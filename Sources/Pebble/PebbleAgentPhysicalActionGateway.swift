@@ -23,6 +23,7 @@ enum PebbleAgentPhysicalActionFailure: String {
     case occupiedTarget
     case blockEntityUnsupported
     case unboundedSideEffects
+    case activeProbePlacementInvalid
     case targetChanged
     case coreRefused
     case outcomeMismatch
@@ -95,6 +96,60 @@ struct PebbleAgentBlockBreakToolState {
 /// action rules remain in PebbleCore; callers may publish Civilization state
 /// only after receiving a verified `.succeeded` outcome.
 final class PebbleAgentPhysicalActionGateway {
+    /// Snapshot of those live probes whose current placement is canonically
+    /// valid before one candidate block mutation. A physical action is not
+    /// permitted to make any such probe invalid. Existing invalid probes are
+    /// not silently repaired here; checkpoint and lifecycle boundaries remain
+    /// responsible for refusing them.
+    private struct ActiveProbePlacementBoundary {
+        struct Entry {
+            let agentID: String
+            let entityID: Int
+            let position: EntityPlacementPosition
+            let bodyWidth: Double
+            let bodyHeight: Double
+            let wasValid: Bool
+        }
+
+        let entries: [Entry]
+
+        func remainsValid(
+            in world: World,
+            ignoringCandidateEntityIDs: Set<Int> = []
+        ) -> Bool {
+            let active = world.entities.compactMap {
+                $0 as? LabCoreAgentEntity
+            }.filter { !$0.dead }
+            let activeByID = Dictionary(
+                uniqueKeysWithValues: active.map { ($0.id, $0) }
+            )
+            let ignored = Set(active.map(\.id)).union(
+                ignoringCandidateEntityIDs
+            )
+            return entries.allSatisfy { entry in
+                guard let probe = activeByID[entry.entityID],
+                      probe.labAgentId == entry.agentID,
+                      probe.width == entry.bodyWidth,
+                      probe.height == entry.bodyHeight,
+                      EntityPlacementPosition(
+                          x: Int(probe.x.rounded(.down)),
+                          y: Int(probe.y.rounded(.down)),
+                          z: Int(probe.z.rounded(.down))
+                      ) == entry.position else {
+                    return false
+                }
+                guard entry.wasValid else { return true }
+                return assessEntityPlacement(
+                    in: world,
+                    at: entry.position,
+                    bodyWidth: entry.bodyWidth,
+                    bodyHeight: entry.bodyHeight,
+                    ignoringEntityIDs: ignored
+                ).isValid
+            }
+        }
+    }
+
     private enum CandidateReservation {
         case none
         case reserved(PebbleCandidatePhysicalCompensationReservation)
@@ -166,6 +221,9 @@ final class PebbleAgentPhysicalActionGateway {
                 before, before, [], .blockEntityUnsupported
             )
         }
+        let activeProbeBoundary = captureActiveProbePlacementBoundary(
+            in: world
+        )
         let candidateReservation = reserveCandidateCompensation(
             family: family, actorID: request.actorID, target: request.target
         )
@@ -209,11 +267,18 @@ final class PebbleAgentPhysicalActionGateway {
             && physical.mutations.count == 1
             && physical.spawnedItemEntityIDs.isEmpty
             && mutationsConform(world: world, mutations: physical.mutations)
+        let activeProbesValid = activeProbeBoundary.remainsValid(
+            in: world,
+            ignoringCandidateEntityIDs: Set(physical.spawnedItemEntityIDs)
+        )
         let toolMatches = toolState.verify()
-        let accepted = matches && toolMatches && verifyAfterMutation()
-        guard matches, toolMatches, accepted else {
+        let accepted = matches && activeProbesValid && toolMatches
+            && verifyAfterMutation()
+        guard matches, activeProbesValid, toolMatches, accepted else {
             let failure: PebbleAgentPhysicalActionFailure = !matches
-                ? .outcomeMismatch : !toolMatches ? .actorStateMismatch : .postMutationRejected
+                ? .outcomeMismatch
+                : !activeProbesValid ? .activeProbePlacementInvalid
+                : !toolMatches ? .actorStateMismatch : .postMutationRejected
             return rolledBackFailure(
                 family: family, actorID: request.actorID, target: request.target,
                 before: before, world: world, mutations: physical.mutations,
@@ -388,6 +453,10 @@ final class PebbleAgentPhysicalActionGateway {
             )
         }
 
+        let activeProbeBoundary = captureActiveProbePlacementBoundary(
+            in: world
+        )
+
         let candidateReservation = reserveCandidateCompensation(
             family: family, actorID: request.actorID, target: request.target
         )
@@ -441,11 +510,14 @@ final class PebbleAgentPhysicalActionGateway {
             && physical.mutations.allSatisfy {
                 world.getBlockEntity($0.position.x, $0.position.y, $0.position.z) == nil
             }
+        let activeProbesValid = activeProbeBoundary.remainsValid(in: world)
         let custodyMatches = custody.verify()
-        let acceptedAfterMutation = verifyAfterMutation()
-        guard physicalOutcomeMatches, custodyMatches, acceptedAfterMutation else {
+        let acceptedAfterMutation = activeProbesValid && verifyAfterMutation()
+        guard physicalOutcomeMatches, activeProbesValid, custodyMatches,
+              acceptedAfterMutation else {
             let failure: PebbleAgentPhysicalActionFailure = !physicalOutcomeMatches
                 ? .outcomeMismatch
+                : !activeProbesValid ? .activeProbePlacementInvalid
                 : !custodyMatches ? .actorStateMismatch : .postMutationRejected
             return rolledBackFailure(
                 family: family,
@@ -624,6 +696,10 @@ final class PebbleAgentPhysicalActionGateway {
             )
         }
 
+        let activeProbeBoundary = captureActiveProbePlacementBoundary(
+            in: world
+        )
+
         let candidateReservation = reserveCandidateCompensation(
             family: family, actorID: request.actorID, target: request.target
         )
@@ -677,14 +753,21 @@ final class PebbleAgentPhysicalActionGateway {
                     entity.id == id && entity is ItemEntity
                 }
             }
+        let activeProbesValid = activeProbeBoundary.remainsValid(
+            in: world,
+            ignoringCandidateEntityIDs: Set(physical.spawnedItemEntityIDs)
+        )
         let toolMatches = toolState.verify()
-        let dropsAcquired = physicalOutcomeMatches && toolMatches
+        let dropsAcquired = physicalOutcomeMatches && activeProbesValid
+            && toolMatches
             ? acquireDrops(physical.spawnedItemEntityIDs)
             : false
         let acceptedAfterMutation = dropsAcquired && verifyAfterMutation()
-        guard physicalOutcomeMatches, toolMatches, dropsAcquired, acceptedAfterMutation else {
+        guard physicalOutcomeMatches, activeProbesValid, toolMatches,
+              dropsAcquired, acceptedAfterMutation else {
             let failure: PebbleAgentPhysicalActionFailure = !physicalOutcomeMatches
                 ? .outcomeMismatch
+                : !activeProbesValid ? .activeProbePlacementInvalid
                 : !toolMatches ? .actorStateMismatch : .postMutationRejected
             return rolledBackFailure(
                 family: family,
@@ -746,6 +829,42 @@ final class PebbleAgentPhysicalActionGateway {
         } catch {
             return .refused
         }
+    }
+
+    private func captureActiveProbePlacementBoundary(
+        in world: World
+    ) -> ActiveProbePlacementBoundary {
+        let active = world.entities.compactMap {
+            $0 as? LabCoreAgentEntity
+        }.filter { !$0.dead }.sorted {
+            if $0.labAgentId != $1.labAgentId {
+                return $0.labAgentId < $1.labAgentId
+            }
+            return $0.id < $1.id
+        }
+        let ignored = Set(active.map(\.id))
+        let entries = active.map { probe in
+            let position = EntityPlacementPosition(
+                x: Int(probe.x.rounded(.down)),
+                y: Int(probe.y.rounded(.down)),
+                z: Int(probe.z.rounded(.down))
+            )
+            return ActiveProbePlacementBoundary.Entry(
+                agentID: probe.labAgentId,
+                entityID: probe.id,
+                position: position,
+                bodyWidth: probe.width,
+                bodyHeight: probe.height,
+                wasValid: assessEntityPlacement(
+                    in: world,
+                    at: position,
+                    bodyWidth: probe.width,
+                    bodyHeight: probe.height,
+                    ignoringEntityIDs: ignored
+                ).isValid
+            )
+        }
+        return ActiveProbePlacementBoundary(entries: entries)
     }
 
     private func registerCandidateCompensation(

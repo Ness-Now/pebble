@@ -1252,8 +1252,11 @@ extension PebbleAgentController {
                 z: Int($0.z.rounded(.down))
             )
         }
+        let activeProbeSupports = Set(occupied.map {
+            PhysicalBlockPosition(x: $0.x, y: $0.y - 1, z: $0.z)
+        })
         let offsets = [(1, 0), (-1, 0), (0, 1), (0, -1)]
-        let targets = [-1, 0, 1, 2].flatMap { dy in
+        let targets = [0, 1, 2, -1].flatMap { dy in
             offsets.map { dx, dz in
                 PhysicalBlockPosition(
                     x: origin.x + dx, y: origin.y + dy,
@@ -1267,6 +1270,7 @@ extension PebbleAgentController {
                     target.x, target.y, target.z
                 ) == nil
                 && !occupied.contains(target)
+                && !activeProbeSupports.contains(target)
         }
         guard let target = targets.first else {
             throw PebbleAgentEstateBoundaryError.invalid(

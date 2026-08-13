@@ -14,8 +14,25 @@ extension PebbleAgentController {
         world: World,
         player: Player
     ) -> PebbleAgentCommandResult {
+        if arguments.count == 2,
+           arguments[0].lowercased() == "proof",
+           environment["PEBBLELAB_GATE_D_BLOCKER_10"] == "1" {
+            switch arguments[1].lowercased() {
+            case "support-safety":
+                return proveBlocker10SupportSafety(world: world)
+            case "safe-break":
+                return proveBlocker10SafeBreak(world: world)
+            case "mutation-family-audit":
+                return proveBlocker10MutationFamilyAudit(world: world)
+            default:
+                break
+            }
+        }
         guard arguments == ["proof"] else {
-            return failure("Usage: /lab gateway proof")
+            return failure(
+                "Usage: /lab gateway proof"
+                    + " [support-safety|safe-break]"
+            )
         }
         let gates = [
             ("PEBBLELAB_APP_AGENTS=1", featureEnabled),
@@ -342,5 +359,535 @@ extension PebbleAgentController {
         _ position: PhysicalBlockPosition
     ) -> Int {
         world.getBlock(position.x, position.y, position.z)
+    }
+
+    /// Disposable Blocker 10 proof fixture. This invokes the same gateway as
+    /// live autonomous execution and deliberately targets the exact support
+    /// beneath another currently valid probe. It publishes no Civilization
+    /// operation; the following checkpoint command independently judges the
+    /// resulting physical boundary.
+    private func proveBlocker10SupportSafety(
+        world: World
+    ) -> PebbleAgentCommandResult {
+        guard environment["PEBBLELAB_DISPOSABLE_WORLD_PROOF"] == "1",
+              let published = session, activeWorld === world,
+              isPaused, !movementEnabled, !autoInteractionEnabled else {
+            return failure("Blocker 10 support proof boundary refused.")
+        }
+        let probes = probesByAgentId.values.filter {
+            $0.world === world && !$0.dead
+        }.sorted {
+            if $0.labAgentId != $1.labAgentId {
+                return $0.labAgentId < $1.labAgentId
+            }
+            return $0.id < $1.id
+        }
+        let ignored = Set(probes.map(\.id))
+        let pairs = probes.flatMap { actor in
+            probes.compactMap { protected -> (
+                LabCoreAgentEntity, LabCoreAgentEntity,
+                PhysicalBlockPosition, EntityPlacementAssessment
+            )? in
+                guard actor !== protected else { return nil }
+                let actorPosition = PebbleAgentEmbodiment(probe: actor).position
+                let protectedPosition = PebbleAgentEmbodiment(
+                    probe: protected
+                ).position
+                let horizontal = abs(actorPosition.x - protectedPosition.x)
+                    + abs(actorPosition.z - protectedPosition.z)
+                guard horizontal == 1,
+                      actorPosition.y == protectedPosition.y else { return nil }
+                let placement = assessEntityPlacement(
+                    in: world,
+                    at: EntityPlacementPosition(
+                        x: protectedPosition.x,
+                        y: protectedPosition.y,
+                        z: protectedPosition.z
+                    ),
+                    bodyWidth: protected.width,
+                    bodyHeight: protected.height,
+                    ignoringEntityIDs: ignored
+                )
+                guard placement.isValid else { return nil }
+                return (
+                    actor,
+                    protected,
+                    PhysicalBlockPosition(
+                        x: protectedPosition.x,
+                        y: protectedPosition.y - 1,
+                        z: protectedPosition.z
+                    ),
+                    placement
+                )
+            }
+        }
+        guard let (actor, protected, target, beforePlacement) = pairs.first,
+              world.isChunkReady(target.x >> 4, target.z >> 4),
+              world.getBlockEntity(target.x, target.y, target.z) == nil else {
+            return failure("Blocker 10 proof found no valid adjacent pair.")
+        }
+        let originalTarget = world.getBlock(target.x, target.y, target.z)
+        _ = world.setBlock(
+            target.x, target.y, target.z, Int(cell(B.stone)), SET_SILENT
+        )
+        guard world.getBlock(target.x, target.y, target.z)
+                == Int(cell(B.stone)) else {
+            return failure("Blocker 10 support fixture preparation failed.")
+        }
+        if actor.carriedItems.allSatisfy({ $0 == nil }) {
+            actor.carriedItems[0] = ItemStack(iid("iron_pickaxe"), 1)
+        }
+        guard let toolSlot = actor.carriedItems.indices.first(where: {
+            actor.carriedItems[$0]?.id == iid("iron_pickaxe")
+        }), let binding = materialCustodyGateway.toolBinding(
+            actor: actor, slot: toolSlot, world: world
+        ) else {
+            _ = world.setBlock(
+                target.x, target.y, target.z, originalTarget, SET_SILENT
+            )
+            return failure("Blocker 10 support proof requires a pickaxe.")
+        }
+        do {
+            let sessionBefore = try published.durableStateBytes()
+            let rightsBefore = published.materialRightsSnapshot()
+            let estatesBefore = published.estateSnapshot()
+            let recorderBefore = replayRecorder?.records.count ?? 0
+            let inventoryBefore = copyItemInventory(actor.carriedItems)
+            let entitiesBefore = Set(world.entities.map(\.id))
+            let damageBefore = binding.heldItem.damage
+            let outcome = physicalActionGateway.breakBlock(
+                world: world,
+                actor: actor,
+                request: PebbleAgentBlockBreakRequest(
+                    actorID: actor.labAgentId,
+                    target: target,
+                    expectedCell: Int(cell(B.stone)),
+                    heldItem: binding.heldItem,
+                    isCreative: false
+                ),
+                toolState: binding.toolState,
+                occupiedPositions: probes.map {
+                    let position = PebbleAgentEmbodiment(probe: $0).position
+                    return PhysicalBlockPosition(
+                        x: position.x, y: position.y, z: position.z
+                    )
+                }
+            )
+            let afterPlacement = assessEntityPlacement(
+                in: world,
+                at: beforePlacement.position,
+                bodyWidth: protected.width,
+                bodyHeight: protected.height,
+                ignoringEntityIDs: ignored
+            )
+            let damageAfter = actor.carriedItems[toolSlot]?.damage ?? -1
+            let newEntities = world.entities.filter {
+                !entitiesBefore.contains($0.id)
+            }
+            let itemDrops = newEntities.compactMap { $0 as? ItemEntity }
+            let sessionUnchanged = try self.session?.durableStateBytes()
+                == sessionBefore
+            let rightsUnchanged = self.session?.materialRightsSnapshot()
+                == rightsBefore
+            let estatesUnchanged = self.session?.estateSnapshot()
+                == estatesBefore
+            let recorderUnchanged = (replayRecorder?.records.count ?? 0)
+                == recorderBefore
+            let custodyUnchanged = inventoryEqual(
+                actor.carriedItems, inventoryBefore
+            )
+            let worldCommitted = world.getBlock(
+                target.x, target.y, target.z
+            ) == 0
+            let placementBeforeText = beforePlacement.isValid
+                ? "valid" : "invalid"
+            let placementAfterText = afterPlacement.isValid
+                ? "valid"
+                : afterPlacement.rejections.map(\.rawValue)
+                    .joined(separator: ",")
+            let outcomeText = "outcome=\(outcome.status.rawValue) "
+                + "failure=\(outcome.failure?.rawValue ?? "none")"
+            let worldText = "world=\(Int(cell(B.stone)))>"
+                + "\(world.getBlock(target.x, target.y, target.z)) "
+                + "worldMutation=\(worldCommitted ? 1 : 0)"
+            let actorText = "toolDamage=\(damageBefore)>\(damageAfter) "
+                + "drops=\(itemDrops.count) "
+                + "custody=\(custodyUnchanged ? "unchanged" : "changed")"
+            let publicationText = "materialRights="
+                + (rightsUnchanged ? "unchanged" : "changed")
+                + " estate=" + (estatesUnchanged ? "unchanged" : "changed")
+                + " session=" + (sessionUnchanged ? "unchanged" : "changed")
+                + " recorder="
+                + (recorderUnchanged ? "unchanged" : "changed")
+            let message = "blocker10 support destructive request "
+                + "actor=\(actor.labAgentId) protected=\(protected.labAgentId) "
+                + "target=\(target.x),\(target.y),\(target.z) "
+                + "beforePlacement=\(placementBeforeText) "
+                + outcomeText + " " + worldText + " " + actorText + " "
+                + publicationText
+                + " protectedPlacementAfter=\(placementAfterText) "
+                + "physicalReceipts=0"
+            trace(message)
+            return success(message)
+        } catch {
+            return failure("Blocker 10 support proof failed: \(error)")
+        }
+    }
+
+    /// Positive control for the same gateway: one real nearby block is broken,
+    /// tool wear and drop acquisition are physical, and every active probe
+    /// remains valid under the canonical PebbleCore placement assessment.
+    private func proveBlocker10SafeBreak(
+        world: World
+    ) -> PebbleAgentCommandResult {
+        guard environment["PEBBLELAB_DISPOSABLE_WORLD_PROOF"] == "1",
+              let published = session, activeWorld === world,
+              isPaused, !movementEnabled, !autoInteractionEnabled,
+              let actor = probesByAgentId.values.filter({
+                  $0.world === world && !$0.dead
+                      && $0.carriedItems.contains(where: {
+                          $0?.id == iid("iron_pickaxe")
+                      })
+              }).sorted(by: { $0.labAgentId < $1.labAgentId }).first else {
+            return failure("Blocker 10 safe-break proof boundary refused.")
+        }
+        let probes = probesByAgentId.values.filter {
+            $0.world === world && !$0.dead
+        }
+        let positions = probes.map {
+            PebbleAgentEmbodiment(probe: $0).position
+        }
+        let actorPosition = PebbleAgentEmbodiment(probe: actor).position
+        let candidates = [(1, 0), (0, 1), (-1, 0), (0, -1)].map {
+            PhysicalBlockPosition(
+                x: actorPosition.x + $0.0,
+                y: actorPosition.y,
+                z: actorPosition.z + $0.1
+            )
+        }
+        guard let target = candidates.first(where: { candidate in
+            world.isChunkReady(candidate.x >> 4, candidate.z >> 4)
+                && world.getBlockEntity(
+                    candidate.x, candidate.y, candidate.z
+                ) == nil
+                && !positions.contains(where: {
+                    ($0.x == candidate.x && $0.y == candidate.y
+                        && $0.z == candidate.z)
+                        || ($0.x == candidate.x && $0.y - 1 == candidate.y
+                            && $0.z == candidate.z)
+                })
+        }) else {
+            return failure("Blocker 10 safe-break found no bounded target.")
+        }
+        _ = world.setBlock(
+            target.x, target.y, target.z, Int(cell(B.stone)), SET_SILENT
+        )
+        guard let slot = actor.carriedItems.indices.first(where: {
+            actor.carriedItems[$0]?.id == iid("iron_pickaxe")
+        }), let binding = materialCustodyGateway.toolBinding(
+            actor: actor, slot: slot, world: world
+        ) else {
+            return failure("Blocker 10 safe-break lost its pickaxe.")
+        }
+        let endpoint = PebbleAgentMaterialCustodyEndpoint.liveAgent(
+            actor, in: world
+        )
+        do {
+            let sessionBefore = try published.durableStateBytes()
+            let recorderBefore = replayRecorder?.records.count ?? 0
+            let damageBefore = binding.heldItem.damage
+            var acquiredQuantity = 0
+            let outcome = physicalActionGateway.breakBlock(
+                world: world,
+                actor: actor,
+                request: PebbleAgentBlockBreakRequest(
+                    actorID: actor.labAgentId, target: target,
+                    expectedCell: Int(cell(B.stone)),
+                    heldItem: binding.heldItem, isCreative: false
+                ),
+                toolState: binding.toolState,
+                occupiedPositions: positions.map {
+                    PhysicalBlockPosition(x: $0.x, y: $0.y, z: $0.z)
+                },
+                acquireDrops: { ids in
+                    guard let source = PebbleAgentItemEntityCustodyEndpoint(
+                        spawnedItemEntityIDs: ids, world: world
+                    ), let fingerprint = try? self.materialCustodyGateway
+                        .fingerprint(endpoint) else { return false }
+                    let result = self.materialCustodyGateway.acquireItemEntities(
+                        PebbleAgentItemEntityAcquisitionRequest(
+                            transactionID: "gate-d-blocker10-safe-break",
+                            spawnedItemEntityIDs: ids,
+                            expectedDestinationFingerprint: fingerprint
+                        ),
+                        from: source, to: endpoint
+                    )
+                    acquiredQuantity = result.quantityMoved
+                    return result.succeeded
+                }
+            )
+            let ignored = Set(probes.map(\.id))
+            let placementValid = probes.allSatisfy { probe in
+                let position = PebbleAgentEmbodiment(probe: probe).position
+                return assessEntityPlacement(
+                    in: world,
+                    at: EntityPlacementPosition(
+                        x: position.x, y: position.y, z: position.z
+                    ),
+                    bodyWidth: probe.width,
+                    bodyHeight: probe.height,
+                    ignoringEntityIDs: ignored
+                ).isValid
+            }
+            let damageAfter = actor.carriedItems[slot]?.damage ?? -1
+            let sessionUnchanged = try self.session?.durableStateBytes()
+                == sessionBefore
+            let recorderUnchanged = (replayRecorder?.records.count ?? 0)
+                == recorderBefore
+            let message = "blocker10 safe physical break "
+                + "actor=\(actor.labAgentId) target="
+                + "\(target.x),\(target.y),\(target.z) "
+                + "outcome=\(outcome.status.rawValue) "
+                + "world=\(Int(cell(B.stone)))>"
+                + "\(world.getBlock(target.x, target.y, target.z)) "
+                + "toolDamage=\(damageBefore)>\(damageAfter) "
+                + "dropsAcquired=\(acquiredQuantity) "
+                + "activePlacement=\(placementValid ? "valid" : "invalid") "
+                + "session=\(sessionUnchanged ? "unchanged" : "changed") "
+                + "recorder=\(recorderUnchanged ? "unchanged" : "changed")"
+            trace(message)
+            guard outcome.succeeded, world.getBlock(
+                target.x, target.y, target.z
+            ) == 0, damageAfter == damageBefore + 1,
+                  acquiredQuantity > 0, placementValid,
+                  sessionUnchanged, recorderUnchanged else {
+                return failure("Blocker 10 safe-break verification failed.")
+            }
+            return success(message)
+        } catch {
+            return failure("Blocker 10 safe-break proof failed: \(error)")
+        }
+    }
+
+    private func inventoryEqual(
+        _ lhs: [ItemStack?],
+        _ rhs: [ItemStack?]
+    ) -> Bool {
+        lhs.elementsEqual(rhs) { left, right in
+            switch (left, right) {
+            case (nil, nil): return true
+            case let (left?, right?): return stacksEqual(left, right)
+            default: return false
+            }
+        }
+    }
+
+    /// Audits the sibling mutation families against the same active-probe
+    /// boundary. Tilling the support and placing into the upper body are both
+    /// real Core mutations before candidate verification, then must compensate
+    /// exactly. Direct foot-cell occupancy remains an earlier refusal.
+    private func proveBlocker10MutationFamilyAudit(
+        world: World
+    ) -> PebbleAgentCommandResult {
+        guard environment["PEBBLELAB_DISPOSABLE_WORLD_PROOF"] == "1",
+              let published = session, activeWorld === world,
+              isPaused, !movementEnabled, !autoInteractionEnabled else {
+            return failure("Blocker 10 mutation-family audit refused.")
+        }
+        let probes = probesByAgentId.values.filter {
+            $0.world === world && !$0.dead
+        }.sorted { $0.labAgentId < $1.labAgentId }
+        let positions = probes.map {
+            PebbleAgentEmbodiment(probe: $0).position
+        }
+        let pair = probes.flatMap { actor in
+            probes.compactMap { protected -> (
+                LabCoreAgentEntity, LabCoreAgentEntity
+            )? in
+                guard actor !== protected else { return nil }
+                let a = PebbleAgentEmbodiment(probe: actor).position
+                let p = PebbleAgentEmbodiment(probe: protected).position
+                return abs(a.x - p.x) + abs(a.z - p.z) == 1
+                    && a.y == p.y ? (actor, protected) : nil
+            }
+        }.first
+        guard let (actor, protected) = pair else {
+            return failure("Blocker 10 family audit has no adjacent pair.")
+        }
+        let protectedPosition = PebbleAgentEmbodiment(
+            probe: protected
+        ).position
+        let support = PhysicalBlockPosition(
+            x: protectedPosition.x,
+            y: protectedPosition.y - 1,
+            z: protectedPosition.z
+        )
+        let upperBody = PhysicalBlockPosition(
+            x: protectedPosition.x,
+            y: protectedPosition.y + 1,
+            z: protectedPosition.z
+        )
+        let foot = PhysicalBlockPosition(
+            x: protectedPosition.x,
+            y: protectedPosition.y,
+            z: protectedPosition.z
+        )
+        _ = world.setBlock(
+            support.x, support.y, support.z, Int(cell(B.dirt)), SET_SILENT
+        )
+        _ = world.setBlock(
+            upperBody.x, upperBody.y, upperBody.z, 0, SET_SILENT
+        )
+        _ = world.setBlock(foot.x, foot.y, foot.z, 0, SET_SILENT)
+        let pickaxeSlot = actor.carriedItems.indices.first(where: {
+            actor.carriedItems[$0]?.id == iid("iron_pickaxe")
+        }) ?? 0
+        if actor.carriedItems[pickaxeSlot] == nil {
+            actor.carriedItems[pickaxeSlot] = ItemStack(
+                iid("iron_pickaxe"), 1
+            )
+        }
+        guard let hoeSlot = actor.carriedItems.indices.first(where: {
+            actor.carriedItems[$0] == nil
+        }) else {
+            return failure("Blocker 10 family audit has no hoe slot.")
+        }
+        actor.carriedItems[hoeSlot] = ItemStack(iid("iron_hoe"), 1)
+        guard let blockSlot = actor.carriedItems.indices.first(where: {
+            actor.carriedItems[$0] == nil
+        }) else {
+            return failure("Blocker 10 family audit has no block slot.")
+        }
+        actor.carriedItems[blockSlot] = ItemStack(iid("stone"), 1)
+        let inventoryBefore = copyItemInventory(actor.carriedItems)
+        guard let hoe = materialCustodyGateway.toolBinding(
+            actor: actor, slot: hoeSlot, world: world
+        ), let placement = materialCustodyGateway.placementBinding(
+            actor: actor, slot: blockSlot
+        ) else {
+            return failure("Blocker 10 family bindings are unavailable.")
+        }
+        let occupied = positions.map {
+            PhysicalBlockPosition(x: $0.x, y: $0.y, z: $0.z)
+        }
+        do {
+            let sessionBefore = try published.durableStateBytes()
+            let recorderBefore = replayRecorder?.records.count ?? 0
+            let entitiesBefore = Set(world.entities.map(\.id))
+            let till = physicalActionGateway.tillBlock(
+                world: world,
+                actor: PebbleAgentEmbodiment(probe: actor),
+                request: PebbleAgentBlockTillingRequest(
+                    actorID: actor.labAgentId,
+                    target: support,
+                    expectedCell: Int(cell(B.dirt)),
+                    heldItem: hoe.heldItem
+                ),
+                toolState: hoe.toolState,
+                occupiedPositions: occupied
+            )
+            let hit = RaycastHit(
+                x: upperBody.x, y: upperBody.y, z: upperBody.z,
+                face: 1, cell: 0, t: 0,
+                px: Double(upperBody.x) + 0.5,
+                py: Double(upperBody.y) + 0.5,
+                pz: Double(upperBody.z) + 0.5
+            )
+            let placed = physicalActionGateway.placeBlock(
+                world: world,
+                actor: actor,
+                request: PebbleAgentBlockPlacementRequest(
+                    actorID: actor.labAgentId,
+                    hit: hit,
+                    target: upperBody,
+                    expectedCell: 0,
+                    blockID: Int(B.stone),
+                    heldItem: placement.heldItem,
+                    orientation: BlockPlacementOrientation(
+                        yaw: actor.yaw, pitch: actor.pitch
+                    )
+                ),
+                custody: placement.custody,
+                occupiedPositions: occupied
+            )
+            let occupiedHit = RaycastHit(
+                x: foot.x, y: foot.y, z: foot.z,
+                face: 1, cell: 0, t: 0,
+                px: Double(foot.x) + 0.5,
+                py: Double(foot.y) + 0.5,
+                pz: Double(foot.z) + 0.5
+            )
+            let occupiedPlacement = materialCustodyGateway.placementBinding(
+                actor: actor, slot: blockSlot
+            )
+            guard let occupiedPlacement else {
+                return failure("Blocker 10 occupied binding disappeared.")
+            }
+            let direct = physicalActionGateway.placeBlock(
+                world: world,
+                actor: actor,
+                request: PebbleAgentBlockPlacementRequest(
+                    actorID: actor.labAgentId,
+                    hit: occupiedHit,
+                    target: foot,
+                    expectedCell: 0,
+                    blockID: Int(B.stone),
+                    heldItem: occupiedPlacement.heldItem,
+                    orientation: BlockPlacementOrientation(
+                        yaw: actor.yaw, pitch: actor.pitch
+                    )
+                ),
+                custody: occupiedPlacement.custody,
+                occupiedPositions: Array(occupied.reversed())
+            )
+            let ignored = Set(probes.map(\.id))
+            let finalPlacement = assessEntityPlacement(
+                in: world,
+                at: EntityPlacementPosition(
+                    x: protectedPosition.x,
+                    y: protectedPosition.y,
+                    z: protectedPosition.z
+                ),
+                bodyWidth: protected.width,
+                bodyHeight: protected.height,
+                ignoringEntityIDs: ignored
+            )
+            let sessionAfter = try self.session?.durableStateBytes()
+            let exact = till.status == .verificationFailure
+                && till.failure == .activeProbePlacementInvalid
+                && placed.status == .verificationFailure
+                && placed.failure == .activeProbePlacementInvalid
+                && direct.status == .refused
+                && direct.failure == .occupiedTarget
+                && world.getBlock(support.x, support.y, support.z)
+                    == Int(cell(B.dirt))
+                && world.getBlock(
+                    upperBody.x, upperBody.y, upperBody.z
+                ) == 0
+                && world.getBlock(foot.x, foot.y, foot.z) == 0
+                && inventoryEqual(actor.carriedItems, inventoryBefore)
+                && Set(world.entities.map(\.id)) == entitiesBefore
+                && finalPlacement.isValid
+                && sessionAfter == sessionBefore
+                && (replayRecorder?.records.count ?? 0) == recorderBefore
+            let message = "blocker10 mutation family audit "
+                + "till=\(till.status.rawValue):"
+                + "\(till.failure?.rawValue ?? "none") "
+                + "place=\(placed.status.rawValue):"
+                + "\(placed.failure?.rawValue ?? "none") "
+                + "directOccupied=\(direct.status.rawValue):"
+                + "\(direct.failure?.rawValue ?? "none") "
+                + "support=unchanged body=clear tool=unchanged "
+                + "custody=unchanged drops=0 placement="
+                + (finalPlacement.isValid ? "valid" : "invalid")
+                + " enumerationOrder=independent exact=\(exact ? 1 : 0)"
+            trace(message)
+            guard exact else {
+                return failure("Blocker 10 mutation-family audit failed.")
+            }
+            return success(message)
+        } catch {
+            return failure("Blocker 10 mutation-family audit failed: \(error)")
+        }
     }
 }
