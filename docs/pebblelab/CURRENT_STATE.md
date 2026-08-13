@@ -92,10 +92,24 @@ Published Gate D Blocker 09 product-fix head:
 ee742afb41fda44c77d8b98f868fbe759934057e
 ```
 
+Published baseline evaluated by independent Gate D Evaluation 10 and used as
+the direct base for the local Blocker 10 correction candidate:
+
+```text
+55e513becac622e2f7f258f10ec406d26865eb6a
+```
+
+Local Gate D Blocker 10 product-fix commit:
+
+```text
+6ec700640dfe806f32da62fe7d7315c64fdb8f74
+```
+
 The `CIV-33` completion, renewable-subsistence milestone and Gate D Blockers 01
 through 09 are published on the canonical branch. Independent Gate D
-Evaluations 01 through 09 remain immutable FAIL evidence for their evaluated
-baselines. Evaluation 04 found that an abandoned civilization
+Evaluations 01 through 10 remain immutable FAIL evidence for their evaluated
+baselines. Blocker 10 is a local correction candidate awaiting senior review
+and manual publication. Evaluation 04 found that an abandoned civilization
 candidate could leave an earlier successful physical movement in PebbleCore
 after a later agricultural navigation collision.
 
@@ -103,7 +117,7 @@ after a later agricultural navigation collision.
 
 ```text
 active CIV phase: none
-next authorized action: NEW INDEPENDENT V4-GATE-D-v1 EVALUATION 10
+next authorized action: SENIOR REVIEW AND MANUAL PUBLICATION OF GATE D BLOCKER 10
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -121,7 +135,9 @@ Gate D Evaluation 08 status: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 08 status: BLOCKER_FIX_PUBLISHED
 Gate D Evaluation 09 status: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 09 status: BLOCKER_FIX_PUBLISHED
-Independent Gate D Evaluation 10 status: NOT_STARTED — NEXT AUTHORIZED ACTION
+Gate D Evaluation 10 status: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
+Gate D Blocker 10 status: BLOCKER_FIX_LOCAL_CANDIDATE
+Independent Gate D Evaluation 11 status: NOT_STARTED
 CIV-34 status: NOT_STARTED
 roadmap generation: V4
 ```
@@ -249,22 +265,45 @@ unverified future identity, wrong holder, wrong quantity, ambiguity and
 duplicate reservation all fail closed. Schema 30 and Observer schema 7 remain
 unchanged.
 
+The local Blocker 10 correction captures every active Lab probe that is
+canonically placeable before a candidate block mutation, then reuses
+PebbleCore `assessEntityPlacement` before any Civilization publication. A
+break, till or placement that would remove support, obstruct the body or
+otherwise invalidate one of those probes is compensated through the existing
+physical-action transaction. The World block, tool state, drops, custody,
+Material Rights, estate projection, session and recorder remain exact. No
+probe is moved, no alternative position is invented, and checkpoint save
+continues to reject `incompatibleSupport`.
+
+The positive control still performs a real nearby break with tool wear and
+physical drop acquisition. The decisive continuation performs inherited
+pickaxe damage 1 to 2 on a safe target, saves checkpoint C, fresh-restores the
+exact damage-2 custody with one current reconciliation, then performs another
+real damage 2 to 3 use. Durable registration remains damage 0 and the one
+historical settlement receipt remains unchanged. Schema 30 and Observer
+schema 7 are unchanged.
+
 ## Last validation baseline
 
-For the Gate D Blocker 09 evolved-material checkpoint-save correction:
+For the Gate D Blocker 10 active-probe physical-action safety correction:
 
 ```text
-published baseline red reproduction: PASS (damage-1 current identity save refused)
-damage 0>1 save / protected fresh restore: PASS / exact
-damage 1>2 save / protected fresh restore: PASS / exact
-successful-load committed reconciliation runs: 1 per load
-current identity adversarials: all fail closed
-historical durable identity / settlement receipt: retained / unchanged
+published baseline red reproduction: PASS (support break committed; checkpoint incompatibleSupport)
+support-destructive break / till / place: exact rollback / exact rollback / exact rollback
+safe physical break: PASS (real wear, block removal and acquired drop)
+checkpoint immediately after refused mutation: restartSafe
+damage 1>2 / checkpoint C / fresh restore: PASS / PASS / exact damage 2
+successful-load committed current reconciliation runs: 1
+continued post-restore physical use: PASS (damage 2>3)
+historical durable identity / settlement receipt: damage 0 / unchanged one
 checkpoint schema / Observer schema: 30 / 7
 physical loss / duplication / synthetic material: 0 / 0 / 0
-duplicate assets / receipts / settlements: 0 / 0 / 0
+duplicate probes / assets / receipts / settlements: 0 / 0 / 0 / 0
 Observer mutation count: 0
-Gate D Blockers 01 through 08: PASS
+Gate D Blockers 01 through 07: PASS
+Gate D Blocker 08 dedicated runner: INCONCLUSIVE (signed historical session fixture unavailable)
+Gate D Blocker 08 integrated current semantics: PASS
+Gate D Blocker 09: PASS
 repository shared smoke: 3772 passed, 0 failed
 repository verification steps: 35/35
 golden regeneration: NOT ATTEMPTED
@@ -390,11 +429,10 @@ golden regeneration: NOT ATTEMPTED
 
 ## Next authorized action
 
-The current authorized action is a new independent `V4-GATE-D-v1` Evaluation
-10. Evaluations 06 through 09 remain
+The current authorized action is senior review and manual publication of Gate D
+Blocker 10. Evaluations 06 through 10 remain
 **EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE**. Gate D remains
-**EVALUATED_FAIL_NOT_ACQUIRED** and is not acquired by the published Blocker 09
-correction. Independent Evaluation 10 is
-**NOT_STARTED — NEXT AUTHORIZED ACTION**.
+**EVALUATED_FAIL_NOT_ACQUIRED** and is not acquired by the local Blocker 10
+correction candidate. Independent Evaluation 11 is **NOT_STARTED**.
 `CIV-34` is not started and remains downstream of a future published Gate D
 PASS.
