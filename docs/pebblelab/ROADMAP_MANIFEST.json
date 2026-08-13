@@ -35,7 +35,10 @@
     "gateDEvaluation08EvaluatedProductHead": "02c7778769c8a6d971f4eb8bd73e5a3f7afc8c1e",
     "gateDBlocker08AffectedProductHead": "02c7778769c8a6d971f4eb8bd73e5a3f7afc8c1e",
     "gateDBlocker08PublishedProductFixHead": "a7f1fd7bf92a6d049d7601945209eb9c98d06058",
-    "meaning": "Canonical history through historical Gate D Evaluation 08; Blockers 01 through 08 are fixed and published, Evaluations 01 through 08 remain immutable FAIL evidence, and the next authorized action is a new independent Gate D Evaluation 09.",
+    "gateDEvaluation09EvaluatedProductHead": "4ea6fba4b615d72a96087bb98bf5bbca4b560e4b",
+    "gateDBlocker09AffectedProductHead": "4ea6fba4b615d72a96087bb98bf5bbca4b560e4b",
+    "gateDBlocker09LocalProductFixCommit": "ee742afb41fda44c77d8b98f868fbe759934057e",
+    "meaning": "Canonical history through historical Gate D Evaluation 09; Blockers 01 through 08 are fixed and published, Evaluations 01 through 09 remain immutable FAIL evidence, Blocker 09 is a local correction candidate, and the next authorized action is senior review and manual publication of Blocker 09.",
     "safeBootstrapHardeningPublished": true
   },
   "documents": {
@@ -62,6 +65,7 @@
     "gateDBlocker06EstateSourcePhysicalAuthority": "docs/pebblelab/GATE_D_BLOCKER_06_ESTATE_SOURCE_PHYSICAL_AUTHORITY.md",
     "gateDBlocker07ReconciliationAfterPhysicalRestore": "docs/pebblelab/GATE_D_BLOCKER_07_RECONCILIATION_AFTER_PHYSICAL_RESTORE.md",
     "gateDBlocker08CollectiveProbeRestorePlacement": "docs/pebblelab/GATE_D_BLOCKER_08_COLLECTIVE_PROBE_RESTORE_PLACEMENT.md",
+    "gateDBlocker09EvolvedMaterialIdentityCheckpointSave": "docs/pebblelab/GATE_D_BLOCKER_09_EVOLVED_MATERIAL_IDENTITY_CHECKPOINT_SAVE.md",
     "gateCEvidenceMarkdown": "docs/pebblelab/GATE_C_EVALUATION_01_SUMMARY.md",
     "gateCEvidenceJSON": "docs/pebblelab/GATE_C_EVALUATION_01_SUMMARY.json"
   },
@@ -77,7 +81,7 @@
     "activePhase": null,
     "completedThrough": "CIV-33",
     "nextEligiblePhase": null,
-    "nextAuthorizedAction": "NEW-INDEPENDENT-V4-GATE-D-v1-EVALUATION-09",
+    "nextAuthorizedAction": "SENIOR-REVIEW-AND-MANUAL-PUBLICATION-GATE-D-BLOCKER-09",
     "civ27Status": "completed",
     "civ28Status": "completed",
     "gateCStatus": "acquired",
@@ -102,7 +106,9 @@
     "gateDBlocker07Status": "fixedPublished",
     "gateDEvaluation08Status": "evaluatedFailNotAcquired",
     "gateDBlocker08Status": "fixedPublished",
-    "gateDEvaluation09Status": "notStarted",
+    "gateDEvaluation09Status": "evaluatedFailNotAcquired",
+    "gateDBlocker09Status": "fixedLocalCandidate",
+    "gateDEvaluation10Status": "notStarted",
     "civ34Status": "notStarted",
     "renewableSubsistenceMilestoneStatus": "completedPublished",
     "v4CanonicalDocumentSet": true
@@ -464,7 +470,55 @@
     "civ34Started": false,
     "evaluation09Started": false,
     "publicationVerified": true,
-    "nextAuthorizedAction": "NEW-INDEPENDENT-V4-GATE-D-v1-EVALUATION-09"
+    "nextAuthorizedActionAfterBlocker08Publication": "NEW-INDEPENDENT-V4-GATE-D-v1-EVALUATION-09"
+  },
+  "gateDBlocker09Validation": {
+    "affectedPublishedBaseline": "4ea6fba4b615d72a96087bb98bf5bbca4b560e4b",
+    "evaluation09EvidenceCommits": [
+      "fab16936274b1d75d528967c149c4d0e0e78251f",
+      "7f5a2955b89c4dc44f1f14cf7d4cef98009dd93d"
+    ],
+    "status": "fixedLocalCandidate",
+    "localProductFixCommit": "ee742afb41fda44c77d8b98f868fbe759934057e",
+    "checkpointSchema": 30,
+    "observerSchema": 7,
+    "rootCause": "checkpointCustodyValidationComparedCurrentPhysicalToolToRegistrationIdentity",
+    "durableAssetIdentity": "immutableRegistrationAndSettlementHistory",
+    "currentPhysicalProof": "exactLastVerifiedHolderIdentityQuantityHolderAndPebbleCoreCustody",
+    "identityEvolutionPolicy": "sharedCanonicalMaterialRightsAssetReferencePredicate",
+    "reservationIdentity": "exactCurrentVerifiedMaterialIdentity",
+    "checkpointSaveMutatesCivilization": false,
+    "damageZeroToOneCheckpointSave": "passed",
+    "damageOneProtectedFreshRestore": "exact",
+    "damageOneToTwoCheckpointSave": "passed",
+    "damageTwoProtectedFreshRestore": "exact",
+    "successfulLoadCommittedCurrentReconciliationRuns": 1,
+    "oldIdentitySubstitution": "failClosed",
+    "unverifiedFutureIdentity": "failClosed",
+    "missingCurrentIdentity": "failClosed",
+    "wrongHolder": "failClosed",
+    "wrongQuantity": "failClosed",
+    "ambiguousCurrentIdentity": "failClosed",
+    "duplicateCurrentUnitReservation": "failClosed",
+    "assetIDContinuity": "same",
+    "settlementReceiptContinuity": "unchangedOne",
+    "physicalLoss": 0,
+    "physicalDuplication": 0,
+    "syntheticMaterial": 0,
+    "duplicateAssets": 0,
+    "duplicateReceipts": 0,
+    "duplicateSettlements": 0,
+    "observerMutationCount": 0,
+    "repositoryChecksPassed": 3772,
+    "repositoryChecksFailed": 0,
+    "repositoryStepsPassed": 35,
+    "repositoryStepsTotal": 35,
+    "blockers01Through08": "passed",
+    "goldenRegenerationAttempted": false,
+    "gateDAcquired": false,
+    "civ34Started": false,
+    "evaluation10Started": false,
+    "nextAuthorizedAction": "SENIOR-REVIEW-AND-MANUAL-PUBLICATION-GATE-D-BLOCKER-09"
   },
   "publishedPostGateHardening": [
     {
@@ -637,8 +691,23 @@
     "publishedProductFixHead": "a7f1fd7bf92a6d049d7601945209eb9c98d06058"
   },
   "evaluation09": {
-    "status": "notStarted",
-    "nextAuthorizedAction": true
+    "status": "evaluatedFailNotAcquired",
+    "evaluatedProductBaseline": "4ea6fba4b615d72a96087bb98bf5bbca4b560e4b",
+    "evidenceCommits": [
+      "fab16936274b1d75d528967c149c4d0e0e78251f",
+      "7f5a2955b89c4dc44f1f14cf7d4cef98009dd93d"
+    ],
+    "verdict": "failProductCorrectionRequired",
+    "historicalEvidenceImmutable": true
+  },
+  "blocker09EvolvedMaterialIdentityCheckpointSave": {
+    "status": "fixedLocalCandidate",
+    "evidence": "docs/pebblelab/GATE_D_BLOCKER_09_EVOLVED_MATERIAL_IDENTITY_CHECKPOINT_SAVE.md",
+    "gateAcquired": false,
+    "localProductFixCommit": "ee742afb41fda44c77d8b98f868fbe759934057e"
+  },
+  "evaluation10": {
+    "status": "notStarted"
   }
     },
     "E": {
