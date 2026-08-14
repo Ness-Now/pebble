@@ -1487,6 +1487,16 @@ extension PebbleAgentController {
                 "Checkpoint load refused: production gate or dependency is disabled."
             )
         }
+        if candidate.contractsEnabled
+            && (!contractFeatureEnabled || !productionFeatureEnabled
+                || !featureEnabled || !persistenceFeatureEnabled
+                || !materialFeatureEnabled
+                || !autonomousCivilizationFeatureEnabled) {
+            trace("checkpoint load refused name=\(name.rawValue) reason=contractGate")
+            return failure(
+                "Checkpoint load refused: contract gate or dependency is disabled."
+            )
+        }
         let checkpointDigest = try candidate.durableStateDigest()
         guard checkpointDigest == stored.manifest.semanticDigest else {
             throw AgentCheckpointError.semanticDigestMismatch

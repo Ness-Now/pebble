@@ -43,6 +43,10 @@ extension PebbleAgentController {
             return handleBarter(
                 Array(arguments.dropFirst()), world: world, player: player
             )
+        case "contract", "contracts":
+            return handleContracts(
+                Array(arguments.dropFirst()), world: world, player: player
+            )
         case "start":
             guard arguments.count == 1 else { return failure("Usage: /lab start") }
             return start(world: world, player: player)

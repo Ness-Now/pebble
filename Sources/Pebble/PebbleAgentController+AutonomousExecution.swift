@@ -60,6 +60,11 @@ extension PebbleAgentController {
                     activity: activity, actor: embodiment, world: world,
                     session: &session, recorder: &recorder
                 )
+            case .contract:
+                receipt = try executeAutonomousContract(
+                    activity: activity, actor: embodiment, world: world,
+                    session: &session, recorder: &recorder
+                )
             case .dependentCare, .teaching, .construction, .materialHandling:
                 throw ControllerError.feedbackBoundary(
                     "autonomous domain remains owned by its existing cognitive path"
@@ -124,6 +129,9 @@ extension PebbleAgentController {
             )
         } catch {
             if case ControllerError.barterPostMutationBoundary = error {
+                throw error
+            }
+            if case ControllerError.contractPostMutationBoundary = error {
                 throw error
             }
             let outcome = AgentAutonomousActivityOutcome(
@@ -340,6 +348,10 @@ extension PebbleAgentController {
                 } else {
                     try session.recordVerifiedProduction(verified)
                 }
+                try registerContractPerformanceAssetIfNeeded(
+                    verified, actor: actor, world: world,
+                    session: &session, recorder: &recorderCandidate
+                )
             }
         )
         guard result.succeeded else {

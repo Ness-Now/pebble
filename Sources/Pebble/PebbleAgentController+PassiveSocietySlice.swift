@@ -503,6 +503,7 @@ extension PebbleAgentController {
         case .construction, .materialHandling: return "materialWork"
         case .production: return "production"
         case .barter: return "barter"
+        case .contract: return "contract"
         }
     }
 }

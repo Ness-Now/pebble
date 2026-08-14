@@ -10,7 +10,7 @@ WORLD_SEED="12345"
 
 usage() {
     cat <<EOF
-Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--harvest|--construction|--embodiment|--build|--social|--physical|--material|--rights|--production|--barter|--cooperation|--persistence|--population|--multiscale|--ecology|--mortality|--reproduction|--kinship|--households|--care|--skills|--teaching|--integrated-teaching|--ecological-observation|--agriculture|--wild-subsistence|--physical-food-survival|--livestock|--work-professions|--work-demand-refresh|--gate-b-passive]
+Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--harvest|--construction|--embodiment|--build|--social|--physical|--material|--rights|--production|--barter|--contracts|--cooperation|--persistence|--population|--multiscale|--ecology|--mortality|--reproduction|--kinship|--households|--care|--skills|--teaching|--integrated-teaching|--ecological-observation|--agriculture|--wild-subsistence|--physical-food-survival|--livestock|--work-professions|--work-demand-refresh|--gate-b-passive]
        scripts/verify-pebblelab-live.sh --help
 
 Launches Pebble for a reproducible, operator-verified Phase J live check. The app is
@@ -41,6 +41,7 @@ Options:
   --rights Run CIV-26 real custody, claims, permissions, transgression, and rollback.
   --production Run CIV-34 real recipes, workshop, custody, restart, and produced-tool use.
   --barter Run CIV-35 local consent, two-sided custody, rollback, restart, and tool use.
+  --contracts Run CIV-36 open debt, three-process restart, fulfillment rollback, and exact-once proof.
   --cooperation Run shared construction-material task, delivery, and shelter completion.
   --persistence Run checkpoint, real process restart, causal replay, and uninterrupted control.
   --population Run bounded migrant admission, mid-route restart, arrival, and uninterrupted control.
@@ -135,6 +136,7 @@ for option in "$@"; do
         --rights) MODE="rights"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --production) MODE="production"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --barter) MODE="barter"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
+        --contracts) MODE="contracts"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --cooperation) MODE="cooperation"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --persistence) MODE="persistence"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --population) MODE="population"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
@@ -187,6 +189,7 @@ LIVESTOCK_GATE=0
 WORK_PROFESSIONS_GATE=0
 PRODUCTION_GATE=0
 BARTER_GATE=0
+CONTRACT_GATE=0
 AUTONOMOUS_CIVILIZATION_GATE=0
 INTEGRATED_TEACHING_PROOF=0
 PASSIVE_OBSERVER_INPUT_PROOF=0
@@ -196,7 +199,20 @@ GATE_B3_ACCEPTANCE=0
 GATE_B3_COGNITIVE_HZ=4
 GATE_B3_HORIZON=0
 GATE_B3_RANDOM_TICK_SPEED=3
-if [ "$MODE" = "barter" ]; then
+if [ "$MODE" = "contracts" ]; then
+    WORLD_SEED="46"
+    MATERIAL_GATE=1
+    PERSISTENCE_GATE=1
+    PRODUCTION_GATE=1
+    CONTRACT_GATE=1
+    AUTONOMOUS_CIVILIZATION_GATE=1
+    WORLD_NAME="PebbleLab-Disposable-Contracts-46"
+    CAPTURE_NAME="contract-final.png"
+    CONTRACT_PHASE1_COMMANDS='/gamerule randomTickSpeed 0;/gamerule doMobSpawning false;/gamerule doDaylightCycle false;/gamerule doWeatherCycle false;/time set 1000;/weather clear;/tp 14 68 -18|/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab contract setup;/lab contract status;/lab overlay compact|/lab step;/lab contract status;/lab overlay compact|/lab step;/lab contract status;/lab checkpoint save contract-open-v33;/lab checkpoint status;/lab causality tail 20;/lab status'
+    CONTRACT_PHASE2_COMMANDS='/tp 14 68 -18;/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab checkpoint load contract-open-v33;/lab contract status;/lab overlay compact|/lab step;/lab contract status;/lab overlay compact|/lab step;/lab contract status;/lab overlay compact|/lab step;/lab contract status;/lab contract proof;/lab checkpoint save contract-fulfilled-v33;/lab checkpoint status;/lab causality tail 20;/lab status'
+    CONTRACT_PHASE3_COMMANDS='/tp 14 68 -18;/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab checkpoint load contract-fulfilled-v33;/lab contract status;/lab overlay compact|/lab step;/lab contract status;/lab contract proof;/lab checkpoint save contract-final-v33;/lab checkpoint status;/lab causality tail 20;/lab contract cleanup;/lab status'
+    LAB_COMMANDS="$CONTRACT_PHASE1_COMMANDS"
+elif [ "$MODE" = "barter" ]; then
     WORLD_SEED="46"
     MATERIAL_GATE=1
     PERSISTENCE_GATE=1
@@ -925,6 +941,7 @@ print_plan() {
     printf '  PEBBLELAB_APP_AGENTS_WORK_PROFESSIONS=%s\n' "$WORK_PROFESSIONS_GATE"
     printf '  PEBBLELAB_APP_AGENTS_PRODUCTION=%s\n' "$PRODUCTION_GATE"
     printf '  PEBBLELAB_APP_AGENTS_BARTER=%s\n' "$BARTER_GATE"
+    printf '  PEBBLELAB_APP_AGENTS_CONTRACTS=%s\n' "$CONTRACT_GATE"
     printf '  PEBBLELAB_APP_AGENTS_AUTONOMOUS_CIVILIZATION=%s\n' "$AUTONOMOUS_CIVILIZATION_GATE"
     printf '  PEBBLELAB_INTEGRATED_TEACHING_PROOF=%s\n' "$INTEGRATED_TEACHING_PROOF"
     printf '  PEBBLELAB_PASSIVE_OBSERVER_INPUT_PROOF=%s\n' "$PASSIVE_OBSERVER_INPUT_PROOF"
@@ -935,7 +952,13 @@ print_plan() {
     printf '  PEBBLELAB_GATE_B3_HORIZON=%s\n' "$GATE_B3_HORIZON"
     printf '  PEBBLELAB_DISPOSABLE_WORLD_PROOF=1\n'
     printf '  PEBBLE_CMD=%s\n' "$LAB_COMMANDS"
-    if [ "$MODE" = "barter" ]; then
+    if [ "$MODE" = "contracts" ]; then
+        printf '  PEBBLE_SHOT=-|%s/contract-before-promise.png|%s/contract-proposal.png|%s/contract-open-debt.png\n' \
+            "$(dirname "$capture_path")" "$(dirname "$capture_path")" \
+            "$(dirname "$capture_path")"
+        printf '  Restart 2 PEBBLE_CMD=%s\n' "$CONTRACT_PHASE2_COMMANDS"
+        printf '  Restart 3 PEBBLE_CMD=%s\n' "$CONTRACT_PHASE3_COMMANDS"
+    elif [ "$MODE" = "barter" ]; then
         printf '  2. Confirm two local residents retain distinct produced goods before exchange.\n'
         printf '  3. Confirm offer, acceptance, compensated mid-transfer fault, exact retry, and swapped custody.\n'
         printf '  4. Confirm the fresh process preserves one exchange and the receiver uses the produced pickaxe.\n'
@@ -997,7 +1020,11 @@ print_plan() {
     IFS=$old_ifs
     printf '\nOperator checks:\n'
     printf '  1. Wait for automatic disposable-world creation, commands, capture, and normal termination.\n'
-    if [ "$MODE" = "production" ]; then
+    if [ "$MODE" = "contracts" ]; then
+        printf '  2. Confirm a normal proposal and distinct acceptance precede physical consideration and open debt.\n'
+        printf '  3. Confirm process two restores open debt, normally produces bread, rolls back a real fulfillment transfer, and retries.\n'
+        printf '  4. Confirm process three preserves fulfilled state and executes no duplicate fulfillment.\n'
+    elif [ "$MODE" = "production" ]; then
         printf '  2. Confirm the real crafting table transforms exact canonical inputs into a stone pickaxe and bread.\n'
         printf '  3. Confirm the negative matrix, true late rollback, immediate retry, contention, and reserved-input refusal.\n'
         printf '  4. Confirm a fresh process restores exact custody/history, then the produced pickaxe breaks real stone with damage 0->1.\n'
@@ -1130,13 +1157,13 @@ print_plan() {
         && [ "$MODE" != "mortality" ] && [ "$MODE" != "reproduction" ] \
         && [ "$MODE" != "kinship" ] && [ "$MODE" != "households" ] \
         && [ "$MODE" != "care" ] && [ "$MODE" != "skills" ]; then
-        if [ "$MODE" = "material" ] || [ "$MODE" = "rights" ] || [ "$MODE" = "production" ] || [ "$MODE" = "barter" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "integrated-teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ] || [ "$MODE" = "work-demand-refresh" ] || [ "$MODE" = "gate-b-passive" ]; then
+        if [ "$MODE" = "material" ] || [ "$MODE" = "rights" ] || [ "$MODE" = "production" ] || [ "$MODE" = "barter" ] || [ "$MODE" = "contracts" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "integrated-teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ] || [ "$MODE" = "work-demand-refresh" ] || [ "$MODE" = "gate-b-passive" ]; then
             printf '  5. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
         else
             printf '  4. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
         fi
     fi
-    if [ "$MODE" = "material" ] || [ "$MODE" = "rights" ] || [ "$MODE" = "production" ] || [ "$MODE" = "barter" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "integrated-teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ] || [ "$MODE" = "work-demand-refresh" ] || [ "$MODE" = "gate-b-passive" ]; then
+    if [ "$MODE" = "material" ] || [ "$MODE" = "rights" ] || [ "$MODE" = "production" ] || [ "$MODE" = "barter" ] || [ "$MODE" = "contracts" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "integrated-teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ] || [ "$MODE" = "work-demand-refresh" ] || [ "$MODE" = "gate-b-passive" ]; then
         printf '  6. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
     else
         printf '  5. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
@@ -1176,7 +1203,17 @@ TRACE_PATH="$SESSION_ROOT/pebble-live.log"
 DB_PATH="$SESSION_HOME/Library/Application Support/Pebble/pebble.db"
 [ ! -e "$DB_PATH" ] || fail "fresh disposable database already exists: $DB_PATH"
 /bin/mkdir -p "$SESSION_HOME" "$CAPTURE_DIR"
-if [ "$MODE" = "barter" ]; then
+if [ "$MODE" = "contracts" ]; then
+    CAPTURE_BEFORE_PATH="$CAPTURE_DIR/contract-before-promise.png"
+    CAPTURE_PROPOSAL_PATH="$CAPTURE_DIR/contract-proposal.png"
+    CAPTURE_OPEN_PATH="$CAPTURE_DIR/contract-open-debt.png"
+    CAPTURE_RESTORED_PATH="$CAPTURE_DIR/contract-restored-open-debt.png"
+    CAPTURE_PRODUCED_PATH="$CAPTURE_DIR/contract-produced-bread.png"
+    CAPTURE_FAULT_PATH="$CAPTURE_DIR/contract-fulfillment-rollback.png"
+    CAPTURE_FULFILLED_PATH="$CAPTURE_DIR/contract-fulfilled.png"
+    CAPTURE_VERIFIED_PATH="$CAPTURE_DIR/contract-restored-fulfilled.png"
+    SHOT_SPEC="-|$CAPTURE_BEFORE_PATH|$CAPTURE_PROPOSAL_PATH|$CAPTURE_OPEN_PATH"
+elif [ "$MODE" = "barter" ]; then
     CAPTURE_PRE_PATH="$CAPTURE_DIR/barter-pre-exchange.png"
     CAPTURE_OFFER_PATH="$CAPTURE_DIR/barter-offer.png"
     CAPTURE_POST_PATH="$CAPTURE_DIR/barter-post-exchange.png"
@@ -1252,6 +1289,175 @@ printf '\nLaunching Pebble now. Personal Pebble data is hidden by CFFIXED_USER_H
 
 if /usr/bin/pgrep -x Pebble >/dev/null 2>&1; then
     fail "a Pebble process is already running; refusing an ambiguous live baseline"
+fi
+
+if [ "$MODE" = "contracts" ]; then
+    cd "$ROOT_DIR"
+    swift build -c release --product Pebble
+    PEBBLE_BINARY="$ROOT_DIR/.build/release/Pebble"
+    [ -x "$PEBBLE_BINARY" ] \
+        || fail "Release Pebble binary missing: $PEBBLE_BINARY"
+
+    PHASE1_TRACE="$SESSION_ROOT/contract-phase1.log"
+    PHASE2_TRACE="$SESSION_ROOT/contract-phase2.log"
+    PHASE3_TRACE="$SESSION_ROOT/contract-phase3.log"
+
+    run_contract_app() {
+        run_home=$1
+        run_trace=$2
+        run_commands=$3
+        create_world=$4
+        command_world_tick=$5
+        run_shots=$6
+        fulfillment_fault=$7
+        if [ "$create_world" -eq 1 ]; then
+            CFFIXED_USER_HOME="$run_home" \
+            PEBBLE_AUTOLOAD=1 \
+            PEBBLE_NEWWORLD="$WORLD_SEED" \
+            PEBBLE_NEWWORLD_NAME="$WORLD_NAME" \
+            PEBBLELAB_APP_AGENTS=1 \
+            PEBBLELAB_APP_AGENTS_MOVE=1 \
+            PEBBLELAB_APP_PROBES=1 \
+            PEBBLELAB_DEBUG_ENTITIES=1 \
+            PEBBLELAB_APP_AGENTS_OVERLAY=1 \
+            PEBBLELAB_APP_AGENTS_TRACE=1 \
+            PEBBLELAB_APP_AGENTS_TRACE_EVERY=1 \
+            PEBBLELAB_APP_AGENTS_INTERACT=1 \
+            PEBBLELAB_APP_AGENTS_MATERIAL=1 \
+            PEBBLELAB_APP_AGENTS_PERSISTENCE=1 \
+            PEBBLELAB_APP_AGENTS_PRODUCTION=1 \
+            PEBBLELAB_APP_AGENTS_CONTRACTS=1 \
+            PEBBLELAB_APP_AGENTS_AUTONOMOUS_CIVILIZATION=1 \
+            PEBBLELAB_DISPOSABLE_CONTRACT_FULFILLMENT_FAULT="$fulfillment_fault" \
+            PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
+            PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
+            PEBBLE_CMD="$run_commands" \
+            PEBBLE_SHOT="$run_shots" \
+            "$PEBBLE_BINARY" 2>&1 | /usr/bin/tee "$run_trace"
+        else
+            CFFIXED_USER_HOME="$run_home" \
+            PEBBLE_AUTOLOAD=1 \
+            PEBBLELAB_APP_AGENTS=1 \
+            PEBBLELAB_APP_AGENTS_MOVE=1 \
+            PEBBLELAB_APP_PROBES=1 \
+            PEBBLELAB_DEBUG_ENTITIES=1 \
+            PEBBLELAB_APP_AGENTS_OVERLAY=1 \
+            PEBBLELAB_APP_AGENTS_TRACE=1 \
+            PEBBLELAB_APP_AGENTS_TRACE_EVERY=1 \
+            PEBBLELAB_APP_AGENTS_INTERACT=1 \
+            PEBBLELAB_APP_AGENTS_MATERIAL=1 \
+            PEBBLELAB_APP_AGENTS_PERSISTENCE=1 \
+            PEBBLELAB_APP_AGENTS_PRODUCTION=1 \
+            PEBBLELAB_APP_AGENTS_CONTRACTS=1 \
+            PEBBLELAB_APP_AGENTS_AUTONOMOUS_CIVILIZATION=1 \
+            PEBBLELAB_DISPOSABLE_CONTRACT_FULFILLMENT_FAULT="$fulfillment_fault" \
+            PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
+            PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
+            PEBBLE_CMD="$run_commands" \
+            PEBBLE_SHOT="$run_shots" \
+            "$PEBBLE_BINARY" 2>&1 | /usr/bin/tee "$run_trace"
+        fi
+        if /usr/bin/pgrep -x Pebble >/dev/null 2>&1; then
+            fail "Pebble process remained after contract phase: $run_trace"
+        fi
+    }
+
+    printf '\nContract phase 1: normal promise, distinct acceptance, real consideration, and open debt checkpoint.\n'
+    run_contract_app \
+        "$SESSION_HOME" "$PHASE1_TRACE" "$CONTRACT_PHASE1_COMMANDS" \
+        1 100 "$SHOT_SPEC" 0
+    TRACE_PATH="$PHASE1_TRACE"
+    [ -s "$CAPTURE_BEFORE_PATH" ] || fail "contract pre-promise capture missing"
+    [ -s "$CAPTURE_PROPOSAL_PATH" ] || fail "contract proposal capture missing"
+    [ -s "$CAPTURE_OPEN_PATH" ] || fail "contract open-debt capture missing"
+    require_trace 'contract setup promisor=agent_[0-9]+ promisee=agent_[0-9]+ reasonCurrent=stone_pickaxe:1 promisedFuture=bread:1 promisedHeldBefore=0 consideration=stone_pickaxe:1 physical=verified normalProposal=awaiting normalAcceptance=awaiting proofFixtureDecisionAuthority=0 manualProductiveContractCommandsAfterBootstrap=0' 'bootstrap creates current consideration, inputs, and reasons but no decisive promise'
+    require_trace 'contract normal promise proposal proposal=promise-[0-9a-f]+ promisor=agent_[0-9]+ normalProposalDecision=1 proofFixtureDecisionAuthority=0 physicalMutation=0' 'normal promise decision'
+    require_trace 'contract normal promisee decision proposal=promise-[0-9a-f]+ promisee=agent_[0-9]+ decision=accepted distinctAcceptance=1 normalAcceptanceDecision=1 proofFixtureDecisionAuthority=0 physicalMutation=0' 'distinct normal acceptance'
+    require_trace 'contract physical publication obligation=obligation-[0-9a-f]+ action=consideration from=agent_[0-9]+ to=agent_[0-9]+ material=stone_pickaxe:1 receipt=contract:obligation-[0-9a-f]+:consideration publication=verified' 'real current consideration opens debt'
+    require_trace 'contracts enabled=1 .*active=1 debts=1 fulfilled=0 .*checkpointReady=1 .*proofFixtureDecisionAuthority=0 .*manualProductiveContractCommandsAfterBootstrap=0 .*physicalLoss=0 physicalDuplication=0 syntheticMaterial=0 duplicateFulfillmentReceipts=0 duplicateReservations=0 observerMutationCount=0' 'open debt has bounded truthful status'
+    require_trace 'checkpoint saved name=contract-open-v33 .*restartSafe=1 ' 'restart-safe open debt checkpoint'
+    require_trace 'summary .*runtimeErrors=0 .*probesRemoved=3 ' 'phase-one clean shutdown'
+    reject_trace 'contract normal promised good obtained|action=fulfillment|CANDIDATE_PHYSICAL_HARD_FAILURE' 'premature performance or hard rollback failure'
+
+    PERSISTENCE_ROOT="$SESSION_HOME/Library/Application Support/Pebble/PebbleLabAgents"
+    OPEN_SESSION=$(/usr/bin/find "$PERSISTENCE_ROOT" -type f -path '*/checkpoints/contract-open-v33/session.json' -print -quit)
+    [ -n "$OPEN_SESSION" ] || fail "contract-open-v33 session.json missing"
+    /usr/bin/grep -q '"schemaVersion":33' "$OPEN_SESSION" \
+        || fail "open contract checkpoint is not schema 33"
+    OPEN_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint saved name=contract-open-v33 .* digest=\([0-9a-f]*\) storageDigest=.*/\1/p' "$PHASE1_TRACE" | /usr/bin/tail -1)
+    [ -n "$OPEN_DIGEST" ] || fail "open contract digest extraction failed"
+    persisted_world_tick=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT json_extract(json, '$.dims.\"0\".time') FROM worlds;")
+    case "$persisted_world_tick" in
+        ''|*[!0-9]*) fail "invalid persisted contract World tick: $persisted_world_tick" ;;
+    esac
+    continuation_command_tick=$((persisted_world_tick + 100))
+
+    printf '\nContract phase 2: restore open debt, normal production, true fulfillment fault, rollback, and retry.\n'
+    PHASE2_SHOTS="$CAPTURE_RESTORED_PATH|$CAPTURE_PRODUCED_PATH|$CAPTURE_FAULT_PATH|$CAPTURE_FULFILLED_PATH"
+    run_contract_app \
+        "$SESSION_HOME" "$PHASE2_TRACE" "$CONTRACT_PHASE2_COMMANDS" \
+        0 "$continuation_command_tick" "$PHASE2_SHOTS" 1
+    TRACE_PATH="$PHASE2_TRACE"
+    [ -s "$CAPTURE_RESTORED_PATH" ] || fail "contract restored-open capture missing"
+    [ -s "$CAPTURE_PRODUCED_PATH" ] || fail "contract produced-good capture missing"
+    [ -s "$CAPTURE_FAULT_PATH" ] || fail "contract rollback capture missing"
+    [ -s "$CAPTURE_FULFILLED_PATH" ] || fail "contract fulfilled capture missing"
+    require_trace "checkpoint loaded name=contract-open-v33 .*digest=$OPEN_DIGEST .*restartSafe=1 .*custodyDuplicates=0 physicalBoundary=acquired" 'fresh-process open debt and custody restore'
+    require_trace 'contract normal promised good obtained obligation=obligation-[0-9a-f]+ producer=agent_[0-9]+ material=bread:1 productionReceipt=produce:production:contract:obligation-[0-9a-f]+:perform:t[0-9]+:[0-9a-f]+ normalProductPath=1' 'later normal production obtains promised good'
+    require_trace_at_least 'contract post-transfer mutation obligation=obligation-[0-9a-f]+ action=fulfillment receipt=contract:obligation-[0-9a-f]+:fulfillment quantity=1 candidatePhysicalMutation=1 publication=0' 2 'faulted fulfillment and immediate retry both reach real mutation'
+    require_trace 'CANDIDATE_PHYSICAL_ROLLBACK operation=advanceOneTick .*contractPostMutationBoundary.*registered=material-transfer:contract:obligation-[0-9a-f]+:fulfillment:[0-9]+ .*completed=material-transfer:contract:obligation-[0-9a-f]+:fulfillment:[0-9]+ .*publishedSession=unchanged .*publishedRecorder=unchanged' 'exact post-fulfillment compensation with open published debt'
+    require_trace_count 'contract physical publication obligation=obligation-[0-9a-f]+ action=fulfillment ' 1 'one successful physical fulfillment publication'
+    require_trace 'contract proof result=PASS promise=explicit acceptance=distinct obligation=durable consideration=physical debt=open-before-fulfillment normalProductPath=PASS fulfillment=physical exactOnce=1 duplicateFulfillmentCount=0 observerMutationCount=0 proofFixtureDecisionAuthority=0 manualProductiveContractCommandsAfterBootstrap=0 physicalLoss=0 physicalDuplication=0 syntheticMaterial=0 duplicateFulfillmentReceipts=0 duplicateReservations=0' 'exact-once positive proof'
+    require_trace 'checkpoint saved name=contract-fulfilled-v33 .*restartSafe=1 ' 'restart-safe fulfilled checkpoint'
+    require_trace 'summary .*runtimeErrors=1 .*probesRemoved=3 ' 'one expected fulfillment fault and clean phase-two shutdown'
+    reject_trace 'CANDIDATE_PHYSICAL_HARD_FAILURE' 'unverifiable contract rollback'
+
+    FULFILLED_SESSION=$(/usr/bin/find "$PERSISTENCE_ROOT" -type f -path '*/checkpoints/contract-fulfilled-v33/session.json' -print -quit)
+    [ -n "$FULFILLED_SESSION" ] || fail "contract-fulfilled-v33 session.json missing"
+    /usr/bin/grep -q '"schemaVersion":33' "$FULFILLED_SESSION" \
+        || fail "fulfilled contract checkpoint is not schema 33"
+    FULFILLED_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint saved name=contract-fulfilled-v33 .* digest=\([0-9a-f]*\) storageDigest=.*/\1/p' "$PHASE2_TRACE" | /usr/bin/tail -1)
+    [ -n "$FULFILLED_DIGEST" ] || fail "fulfilled contract digest extraction failed"
+    persisted_world_tick=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT json_extract(json, '$.dims.\"0\".time') FROM worlds;")
+    case "$persisted_world_tick" in
+        ''|*[!0-9]*) fail "invalid persisted fulfilled World tick: $persisted_world_tick" ;;
+    esac
+    continuation_command_tick=$((persisted_world_tick + 100))
+
+    printf '\nContract phase 3: restore fulfilled state and prove no duplicate fulfillment.\n'
+    PHASE3_SHOTS="$CAPTURE_VERIFIED_PATH|$CAPTURE_PATH"
+    run_contract_app \
+        "$SESSION_HOME" "$PHASE3_TRACE" "$CONTRACT_PHASE3_COMMANDS" \
+        0 "$continuation_command_tick" "$PHASE3_SHOTS" 0
+    TRACE_PATH="$PHASE3_TRACE"
+    [ -s "$CAPTURE_VERIFIED_PATH" ] || fail "contract restored-fulfilled capture missing"
+    [ -s "$CAPTURE_PATH" ] || fail "contract final capture missing"
+    require_trace "checkpoint loaded name=contract-fulfilled-v33 .*digest=$FULFILLED_DIGEST .*restartSafe=1 .*custodyDuplicates=0 physicalBoundary=acquired" 'fresh-process fulfilled contract restore'
+    require_trace 'contracts enabled=1 .*active=0 debts=0 fulfilled=1 .*proofFixtureDecisionAuthority=0 .*manualProductiveContractCommandsAfterBootstrap=0 .*duplicateFulfillmentReceipts=0' 'fulfilled contract remains closed once'
+    require_trace 'contract proof result=PASS .*fulfillment=physical exactOnce=1 duplicateFulfillmentCount=0 observerMutationCount=0' 'duplicate attempt remains refused after restart'
+    require_trace 'checkpoint saved name=contract-final-v33 .*restartSafe=1 ' 'final schema-33 checkpoint'
+    require_trace 'Contract disposable fixture cleanup cells=exact fulfilledCustody=retained' 'fixture cleanup retains performed custody'
+    require_trace 'summary .*runtimeErrors=0 .*probesRemoved=3 ' 'phase-three clean shutdown'
+    reject_trace 'contract physical publication obligation=.*action=fulfillment|contract post-transfer mutation .*action=fulfillment|^\[lab-live\] error ' 'duplicate fulfillment or unexpected continuation error'
+
+    FINAL_SESSION=$(/usr/bin/find "$PERSISTENCE_ROOT" -type f -path '*/checkpoints/contract-final-v33/session.json' -print -quit)
+    [ -n "$FINAL_SESSION" ] || fail "contract-final-v33 session.json missing"
+    /usr/bin/grep -q '"schemaVersion":33' "$FINAL_SESSION" \
+        || fail "final contract checkpoint is not schema 33"
+    if /usr/bin/pgrep -x Pebble >/dev/null 2>&1 \
+        || /usr/bin/pgrep -x swift-run >/dev/null 2>&1 \
+        || /usr/bin/pgrep -x pebsmoke >/dev/null 2>&1; then
+        fail "residual PebbleLab process after contract proof"
+    fi
+    printf '\nPASS: CIV-36 open debt, normal production, exact rollback/retry, three-process durability, exact-once fulfillment, and cleanup verified.\n'
+    printf 'Phase 1 trace: %s\n' "$PHASE1_TRACE"
+    printf 'Phase 2 trace: %s\n' "$PHASE2_TRACE"
+    printf 'Phase 3 trace: %s\n' "$PHASE3_TRACE"
+    printf 'Checkpoint schema: 33\n'
+    printf 'Observer schema: 10\n'
+    printf 'Final capture: %s\n' "$CAPTURE_PATH"
+    printf 'Retained isolated session: %s\n' "$SESSION_ROOT"
+    exit 0
 fi
 
 if [ "$MODE" = "barter" ]; then
@@ -3642,6 +3848,7 @@ PEBBLELAB_APP_AGENTS_LIVESTOCK="$LIVESTOCK_GATE" \
 PEBBLELAB_APP_AGENTS_WORK_PROFESSIONS="$WORK_PROFESSIONS_GATE" \
 PEBBLELAB_APP_AGENTS_PRODUCTION="$PRODUCTION_GATE" \
 PEBBLELAB_APP_AGENTS_BARTER="$BARTER_GATE" \
+PEBBLELAB_APP_AGENTS_CONTRACTS="$CONTRACT_GATE" \
 PEBBLELAB_APP_AGENTS_AUTONOMOUS_CIVILIZATION="$AUTONOMOUS_CIVILIZATION_GATE" \
 PEBBLELAB_INTEGRATED_TEACHING_PROOF="$INTEGRATED_TEACHING_PROOF" \
 PEBBLELAB_PASSIVE_OBSERVER_INPUT_PROOF="$PASSIVE_OBSERVER_INPUT_PROOF" \

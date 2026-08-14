@@ -33,6 +33,7 @@ public enum AgentReplaySchema {
     public static let independentEcologicalReceiptVersion = 30
     public static let productionVersion = 31
     public static let barterVersion = 32
+    public static let contractVersion = 33
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -53,6 +54,7 @@ public enum AgentReplaySchema {
             || version == independentEcologicalReceiptVersion
             || version == productionVersion
             || version == barterVersion
+            || version == contractVersion
     }
 }
 
@@ -179,6 +181,13 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case barterOffer
     case barterDecision
     case barterOutcome
+    case contractFeature
+    case contractOpportunity
+    case promiseProposal
+    case promiseDecision
+    case contractConsideration
+    case contractFulfillment
+    case contractReview
 }
 
 public enum AgentReplayOperation: Codable {
@@ -409,6 +418,28 @@ public enum AgentReplayOperation: Codable {
         offerID: AgentBarterOfferID, status: AgentBarterOfferStatus, reason: String
     )
     case recordVerifiedBarter(AgentVerifiedBarterOutcome)
+    case setContractsEnabled(Bool, configuration: AgentContractConfiguration)
+    case recordContractOpportunity(AgentContractOpportunityObservation)
+    case createPromiseProposal(
+        proposalID: AgentPromiseProposalID, opportunityID: String,
+        promisorID: AgentID
+    )
+    case decidePromiseProposal(
+        proposalID: AgentPromiseProposalID, promiseeID: AgentID,
+        accept: Bool, reason: String
+    )
+    case withdrawPromiseProposal(
+        proposalID: AgentPromiseProposalID, promisorID: AgentID, reason: String
+    )
+    case expirePromiseProposal(AgentPromiseProposalID)
+    case recordVerifiedContractConsideration(
+        AgentVerifiedContractConsiderationOutcome
+    )
+    case recordVerifiedContractFulfillment(
+        AgentVerifiedContractFulfillmentOutcome
+    )
+    case reviewContractDueBoundaries
+    case reviewContractParticipantContinuity
 
     public var kind: AgentReplayOperationKind {
         switch self {
@@ -531,6 +562,15 @@ public enum AgentReplayOperation: Codable {
         case .decideBarterOffer, .withdrawBarterOffer,
              .markBarterOfferFailed: return .barterDecision
         case .recordVerifiedBarter: return .barterOutcome
+        case .setContractsEnabled: return .contractFeature
+        case .recordContractOpportunity: return .contractOpportunity
+        case .createPromiseProposal: return .promiseProposal
+        case .decidePromiseProposal, .withdrawPromiseProposal,
+             .expirePromiseProposal: return .promiseDecision
+        case .recordVerifiedContractConsideration: return .contractConsideration
+        case .recordVerifiedContractFulfillment: return .contractFulfillment
+        case .reviewContractDueBoundaries,
+             .reviewContractParticipantContinuity: return .contractReview
         }
     }
 
@@ -581,6 +621,20 @@ public enum AgentReplayOperation: Codable {
         case let .markBarterOfferFailed(offerID, status, _):
             raw = "barter-decision:\(offerID.rawValue):\(status.rawValue)"
         case let .recordVerifiedBarter(outcome):
+            raw = outcome.operationID
+        case let .recordContractOpportunity(observation):
+            raw = "contract-observe:\(observation.opportunityID)"
+        case let .createPromiseProposal(proposalID, _, _):
+            raw = "promise-propose:\(proposalID.rawValue)"
+        case let .decidePromiseProposal(proposalID, _, accept, _):
+            raw = "promise-accept:\(proposalID.rawValue):\(accept)"
+        case let .withdrawPromiseProposal(proposalID, _, _):
+            raw = "promise-withdraw:\(proposalID.rawValue)"
+        case let .expirePromiseProposal(proposalID):
+            raw = "promise-expire:\(proposalID.rawValue)"
+        case let .recordVerifiedContractConsideration(outcome):
+            raw = outcome.operationID
+        case let .recordVerifiedContractFulfillment(outcome):
             raw = outcome.operationID
         case let .provideDependentNourishment(intent): raw = intent.provisionID
         case let .startApprenticeship(request):
@@ -899,6 +953,9 @@ public struct AgentReplayRecorder {
         simulationID = checkpoint.simulationID
         initialTick = checkpoint.tick.rawValue
         schemaVersion = checkpoint.schemaVersion
+            == AgentCheckpointSchema.contractVersion
+            ? AgentReplaySchema.contractVersion
+            : checkpoint.schemaVersion
             == AgentCheckpointSchema.barterVersion
             ? AgentReplaySchema.barterVersion
             : checkpoint.schemaVersion
@@ -1181,6 +1238,16 @@ public struct AgentReplayRecorder {
             }
             schemaVersion = AgentReplaySchema.barterVersion
         }
+        if case let .setContractsEnabled(enabled, _) = operation,
+           enabled,
+           schemaVersion < AgentReplaySchema.contractVersion {
+            guard records.isEmpty else {
+                throw AgentReplayError.invalidJournal(
+                    "contract activation must be the first v33 replay operation"
+                )
+            }
+            schemaVersion = AgentReplaySchema.contractVersion
+        }
         guard session.simulationID == simulationID else { throw AgentReplayError.currentStateMismatch }
         let preDigest = try session.durableStateDigest()
         let tickBefore = session.tick
@@ -1426,6 +1493,8 @@ public enum AgentSessionReplayer {
                     <= AgentCheckpointSchema.independentEcologicalReceiptVersion)
             || (manifest.schemaVersion == AgentReplaySchema.barterVersion
                 && checkpoint.schemaVersion <= AgentCheckpointSchema.productionVersion)
+            || (manifest.schemaVersion == AgentReplaySchema.contractVersion
+                && checkpoint.schemaVersion <= AgentCheckpointSchema.barterVersion)
         guard manifest.baseCheckpointID == checkpoint.checkpointID,
               manifest.baseCheckpointDigest == checkpoint.semanticDigest,
               manifest.simulationID == checkpoint.simulationID,
@@ -1852,6 +1921,36 @@ extension AgentSimulationSession {
             )
         case let .recordVerifiedBarter(outcome):
             try candidate.recordVerifiedBarter(outcome)
+        case let .setContractsEnabled(enabled, configuration):
+            try candidate.setContractsEnabled(enabled, configuration: configuration)
+        case let .recordContractOpportunity(observation):
+            try candidate.recordContractOpportunity(observation)
+        case let .createPromiseProposal(proposalID, opportunityID, promisorID):
+            try candidate.createPromiseProposal(
+                proposalID: proposalID, opportunityID: opportunityID,
+                promisorID: promisorID
+            )
+        case let .decidePromiseProposal(
+            proposalID, promiseeID, accept, reason
+        ):
+            try candidate.decidePromiseProposal(
+                proposalID: proposalID, promiseeID: promiseeID,
+                accept: accept, reason: reason
+            )
+        case let .withdrawPromiseProposal(proposalID, promisorID, reason):
+            try candidate.withdrawPromiseProposal(
+                proposalID: proposalID, promisorID: promisorID, reason: reason
+            )
+        case let .expirePromiseProposal(proposalID):
+            try candidate.expirePromiseProposal(proposalID: proposalID)
+        case let .recordVerifiedContractConsideration(outcome):
+            try candidate.recordVerifiedContractConsideration(outcome)
+        case let .recordVerifiedContractFulfillment(outcome):
+            try candidate.recordVerifiedContractFulfillment(outcome)
+        case .reviewContractDueBoundaries:
+            try candidate.reviewContractDueBoundaries()
+        case .reviewContractParticipantContinuity:
+            try candidate.reviewContractParticipantContinuity()
         }
         self = candidate
         let causal = causalLedgerSnapshot().summary

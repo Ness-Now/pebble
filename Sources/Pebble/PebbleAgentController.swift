@@ -113,6 +113,8 @@ final class PebbleAgentController {
     /// counterparty-decision authority.
     var barterDisposableWorldFixture: PebbleAgentBarterDisposableWorldFixture?
     var barterMidExchangeFaultInjected = false
+    var contractDisposableWorldFixture: PebbleAgentContractDisposableWorldFixture?
+    var contractFulfillmentFaultInjected = false
     var candidateAgricultureNavigationFailureProofInjected = false
     var ecologicalObservationProofFixture: PebbleAgentEcologicalObservationProofFixture?
     var agricultureProofFixture: PebbleAgentAgricultureProofFixture?
@@ -220,6 +222,9 @@ final class PebbleAgentController {
     }
     var barterFeatureEnabled: Bool {
         environment["PEBBLELAB_APP_AGENTS_BARTER"] == "1"
+    }
+    var contractFeatureEnabled: Bool {
+        environment["PEBBLELAB_APP_AGENTS_CONTRACTS"] == "1"
     }
     var safeBootstrapLateFailureProofEnabled: Bool {
         environment["PEBBLELAB_DISPOSABLE_SAFE_BOOTSTRAP_LATE_FAILURE_PROOF"] == "1"
@@ -333,5 +338,7 @@ final class PebbleAgentController {
         case familyBoundary(String)
         case barterBoundary(String)
         case barterPostMutationBoundary(String)
+        case contractBoundary(String)
+        case contractPostMutationBoundary(String)
     }
 }

@@ -791,6 +791,8 @@ extension PebbleAgentController {
         passiveSocietyAudit = PebbleAgentPassiveSocietyAudit()
         workDemandRefreshAudit = PebbleAgentWorkDemandRefreshAudit()
         rightsProofFixture = nil
+        contractDisposableWorldFixture = nil
+        contractFulfillmentFaultInjected = false
         autoInteractionEnabled = false
         lastAutoInteractionReason = "none"
         lastInteractionAttempted = false
