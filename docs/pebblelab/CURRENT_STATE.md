@@ -15,7 +15,9 @@ SHA of the documentation commit that contains it.
 - `CIV-00` through `CIV-35`: **COMPLETE AND PUBLISHED** in their bounded
   contracts.
 - `CIV-36 — Debt, Promises and Durable Contracts V1`:
-  **NOT_STARTED — NEXT ELIGIBLE PHASE**.
+  **IMPLEMENTED_LOCAL_REVIEW_CANDIDATE**.
+- `CIV-37 — Physical Markets and Local Price Discovery V1`:
+  **NOT_STARTED**.
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
 
 Published canonical baseline evaluated by independent Gate D Evaluation 04
@@ -161,15 +163,31 @@ cap remain sustainable across schema-32 restart. The decisive route exchanges
 agent_0's real CIV-34 stone pickaxe for two breads held by agent_1, compensates
 a true post-first-transfer fault exactly, retries successfully, restores once
 across a fresh process and uses the exact received pickaxe. Observer schema is
-9. CIV-36 remains not started and is the next eligible phase.
+9.
+
+`CIV-36 — Debt, Promises and Durable Contracts V1` is implemented locally from
+exact published baseline `e47c2d1a4132dc756219ef0d2c1495b2769b8d35` at
+product/proof commit `a910f938c0e943e37aa851c0f65dfecdb06698cc`. The sole
+session owns explicit future promises, distinct acceptance, durable
+obligations, due boundaries and bounded terminal-only compaction. A promise
+creates no matter. Only verified current consideration opens debt; only a
+later exact physical performance transfer closes it. Pebble reuses CIV-26
+Material Rights, CIV-34 production, the material-custody gateway and the
+candidate physical transaction. Schema 33 restores open debt and fulfilled
+history; replay schema 33 moves no World matter; Observer schema 10 is
+read-only. Focused validation passes 24/24, the repository gate passes 35/35
+with 3886/3886 assertions, and an inspected three-process campaign proves open
+debt restart, normal bread production, a true post-transfer rollback, retry,
+exact-once fulfillment and fulfilled restart. This is a local review candidate,
+not a publication claim. CIV-37 remains not started and Gate E remains planned.
 
 ## Current program position
 
 ```text
-active CIV phase: none
-completed through: CIV-35
-next eligible phase: CIV-36
-next authorized action: CIV-36
+active CIV phase: CIV-36 — IMPLEMENTED_LOCAL_REVIEW_CANDIDATE
+completed and published through: CIV-35
+next eligible phase: CIV-37 after CIV-36 approval and publication
+next authorized action: SENIOR REVIEW OF CIV-36
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -197,7 +215,9 @@ Gate D Blocker 10 status: BLOCKER_FIX_PUBLISHED
 Independent Gate D Evaluation 11 status: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 CIV-34 status: COMPLETE AND PUBLISHED
 CIV-35 status: COMPLETE AND PUBLISHED
-CIV-36 status: NOT_STARTED — NEXT ELIGIBLE PHASE
+CIV-36 status: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE
+CIV-37 status: NOT_STARTED
+V4-GATE-E-v1 status: PLANNED — NOT ACQUIRED
 roadmap generation: V4
 ```
 
@@ -498,5 +518,7 @@ through 10 remain **FAIL — HISTORICAL IMMUTABLE EVIDENCE**, and Blockers 01
 through 10 remain **FIXED AND PUBLISHED**. Gate D is **ACQUIRED AND
 PUBLISHED**. `CIV-34 — Production, Tools and Workshops V1` is **COMPLETE AND
 PUBLISHED**. `CIV-35 — Barter and Local Exchange V1` is **COMPLETE AND
-PUBLISHED**. `CIV-36` remains **NOT_STARTED — NEXT ELIGIBLE PHASE**. The next
-authorized action is **CIV-36**.
+PUBLISHED**. `CIV-36 — Debt, Promises and Durable Contracts V1` is
+**IMPLEMENTED_LOCAL_REVIEW_CANDIDATE**, not published. `CIV-37` is
+**NOT_STARTED** and Gate E remains **PLANNED — NOT ACQUIRED**. The next
+authorized action is **SENIOR REVIEW OF CIV-36**.

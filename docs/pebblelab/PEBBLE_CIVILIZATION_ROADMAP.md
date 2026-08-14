@@ -133,10 +133,10 @@ CIV-00 through CIV-35: COMPLETE AND PUBLISHED
 Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
-active CIV phase: none
-completed through: CIV-35
-next eligible phase: CIV-36
-next authorized action: CIV-36
+active CIV phase: CIV-36 — IMPLEMENTED_LOCAL_REVIEW_CANDIDATE
+completed and published through: CIV-35
+next eligible phase: CIV-37 after CIV-36 approval and publication
+next authorized action: SENIOR REVIEW OF CIV-36
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
@@ -164,7 +164,9 @@ Gate D Blocker 10: BLOCKER_FIX_PUBLISHED
 Independent Gate D Evaluation 11: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 CIV-34: COMPLETE AND PUBLISHED
 CIV-35: COMPLETE AND PUBLISHED
-CIV-36: NOT_STARTED — NEXT ELIGIBLE PHASE
+CIV-36: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE
+CIV-37: NOT_STARTED
+V4-GATE-E-v1: PLANNED — NOT ACQUIRED
 ```
 
 The `CIV-33` completion is published on the canonical branch at
@@ -235,7 +237,11 @@ published from exact baseline `8b7faa4cd03e315dec5696f72ec1ad75e333c77f`.
 Senior review approved corrected evidence HEAD
 `1dbe84fdc9286b35e05a0aaaf8673ec0ce99718a` after Correction 01 fixed both
 the proof-fixture-bound discovery path and permanent terminal-offer capacity
-exhaustion. `CIV-36` remains not started and is the next eligible phase.
+exhaustion. `CIV-36` is implemented locally from exact baseline
+`e47c2d1a4132dc756219ef0d2c1495b2769b8d35` at product/proof commit
+`a910f938c0e943e37aa851c0f65dfecdb06698cc`. It remains an unpublished local
+review candidate. CIV-37 is not started, Gate E is not acquired and the next
+authorized action is senior review of CIV-36.
 
 Gate B is acquired under `V4-GATE-B-v1`, the bounded checkpoint proved by the
 published closure and subsequently hardened for normal-world bootstrap:
@@ -413,7 +419,9 @@ targeted Blocker 09 correction is **fixed and published**. Evaluation 10
 remains historical FAIL evidence; its targeted Blocker 10 correction is a
 **BLOCKER_FIX_PUBLISHED**. Independent Evaluation 11 is the first accepted
 whole-Gate PASS and is **SENIOR REVIEW APPROVED**. `CIV-34` and `CIV-35` are
-**COMPLETE AND PUBLISHED**. `CIV-36` is **NOT_STARTED — NEXT ELIGIBLE PHASE**.
+**COMPLETE AND PUBLISHED**. `CIV-36` is
+**IMPLEMENTED_LOCAL_REVIEW_CANDIDATE**. `CIV-37` is **NOT_STARTED** and Gate E
+remains **PLANNED — NOT ACQUIRED**.
 
 | Phase | Requirement | Outcome |
 | --- | --- | --- |
@@ -750,8 +758,9 @@ No individual correction acquired Gate D. The independent composition proof is
 recorded in
 [`GATE_D_EVALUATION_11_REPORT.md`](GATE_D_EVALUATION_11_REPORT.md). Senior
 review approved it, so Gate D remains acquired and published. `CIV-34` and
-`CIV-35` are complete and published. `CIV-36` is not started and is the next
-eligible phase and next authorized action.
+`CIV-35` are complete and published. `CIV-36` is an implemented but unpublished
+local review candidate. `CIV-37` is not started; senior review of CIV-36 is the
+next authorized action.
 
 ## Wave 3 — Local material economy
 
@@ -774,6 +783,8 @@ barter, obligations or commodity exchange.
 Observable slices:
 
 - after `CIV-35`: a real produced object is offered and exchanged;
+- after `CIV-36`: an open obligation survives restart, later production and
+  exact physical fulfillment without duplication;
 - after `CIV-37`: a physical market shows deposits, withdrawals and local
   price history;
 - `CIV-38`, if chosen: compare monetary and non-monetary trajectories.
@@ -882,6 +893,59 @@ This phase does not claim debt, future promises, durable contracts, credit,
 markets, market price discovery, currency, accounting, merchant organizations,
 large-scale trade or global logistics. `CIV-36`, `CIV-37` and `CIV-38` remain
 unimplemented by CIV-35.
+
+### `CIV-36` — Debt, Promises and Durable Contracts V1
+
+Status: **IMPLEMENTED_LOCAL_REVIEW_CANDIDATE, required**.
+
+Local candidate identity:
+
+```text
+exact baseline: e47c2d1a4132dc756219ef0d2c1495b2769b8d35
+product/proof commit: a910f938c0e943e37aa851c0f65dfecdb06698cc
+publication: NOT CLAIMED
+next action: SENIOR REVIEW OF CIV-36
+```
+
+Result: a bounded local observation may lead one inhabitant to explicitly
+promise one complete future exact material identity and quantity in return for
+one current exact consideration asset. Proposal creates no matter. The named,
+distinct promisee independently accepts or rejects. Acceptance creates a
+durable `awaitingConsideration` obligation but no debt. Only Pebble's verified
+physical consideration transfer opens debt and raises one exact CIV-34
+production need for the debtor.
+
+The normal autonomous path later produces `bread x1` from three real wheat at
+the existing crafting workshop. Fulfillment requires the complete exact bread
+in current debtor custody. Pebble reuses the CIV-26 material-custody gateway,
+CIV-34 production gateway and candidate physical transaction; the sole
+`AgentSimulationSession` publishes fulfillment only after the real transfer is
+verified. A true post-transfer fault compensates exactly, leaves debt open and
+permits a same-process retry that fulfills once. A negotiated reason pair
+cannot immediately regenerate as a reverse promise after the goods change
+hands.
+
+Due obligations become overdue without punishment or invented enforcement.
+Participant death blocks active obligations; V1 defines no inheritance.
+Terminal-only deterministic compaction protects every open proposal and active
+obligation while permitting continued contract creation beyond twice a focused
+capacity. Schema 33 restores open debt and fulfilled history without executing
+World work. Replay schema 33 reconstructs social history only. Observer schema
+10 projects proposals, exact terms, due status, receipts and rights read-only.
+
+Focused validation passes 24/24. The canonical repository gate passes 35/35
+with 3886 assertions. The inspected three-process live campaign saves open
+debt, restores it in a fresh process, produces the promised good normally,
+reaches and rolls back a real fulfillment mutation, retries successfully, then
+restores the fulfilled state in a third process with zero duplicate
+fulfillment. Nine native captures were inspected. The bounded proof is
+[`CIV_36_PHASE_SUMMARY.md`](CIV_36_PHASE_SUMMARY.md).
+
+This phase does not claim markets, price discovery, currency, interest,
+banking, bankruptcy, general legal enforcement, courts, contract inheritance,
+merchant organizations, taxation or large-scale finance. CIV-37 physical
+markets and local price discovery remain not started. Gate E remains planned
+and is not acquired.
 
 ### `V4-GATE-E-v1` — Local Material Economy
 

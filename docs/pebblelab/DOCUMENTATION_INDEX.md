@@ -40,6 +40,7 @@ These documents form the minimal permanent memory of the project:
 | [`PEBBLE_CIVILIZATION_ROADMAP.md`](PEBBLE_CIVILIZATION_ROADMAP.md) | Canonical human V4 program, required/optional phases, slices and versioned gates. |
 | [`ROADMAP_MANIFEST.json`](ROADMAP_MANIFEST.json) | Deterministic machine projection of the V4 roadmap and status. |
 | [`DOCUMENTATION_INDEX.md`](DOCUMENTATION_INDEX.md) | Classification and navigation for the documentation set. |
+| [`CIV_36_PHASE_SUMMARY.md`](CIV_36_PHASE_SUMMARY.md) | Local review-candidate architecture, contract semantics, physical proof, validation and non-claims for CIV-36. |
 
 Canonical status at the product baseline reconciled by this documentation:
 
@@ -74,8 +75,10 @@ Gate D Blocker 10: BLOCKER_FIX_PUBLISHED
 Independent Gate D Evaluation 11: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 CIV-34: COMPLETE AND PUBLISHED
 CIV-35: COMPLETE AND PUBLISHED
-CIV-36: NOT_STARTED — NEXT ELIGIBLE PHASE
-next: CIV-36
+CIV-36: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE
+CIV-37: NOT_STARTED
+V4-GATE-E-v1: PLANNED — NOT ACQUIRED
+next: SENIOR REVIEW OF CIV-36
 ```
 
 The `CIV-33` completion is published on the canonical branch at
@@ -137,8 +140,16 @@ permanent terminal-offer capacity exhaustion at
 evidence HEAD `1dbe84fdc9286b35e05a0aaaf8673ec0ce99718a` and review bundle
 SHA-256 `c26a79fa7641e2da534f4bf18954bdbe50635d6bc9306be55a7b705af321e41d`.
 The complete accepted evidence is indexed in
-[`CIV_35_PHASE_SUMMARY.md`](CIV_35_PHASE_SUMMARY.md). `CIV-36` is not started
-and is the next eligible phase.
+[`CIV_35_PHASE_SUMMARY.md`](CIV_35_PHASE_SUMMARY.md). `CIV-36 — Debt, Promises
+and Durable Contracts V1` is implemented locally from exact baseline
+`e47c2d1a4132dc756219ef0d2c1495b2769b8d35` at product/proof commit
+`a910f938c0e943e37aa851c0f65dfecdb06698cc`. Its schema-33 open-debt restart,
+normal CIV-34 production, verified rollback/retry, exact-once fulfillment,
+Observer schema 10, 24/24 focused checks, 3886/3886 repository assertions and
+three-process live proof are indexed in
+[`CIV_36_PHASE_SUMMARY.md`](CIV_36_PHASE_SUMMARY.md). CIV-36 remains an
+unpublished local review candidate. CIV-37 is not started, Gate E is not
+acquired, and the next authorized action is senior review of CIV-36.
 
 ## Operational
 
