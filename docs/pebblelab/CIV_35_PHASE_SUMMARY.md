@@ -1,26 +1,51 @@
 # CIV-35 — Barter and Local Exchange V1
 
-## Verdict and correction status
+## Verdict and publication record
 
-`CIV-35` remains **IMPLEMENTED_LOCAL_REVIEW_CANDIDATE**. It is local, has not
-been published or senior-approved, and remains based directly on the exact
-published canonical baseline:
+`CIV-35` is **COMPLETE AND PUBLISHED** in its bounded V1 contract. Senior
+review approved the corrected product implementation and final evidence. The
+phase was implemented directly from the exact published canonical baseline:
 
 ```text
 8b7faa4cd03e315dec5696f72ec1ad75e333c77f
 ```
 
-Senior Review Correction 01 fixes two defects in the first local candidate:
+Accepted implementation history:
 
 ```text
-CIV-35 Blocker 01A:
-barter opportunity/negotiation was disposable-proof-fixture-bound
+original CIV-35 product commit:
+144bcaf162b37f92b151ec2180c0bd9be294adce
 
-CIV-35 Blocker 01B:
-terminal offers permanently exhausted maximumOffers
+initial candidate documentation HEAD:
+b80b6bdda4345cd002ed34296dea92562cbb5fc1
+
+Senior Review Correction 01 product correction:
+43c6b6ba00fee879918125cb9cffd79e653c49fc
+
+corrected reviewed evidence HEAD:
+1dbe84fdc9286b35e05a0aaaf8673ec0ce99718a
+
+senior review: APPROVED
+final review bundle SHA-256:
+c26a79fa7641e2da534f4bf18954bdbe50635d6bc9306be55a7b705af321e41d
+internal checksums: 37/37 PASS
+unzip: PASS
 ```
 
-The correction does not reopen CIV-34 or Gate D and does not begin CIV-36.
+The first candidate at `b80b6bdda4345cd002ed34296dea92562cbb5fc1`
+was not independently approved. Senior review required and subsequently
+approved this correction:
+
+```text
+CIV-35 Senior Review Correction 01A:
+normal barter discovery/negotiation was proof-fixture-bound
+
+CIV-35 Senior Review Correction 01B:
+terminal offers could permanently exhaust maximumOffers
+```
+
+Both defects are corrected. This publication does not reopen CIV-34 or Gate D
+and does not begin CIV-36.
 
 ## Corrected reuse-first architecture
 
@@ -249,13 +274,14 @@ contract enforcement, order books, matching engines, market stalls as
 economic authority, supply/demand curves, taxation, wages, firms, shops,
 guilds or trade law. CIV-36, CIV-37 and CIV-38 remain outside this correction.
 
-## Local candidate program state
+## Published program state
 
 ```text
 CIV-34: COMPLETE AND PUBLISHED
-CIV-35: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE
-CIV-36: NOT_STARTED
+CIV-35: COMPLETE AND PUBLISHED
+CIV-36: NOT_STARTED — NEXT ELIGIBLE PHASE
 Gate D: ACQUIRED AND PUBLISHED
-next: SENIOR REVIEW OF CIV-35
-push: NOT_ATTEMPTED
+active phase: none
+completed through: CIV-35
+next: CIV-36
 ```

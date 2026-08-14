@@ -12,10 +12,10 @@ SHA of the documentation commit that contains it.
   **ACQUIRED AND PUBLISHED** under contract `V4-GATE-C-v1`.
 - Gate D — Generational Continuity:
   **ACQUIRED AND PUBLISHED** under contract `V4-GATE-D-v1`.
-- `CIV-00` through `CIV-34`: **COMPLETE AND PUBLISHED** in their bounded
+- `CIV-00` through `CIV-35`: **COMPLETE AND PUBLISHED** in their bounded
   contracts.
-- `CIV-35 — Barter and Local Exchange V1`:
-  **IMPLEMENTED_LOCAL_REVIEW_CANDIDATE**; not published.
+- `CIV-36 — Debt, Promises and Durable Contracts V1`:
+  **NOT_STARTED — NEXT ELIGIBLE PHASE**.
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
 
 Published canonical baseline evaluated by independent Gate D Evaluation 04
@@ -136,31 +136,40 @@ evidence HEAD `24f0f72aae7543177ca746e892c57482496dabef` and bundle SHA-256
 `8a00bfef38c7d93dae0eff6867d58bc4d05bc872fb72b00f83616367dd682b6d`.
 The accepted CIV-34 proof covers canonical crafting, the transactional live
 gateway, the normal autonomous path, schema-31 restart, Observer schema 8 and
-downstream produced-tool use. CIV-35 is now an implemented local review
-candidate from exact baseline `8b7faa4cd03e315dec5696f72ec1ad75e333c77f`.
-Senior Review Correction 01 fixed the first local candidate's two identified
-defects: opportunity/negotiation was disposable-proof-fixture-bound, and
-terminal offer projections permanently exhausted `maximumOffers`. Normal
-runtime now derives explicitly bounded local physical pair observations from
-current Pebble custody/proximity evidence, while the sole session selects the
-offer and the named counterparty independently evaluates its current need and
-local evidence. The disposable proof injects neither the decisive opportunity
-nor either decision after bootstrap. Deterministic oldest-terminal compaction
-keeps offer projections bounded without ever evicting open or accepted
-authority; 24 attempts against an eight-offer focused cap remain sustainable
-across schema-32 restart. The corrected live route exchanges agent_0's real
-CIV-34 stone pickaxe for two breads held by agent_1, compensates a true
-post-first-transfer fault exactly, retries successfully, restores once across
-a fresh process and uses the exact received pickaxe. Observer schema remains
-9. CIV-35 remains unpublished and awaits senior review; CIV-36 is not started.
+downstream produced-tool use. `CIV-35 — Barter and Local Exchange V1` is
+complete and published from exact baseline
+`8b7faa4cd03e315dec5696f72ec1ad75e333c77f`. Its original product commit is
+`144bcaf162b37f92b151ec2180c0bd9be294adce`. The first candidate documentation
+HEAD `b80b6bdda4345cd002ed34296dea92562cbb5fc1` was not independently approved:
+senior review found that normal barter discovery/negotiation was
+proof-fixture-bound and terminal offers could permanently exhaust
+`maximumOffers`. Senior Review Correction 01 fixed both defects at product
+commit `43c6b6ba00fee879918125cb9cffd79e653c49fc`. Senior review then approved
+corrected evidence HEAD `1dbe84fdc9286b35e05a0aaaf8673ec0ce99718a` and review
+bundle SHA-256
+`c26a79fa7641e2da534f4bf18954bdbe50635d6bc9306be55a7b705af321e41d`
+with 37/37 internal checksums and passing unzip validation.
+
+The corrected normal runtime derives explicitly bounded local physical pair
+observations from current Pebble custody/proximity evidence, while the sole
+session selects the offer and the named counterparty independently evaluates
+its current need and local evidence. The disposable proof injects neither the
+decisive opportunity nor either decision after bootstrap. Deterministic
+oldest-terminal compaction keeps offer projections bounded without ever
+evicting open or accepted authority; 24 attempts against an eight-offer focused
+cap remain sustainable across schema-32 restart. The decisive route exchanges
+agent_0's real CIV-34 stone pickaxe for two breads held by agent_1, compensates
+a true post-first-transfer fault exactly, retries successfully, restores once
+across a fresh process and uses the exact received pickaxe. Observer schema is
+9. CIV-36 remains not started and is the next eligible phase.
 
 ## Current program position
 
 ```text
-active CIV phase: CIV-35 — LOCAL REVIEW CANDIDATE
-completed through: CIV-34
-next eligible phase: none pending CIV-35 review
-next authorized action: SENIOR REVIEW OF CIV-35
+active CIV phase: none
+completed through: CIV-35
+next eligible phase: CIV-36
+next authorized action: CIV-36
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -187,8 +196,8 @@ Gate D Evaluation 10 status: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 10 status: BLOCKER_FIX_PUBLISHED
 Independent Gate D Evaluation 11 status: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 CIV-34 status: COMPLETE AND PUBLISHED
-CIV-35 status: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE
-CIV-36 status: NOT_STARTED
+CIV-35 status: COMPLETE AND PUBLISHED
+CIV-36 status: NOT_STARTED — NEXT ELIGIBLE PHASE
 roadmap generation: V4
 ```
 
@@ -488,6 +497,6 @@ Gate D Evaluation 11 is **PASS — SENIOR REVIEW APPROVED**. Evaluations 01
 through 10 remain **FAIL — HISTORICAL IMMUTABLE EVIDENCE**, and Blockers 01
 through 10 remain **FIXED AND PUBLISHED**. Gate D is **ACQUIRED AND
 PUBLISHED**. `CIV-34 — Production, Tools and Workshops V1` is **COMPLETE AND
-PUBLISHED**. `CIV-35 — Barter and Local Exchange V1` is
-**IMPLEMENTED_LOCAL_REVIEW_CANDIDATE** and is not published. `CIV-36` remains
-**NOT_STARTED**. The next authorized action is **SENIOR REVIEW OF CIV-35**.
+PUBLISHED**. `CIV-35 — Barter and Local Exchange V1` is **COMPLETE AND
+PUBLISHED**. `CIV-36` remains **NOT_STARTED — NEXT ELIGIBLE PHASE**. The next
+authorized action is **CIV-36**.

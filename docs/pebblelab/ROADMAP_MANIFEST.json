@@ -46,8 +46,13 @@
       "f55b64305027bee3fb67a2e27b422578124c4e00",
       "39f6b8bc464319b4ee3879686bab3af5fcf63e83"
     ],
-    "civ35LocalCandidateBaseline": "8b7faa4cd03e315dec5696f72ec1ad75e333c77f",
-    "meaning": "Canonical published history remains complete through senior-review-approved CIV-34; Gate D Evaluation 11 remains the first accepted PASS; Evaluations 01 through 10 remain immutable historical FAIL evidence; Blockers 01 through 10 remain fixed and published; CIV-35 is an implemented local review candidate and is not published; CIV-36 is not started.",
+    "civ35ExactBaseline": "8b7faa4cd03e315dec5696f72ec1ad75e333c77f",
+    "civ35OriginalProductCommit": "144bcaf162b37f92b151ec2180c0bd9be294adce",
+    "civ35InitialCandidateDocumentationHead": "b80b6bdda4345cd002ed34296dea92562cbb5fc1",
+    "civ35SeniorReviewCorrection01ProductCommit": "43c6b6ba00fee879918125cb9cffd79e653c49fc",
+    "civ35ReviewedEvidenceHead": "1dbe84fdc9286b35e05a0aaaf8673ec0ce99718a",
+    "civ35ReviewBundleSHA256": "c26a79fa7641e2da534f4bf18954bdbe50635d6bc9306be55a7b705af321e41d",
+    "meaning": "Canonical published history is complete through senior-review-approved CIV-35; Gate D Evaluation 11 remains the first accepted PASS; Evaluations 01 through 10 remain immutable historical FAIL evidence; Blockers 01 through 10 remain fixed and published; CIV-35 Senior Review Correction 01 is accepted; CIV-36 is not started and is the next eligible phase.",
     "safeBootstrapHardeningPublished": true
   },
   "documents": {
@@ -91,10 +96,10 @@
     "historicalPlans": "nonDirective"
   },
   "currentState": {
-    "activePhase": "CIV-35",
-    "completedThrough": "CIV-34",
-    "nextEligiblePhase": null,
-    "nextAuthorizedAction": "SENIOR_REVIEW_CIV-35",
+    "activePhase": null,
+    "completedThrough": "CIV-35",
+    "nextEligiblePhase": "CIV-36",
+    "nextAuthorizedAction": "CIV-36",
     "civ27Status": "completed",
     "civ28Status": "completed",
     "gateCStatus": "acquired",
@@ -132,8 +137,8 @@
     "gateDEvaluation11Status": "passedPublished",
     "civ34Status": "completed",
     "civ34ReviewStatus": "published",
-    "civ35Status": "implementedLocalReviewCandidate",
-    "civ35ReviewStatus": "pendingSeniorReview",
+    "civ35Status": "completed",
+    "civ35ReviewStatus": "published",
     "civ36Status": "notStarted",
     "renewableSubsistenceMilestoneStatus": "completedPublished",
     "v4CanonicalDocumentSet": true
@@ -818,18 +823,30 @@
     "cleanup": "exact"
   },
   "civ35Validation": {
-    "scope": "Local CIV-35 Barter and Local Exchange V1 senior-review candidate; the candidate commit and review ZIP are identified by the delivery Git state and external checksum rather than self-reference.",
+    "scope": "Published CIV-35 Barter and Local Exchange V1 contract with senior-review-approved Correction 01 and accepted final evidence.",
     "exactBaseline": "8b7faa4cd03e315dec5696f72ec1ad75e333c77f",
-    "status": "implementedLocalReviewCandidate",
-    "published": false,
+    "status": "completedPublished",
+    "published": true,
+    "seniorReview": "approved",
+    "implementationHistory": {
+      "originalProductCommit": "144bcaf162b37f92b151ec2180c0bd9be294adce",
+      "initialCandidateDocumentationHead": "b80b6bdda4345cd002ed34296dea92562cbb5fc1",
+      "initialCandidateIndependentlyApproved": false,
+      "correction01ProductCommit": "43c6b6ba00fee879918125cb9cffd79e653c49fc",
+      "reviewedEvidenceHead": "1dbe84fdc9286b35e05a0aaaf8673ec0ce99718a",
+      "reviewBundleSHA256": "c26a79fa7641e2da534f4bf18954bdbe50635d6bc9306be55a7b705af321e41d",
+      "internalChecksumsPassed": 37,
+      "internalChecksumsTotal": 37,
+      "unzipValidation": "passed"
+    },
     "gateDStatus": "acquiredPublished",
     "civ34Status": "completedPublished",
     "civ36Status": "notStarted",
-    "nextAuthorizedAction": "SENIOR_REVIEW_CIV-35",
+    "nextAuthorizedAction": "CIV-36",
     "seniorReviewCorrection01": {
-      "status": "implementedLocalReviewCandidate",
-      "blocker01A": "barterOpportunityAndNegotiationWereDisposableProofFixtureBound",
-      "blocker01B": "terminalOffersPermanentlyExhaustedMaximumOffers",
+      "status": "correctedApproved",
+      "correction01A": "normalBarterDiscoveryAndNegotiationWereProofFixtureBound",
+      "correction01B": "terminalOffersCouldPermanentlyExhaustMaximumOffers",
       "proofFixtureDecisionAuthorityAfterBootstrap": 0,
       "manualProductiveBarterCommandsAfterBootstrap": 0
     },
@@ -838,6 +855,9 @@
     "cognitionAuthority": "soleAgentSimulationSession",
     "localObservationAuthority": "boundedPhysicalSignalDistanceLineOfSightAndChunkReadiness",
     "normalAutonomousProductPath": "passed",
+    "normalOpportunityDiscovery": "passed",
+    "normalOfferDecision": "passed",
+    "independentCounterpartyDecision": "passed",
     "normalDiscoveryBounds": {
       "agents": 8,
       "nearbyCounterpartiesPerAgent": 4,
@@ -882,12 +902,15 @@
       "productionMaximumOffers": 32,
       "productionLifetimeTicks": 4,
       "evictionPolicy": "oldestTerminalDecisionCausalSequenceThenOfferID",
+      "terminalCompaction": "deterministicOldestTerminalProjectionFirst",
+      "openAcceptedOfferEviction": "never",
       "pendingOffersEvictable": false,
       "focusedMaximumOffers": 8,
       "focusedLifetimeTicks": 2,
       "lifetimeAttemptsTested": 24,
       "maximumSimultaneouslyRetained": 8,
       "pendingOffersAccidentallyEvicted": 0,
+      "newOfferAfterLifetimeChurn": "passed",
       "restartAfterCompaction": "passed",
       "ordinaryGoodsRequireProductionProvenance": false
     },
@@ -1553,7 +1576,7 @@
     {
       "id": "CIV-35",
       "title": "Barter and Local Exchange V1",
-      "status": "implementedLocalReviewCandidate",
+      "status": "completed",
       "wave": "wave-3-local-material-economy",
       "requiredForCanonicalProgression": true,
       "dependsOn": [

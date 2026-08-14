@@ -129,14 +129,14 @@ f55b64305027bee3fb67a2e27b422578124c4e00
 ## Canonical position
 
 ```text
-CIV-00 through CIV-34: COMPLETE AND PUBLISHED
+CIV-00 through CIV-35: COMPLETE AND PUBLISHED
 Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
-active CIV phase: CIV-35 — LOCAL REVIEW CANDIDATE
-completed through: CIV-34
-next eligible phase: none pending CIV-35 review
-next authorized action: SENIOR REVIEW OF CIV-35
+active CIV phase: none
+completed through: CIV-35
+next eligible phase: CIV-36
+next authorized action: CIV-36
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
@@ -163,8 +163,8 @@ Gate D Evaluation 10: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 10: BLOCKER_FIX_PUBLISHED
 Independent Gate D Evaluation 11: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 CIV-34: COMPLETE AND PUBLISHED
-CIV-35: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE
-CIV-36: NOT_STARTED
+CIV-35: COMPLETE AND PUBLISHED
+CIV-36: NOT_STARTED — NEXT ELIGIBLE PHASE
 ```
 
 The `CIV-33` completion is published on the canonical branch at
@@ -230,10 +230,12 @@ published baseline `24c679581f7dfd93d26bffa2e9486a5340af0d9c`; senior review
 approved the evidence. Evaluations 01 through 10 remain immutable historical
 FAIL evidence and Blockers 01 through 10 remain fixed and published. `CIV-34`
 is complete and published from baseline
-`1bbf3df08ca8a05c79af61c888c424e52bb30801`. `CIV-35` is an implemented local
-review candidate from exact baseline
-`8b7faa4cd03e315dec5696f72ec1ad75e333c77f`; it is not published. `CIV-36`
-remains not started and the next action is senior review of CIV-35.
+`1bbf3df08ca8a05c79af61c888c424e52bb30801`. `CIV-35` is complete and
+published from exact baseline `8b7faa4cd03e315dec5696f72ec1ad75e333c77f`.
+Senior review approved corrected evidence HEAD
+`1dbe84fdc9286b35e05a0aaaf8673ec0ce99718a` after Correction 01 fixed both
+the proof-fixture-bound discovery path and permanent terminal-offer capacity
+exhaustion. `CIV-36` remains not started and is the next eligible phase.
 
 Gate B is acquired under `V4-GATE-B-v1`, the bounded checkpoint proved by the
 published closure and subsequently hardened for normal-world bootstrap:
@@ -410,9 +412,8 @@ historical FAIL evidence; its targeted Blocker 08 correction is a
 targeted Blocker 09 correction is **fixed and published**. Evaluation 10
 remains historical FAIL evidence; its targeted Blocker 10 correction is a
 **BLOCKER_FIX_PUBLISHED**. Independent Evaluation 11 is the first accepted
-whole-Gate PASS and is **SENIOR REVIEW APPROVED**. `CIV-34` is **COMPLETE AND
-PUBLISHED**. `CIV-35` is **IMPLEMENTED_LOCAL_REVIEW_CANDIDATE** and not
-published. `CIV-36` is **NOT_STARTED**.
+whole-Gate PASS and is **SENIOR REVIEW APPROVED**. `CIV-34` and `CIV-35` are
+**COMPLETE AND PUBLISHED**. `CIV-36` is **NOT_STARTED — NEXT ELIGIBLE PHASE**.
 
 | Phase | Requirement | Outcome |
 | --- | --- | --- |
@@ -748,10 +749,9 @@ The published active-probe physical-action safety correction is documented in
 No individual correction acquired Gate D. The independent composition proof is
 recorded in
 [`GATE_D_EVALUATION_11_REPORT.md`](GATE_D_EVALUATION_11_REPORT.md). Senior
-review approved it, so Gate D remains acquired and published. `CIV-34` is
-complete and published; `CIV-35` is an implemented local review candidate and
-is not published. `CIV-36` is not started. The next authorized action is senior
-review of CIV-35.
+review approved it, so Gate D remains acquired and published. `CIV-34` and
+`CIV-35` are complete and published. `CIV-36` is not started and is the next
+eligible phase and next authorized action.
 
 ## Wave 3 — Local material economy
 
@@ -819,19 +819,25 @@ exact cleanup. The bounded proof is
 
 This phase did not itself claim barter, markets, prices, currency, debt, general
 contracts, guilds, large-scale industry, technology trees, full logistics,
-land/workshop property law or general organizations. CIV-35 now supplies the
-separate bounded local barter candidate below.
+land/workshop property law or general organizations. CIV-35 supplies the
+separate bounded published local barter phase below.
 
 ### `CIV-35` — Barter and Local Exchange V1
 
-Status: **implemented local review candidate, required; not published**.
+Status: **complete and published, required**.
 
-Implementation baseline:
+Publication identity:
 
 ```text
-exact published baseline: 8b7faa4cd03e315dec5696f72ec1ad75e333c77f
-local branch: codex/civ-35-barter-local-exchange-v1
-next action: SENIOR REVIEW OF CIV-35
+exact baseline: 8b7faa4cd03e315dec5696f72ec1ad75e333c77f
+original product commit: 144bcaf162b37f92b151ec2180c0bd9be294adce
+initial candidate documentation HEAD: b80b6bdda4345cd002ed34296dea92562cbb5fc1
+Senior Review Correction 01 product commit: 43c6b6ba00fee879918125cb9cffd79e653c49fc
+reviewed evidence HEAD: 1dbe84fdc9286b35e05a0aaaf8673ec0ce99718a
+review bundle SHA-256: c26a79fa7641e2da534f4bf18954bdbe50635d6bc9306be55a7b705af321e41d
+internal checksums: 37/37 PASS
+unzip: PASS
+senior review: APPROVED
 ```
 
 Result: two distinct co-located inhabitants use active causal needs and current
@@ -842,9 +848,10 @@ transaction to prevalidate, mutate and verify both Core inventory legs before
 the sole `AgentSimulationSession` publishes one exchange and two CIV-26 rights
 transitions.
 
-Senior Review Correction 01 fixed two local-candidate defects before approval:
-barter discovery/negotiation had been disposable-proof-fixture-bound, and
-terminal offer projections permanently consumed the 32-offer capacity. Pebble
+The initial candidate at `b80b6bdda4345cd002ed34296dea92562cbb5fc1` was not
+independently approved. Senior Review Correction 01A fixed normal barter
+discovery/negotiation that had been proof-fixture-bound; Correction 01B fixed
+terminal offers that could permanently exhaust `maximumOffers`. Pebble
 now emits stable bounded observations from at most 8 agents, 4 nearby
 counterparties per agent, 4 exact current goods per agent and 32 pair
 candidates per tick; PebbleAgents evaluates at most 8 active needs and records
@@ -853,6 +860,7 @@ rights, needs and proximity only. Terminal projections compact in deterministic
 oldest-causal order under capacity pressure, while open and accepted offers are
 never evicted. A focused 24-attempt campaign against an eight-offer cap proves
 continued creation, pending retention and schema-32 restart after compaction.
+Senior review approved both corrections and the final evidence.
 
 The decisive autonomous campaign exchanges agent_0's real CIV-34
 `stone_pickaxe x1` for agent_1's `bread x2`. A deterministic fault after the
