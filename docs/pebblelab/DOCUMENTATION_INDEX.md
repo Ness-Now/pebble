@@ -143,10 +143,14 @@ The complete accepted evidence is indexed in
 [`CIV_35_PHASE_SUMMARY.md`](CIV_35_PHASE_SUMMARY.md). `CIV-36 — Debt, Promises
 and Durable Contracts V1` is implemented locally from exact baseline
 `e47c2d1a4132dc756219ef0d2c1495b2769b8d35` at product/proof commit
-`a910f938c0e943e37aa851c0f65dfecdb06698cc`. Its schema-33 open-debt restart,
-normal CIV-34 production, verified rollback/retry, exact-once fulfillment,
-Observer schema 10, 24/24 focused checks, 3886/3886 repository assertions and
-three-process live proof are indexed in
+`a910f938c0e943e37aa851c0f65dfecdb06698cc`. Senior Review Correction 01 at
+`76adcba62ac901b01618bea58fba32e1d5dc0d02` corrects the first candidate's
+ordinary post-physical publication escape gap and its discard of reacquired
+asset-scoped current fingerprints. Its schema-33 open-debt restart, current
+authority on both legs, predictable zero-mutation publication refusal,
+ordinary and explicit verified rollback/retry, normal CIV-34 production,
+exact-once fulfillment, Observer schema 10, 30/30 focused checks, 3892/3892
+repository assertions and four-process live proof are indexed in
 [`CIV_36_PHASE_SUMMARY.md`](CIV_36_PHASE_SUMMARY.md). CIV-36 remains an
 unpublished local review candidate. CIV-37 is not started, Gate E is not
 acquired, and the next authorized action is senior review of CIV-36.

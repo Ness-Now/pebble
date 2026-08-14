@@ -239,9 +239,12 @@ Senior review approved corrected evidence HEAD
 the proof-fixture-bound discovery path and permanent terminal-offer capacity
 exhaustion. `CIV-36` is implemented locally from exact baseline
 `e47c2d1a4132dc756219ef0d2c1495b2769b8d35` at product/proof commit
-`a910f938c0e943e37aa851c0f65dfecdb06698cc`. It remains an unpublished local
-review candidate. CIV-37 is not started, Gate E is not acquired and the next
-authorized action is senior review of CIV-36.
+`a910f938c0e943e37aa851c0f65dfecdb06698cc`. Senior Review Correction 01
+product/proof commit `76adcba62ac901b01618bea58fba32e1d5dc0d02`
+closes the ordinary post-physical publication escape gap and uses reacquired
+asset-scoped current fingerprints as the immediate transfer authority. CIV-36
+remains an unpublished local review candidate. CIV-37 is not started, Gate E
+is not acquired and the next authorized action is senior review of CIV-36.
 
 Gate B is acquired under `V4-GATE-B-v1`, the bounded checkpoint proved by the
 published closure and subsequently hardened for normal-world bootstrap:
@@ -903,6 +906,8 @@ Local candidate identity:
 ```text
 exact baseline: e47c2d1a4132dc756219ef0d2c1495b2769b8d35
 product/proof commit: a910f938c0e943e37aa851c0f65dfecdb06698cc
+reviewed pre-correction HEAD: 4c7af994fc52974f6f919765af682b209f6b84ca
+Senior Review Correction 01: 76adcba62ac901b01618bea58fba32e1d5dc0d02
 publication: NOT CLAIMED
 next action: SENIOR REVIEW OF CIV-36
 ```
@@ -920,10 +925,15 @@ the existing crafting workshop. Fulfillment requires the complete exact bread
 in current debtor custody. Pebble reuses the CIV-26 material-custody gateway,
 CIV-34 production gateway and candidate physical transaction; the sole
 `AgentSimulationSession` publishes fulfillment only after the real transfer is
-verified. A true post-transfer fault compensates exactly, leaves debt open and
-permits a same-process retry that fulfills once. A negotiated reason pair
-cannot immediately regenerate as a reverse promise after the goods change
-hands.
+verified. Correction 01 prospectively validates complete contract publication
+before moving matter, then makes every post-transfer error escape the bounded
+autonomous path so candidate compensation executes. Both physical legs
+reacquire exact asset authority and use its current full-custody fingerprint
+immediately; unrelated slot drift is tolerated while tracked-asset drift fails
+closed. The retained explicit fault and independent ordinary publication
+rejections compensate exactly, leave debt open and permit a same-process retry
+that fulfills once. A negotiated reason pair cannot immediately regenerate as
+a reverse promise after the goods change hands.
 
 Due obligations become overdue without punishment or invented enforcement.
 Participant death blocks active obligations; V1 defines no inheritance.
@@ -933,12 +943,13 @@ capacity. Schema 33 restores open debt and fulfilled history without executing
 World work. Replay schema 33 reconstructs social history only. Observer schema
 10 projects proposals, exact terms, due status, receipts and rights read-only.
 
-Focused validation passes 24/24. The canonical repository gate passes 35/35
-with 3886 assertions. The inspected three-process live campaign saves open
-debt, restores it in a fresh process, produces the promised good normally,
-reaches and rolls back a real fulfillment mutation, retries successfully, then
-restores the fulfilled state in a third process with zero duplicate
-fulfillment. Nine native captures were inspected. The bounded proof is
+Focused validation passes 30/30. The canonical repository gate passes 35/35
+with 3892 assertions. The inspected four-process live campaign first proves a
+predictable publication-capacity refusal with zero physical mutation, then
+saves open debt, restores it in a fresh process, produces the promised good
+normally, reaches and rolls back real consideration and fulfillment mutations,
+retries successfully, and restores fulfilled state with zero duplicate
+fulfillment. Twelve native captures were inspected. The bounded proof is
 [`CIV_36_PHASE_SUMMARY.md`](CIV_36_PHASE_SUMMARY.md).
 
 This phase does not claim markets, price discovery, currency, interest,

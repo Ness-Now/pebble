@@ -175,11 +175,25 @@ later exact physical performance transfer closes it. Pebble reuses CIV-26
 Material Rights, CIV-34 production, the material-custody gateway and the
 candidate physical transaction. Schema 33 restores open debt and fulfilled
 history; replay schema 33 moves no World matter; Observer schema 10 is
-read-only. Focused validation passes 24/24, the repository gate passes 35/35
-with 3886/3886 assertions, and an inspected three-process campaign proves open
-debt restart, normal bread production, a true post-transfer rollback, retry,
+read-only. Senior review of pre-correction candidate HEAD
+`4c7af994fc52974f6f919765af682b209f6b84ca` found two defects. Correction 01A
+discloses that ordinary post-physical publication failures were not guaranteed
+to escape autonomous blocked handling and could bypass candidate rollback.
+Correction 01B discloses that current asset-scoped authority was reacquired but
+its current custody fingerprint was discarded in favor of a historical
+full-custody fingerprint. Product/proof commit
+`76adcba62ac901b01618bea58fba32e1d5dc0d02` corrects both: complete predictable
+publication is prevalidated before World mutation, every error after newly
+registered candidate compensation escapes and rolls back, and both physical
+legs use reacquired `currentCustodyFingerprint` immediately while preserving
+exact tracked-asset and CIV-26 rights checks. Focused validation passes 30/30,
+the repository gate passes 35/35 with 3892/3892 assertions, and an inspected
+four-process campaign proves zero-mutation capacity refusal, unrelated-slot
+drift tolerance, ordinary consideration rollback, explicit and ordinary
+fulfillment rollbacks, open-debt restart, normal bread production, exact retry,
 exact-once fulfillment and fulfilled restart. This is a local review candidate,
-not a publication claim. CIV-37 remains not started and Gate E remains planned.
+not a publication or approval claim. CIV-37 remains not started and Gate E
+remains planned.
 
 ## Current program position
 
