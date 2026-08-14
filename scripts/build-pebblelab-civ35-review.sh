@@ -6,9 +6,9 @@ SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 ROOT_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd -P)
 BASELINE=8b7faa4cd03e315dec5696f72ec1ad75e333c77f
 BRANCH=codex/civ-35-barter-local-exchange-v1
-LIVE_DIR=${PEBBLELAB_CIV35_LIVE_DIR:-/var/folders/23/t4l5dv055dl3x1zqylcpl9wc0000gn/T/PebbleLab-live.05BFyO}
-FOCUSED_LOG=${PEBBLELAB_CIV35_FOCUSED_LOG:-/tmp/PebbleLab-CIV35-focused.log}
-GATE_LOG=${PEBBLELAB_CIV35_GATE_LOG:-/tmp/PebbleLab-CIV35-repository-gate.log}
+LIVE_DIR=${PEBBLELAB_CIV35_LIVE_DIR:-/var/folders/23/t4l5dv055dl3x1zqylcpl9wc0000gn/T/PebbleLab-live.kmlede}
+FOCUSED_LOG=${PEBBLELAB_CIV35_FOCUSED_LOG:-/tmp/PebbleLab-CIV35-Corr01-focused.log}
+GATE_LOG=${PEBBLELAB_CIV35_GATE_LOG:-/tmp/PebbleLab-CIV35-Corr01-repository-gate.log}
 OUTPUT_PARENT=${PEBBLELAB_CIV35_REVIEW_PARENT:-/tmp}
 
 fail() {
@@ -34,14 +34,22 @@ cd "$ROOT_DIR"
     || fail 'candidate is not based on the exact published baseline'
 [ -z "$(git status --short)" ] || fail 'worktree must be clean'
 
-/usr/bin/grep -q '22 passed, 0 failed' "$FOCUSED_LOG" \
+/usr/bin/grep -q '54 passed, 0 failed' "$FOCUSED_LOG" \
     || fail 'focused CIV-35 result is absent'
-/usr/bin/grep -q '3830 passed, 0 failed' "$GATE_LOG" \
+/usr/bin/grep -q '3862 passed, 0 failed' "$GATE_LOG" \
     || fail 'complete assertion result is absent'
 /usr/bin/grep -q 'PASS: all 35 PebbleLab verification steps succeeded' \
     "$GATE_LOG" || fail 'repository gate did not pass 35/35'
 /usr/bin/grep -q 'barter proof normalProductPath=PASS' \
     "$LIVE_DIR/barter-phase1.log" || fail 'normal live product path is absent'
+/usr/bin/grep -q 'barter setup .*opportunity=awaiting-normal-runtime .*barterProofFixtureDecisionAuthority=0 .*manualProductiveBarterCommandsAfterBootstrap=0' \
+    "$LIVE_DIR/barter-phase1.log" || fail 'fixture authority exclusion is absent'
+/usr/bin/grep -q 'barter normal opportunity discovery .*normalOpportunityDiscovery=1 .*barterProofFixtureDecisionAuthority=0' \
+    "$LIVE_DIR/barter-phase1.log" || fail 'normal opportunity discovery is absent'
+/usr/bin/grep -q 'barter normal offer decision .*normalOfferDecision=1 .*barterProofFixtureDecisionAuthority=0' \
+    "$LIVE_DIR/barter-phase1.log" || fail 'normal offer decision is absent'
+/usr/bin/grep -q 'barter normal counterparty decision .*normalCounterpartyDecision=1 .*barterProofFixtureDecisionAuthority=0' \
+    "$LIVE_DIR/barter-phase1.log" || fail 'normal counterparty decision is absent'
 /usr/bin/grep -q 'CANDIDATE_PHYSICAL_ROLLBACK operation=advanceOneTick' \
     "$LIVE_DIR/barter-phase1.log" || fail 'mid-exchange rollback is absent'
 /usr/bin/grep -q 'bartered produced tool used .*downstreamUse=PASS' \
@@ -105,6 +113,14 @@ EOF
 /bin/cat > "$BUNDLE_DIR/01_EXECUTIVE_SUMMARY.md" <<'EOF'
 # Executive summary
 
+Senior Review Correction 01 fixes two defects in the original local candidate:
+normal opportunity/negotiation was disposable-proof-fixture-bound, and terminal
+offer projections permanently exhausted `maximumOffers`. The fixture now
+creates only disposable physical initial conditions. Pebble performs bounded
+normal observation, PebbleAgents selects the offer and independently evaluates
+the counterparty, and oldest terminal projections compact deterministically
+without evicting open or accepted authority.
+
 Two local inhabitants exchange real current physical goods: agent_0 offers
 one CIV-34-produced stone pickaxe for two CIV-34-produced breads held by
 agent_1. Agent_1 independently accepts from current local evidence. Pebble
@@ -132,6 +148,11 @@ EOF
 /bin/cat > "$BUNDLE_DIR/03_REUSE_FIRST_AUDIT.md" <<'EOF'
 # Reuse-first audit
 
+Correction disclosure:
+
+- Blocker 01A: barter opportunity/negotiation was disposable-proof-fixture-bound.
+- Blocker 01B: terminal offers permanently exhausted `maximumOffers`.
+
 - Physical stacks, extraction, insertion and capacity: PebbleCore.
 - Live transfer, inspection and fingerprints: existing
   `PebbleAgentMaterialCustodyGateway`.
@@ -155,6 +176,10 @@ verified history only. Pebble owns observation plus physical prevalidation,
 mutation, verification and compensation. PebbleCore remains physical truth.
 Rights publication follows verified physical success and cannot create or
 replace matter. `AgentSimulationSession` remains the sole aggregate root.
+Pebble supplies current rights-tracked custody fingerprints plus bounded
+embodiment, line-of-sight, chunk and distance evidence; PebbleAgents supplies
+current causal reasons and the two distinct decisions. The disposable fixture
+has zero decision authority after bootstrap.
 EOF
 
 /bin/cat > "$BUNDLE_DIR/05_BARTER_CONTRACT.md" <<'EOF'
@@ -171,21 +196,35 @@ EOF
 /bin/cat > "$BUNDLE_DIR/06_LOCAL_DISCOVERY_AND_DECISION.md" <<'EOF'
 # Local discovery and decision
 
-The decisive pair is one Manhattan cell apart. Opportunity formation uses the
-existing bounded distance, line-of-sight and ready-chunk signal. Agent_0 has a
+The decisive pair is one Manhattan cell apart. Normal Pebble ticks observe at
+most 8 stable agents, 4 nearby counterparties per agent, 4 current exact goods
+per agent and 32 physical pair candidates. PebbleAgents considers at most 8
+active needs per agent and returns at most 4 discoveries. Agent_0 has a
 physical-food need for bread x2; agent_1 has a missing-useful-tool need for a
-stone pickaxe. There is no settlement inventory query, global supply/demand,
-best-trade search or numerical price.
+stone pickaxe. The normal trace proves discovery, offer selection and the named
+counterparty decision with fixture decision authority zero and no productive
+manual command after bootstrap. There is no settlement inventory query, global
+supply/demand, best-trade search or numerical price.
 EOF
 
 /bin/cat > "$BUNDLE_DIR/07_OFFERS_ACCEPTANCE_REJECTION.md" <<'EOF'
 # Offers, acceptance and rejection
 
-Agent_0 creates `civ35-primary`; matter remains unchanged. On a later normal
-tick, agent_1 rechecks its active need and current local physical signal before
-explicit acceptance. The focused variation proves rejection publishes no
-physical receipt, followed by an alternative accepted offer. Withdrawal and
-expiry remove authority for later acceptance. Pending offers are bounded.
+Agent_0 creates stable product-selected offer `barter-2f8d7877e8728aab`;
+matter remains unchanged. On a later normal tick, agent_1 rechecks its active
+need and current local physical signal before explicit acceptance. A changed
+local signal or fulfilled need produces refusal.
+
+Production retains at most 32 offer projections with a four-tick lifetime.
+When full, the oldest terminal projection by decision causal sequence then
+offer ID is evicted. Completed, rejected, withdrawn, expired, stale and failed
+are eligible; open and accepted are never evicted. Completed records, rights,
+causal history and processed operations keep their own bounded durable truth.
+The focused cap-8/lifetime-2 campaign makes 24 attempts, observes all terminal
+states, never retains more than 8 offers, never evicts either of two pending
+offers, restores byte-exactly after compaction and creates a new offer after
+restart. An ordinary rights-tracked `oak_log ↔ cobblestone` pair also proves
+CIV-34 provenance is integration evidence rather than universal eligibility.
 EOF
 
 /bin/cat > "$BUNDLE_DIR/08_PHYSICAL_TWO_SIDED_TRANSFER.md" <<'EOF'
@@ -239,6 +278,8 @@ Agent_0's pickaxe retains production operation
 custody continuously into the offer and exchange. No fixture replaces it.
 After restart, agent_1 uses that same item: `stone_pickaxe`, damage 0 to 1,
 real World stone to air. The use event cites production and barter completion.
+Ordinary exact rights-tracked goods remain eligible without production IDs;
+the produced-good requirement belongs to the decisive CIV-34 integration proof.
 EOF
 
 /bin/cat > "$BUNDLE_DIR/13_RESTART_AND_REPLAY.md" <<'EOF'
@@ -246,10 +287,11 @@ EOF
 
 Schema 32 refuses checkpoint readiness while any offer is open or accepted;
 pending physical authority is deliberately not durable. Completed terminal
-history and rights are durable. A second Pebble process restores two stacks,
-quantity three, with `custodyDuplicates=0`; no barter completion repeats.
-Typed replay reconstructs social history only and never invokes a World
-transfer.
+history and rights are durable. Terminal compaction round-trips byte-exactly,
+does not resurrect reservation authority, and permits another offer after
+restart. A second Pebble process restores two stacks, quantity three, with
+`custodyDuplicates=0`; no barter completion repeats. Typed replay reconstructs
+social history only and never invokes a World transfer.
 EOF
 
 /bin/cat > "$BUNDLE_DIR/14_OBSERVER_AND_CAUSALITY.md" <<'EOF'
@@ -275,7 +317,7 @@ EOF
 /bin/cat > "$BUNDLE_DIR/16_REGRESSIONS.md" <<'EOF'
 # Regressions
 
-The complete 3,830-assertion smoke suite includes CIV-26 rights/custody,
+The complete 3,862-assertion smoke suite includes CIV-26 rights/custody,
 CIV-27 persistence/reconciliation, CIV-28 Observer, Gate D physical boundaries
 and evolved identities, CIV-33 estates, and all CIV-34 Core production and
 produced-tool proofs. The canonical repository gate passes 35/35. Goldens are
@@ -290,14 +332,18 @@ shows pre-exchange, open offer and post-exchange state and contains one expected
 fault. Phase 2 shows fresh restore, exact produced-tool use and final cleanup
 with zero runtime errors. All six native captures were manually inspected;
 structured traces, not pixels, carry exact quantities and receipt authority.
+The decisive phase-1 trace records `barterProofFixtureDecisionAuthority=0`,
+`normalOpportunityDiscovery=1`, `normalOfferDecision=1`,
+`normalCounterpartyDecision=1` and
+`manualProductiveBarterCommandsAfterBootstrap=0`.
 EOF
 
 /bin/cat > "$BUNDLE_DIR/18_TEST_RESULTS.md" <<'EOF'
 # Test results
 
 ```text
-focused CIV-35: 22 passed, 0 failed
-complete smoke: 3830 passed, 0 failed
+focused CIV-35: 54 passed, 0 failed
+complete smoke: 3862 passed, 0 failed
 repository gate: 35/35, 0 failures
 checkpoint schema: 32
 Observer schema: 9
@@ -333,13 +379,42 @@ EOF
       branch: $branch,
       head: $head,
       pushAttempted: false,
+      correction: {
+        blocker01A: "barter opportunity/negotiation was disposable-proof-fixture-bound",
+        blocker01B: "terminal offers permanently exhausted maximumOffers",
+        proofFixtureDecisionAuthorityAfterBootstrap: 0,
+        manualProductiveBarterCommandsAfterBootstrap: 0
+      },
       exchange: {
         offeror: "agent_0",
         counterparty: "agent_1",
         offered: "stone_pickaxe:1",
         requested: "bread:2",
         normalProductPath: "PASS",
+        normalOpportunityDiscovery: 1,
+        normalOfferDecision: 1,
+        normalCounterpartyDecision: 1,
         secondVariation: "PASS"
+      },
+      discoveryBounds: {
+        agents: 8,
+        nearbyCounterpartiesPerAgent: 4,
+        physicalGoodsPerAgent: 4,
+        physicalPairCandidatesPerTick: 32,
+        activeNeedsPerAgent: 8,
+        discoveriesPerTick: 4
+      },
+      offerLifecycle: {
+        productionMaximumOffers: 32,
+        productionLifetimeTicks: 4,
+        terminalEviction: "oldest decision causal sequence then offer ID",
+        pendingEvictable: false,
+        focusedMaximumOffers: 8,
+        focusedLifetimeTicks: 2,
+        lifetimeAttemptsTested: 24,
+        maximumSimultaneouslyRetained: 8,
+        pendingAccidentallyEvicted: 0,
+        restartAfterCompaction: "PASS"
       },
       atomicity: {
         trueMidExchangeMutation: true,
@@ -360,9 +435,9 @@ EOF
         observerMutationCount: 0
       },
       validation: {
-        focusedPassed: 22,
+        focusedPassed: 54,
         focusedFailed: 0,
-        assertionsPassed: 3830,
+        assertionsPassed: 3862,
         assertionsFailed: 0,
         repositoryStepsPassed: 35,
         repositoryStepsTotal: 35,

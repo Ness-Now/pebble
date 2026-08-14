@@ -1,144 +1,178 @@
 # CIV-35 — Barter and Local Exchange V1
 
-## Verdict and baseline
+## Verdict and correction status
 
-`CIV-35` is **IMPLEMENTED_LOCAL_REVIEW_CANDIDATE** in its bounded contract.
-It was implemented directly from the exact published canonical baseline:
+`CIV-35` remains **IMPLEMENTED_LOCAL_REVIEW_CANDIDATE**. It is local, has not
+been published or senior-approved, and remains based directly on the exact
+published canonical baseline:
 
 ```text
 8b7faa4cd03e315dec5696f72ec1ad75e333c77f
 ```
 
-The work is local and has not been published. `CIV-34` remains complete and
-published, `CIV-36` remains not started, and the next authorized action is
-senior review of CIV-35. Gate D remains acquired and published.
-
-## Reuse-first architecture
-
-The implementation adds no parallel inventory, recipe, transfer, market,
-price, currency or obligation engine.
-
-- PebbleCore remains authoritative for item stacks, inventory extraction,
-  insertion, capacity, durability and World truth.
-- Pebble reuses `PebbleAgentMaterialCustodyGateway` for both physical legs.
-  Its new read-only barter prevalidation simulates both canonical Core
-  transfers before mutation. The existing
-  `PebbleCandidatePhysicalTransaction` owns reverse-order compensation.
-- PebbleAgents retains only bounded local observations, value reasons, exact
-  offers, decisions and verified exchange history in the sole
-  `AgentSimulationSession`.
-- CIV-26 Material Rights remains the social authority. Holder, recognized
-  owner, custodian, claim and permission stay distinct; physical truth is
-  never inferred from the rights record.
-- CIV-34 production receipts bind the offered pickaxe to its real inputs,
-  output identity and current physical custody.
-- The existing local physical-signal adapter supplies bounded distance,
-  line-of-sight and chunk readiness. There is no settlement inventory scan,
-  global price oracle or long-distance economic channel.
-
-The permanent distinctions remain explicit:
+Senior Review Correction 01 fixes two defects in the first local candidate:
 
 ```text
-physical custody
-!= possession
-!= recognized ownership
-!= claim
-!= permission/use right
-!= offer
-!= accepted exchange
-!= obligation
+CIV-35 Blocker 01A:
+barter opportunity/negotiation was disposable-proof-fixture-bound
+
+CIV-35 Blocker 01B:
+terminal offers permanently exhausted maximumOffers
 ```
 
-## Bounded spot-barter contract
+The correction does not reopen CIV-34 or Gate D and does not begin CIV-36.
 
-An opportunity names two distinct local agents, two current stack-scoped
-assets, exact material identities and quantities, full holder fingerprints,
-and one causal active need for each received good. An offer reserves both
-asset references socially but moves no matter. Only the named counterparty
-can independently accept or reject it. Acceptance still moves no matter.
+## Corrected reuse-first architecture
 
-Execution rechecks both CIV-26 disposal decisions and both current physical
-fingerprints, prevalidates both Core transfers, performs both exact legs,
-verifies both destination observations and only then publishes one completed
-exchange and two rights transitions. Self-trade, empty/invalid quantities,
-duplicate participants, overlapping asset authority, expired or withdrawn
-offers and duplicate operations fail closed. Offers, records, processed
-operations, candidate goods, local distance and causal history are explicitly
-bounded and deterministically ordered.
+The accepted physical exchange architecture is unchanged. PebbleCore remains
+authoritative for item stacks, inventory extraction/insertion, capacity,
+durability and World truth. Pebble still uses
+`PebbleAgentMaterialCustodyGateway` for both physical legs, read-only
+prevalidation for both destinations, and `PebbleCandidatePhysicalTransaction`
+for reverse-order compensation. CIV-26 Material Rights publishes social
+consequences only after physical verification. The sole
+`AgentSimulationSession` owns cognition, offers, decisions and bounded durable
+history. Observer remains read-only.
 
-CIV-35 is immediate spot barter only. No pending physical authority is
-restart-safe: checkpoint readiness refuses an open or accepted offer. Only
-terminal exchange history is durable. A completed exchange is replayed as
-social history and never re-executes either World transfer.
+The corrected normal product seam is:
 
-## Decisive product campaign
+```text
+Pebble:
+bounded nearby embodiments + LOS/chunk/distance evidence
++ current exact rights-tracked custody/fingerprints
+→ bounded physical pair observations
 
-The two-process disposable-world campaign uses the normal autonomous
-civilization activity path:
+PebbleAgents:
+current active needs + current rights decisions + stable ordering
+→ opportunity → offeror proposal → named counterparty evaluation
+
+Pebble:
+current physical revalidation → two-sided verified execution/compensation
+```
+
+Production defaults bound discovery to 8 agents, 4 nearby counterparties per
+agent, 4 current physical goods per agent, 32 physical pair candidates per
+tick, 8 active needs per agent and 4 discoveries per tick. There is no
+settlement-wide inventory query, all-World item scan, global market matcher,
+price oracle, currency or second transfer engine.
+
+The disposable barter fixture now creates only the World, real goods, rights,
+needs and nearby embodiments. It no longer creates an
+`AgentBarterOpportunityObservation`, offer or decision. Its live trace records
+`barterProofFixtureDecisionAuthority=0` and
+`manualProductiveBarterCommandsAfterBootstrap=0`.
+
+## Spot-barter and offer lifecycle contract
+
+An opportunity binds two distinct agents to two current stack-scoped assets,
+exact material identities and quantities, full custody fingerprints, current
+local evidence and one active reason for each received good. An offer reserves
+both exact asset references socially but moves no matter. The named
+counterparty independently rechecks its current need and current local
+evidence; changed locality or a fulfilled/withdrawn need can produce refusal.
+Acceptance still moves no matter.
+
+At execution, Pebble rechecks both CIV-26 disposal decisions and both current
+fingerprints, prevalidates both Core transfers, mutates and verifies both
+legs, and only then publishes the exchange and rights transitions. Self-trade,
+invalid quantities, duplicate participants, overlapping authority, expired or
+withdrawn offers and duplicate operations fail closed.
+
+The production configuration retains at most 32 offer projections with a
+four-tick lifetime. On capacity pressure, only terminal projections are
+eligible for deterministic eviction:
+
+```text
+completed, rejected, withdrawn, expired, stale, failed
+```
+
+The oldest terminal projection by causal decision sequence and then offer ID
+is removed first. `open` and `accepted` offers are never evicted; if all slots
+are pending, a new offer fails boundedly. Reservation authority is derived
+only from retained pending offers, so every terminal transition releases its
+reservation. Completed records, rights state, causal history and processed
+operation retention keep their own existing bounded contracts and do not
+depend on an evicted offer projection.
+
+The focused lifecycle configuration uses `maximumOffers=8` and
+`offerLifetimeTicks=2`. It performs 24 lifetime offer attempts, including 21
+terminal churn attempts across rejection, expiration, withdrawal, stale and
+failed states. Retained offers never exceed 8, two simultaneous pending offers
+survive capacity reclamation, and a fresh schema-32 restore accepts another
+offer after compaction. Pending offers accidentally evicted: zero.
+
+CIV-34 provenance is retained when exact current production records reconcile
+the observed stack, but it is not a universal eligibility condition. A focused
+ordinary `oak_log ↔ cobblestone` opportunity with exact rights and needs is
+discoverable without production IDs. The decisive campaign still exchanges a
+real CIV-34-produced good.
+
+## Corrected decisive live campaign
+
+The two-process seed-46 campaign takes the corrected normal route:
 
 ```text
 producer / offeror: agent_0
 counterparty: agent_1
 local Manhattan distance: 1
 
-CIV-34 inputs -> output:
-3 cobblestone + 2 sticks -> stone_pickaxe x1
+CIV-34 inputs → output:
+3 cobblestone + 2 sticks → stone_pickaxe x1
 
 before:
 agent_0 holds stone_pickaxe x1
-agent_1 holds bread x2 from two real CIV-34 productions
+agent_1 holds bread x2
 
 reasons:
 agent_0 physicalFoodNeed for bread x2
 agent_1 missingUsefulTool for stone_pickaxe x1
 
-offer: civ35-primary, explicit by agent_0
-decision: explicit acceptance by agent_1 using current local evidence
+runtime discovery: normalOpportunityDiscovery=1
+offer: barter-2f8d7877e8728aab, selected by normal cognition
+decision: independently accepted by agent_1 from current need/locality
 physical receipts:
-barter:civ35-primary:offered
-barter:civ35-primary:requested
+barter:barter-2f8d7877e8728aab:offered
+barter:barter-2f8d7877e8728aab:requested
 
 after:
 agent_0 holds bread x2
 agent_1 holds the exact produced stone_pickaxe x1
 ```
 
-The completed rights publication recognizes agent_1 as holder, custodian and
-owner of the pickaxe with a received claim, and agent_0 equivalently for the
-bread. This coherence is a social publication after physical verification;
-it is not the authority that moved either stack.
+The fixture injects no decisive opportunity after bootstrap, and no productive
+barter command is issued after bootstrap. The completed rights publication
+recognizes agent_1 as holder, custodian and owner of the pickaxe with a
+received claim, and agent_0 equivalently for the bread. Rights publication is
+not physical transfer authority.
 
-The focused variation proves an independent rejection with no mutation or
-receipt, followed by an alternative accepted offer. This avoids a compulsory
-or one-outcome special case without introducing a market.
+## Atomicity, refusal and stale authority
 
-## Atomicity and adversarial authority
+The corrected live route reaches a first real pickaxe transfer, then fires the
+deterministic post-mutation fault before the bread transfer or social
+publication. The candidate transaction reverses the registered first transfer,
+retains no receipt and leaves the session and recorder unchanged. The next
+same-process tick rediscovers current authority, repeats the counterparty
+evaluation and completes exactly once.
 
-The live deterministic seam fires after the first real pickaxe transfer and
-before the bread transfer or any civilization publication. The existing
-candidate transaction reports the registered and completed compensation,
-restores the exact inventories and gateway receipts, and leaves the published
-session and recorder unchanged. The immediately following same-process tick
-re-evaluates acceptance and completes the exchange once.
-
-The focused and live matrix proves:
+Focused and live evidence preserves:
 
 ```text
-missing good: insufficientQuantity, no mutation
-wrong quantity: invalidRequest for an impossible two-unit tool stack, no mutation
-stale offer/fingerprint: staleSource, no substitution
-counterparty refusal: terminal rejected, no receipt
-withdrawn offer: later acceptance refused
-unauthorized holder disposition: noUseRight, no mutation
-destination capacity: destinationFull, no mutation
+offer does not move matter: PASS
+acceptance does not move matter: PASS
+counterparty refusal: rejected, no receipt
+missing good: insufficientQuantity
+wrong quantity: invalidRequest
+stale/external source: staleSource, no substitute
+unauthorized holder disposition: noUseRight
+destination capacity: destinationFull
 concurrent double-spend: second reservation refused
-external custody change: current fingerprint wins; accepted history is stale
+withdrawal/expiration: later authority refused/released
 true mid-exchange mutation: reached
 rollback: exact
 immediate retry: PASS
 ```
 
-Campaign accounting is exact:
+Campaign accounting remains:
 
 ```text
 physicalLoss=0
@@ -149,75 +183,71 @@ duplicateReservations=0
 observerMutationCount=0
 ```
 
-## Restart, downstream use, replay and Observer
+## Restart, replay, downstream use and Observer
 
-CIV-35 advances the shared checkpoint and replay schema from 31 to 32 and
-Observer schema from 8 to 9. Schema 32 persists bounded barter state only when
-all offers are terminal, validates round-trip integrity, refuses corrupt
-state, and retains the one completed exchange and both current rights records.
-Legacy schemas remain supported under their existing compatibility policies.
+Checkpoint/replay schema remains 32 and Observer schema remains 9; no schema
+bump was needed for the correction. Pending physical authority is not
+checkpoint-safe. Terminal compacted offer projections and completed records
+round-trip byte-exactly, and a restored session can create a further offer
+without resurrecting a terminal reservation.
 
-The first process saves `barter-v32` with digest
-`aa1b7804f60a04f6fa820db8eadbb2a9bca6e30b2aa704b26a9ffb71632f3650`.
-A fresh process acquires the checkpoint-bound physical boundary, restores two
-protected stacks with total quantity three and reports `custodyDuplicates=0`.
-No `barter completed` event occurs in the continuation process.
+The corrected live process saves `barter-v32` with digest
+`2458759f4bef4b8ab0743fb79eca199906dadd50870c9f92658270b7c842568a`.
+A fresh Pebble process acquires the checkpoint-bound physical boundary,
+restores two protected stacks with quantity three and reports
+`custodyDuplicates=0`. No completed exchange re-executes.
 
-Agent_1 then uses the exact exchanged CIV-34 pickaxe in the existing physical
-block-break path:
+Agent_1 then uses the exact exchanged CIV-34 pickaxe through the existing
+physical block-break path:
 
 ```text
-same item: stone_pickaxe
-durability: damage 0 -> 1
-World: stone -> air
-downstream use: PASS
+stone_pickaxe damage 0 → 1
+World stone → air
+downstreamUse=PASS
 ```
 
-The use cites both original production provenance and completed barter. Its
-existing CIV-26 `useAttempt` transition reconciles the evolved damage-1
-identity before the final schema-32 checkpoint, whose digest is
-`350209fd19b1853627e7538e38b884f7dbc119642bd71a137e7b8bb013052e3d`.
-
-Observer schema 9 exposes bounded offeror/counterparty identities, exact
-goods and quantities, local reasons, offer decisions, completion receipts,
-post-exchange holders and rights. Snapshot construction is read-only.
+The final schema-32 checkpoint digest is
+`763297299ca84a6c6de3b81196806a6aa51ad0be51af62a3724f9cb2718b83d4`.
+Typed replay reconstructs civilization history without moving World goods.
+Observer schema 9 exposes retained completed records and current rights even
+when old terminal offer projections have been compacted; snapshot construction
+mutates nothing.
 
 ## Verification
 
-Focused CIV-35 validation passed:
+Focused CIV-35 validation:
 
 ```text
-22 passed, 0 failed
+54 passed, 0 failed
 ```
 
-The complete smoke suite and canonical repository gate passed:
+Canonical validation:
 
 ```text
-3830 passed, 0 failed
+3862 passed, 0 failed
 35/35 repository steps
 checkpoint schema: 32
 Observer schema: 9
 golden regeneration: not attempted
 ```
 
-The rendered seed-46 live campaign passed in two Pebble processes. Phase 1
+The corrected rendered live campaign passed in two Pebble processes. Phase 1
 contains one expected injected runtime error and phase 2 contains zero runtime
-errors. Six native-resolution captures were inspected: pre-exchange, open
-offer, post-exchange, fresh restore, produced-tool use and final cleanup. The
-isolated evidence is retained under
-`/var/folders/23/t4l5dv055dl3x1zqylcpl9wc0000gn/T/PebbleLab-live.05BFyO`.
-The disposable workshop and target cells were restored while exchanged goods
-remained in their verified custody.
+errors. Six native captures were inspected: pre-exchange, open offer,
+post-exchange, fresh restore, produced-tool use and final cleanup. Evidence is
+retained under
+`/var/folders/23/t4l5dv055dl3x1zqylcpl9wc0000gn/T/PebbleLab-live.kmlede`.
+Disposable cells were restored exactly while exchanged goods remained in
+verified custody.
 
 ## Explicit non-claims
 
 CIV-35 does not prove debt, future promises, durable contracts, credit,
-markets, market price discovery, currency, accounting, merchant
-organizations, large-scale trade or global logistics. It also does not add
-loans, interest, default, contract enforcement, order books, matching engines,
-market stalls as economic authority, supply/demand curves, taxation, wages,
-firms, shops, guilds or trade law. Those semantics remain outside CIV-35;
-CIV-36, CIV-37 and CIV-38 are not started by this work.
+markets, market price discovery, currency, accounting, merchant organizations,
+large-scale trade or global logistics. It adds no loans, interest, default,
+contract enforcement, order books, matching engines, market stalls as
+economic authority, supply/demand curves, taxation, wages, firms, shops,
+guilds or trade law. CIV-36, CIV-37 and CIV-38 remain outside this correction.
 
 ## Local candidate program state
 

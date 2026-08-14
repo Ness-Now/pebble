@@ -130,7 +130,11 @@ approved reviewed evidence HEAD
 `CIV-35 — Barter and Local Exchange V1` is implemented locally from exact
 baseline `8b7faa4cd03e315dec5696f72ec1ad75e333c77f`. Its bounded two-sided
 physical exchange, rollback/retry, schema-32 restart, Observer schema 9 and
-downstream use evidence are ready for senior review. It is not published;
+downstream use evidence are ready for senior review. Senior Review Correction
+01 removes proof-fixture decision authority from normal discovery and adds
+deterministic terminal-offer compaction that preserves every pending offer;
+the corrected focused, restart and two-process evidence is indexed in
+[`CIV_35_PHASE_SUMMARY.md`](CIV_35_PHASE_SUMMARY.md). It is not published;
 `CIV-36` is not started.
 
 ## Operational

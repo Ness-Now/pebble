@@ -842,6 +842,18 @@ transaction to prevalidate, mutate and verify both Core inventory legs before
 the sole `AgentSimulationSession` publishes one exchange and two CIV-26 rights
 transitions.
 
+Senior Review Correction 01 fixed two local-candidate defects before approval:
+barter discovery/negotiation had been disposable-proof-fixture-bound, and
+terminal offer projections permanently consumed the 32-offer capacity. Pebble
+now emits stable bounded observations from at most 8 agents, 4 nearby
+counterparties per agent, 4 exact current goods per agent and 32 pair
+candidates per tick; PebbleAgents evaluates at most 8 active needs and records
+at most 4 discoveries per tick. The proof fixture creates initial World goods,
+rights, needs and proximity only. Terminal projections compact in deterministic
+oldest-causal order under capacity pressure, while open and accepted offers are
+never evicted. A focused 24-attempt campaign against an eight-offer cap proves
+continued creation, pending retention and schema-32 restart after compaction.
+
 The decisive autonomous campaign exchanges agent_0's real CIV-34
 `stone_pickaxe x1` for agent_1's `bread x2`. A deterministic fault after the
 first real transfer compensates exactly and an immediate same-process retry
@@ -854,7 +866,7 @@ durability evolves from damage zero to one.
 Schema 32 persists bounded terminal barter history and refuses checkpointing
 pending physical authority; replay never moves World matter. Observer schema 9
 projects exact goods, reasons, decisions, receipts and post-exchange rights
-read-only. The canonical gate passes 35/35 with 3830 assertions and the
+read-only. The canonical gate passes 35/35 with 3862 assertions and the
 two-process live campaign supplies six inspected native captures. The bounded
 proof is [`CIV_35_PHASE_SUMMARY.md`](CIV_35_PHASE_SUMMARY.md).
 

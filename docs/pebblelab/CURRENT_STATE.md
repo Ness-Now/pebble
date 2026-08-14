@@ -138,11 +138,21 @@ The accepted CIV-34 proof covers canonical crafting, the transactional live
 gateway, the normal autonomous path, schema-31 restart, Observer schema 8 and
 downstream produced-tool use. CIV-35 is now an implemented local review
 candidate from exact baseline `8b7faa4cd03e315dec5696f72ec1ad75e333c77f`.
-Its normal local barter exchanges agent_0's real CIV-34 stone pickaxe for two
-real CIV-34 breads held by agent_1, compensates a true post-first-transfer
-fault exactly, retries successfully, restores once across a fresh process and
-uses the exact received pickaxe. Checkpoint/replay schema is 32 and Observer
-schema is 9. It remains unpublished; CIV-36 is not started.
+Senior Review Correction 01 fixed the first local candidate's two identified
+defects: opportunity/negotiation was disposable-proof-fixture-bound, and
+terminal offer projections permanently exhausted `maximumOffers`. Normal
+runtime now derives explicitly bounded local physical pair observations from
+current Pebble custody/proximity evidence, while the sole session selects the
+offer and the named counterparty independently evaluates its current need and
+local evidence. The disposable proof injects neither the decisive opportunity
+nor either decision after bootstrap. Deterministic oldest-terminal compaction
+keeps offer projections bounded without ever evicting open or accepted
+authority; 24 attempts against an eight-offer focused cap remain sustainable
+across schema-32 restart. The corrected live route exchanges agent_0's real
+CIV-34 stone pickaxe for two breads held by agent_1, compensates a true
+post-first-transfer fault exactly, retries successfully, restores once across
+a fresh process and uses the exact received pickaxe. Observer schema remains
+9. CIV-35 remains unpublished and awaits senior review; CIV-36 is not started.
 
 ## Current program position
 
