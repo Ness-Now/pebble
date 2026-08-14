@@ -12,12 +12,10 @@ SHA of the documentation commit that contains it.
   **ACQUIRED AND PUBLISHED** under contract `V4-GATE-C-v1`.
 - Gate D — Generational Continuity:
   **ACQUIRED AND PUBLISHED** under contract `V4-GATE-D-v1`.
-- `CIV-00` through `CIV-35`: **COMPLETE AND PUBLISHED** in their bounded
+- `CIV-00` through `CIV-36`: **COMPLETE AND PUBLISHED** in their bounded
   contracts.
-- `CIV-36 — Debt, Promises and Durable Contracts V1`:
-  **IMPLEMENTED_LOCAL_REVIEW_CANDIDATE**.
 - `CIV-37 — Physical Markets and Local Price Discovery V1`:
-  **NOT_STARTED**.
+  **NOT_STARTED — NEXT ELIGIBLE PHASE**.
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
 
 Published canonical baseline evaluated by independent Gate D Evaluation 04
@@ -165,7 +163,8 @@ a true post-first-transfer fault exactly, retries successfully, restores once
 across a fresh process and uses the exact received pickaxe. Observer schema is
 9.
 
-`CIV-36 — Debt, Promises and Durable Contracts V1` is implemented locally from
+`CIV-36 — Debt, Promises and Durable Contracts V1` is complete and published
+from
 exact published baseline `e47c2d1a4132dc756219ef0d2c1495b2769b8d35` at
 product/proof commit `a910f938c0e943e37aa851c0f65dfecdb06698cc`. The sole
 session owns explicit future promises, distinct acceptance, durable
@@ -191,17 +190,22 @@ the repository gate passes 35/35 with 3892/3892 assertions, and an inspected
 four-process campaign proves zero-mutation capacity refusal, unrelated-slot
 drift tolerance, ordinary consideration rollback, explicit and ordinary
 fulfillment rollbacks, open-debt restart, normal bread production, exact retry,
-exact-once fulfillment and fulfilled restart. This is a local review candidate,
-not a publication or approval claim. CIV-37 remains not started and Gate E
-remains planned.
+exact-once fulfillment and fulfilled restart. Senior review approved the
+corrected reviewed evidence/documentation HEAD
+`3494abea0211a843ca54bb0748b1a6d9bdbddd3f` and final review bundle SHA-256
+`7947b0ae2e1c86a551403d24f3d75769e8203baf43f8b0e5958a94d038d21951`
+with 47/47 internal checksums and passing unzip validation. The initial
+candidate HEAD `4c7af994fc52974f6f919765af682b209f6b84ca` was not
+independently approved. CIV-37 remains not started and is the next eligible
+phase; Gate E remains planned and not acquired.
 
 ## Current program position
 
 ```text
-active CIV phase: CIV-36 — IMPLEMENTED_LOCAL_REVIEW_CANDIDATE
-completed and published through: CIV-35
-next eligible phase: CIV-37 after CIV-36 approval and publication
-next authorized action: SENIOR REVIEW OF CIV-36
+active CIV phase: null
+completed and published through: CIV-36
+next eligible phase: CIV-37
+next authorized action: CIV-37
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -229,8 +233,8 @@ Gate D Blocker 10 status: BLOCKER_FIX_PUBLISHED
 Independent Gate D Evaluation 11 status: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 CIV-34 status: COMPLETE AND PUBLISHED
 CIV-35 status: COMPLETE AND PUBLISHED
-CIV-36 status: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE
-CIV-37 status: NOT_STARTED
+CIV-36 status: COMPLETE AND PUBLISHED
+CIV-37 status: NOT_STARTED — NEXT ELIGIBLE PHASE
 V4-GATE-E-v1 status: PLANNED — NOT ACQUIRED
 roadmap generation: V4
 ```
@@ -532,7 +536,6 @@ through 10 remain **FAIL — HISTORICAL IMMUTABLE EVIDENCE**, and Blockers 01
 through 10 remain **FIXED AND PUBLISHED**. Gate D is **ACQUIRED AND
 PUBLISHED**. `CIV-34 — Production, Tools and Workshops V1` is **COMPLETE AND
 PUBLISHED**. `CIV-35 — Barter and Local Exchange V1` is **COMPLETE AND
-PUBLISHED**. `CIV-36 — Debt, Promises and Durable Contracts V1` is
-**IMPLEMENTED_LOCAL_REVIEW_CANDIDATE**, not published. `CIV-37` is
-**NOT_STARTED** and Gate E remains **PLANNED — NOT ACQUIRED**. The next
-authorized action is **SENIOR REVIEW OF CIV-36**.
+PUBLISHED**. `CIV-36 — Debt, Promises and Durable Contracts V1` is **COMPLETE
+AND PUBLISHED**. `CIV-37` is **NOT_STARTED — NEXT ELIGIBLE PHASE** and Gate E
+remains **PLANNED — NOT ACQUIRED**. The next authorized action is **CIV-37**.

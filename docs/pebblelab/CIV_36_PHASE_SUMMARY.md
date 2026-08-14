@@ -2,47 +2,50 @@
 
 ## Verdict
 
-`CIV-36` is **IMPLEMENTED_LOCAL_REVIEW_CANDIDATE** in its bounded V1
-contract. It was implemented directly from the exact published canonical
-baseline:
+`CIV-36` is **COMPLETE AND PUBLISHED** in its bounded V1 contract. It was
+implemented directly from the exact published canonical baseline:
 
 ```text
 e47c2d1a4132dc756219ef0d2c1495b2769b8d35
 ```
 
-Local product and proof commit:
+Original product and proof commit:
 
 ```text
 a910f938c0e943e37aa851c0f65dfecdb06698cc
 ```
 
-Reviewed pre-correction candidate HEAD and Senior Review Correction 01
-product/proof commit:
+Accepted implementation, correction and review history:
 
 ```text
+original product/proof commit: a910f938c0e943e37aa851c0f65dfecdb06698cc
 reviewed pre-correction HEAD: 4c7af994fc52974f6f919765af682b209f6b84ca
-Correction 01: 76adcba62ac901b01618bea58fba32e1d5dc0d02
+initial candidate independently approved: NO
+Senior Review Correction 01 product/proof commit: 76adcba62ac901b01618bea58fba32e1d5dc0d02
+corrected reviewed evidence/documentation HEAD: 3494abea0211a843ca54bb0748b1a6d9bdbddd3f
+senior review: APPROVED
+final review bundle SHA-256: 7947b0ae2e1c86a551403d24f3d75769e8203baf43f8b0e5958a94d038d21951
+internal checksums: 47/47 PASS
+unzip: PASS
 ```
 
-This verdict is deliberately not a publication claim. CIV-35 remains complete
-and published, CIV-37 remains not started, Gate E remains planned, and the next
-authorized action is senior review of this CIV-36 candidate.
+The corrected product and evidence are senior-review approved. CIV-35 remains
+complete and published, CIV-37 remains not started and is the next eligible
+phase, and Gate E remains planned and not acquired.
 
 ## Senior Review Correction 01
 
-Senior review found and this candidate discloses two defects in the first
-reviewed candidate:
+Senior review found two defects in the initial reviewed candidate. Canonical
+history retains them explicitly:
 
 ```text
 CIV-36 Senior Review Correction 01A:
-the first candidate did not guarantee that every ordinary post-physical
-publication failure escaped the autonomous blocked path and therefore could
-bypass candidate rollback
+ordinary post-physical publication failures were not guaranteed to escape the
+autonomous blocked path and could bypass candidate rollback
 
 CIV-36 Senior Review Correction 01B:
-the first candidate reacquired asset-scoped physical authority but discarded
-its current custody fingerprint in favor of the historical full-custody
-fingerprint
+asset-scoped authority was reacquired but its current custody fingerprint was
+discarded in favor of the historical full-custody fingerprint
 ```
 
 Correction 01A now prospectively executes the complete fallible contract
@@ -60,6 +63,56 @@ disposition, then uses the returned `currentCustodyFingerprint` as the
 immediate gateway transfer precondition. Unrelated co-mingled slot drift no
 longer creates false stale-source refusal, while drift of the tracked asset
 still fails closed.
+
+Both corrections are senior-review approved. The initial documentation HEAD
+`4c7af994fc52974f6f919765af682b209f6b84ca` remains historical pre-correction
+evidence and was not independently approved.
+
+## Published contract and corrected guarantees
+
+The accepted bounded CIV-36 result is:
+
+```text
+explicit future promise: PASS
+distinct counterparty acceptance: PASS
+durable accepted obligation: PASS
+real physical consideration: PASS
+outstanding debt survives fresh restart: PASS
+normal CIV-34 promised-good production: PASS
+real physical fulfillment: PASS
+exact-once fulfillment: PASS
+fulfilled fresh restart: PASS
+```
+
+Corrected physical publication atomicity is:
+
+```text
+predictable consideration publication refusal: prevalidated before physical mutation
+predictable-refusal physicalMutation: 0
+ordinary consideration post-mutation failure: real mutation reached
+consideration rollback: EXACT
+explicit fulfillment post-mutation fault: real mutation reached
+explicit fulfillment rollback: EXACT
+ordinary fulfillment publication failure: real mutation reached
+ordinary fulfillment rollback: EXACT
+ordinary post-mutation errors swallowed: 0
+published session after rollback: unchanged
+published recorder after rollback: unchanged
+immediate retry: PASS
+```
+
+The governing invariant is: once a contract physical mutation has registered
+candidate compensation, any subsequent error before complete civilization
+publication escapes the autonomous blocked path and fails the enclosing
+candidate.
+
+Current physical authority is reacquired at execution. The gateway-provided
+`currentCustodyFingerprint` is the immediate transfer precondition; a
+historical full-custody fingerprint is not physical transfer authority.
+Unrelated consideration and fulfillment inventory drift passes when the exact
+tracked asset remains unchanged, while tracked holder, identity or quantity
+changes fail closed. Material Rights remains social authority and a constraint;
+it does not create physical matter.
 
 ## Reuse-first architecture
 
@@ -275,7 +328,7 @@ Observer schema: 10
 golden regeneration: not attempted
 ```
 
-The official live launcher result is:
+The accepted live launcher result is:
 
 ```text
 PASS: CIV-36 predictable prevalidation, current asset authority, ordinary and
@@ -283,23 +336,29 @@ explicit post-transfer rollback/retry, four-process durability, exact-once
 fulfillment, and cleanup verified.
 ```
 
+Accepted campaign accounting is four fresh processes, twelve inspected native
+captures, three expected runtime errors distributed `0 / 1 / 2 / 0`, zero
+unexpected runtime errors, and cleanup of the exact cells with three probes
+removed, interaction restored and fulfilled custody retained.
+
 ## Explicit non-claims
 
-CIV-36 does not claim markets, price discovery, currency, interest, banking,
-bankruptcy, general legal enforcement, courts, contract inheritance, merchant
-organizations, taxation or large-scale finance. It also adds no loans,
-collateral, divisible claims, wages, firms, order books, general settlement,
-public treasury or global logistics. Physical markets and local price
-discovery remain CIV-37 work.
+CIV-36 does not claim physical markets, price discovery, currency, interest,
+banking, bankruptcy, general legal enforcement, courts, contract inheritance,
+merchant organizations, taxation, large-scale finance, collateral or general
+contract language. It also adds no loans, divisible claims, wages, firms,
+order books, general settlement, public treasury or global logistics. Physical
+markets and local price discovery remain CIV-37 work.
 
-## Local program state
+## Canonical program state
 
 ```text
 CIV-35: COMPLETE AND PUBLISHED
-CIV-36: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE
-CIV-37: NOT_STARTED
+CIV-36: COMPLETE AND PUBLISHED
+CIV-37: NOT_STARTED — NEXT ELIGIBLE PHASE
 Gate E: PLANNED — NOT ACQUIRED
-completed published through: CIV-35
-next: SENIOR REVIEW OF CIV-36
-push: NOT_ATTEMPTED
+active phase: null
+completed published through: CIV-36
+next eligible phase: CIV-37
+next authorized action: CIV-37
 ```

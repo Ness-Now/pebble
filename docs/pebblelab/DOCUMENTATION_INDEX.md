@@ -40,14 +40,14 @@ These documents form the minimal permanent memory of the project:
 | [`PEBBLE_CIVILIZATION_ROADMAP.md`](PEBBLE_CIVILIZATION_ROADMAP.md) | Canonical human V4 program, required/optional phases, slices and versioned gates. |
 | [`ROADMAP_MANIFEST.json`](ROADMAP_MANIFEST.json) | Deterministic machine projection of the V4 roadmap and status. |
 | [`DOCUMENTATION_INDEX.md`](DOCUMENTATION_INDEX.md) | Classification and navigation for the documentation set. |
-| [`CIV_36_PHASE_SUMMARY.md`](CIV_36_PHASE_SUMMARY.md) | Local review-candidate architecture, contract semantics, physical proof, validation and non-claims for CIV-36. |
+| [`CIV_36_PHASE_SUMMARY.md`](CIV_36_PHASE_SUMMARY.md) | Published architecture, contract semantics, correction history, physical proof, validation and non-claims for CIV-36. |
 
 Canonical status at the product baseline reconciled by this documentation:
 
 ```text
 Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED under V4-GATE-B-v1
-CIV-00 through CIV-35: COMPLETE AND PUBLISHED
+CIV-00 through CIV-36: COMPLETE AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
@@ -75,10 +75,13 @@ Gate D Blocker 10: BLOCKER_FIX_PUBLISHED
 Independent Gate D Evaluation 11: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 CIV-34: COMPLETE AND PUBLISHED
 CIV-35: COMPLETE AND PUBLISHED
-CIV-36: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE
-CIV-37: NOT_STARTED
+CIV-36: COMPLETE AND PUBLISHED
+CIV-37: NOT_STARTED — NEXT ELIGIBLE PHASE
 V4-GATE-E-v1: PLANNED — NOT ACQUIRED
-next: SENIOR REVIEW OF CIV-36
+active phase: null
+completed through: CIV-36
+next eligible phase: CIV-37
+next authorized action: CIV-37
 ```
 
 The `CIV-33` completion is published on the canonical branch at
@@ -141,19 +144,25 @@ evidence HEAD `1dbe84fdc9286b35e05a0aaaf8673ec0ce99718a` and review bundle
 SHA-256 `c26a79fa7641e2da534f4bf18954bdbe50635d6bc9306be55a7b705af321e41d`.
 The complete accepted evidence is indexed in
 [`CIV_35_PHASE_SUMMARY.md`](CIV_35_PHASE_SUMMARY.md). `CIV-36 — Debt, Promises
-and Durable Contracts V1` is implemented locally from exact baseline
+and Durable Contracts V1` was implemented from exact baseline
 `e47c2d1a4132dc756219ef0d2c1495b2769b8d35` at product/proof commit
 `a910f938c0e943e37aa851c0f65dfecdb06698cc`. Senior Review Correction 01 at
-`76adcba62ac901b01618bea58fba32e1d5dc0d02` corrects the first candidate's
+`76adcba62ac901b01618bea58fba32e1d5dc0d02` corrects the initial candidate's
 ordinary post-physical publication escape gap and its discard of reacquired
-asset-scoped current fingerprints. Its schema-33 open-debt restart, current
+asset-scoped current fingerprints. The initial candidate documentation HEAD
+`4c7af994fc52974f6f919765af682b209f6b84ca` was not independently approved.
+Senior review approved corrected evidence/documentation HEAD
+`3494abea0211a843ca54bb0748b1a6d9bdbddd3f` and final review bundle SHA-256
+`7947b0ae2e1c86a551403d24f3d75769e8203baf43f8b0e5958a94d038d21951`
+with 47/47 internal checksums and passing unzip validation. Its schema-33
+open-debt restart, current
 authority on both legs, predictable zero-mutation publication refusal,
 ordinary and explicit verified rollback/retry, normal CIV-34 production,
 exact-once fulfillment, Observer schema 10, 30/30 focused checks, 3892/3892
 repository assertions and four-process live proof are indexed in
-[`CIV_36_PHASE_SUMMARY.md`](CIV_36_PHASE_SUMMARY.md). CIV-36 remains an
-unpublished local review candidate. CIV-37 is not started, Gate E is not
-acquired, and the next authorized action is senior review of CIV-36.
+[`CIV_36_PHASE_SUMMARY.md`](CIV_36_PHASE_SUMMARY.md). CIV-36 is complete and
+published. CIV-37 is not started and is the next eligible phase; Gate E is not
+acquired, and the next authorized action is CIV-37.
 
 ## Operational
 

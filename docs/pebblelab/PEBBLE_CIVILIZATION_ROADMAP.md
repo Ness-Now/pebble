@@ -129,14 +129,14 @@ f55b64305027bee3fb67a2e27b422578124c4e00
 ## Canonical position
 
 ```text
-CIV-00 through CIV-35: COMPLETE AND PUBLISHED
+CIV-00 through CIV-36: COMPLETE AND PUBLISHED
 Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
-active CIV phase: CIV-36 — IMPLEMENTED_LOCAL_REVIEW_CANDIDATE
-completed and published through: CIV-35
-next eligible phase: CIV-37 after CIV-36 approval and publication
-next authorized action: SENIOR REVIEW OF CIV-36
+active CIV phase: null
+completed and published through: CIV-36
+next eligible phase: CIV-37
+next authorized action: CIV-37
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
@@ -164,8 +164,8 @@ Gate D Blocker 10: BLOCKER_FIX_PUBLISHED
 Independent Gate D Evaluation 11: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 CIV-34: COMPLETE AND PUBLISHED
 CIV-35: COMPLETE AND PUBLISHED
-CIV-36: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE
-CIV-37: NOT_STARTED
+CIV-36: COMPLETE AND PUBLISHED
+CIV-37: NOT_STARTED — NEXT ELIGIBLE PHASE
 V4-GATE-E-v1: PLANNED — NOT ACQUIRED
 ```
 
@@ -237,14 +237,20 @@ published from exact baseline `8b7faa4cd03e315dec5696f72ec1ad75e333c77f`.
 Senior review approved corrected evidence HEAD
 `1dbe84fdc9286b35e05a0aaaf8673ec0ce99718a` after Correction 01 fixed both
 the proof-fixture-bound discovery path and permanent terminal-offer capacity
-exhaustion. `CIV-36` is implemented locally from exact baseline
+exhaustion. `CIV-36` is complete and published from exact baseline
 `e47c2d1a4132dc756219ef0d2c1495b2769b8d35` at product/proof commit
 `a910f938c0e943e37aa851c0f65dfecdb06698cc`. Senior Review Correction 01
 product/proof commit `76adcba62ac901b01618bea58fba32e1d5dc0d02`
 closes the ordinary post-physical publication escape gap and uses reacquired
-asset-scoped current fingerprints as the immediate transfer authority. CIV-36
-remains an unpublished local review candidate. CIV-37 is not started, Gate E
-is not acquired and the next authorized action is senior review of CIV-36.
+asset-scoped current fingerprints as the immediate transfer authority. The
+initial documentation HEAD `4c7af994fc52974f6f919765af682b209f6b84ca`
+was not independently approved. Senior review approved corrected
+evidence/documentation HEAD `3494abea0211a843ca54bb0748b1a6d9bdbddd3f`
+and final review bundle SHA-256
+`7947b0ae2e1c86a551403d24f3d75769e8203baf43f8b0e5958a94d038d21951`
+with 47/47 internal checksums and passing unzip validation. CIV-37 is not
+started and is the next eligible phase; Gate E is not acquired and the next
+authorized action is CIV-37.
 
 Gate B is acquired under `V4-GATE-B-v1`, the bounded checkpoint proved by the
 published closure and subsequently hardened for normal-world bootstrap:
@@ -421,10 +427,9 @@ historical FAIL evidence; its targeted Blocker 08 correction is a
 targeted Blocker 09 correction is **fixed and published**. Evaluation 10
 remains historical FAIL evidence; its targeted Blocker 10 correction is a
 **BLOCKER_FIX_PUBLISHED**. Independent Evaluation 11 is the first accepted
-whole-Gate PASS and is **SENIOR REVIEW APPROVED**. `CIV-34` and `CIV-35` are
-**COMPLETE AND PUBLISHED**. `CIV-36` is
-**IMPLEMENTED_LOCAL_REVIEW_CANDIDATE**. `CIV-37` is **NOT_STARTED** and Gate E
-remains **PLANNED — NOT ACQUIRED**.
+whole-Gate PASS and is **SENIOR REVIEW APPROVED**. `CIV-34` through `CIV-36`
+are **COMPLETE AND PUBLISHED**. `CIV-37` is **NOT_STARTED — NEXT ELIGIBLE
+PHASE** and Gate E remains **PLANNED — NOT ACQUIRED**.
 
 | Phase | Requirement | Outcome |
 | --- | --- | --- |
@@ -760,10 +765,9 @@ The published active-probe physical-action safety correction is documented in
 No individual correction acquired Gate D. The independent composition proof is
 recorded in
 [`GATE_D_EVALUATION_11_REPORT.md`](GATE_D_EVALUATION_11_REPORT.md). Senior
-review approved it, so Gate D remains acquired and published. `CIV-34` and
-`CIV-35` are complete and published. `CIV-36` is an implemented but unpublished
-local review candidate. `CIV-37` is not started; senior review of CIV-36 is the
-next authorized action.
+review approved it, so Gate D remains acquired and published. `CIV-34` through
+`CIV-36` are complete and published. `CIV-37` is not started and is the next
+eligible phase and authorized action.
 
 ## Wave 3 — Local material economy
 
@@ -899,17 +903,23 @@ unimplemented by CIV-35.
 
 ### `CIV-36` — Debt, Promises and Durable Contracts V1
 
-Status: **IMPLEMENTED_LOCAL_REVIEW_CANDIDATE, required**.
+Status: **COMPLETE AND PUBLISHED, required**.
 
-Local candidate identity:
+Accepted implementation, correction and review history:
 
 ```text
 exact baseline: e47c2d1a4132dc756219ef0d2c1495b2769b8d35
-product/proof commit: a910f938c0e943e37aa851c0f65dfecdb06698cc
-reviewed pre-correction HEAD: 4c7af994fc52974f6f919765af682b209f6b84ca
-Senior Review Correction 01: 76adcba62ac901b01618bea58fba32e1d5dc0d02
-publication: NOT CLAIMED
-next action: SENIOR REVIEW OF CIV-36
+original product/proof commit: a910f938c0e943e37aa851c0f65dfecdb06698cc
+initial candidate documentation HEAD: 4c7af994fc52974f6f919765af682b209f6b84ca
+initial candidate independently approved: NO
+Senior Review Correction 01 product/proof commit: 76adcba62ac901b01618bea58fba32e1d5dc0d02
+corrected reviewed evidence/documentation HEAD: 3494abea0211a843ca54bb0748b1a6d9bdbddd3f
+senior review: APPROVED
+final review bundle SHA-256: 7947b0ae2e1c86a551403d24f3d75769e8203baf43f8b0e5958a94d038d21951
+internal checksums: 47/47 PASS
+unzip: PASS
+publication: COMPLETE AND PUBLISHED
+next action: CIV-37
 ```
 
 Result: a bounded local observation may lead one inhabitant to explicitly
@@ -928,7 +938,7 @@ CIV-34 production gateway and candidate physical transaction; the sole
 verified. Correction 01 prospectively validates complete contract publication
 before moving matter, then makes every post-transfer error escape the bounded
 autonomous path so candidate compensation executes. Both physical legs
-reacquire exact asset authority and use its current full-custody fingerprint
+reacquire exact asset authority and use its `currentCustodyFingerprint`
 immediately; unrelated slot drift is tolerated while tracked-asset drift fails
 closed. The retained explicit fault and independent ordinary publication
 rejections compensate exactly, leave debt open and permit a same-process retry
@@ -952,11 +962,12 @@ retries successfully, and restores fulfilled state with zero duplicate
 fulfillment. Twelve native captures were inspected. The bounded proof is
 [`CIV_36_PHASE_SUMMARY.md`](CIV_36_PHASE_SUMMARY.md).
 
-This phase does not claim markets, price discovery, currency, interest,
-banking, bankruptcy, general legal enforcement, courts, contract inheritance,
-merchant organizations, taxation or large-scale finance. CIV-37 physical
-markets and local price discovery remain not started. Gate E remains planned
-and is not acquired.
+This phase does not claim physical markets, price discovery, currency,
+interest, banking, bankruptcy, general legal enforcement, courts, contract
+inheritance, merchant organizations, taxation, large-scale finance, collateral
+or general contract language. CIV-37 physical markets and local price
+discovery remain not started and are the next eligible phase. Gate E remains
+planned and is not acquired.
 
 ### `V4-GATE-E-v1` — Local Material Economy
 
