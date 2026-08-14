@@ -51,6 +51,196 @@ extension AgentSimulationSession {
         }
     }
 
+    /// Converts Pebble's bounded current physical pairs into economically
+    /// relevant local opportunities. This is pure evaluation: it creates no
+    /// offer, reservation, right or physical mutation.
+    public func discoverBarterOpportunities(
+        from candidates: [AgentBarterPhysicalPairObservation]
+    ) throws -> [AgentBarterOpportunityObservation] {
+        guard let state = barterState else {
+            throw AgentSessionError.barter(.disabled)
+        }
+        guard candidates.count
+                <= state.configuration.maximumPhysicalPairCandidatesPerTick,
+              Set(candidates.map(\.candidateID)).count == candidates.count else {
+            throw AgentSessionError.barter(.invalidOpportunity("discovery-bounds"))
+        }
+        var discoveries: [AgentBarterOpportunityObservation] = []
+        for candidate in candidates.sorted(by: {
+            $0.candidateID < $1.candidateID
+        }) {
+            guard candidate.actorAID < candidate.actorBID,
+                  candidate.actorAGood.holderID == candidate.actorAID,
+                  candidate.actorBGood.holderID == candidate.actorBID,
+                  candidate.actorAGood.assetID != candidate.actorBGood.assetID,
+                  candidate.actorAGood.material.identity
+                    != candidate.actorBGood.material.identity,
+                  candidate.distance >= 0,
+                  candidate.distance <= state.configuration.maximumLocalDistance,
+                  candidate.lineOfSight, candidate.chunksReady,
+                  candidate.observedAtTick == tick,
+                  candidate.expiresAtTick
+                    == tick + state.configuration.offerLifetimeTicks,
+                  validBarterText(candidate.candidateID, maximum: 160) else {
+                throw AgentSessionError.barter(
+                    .invalidOpportunity(candidate.candidateID)
+                )
+            }
+            try validateBarterLegProvenance(candidate.actorAGood)
+            try validateBarterLegProvenance(candidate.actorBGood)
+            guard !barterAssetReserved(candidate.actorAGood.assetID, in: state),
+                  !barterAssetReserved(candidate.actorBGood.assetID, in: state),
+                  let actorAReason = bestBarterReason(
+                    actorID: candidate.actorAID,
+                    received: candidate.actorBGood.material,
+                    configuration: state.configuration
+                  ),
+                  let actorBReason = bestBarterReason(
+                    actorID: candidate.actorBID,
+                    received: candidate.actorAGood.material,
+                    configuration: state.configuration
+                  ) else { continue }
+            let actorADisposition = evaluateMaterialUse(AgentMaterialUseRequest(
+                requestID: "barter-discovery:\(candidate.candidateID):a",
+                assetID: candidate.actorAGood.assetID,
+                actorID: candidate.actorAID, use: .transferCustody,
+                verifiedHolder: candidate.actorAGood.holderObservation
+            ))
+            let actorBDisposition = evaluateMaterialUse(AgentMaterialUseRequest(
+                requestID: "barter-discovery:\(candidate.candidateID):b",
+                assetID: candidate.actorBGood.assetID,
+                actorID: candidate.actorBID, use: .transferCustody,
+                verifiedHolder: candidate.actorBGood.holderObservation
+            ))
+            guard actorADisposition.verdict == .allowed,
+                  actorBDisposition.verdict == .allowed else { continue }
+            let opportunity = AgentBarterOpportunityObservation(
+                opportunityID: "barter-opportunity-"
+                    + AgentAutonomousActivityDigest.make(candidate.candidateID),
+                offerorID: candidate.actorAID,
+                counterpartyID: candidate.actorBID,
+                offered: candidate.actorAGood,
+                requested: candidate.actorBGood,
+                offerorReason: actorAReason,
+                counterpartyReason: actorBReason,
+                distance: candidate.distance,
+                lineOfSight: candidate.lineOfSight,
+                chunksReady: candidate.chunksReady,
+                observedAtTick: candidate.observedAtTick,
+                expiresAtTick: candidate.expiresAtTick
+            )
+            try validateBarterOpportunity(opportunity, state: state)
+            discoveries.append(opportunity)
+            if discoveries.count
+                == state.configuration.maximumDiscoveriesPerTick { break }
+        }
+        return discoveries
+    }
+
+    /// Selects one current opportunity through deterministic cognition. The
+    /// returned proposal is explicit offeror authority but remains social-only.
+    public func nextAutonomousBarterOfferProposal() -> AgentBarterOfferProposal? {
+        guard let state = barterState else { return nil }
+        let candidates = state.opportunities.filter { opportunity in
+            guard opportunity.observedAtTick == tick,
+                  opportunity.expiresAtTick >= tick,
+                  !barterAssetReserved(opportunity.offered.assetID, in: state),
+                  !barterAssetReserved(opportunity.requested.assetID, in: state),
+                  bestBarterReason(
+                    actorID: opportunity.offerorID,
+                    received: opportunity.requested.material,
+                    configuration: state.configuration
+                  ) == opportunity.offerorReason,
+                  bestBarterReason(
+                    actorID: opportunity.counterpartyID,
+                    received: opportunity.offered.material,
+                    configuration: state.configuration
+                  ) == opportunity.counterpartyReason else { return false }
+            let offered = evaluateMaterialUse(AgentMaterialUseRequest(
+                requestID: "barter-proposal:\(opportunity.opportunityID):offered",
+                assetID: opportunity.offered.assetID,
+                actorID: opportunity.offerorID, use: .transferCustody,
+                verifiedHolder: opportunity.offered.holderObservation
+            ))
+            let requested = evaluateMaterialUse(AgentMaterialUseRequest(
+                requestID: "barter-proposal:\(opportunity.opportunityID):requested",
+                assetID: opportunity.requested.assetID,
+                actorID: opportunity.counterpartyID, use: .transferCustody,
+                verifiedHolder: opportunity.requested.holderObservation
+            ))
+            return offered.verdict == .allowed && requested.verdict == .allowed
+        }.sorted { lhs, rhs in
+            let lhsPriority = barterReasonPriority(lhs.offerorReason)
+            let rhsPriority = barterReasonPriority(rhs.offerorReason)
+            if lhsPriority != rhsPriority { return lhsPriority > rhsPriority }
+            let lhsCounterparty = barterReasonPriority(lhs.counterpartyReason)
+            let rhsCounterparty = barterReasonPriority(rhs.counterpartyReason)
+            if lhsCounterparty != rhsCounterparty {
+                return lhsCounterparty > rhsCounterparty
+            }
+            return lhs.opportunityID < rhs.opportunityID
+        }
+        guard let opportunity = candidates.first,
+              let offerID = AgentBarterOfferID(
+                rawValue: "barter-" + AgentAutonomousActivityDigest.make(
+                    opportunity.opportunityID
+                )
+              ),
+              !state.processedOperationIDs.contains(
+                "barter-offer:\(offerID.rawValue)"
+              ) else { return nil }
+        return AgentBarterOfferProposal(
+            offerID: offerID,
+            opportunityID: opportunity.opportunityID,
+            actorID: opportunity.offerorID,
+            reason: "current local need values exact requested physical good"
+        )
+    }
+
+    /// The counterparty re-evaluates its own current need and Pebble's current
+    /// local evidence. Opportunity existence alone never implies acceptance.
+    public func evaluateAutonomousBarterCounterpartyDecision(
+        _ observation: AgentBarterCounterpartyDecisionObservation
+    ) -> AgentBarterCounterpartyDecision? {
+        guard let state = barterState,
+              let offer = state.offers.first(where: {
+                  $0.offerID == observation.offerID && $0.status == .open
+              }), offer.opportunity.counterpartyID == observation.counterpartyID,
+              observation.observedAtTick == tick else { return nil }
+        let currentReason = bestBarterReason(
+            actorID: observation.counterpartyID,
+            received: offer.opportunity.offered.material,
+            configuration: state.configuration
+        )
+        let needStillActive = currentReason == offer.opportunity.counterpartyReason
+        let local = offer.expiresAtTick >= tick
+            && observation.distance >= 0
+            && observation.distance <= state.configuration.maximumLocalDistance
+            && observation.lineOfSight && observation.chunksReady
+        let accept = needStillActive && local
+        let reason: String
+        if !needStillActive {
+            reason = "counterparty current need no longer values offered good"
+        } else if !local {
+            reason = "current bounded local evidence refuses exchange"
+        } else {
+            reason = "counterparty current need values exact offered physical good"
+        }
+        return AgentBarterCounterpartyDecision(
+            offerID: offer.offerID,
+            counterpartyID: observation.counterpartyID,
+            accept: accept,
+            reason: reason
+        )
+    }
+
+    public func expiredBarterOfferIDs() -> [AgentBarterOfferID] {
+        guard let state = barterState else { return [] }
+        return state.offers.filter {
+            $0.status.isPending && $0.expiresAtTick < tick
+        }.map(\.offerID).sorted()
+    }
+
     public mutating func recordBarterOpportunity(
         _ observation: AgentBarterOpportunityObservation
     ) throws {
@@ -116,14 +306,17 @@ extension AgentSimulationSession {
         actorID: AgentID
     ) throws {
         guard var state = barterState else { throw AgentSessionError.barter(.disabled) }
+        let offerOperationID = "barter-offer:\(offerID.rawValue)"
         guard let opportunity = state.opportunities.first(where: {
             $0.opportunityID == opportunityID
         }), opportunity.expiresAtTick >= tick, opportunity.offerorID == actorID,
               !state.offers.contains(where: { $0.offerID == offerID }),
+              !state.processedOperationIDs.contains(offerOperationID),
               !barterAssetReserved(opportunity.offered.assetID, in: state),
               !barterAssetReserved(opportunity.requested.assetID, in: state) else {
             throw AgentSessionError.barter(.invalidOffer(offerID.rawValue))
         }
+        compactTerminalBarterOffersForCapacity(state: &state)
         guard state.offers.count < state.configuration.maximumOffers else {
             throw AgentSessionError.barter(.capacityReached("offers"))
         }
@@ -146,6 +339,7 @@ extension AgentSimulationSession {
             decisionEventID: nil, terminalReason: nil
         ))
         state.offers.sort { $0.offerID < $1.offerID }
+        retainProcessedBarterOperationID(offerOperationID, state: &state)
         state.lastBarterEventID = event.eventID
         barterState = state
         try validateBarterStateIfEnabled()
@@ -372,12 +566,7 @@ extension AgentSimulationSession {
             state.records.removeFirst()
             state.evictionCount += 1
         }
-        state.processedOperationIDs.append(outcome.operationID)
-        if state.processedOperationIDs.count
-            > state.configuration.maximumProcessedOperations {
-            state.processedOperationIDs.removeFirst()
-            state.evictionCount += 1
-        }
+        retainProcessedBarterOperationID(outcome.operationID, state: &state)
         state.totalCompletedCount += 1
         state.lastBarterEventID = event.eventID
         materialRightsState = rights
@@ -482,10 +671,6 @@ extension AgentSimulationSession {
         )
         try validateBarterLegProvenance(observation.offered)
         try validateBarterLegProvenance(observation.requested)
-        guard !observation.offered.productionOperationIDs.isEmpty
-                || !observation.requested.productionOperationIDs.isEmpty else {
-            throw AgentSessionError.barter(.invalidOpportunity(observation.opportunityID))
-        }
     }
 
     private func validateBarterReason(
@@ -528,6 +713,69 @@ extension AgentSimulationSession {
             $0.status.isPending
                 && ($0.opportunity.offered.assetID == assetID
                     || $0.opportunity.requested.assetID == assetID)
+        }
+    }
+
+    private func bestBarterReason(
+        actorID: AgentID,
+        received: AgentMaterialStackSnapshot,
+        configuration: AgentBarterConfiguration
+    ) -> AgentBarterValueReason? {
+        productionState?.needs.filter {
+            $0.actorID == actorID && $0.status == .active
+        }.sorted { lhs, rhs in
+            if lhs.priority != rhs.priority { return lhs.priority > rhs.priority }
+            if lhs.createdAtTick != rhs.createdAtTick {
+                return lhs.createdAtTick < rhs.createdAtTick
+            }
+            return lhs.needID < rhs.needID
+        }.prefix(configuration.maximumActiveNeedsPerAgent).first {
+            $0.desiredOutputItemKey == received.identity.itemKey
+                && $0.quantity == received.count
+        }.map(AgentBarterValueReason.init(need:))
+    }
+
+    private func barterReasonPriority(_ reason: AgentBarterValueReason) -> Int {
+        productionState?.needs.first(where: {
+            $0.needID == reason.needID
+        })?.priority ?? -1
+    }
+
+    /// Oldest terminal projection goes first. Open and accepted offers are
+    /// reservation authority and are never eligible for capacity eviction.
+    private func compactTerminalBarterOffersForCapacity(
+        state: inout AgentBarterState
+    ) {
+        while state.offers.count >= state.configuration.maximumOffers {
+            let terminal = state.offers.indices.filter {
+                !state.offers[$0].status.isPending
+            }.min { lhs, rhs in
+                let left = state.offers[lhs]
+                let right = state.offers[rhs]
+                let leftSequence = (left.decisionEventID ?? left.offerEventID)
+                    .sequence.rawValue
+                let rightSequence = (right.decisionEventID ?? right.offerEventID)
+                    .sequence.rawValue
+                if leftSequence != rightSequence {
+                    return leftSequence < rightSequence
+                }
+                return left.offerID < right.offerID
+            }
+            guard let terminal else { return }
+            state.offers.remove(at: terminal)
+            state.evictionCount += 1
+        }
+    }
+
+    private func retainProcessedBarterOperationID(
+        _ operationID: String,
+        state: inout AgentBarterState
+    ) {
+        state.processedOperationIDs.append(operationID)
+        if state.processedOperationIDs.count
+            > state.configuration.maximumProcessedOperations {
+            state.processedOperationIDs.removeFirst()
+            state.evictionCount += 1
         }
     }
 

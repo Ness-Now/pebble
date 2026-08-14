@@ -1,10 +1,9 @@
 import PebbleAgents
 import PebbleCore
 
-struct PebbleAgentBarterProofFixture {
+struct PebbleAgentBarterDisposableWorldFixture {
     let offerorID: String
     let counterpartyID: String
-    let offerID: AgentBarterOfferID
     let workshop: AgentPosition
     let toolTarget: PhysicalBlockPosition
     let originalWorkshopCell: Int
@@ -44,7 +43,7 @@ extension PebbleAgentController {
         guard productionFeatureEnabled, materialFeatureEnabled,
               autonomousCivilizationFeatureEnabled,
               var candidate = session, activeWorld === world,
-              replayRecorder == nil, barterProofFixture == nil,
+              replayRecorder == nil, barterDisposableWorldFixture == nil,
               !candidate.productionEnabled, !candidate.barterEnabled,
               !candidate.materialRightsEnabled else {
             return failure(
@@ -215,47 +214,10 @@ extension PebbleAgentController {
             if !candidate.autonomousActivityEnabled {
                 try candidate.setAutonomousActivityEnabled(true)
             }
-            let records = candidate.productionSnapshot().records
-            let offerorNeed = candidate.productionSnapshot().needs.first {
-                $0.needID.rawValue == "barter:\(pair.0.id):value-bread"
-            }!
-            let counterpartyNeed = candidate.productionSnapshot().needs.first {
-                $0.needID.rawValue == "barter:\(pair.1.id):value-pickaxe"
-            }!
-            let opportunity = AgentBarterOpportunityObservation(
-                opportunityID: "barter-local:\(pair.0.id):\(pair.1.id):t\(candidate.tick)",
-                offerorID: offerorID, counterpartyID: counterpartyID,
-                offered: AgentBarterLeg(
-                    assetID: pickaxeAsset, holderID: offerorID, material: pickaxe,
-                    holderObservation: pickaxeObservation,
-                    productionOperationIDs: records.filter {
-                        $0.actorID == offerorID
-                            && $0.outputProduced.identity.itemKey == "stone_pickaxe"
-                    }.map(\.operationID)
-                ),
-                requested: AgentBarterLeg(
-                    assetID: breadAsset, holderID: counterpartyID, material: bread,
-                    holderObservation: breadObservation,
-                    productionOperationIDs: records.filter {
-                        $0.actorID == counterpartyID
-                            && $0.outputProduced.identity.itemKey == "bread"
-                    }.map(\.operationID)
-                ),
-                offerorReason: AgentBarterValueReason(need: offerorNeed),
-                counterpartyReason: AgentBarterValueReason(need: counterpartyNeed),
-                distance: evidence.distanceManhattan,
-                lineOfSight: evidence.lineOfSight,
-                chunksReady: evidence.chunksReady,
-                observedAtTick: candidate.tick,
-                expiresAtTick: candidate.tick
-                    + (candidate.barterSnapshot().configuration?.offerLifetimeTicks ?? 4)
-            )
-            try candidate.recordBarterOpportunity(opportunity)
-            let offerID = AgentBarterOfferID(rawValue: "civ35-primary")!
             session = candidate
-            barterProofFixture = PebbleAgentBarterProofFixture(
+            barterDisposableWorldFixture = PebbleAgentBarterDisposableWorldFixture(
                 offerorID: pair.0.id, counterpartyID: pair.1.id,
-                offerID: offerID, workshop: workshop, toolTarget: target,
+                workshop: workshop, toolTarget: target,
                 originalWorkshopCell: workshopBefore,
                 originalToolTargetCell: targetBefore,
                 originalOfferorInventory: offerorInventory,
@@ -269,8 +231,11 @@ extension PebbleAgentController {
             let message = "barter setup offeror=\(pair.0.id) counterparty=\(pair.1.id) "
                 + "produced=stone_pickaxe:1,bread:2 physical=verified "
                 + "reasons=physicalFoodNeed,missingUsefulTool localDistance=\(evidence.distanceManhattan) "
-                + "offer=pending-autonomous custodyBefore=\(pair.0.id):stone_pickaxe:1;\(pair.1.id):bread:2 "
-                + "paused=1 productPath=normal-autonomous"
+                + "opportunity=awaiting-normal-runtime "
+                + "custodyBefore=\(pair.0.id):stone_pickaxe:1;\(pair.1.id):bread:2 "
+                + "paused=1 productPath=normal-autonomous "
+                + "barterProofFixtureDecisionAuthority=0 "
+                + "manualProductiveBarterCommandsAfterBootstrap=0"
             trace(message)
             return success(message)
         } catch {
@@ -291,73 +256,289 @@ extension PebbleAgentController {
         session: inout AgentSimulationSession,
         recorder: inout AgentReplayRecorder?
     ) throws {
-        guard let fixture = barterProofFixture, session.barterEnabled else { return }
-        let snapshot = session.barterSnapshot()
-        if snapshot.offers.isEmpty,
-           let opportunity = snapshot.opportunities.first {
+        guard session.barterEnabled else { return }
+        for offerID in session.expiredBarterOfferIDs() {
+            let operation = AgentReplayOperation.markBarterOfferFailed(
+                offerID: offerID, status: .expired,
+                reason: "normal runtime expired bounded offer"
+            )
+            if try applyRecordedOperationIfActive(
+                operation, session: &session, recorder: &recorder
+            ) == nil {
+                try session.markBarterOfferFailed(
+                    offerID: offerID, status: .expired,
+                    reason: "normal runtime expired bounded offer"
+                )
+            }
+            trace(
+                "barter normal offer expiration offer=\(offerID.rawValue) "
+                    + "pendingReservationReleased=1"
+            )
+        }
+
+        let physicalCandidates = observeLocalBarterPhysicalPairs(
+            world: world, session: session
+        )
+        let discoveries = try session.discoverBarterOpportunities(
+            from: physicalCandidates
+        )
+        for opportunity in discoveries {
+            if try applyRecordedOperationIfActive(
+                .recordBarterOpportunity(opportunity),
+                session: &session, recorder: &recorder
+            ) == nil {
+                try session.recordBarterOpportunity(opportunity)
+            }
+        }
+        if !discoveries.isEmpty,
+           let configuration = session.barterSnapshot().configuration {
+            trace(
+                "barter normal opportunity discovery candidates=\(physicalCandidates.count) "
+                    + "discovered=\(discoveries.count) normalOpportunityDiscovery=1 "
+                    + "barterProofFixtureDecisionAuthority=0 bounds="
+                    + "agents:\(configuration.maximumDiscoveryAgents),"
+                    + "counterparties:\(configuration.maximumNearbyCounterpartiesPerAgent),"
+                    + "goods:\(configuration.maximumPhysicalGoodsPerAgent),"
+                    + "pairs:\(configuration.maximumPhysicalPairCandidatesPerTick),"
+                    + "needs:\(configuration.maximumActiveNeedsPerAgent),"
+                    + "discoveries:\(configuration.maximumDiscoveriesPerTick)"
+            )
+        }
+
+        if let proposal = session.nextAutonomousBarterOfferProposal(),
+           let opportunity = session.barterSnapshot().opportunities.first(where: {
+               $0.opportunityID == proposal.opportunityID
+           }) {
             let operation = AgentReplayOperation.createBarterOffer(
-                offerID: fixture.offerID,
-                opportunityID: opportunity.opportunityID,
-                actorID: opportunity.offerorID
+                offerID: proposal.offerID,
+                opportunityID: proposal.opportunityID,
+                actorID: proposal.actorID
             )
             if try applyRecordedOperationIfActive(
                 operation, session: &session, recorder: &recorder
             ) == nil {
                 try session.createBarterOffer(
-                    offerID: fixture.offerID,
-                    opportunityID: opportunity.opportunityID,
-                    actorID: opportunity.offerorID
+                    offerID: proposal.offerID,
+                    opportunityID: proposal.opportunityID,
+                    actorID: proposal.actorID
                 )
             }
             trace(
-                "barter autonomous offer actor=\(opportunity.offerorID.rawValue) "
-                    + "to=\(opportunity.counterpartyID.rawValue) offer=\(fixture.offerID.rawValue) physicalMutation=0"
+                "barter normal offer decision actor=\(proposal.actorID.rawValue) "
+                    + "to=\(opportunity.counterpartyID.rawValue) "
+                    + "offer=\(proposal.offerID.rawValue) normalOfferDecision=1 "
+                    + "barterProofFixtureDecisionAuthority=0 physicalMutation=0"
             )
             return
         }
-        guard let offer = snapshot.offers.first(where: {
-            $0.offerID == fixture.offerID && $0.status == .open
-                && $0.offeredAtTick < session.tick
-        }), let counterparty = session.productionSnapshot().needs.first(where: {
-            $0.needID == offer.opportunity.counterpartyReason.needID
-                && $0.status == .active
-        }), counterparty.reason == offer.opportunity.counterpartyReason.reason,
-              let offerorProbe = probesByAgentId[fixture.offerorID],
-              let counterpartyProbe = probesByAgentId[fixture.counterpartyID] else { return }
+
+        let openOffers = session.barterSnapshot().offers.filter {
+            $0.status == .open && $0.offeredAtTick < session.tick
+        }.sorted { $0.offerID < $1.offerID }
+        guard let offer = openOffers.first,
+              let offerorProbe = probesByAgentId[
+                offer.opportunity.offerorID.rawValue
+              ], let counterpartyProbe = probesByAgentId[
+                offer.opportunity.counterpartyID.rawValue
+              ] else { return }
         let evidence = physicalSignalAdapter.evidence(
             world: world,
             from: PebbleAgentEmbodiment(probe: offerorProbe).position,
             to: PebbleAgentEmbodiment(probe: counterpartyProbe).position,
             configuration: session.configuration.physicalChannelConfiguration
         )
-        let accept = evidence.chunksReady && evidence.lineOfSight
-            && evidence.distanceManhattan
-                <= (snapshot.configuration?.maximumLocalDistance ?? 8)
+        guard let decision = session.evaluateAutonomousBarterCounterpartyDecision(
+            AgentBarterCounterpartyDecisionObservation(
+                offerID: offer.offerID,
+                counterpartyID: offer.opportunity.counterpartyID,
+                distance: evidence.distanceManhattan,
+                lineOfSight: evidence.lineOfSight,
+                chunksReady: evidence.chunksReady,
+                observedAtTick: session.tick
+            )
+        ) else { return }
         let operation = AgentReplayOperation.decideBarterOffer(
-            offerID: offer.offerID,
-            counterpartyID: offer.opportunity.counterpartyID,
-            accept: accept,
-            reason: accept
-                ? "current local need values exact produced tool"
-                : "current local evidence no longer supports exchange"
+            offerID: decision.offerID,
+            counterpartyID: decision.counterpartyID,
+            accept: decision.accept,
+            reason: decision.reason
         )
         if try applyRecordedOperationIfActive(
             operation, session: &session, recorder: &recorder
         ) == nil {
             try session.decideBarterOffer(
-                offerID: offer.offerID,
-                counterpartyID: offer.opportunity.counterpartyID,
-                accept: accept,
-                reason: accept
-                    ? "current local need values exact produced tool"
-                    : "current local evidence no longer supports exchange"
+                offerID: decision.offerID,
+                counterpartyID: decision.counterpartyID,
+                accept: decision.accept,
+                reason: decision.reason
             )
         }
         trace(
-            "barter autonomous decision actor=\(offer.opportunity.counterpartyID.rawValue) "
-                + "offer=\(offer.offerID.rawValue) decision=\(accept ? "accepted" : "rejected") "
+            "barter normal counterparty decision actor=\(decision.counterpartyID.rawValue) "
+                + "offer=\(decision.offerID.rawValue) "
+                + "decision=\(decision.accept ? "accepted" : "rejected") "
+                + "normalCounterpartyDecision=1 "
+                + "barterProofFixtureDecisionAuthority=0 "
                 + "localDistance=\(evidence.distanceManhattan) physicalMutation=0"
         )
+    }
+
+    /// Pebble observes only a deterministic bounded local window and exact
+    /// rights-tracked physical stacks. It does not inspect settlement-wide
+    /// inventories and does not decide whether a trade is economically useful.
+    private func observeLocalBarterPhysicalPairs(
+        world: World,
+        session: AgentSimulationSession
+    ) -> [AgentBarterPhysicalPairObservation] {
+        guard let configuration = session.barterSnapshot().configuration else {
+            return []
+        }
+        let agents = Array(session.snapshot().agents.sorted {
+            $0.id < $1.id
+        }.prefix(configuration.maximumDiscoveryAgents))
+        var assetsByAgent: [String: [AgentBarterLeg]] = [:]
+        for agent in agents {
+            assetsByAgent[agent.id] = observeCurrentBarterLegs(
+                agentIDText: agent.id,
+                world: world,
+                session: session,
+                limit: configuration.maximumPhysicalGoodsPerAgent
+            )
+        }
+        var physicalPairs: [AgentBarterPhysicalPairObservation] = []
+        pairLoop: for actorA in agents {
+            guard let actorAProbe = probesByAgentId[actorA.id] else { continue }
+            let nearby = agents.filter {
+                $0.id > actorA.id
+            }.compactMap { actorB -> (
+                AgentSnapshot, PebbleAgentPhysicalEvidence
+            )? in
+                guard let actorBProbe = probesByAgentId[actorB.id] else { return nil }
+                let evidence = physicalSignalAdapter.evidence(
+                    world: world,
+                    from: PebbleAgentEmbodiment(probe: actorAProbe).position,
+                    to: PebbleAgentEmbodiment(probe: actorBProbe).position,
+                    configuration: session.configuration.physicalChannelConfiguration
+                )
+                guard evidence.distanceManhattan <= configuration.maximumLocalDistance,
+                      evidence.lineOfSight, evidence.chunksReady else { return nil }
+                return (actorB, evidence)
+            }.sorted { lhs, rhs in
+                if lhs.1.distanceManhattan != rhs.1.distanceManhattan {
+                    return lhs.1.distanceManhattan < rhs.1.distanceManhattan
+                }
+                return lhs.0.id < rhs.0.id
+            }.prefix(configuration.maximumNearbyCounterpartiesPerAgent)
+            guard let actorAID = AgentID(rawValue: actorA.id),
+                  let actorAGoods = assetsByAgent[actorA.id] else { continue }
+            for (actorB, evidence) in nearby {
+                guard let actorBID = AgentID(rawValue: actorB.id),
+                      let actorBGoods = assetsByAgent[actorB.id] else { continue }
+                for actorAGood in actorAGoods {
+                    for actorBGood in actorBGoods where
+                        actorAGood.material.identity != actorBGood.material.identity {
+                        let key = [
+                            actorA.id, actorB.id,
+                            actorAGood.assetID.rawValue,
+                            actorBGood.assetID.rawValue,
+                            actorAGood.holderObservation.custodyFingerprint,
+                            actorBGood.holderObservation.custodyFingerprint,
+                            "t\(session.tick)",
+                        ].joined(separator: "|")
+                        physicalPairs.append(AgentBarterPhysicalPairObservation(
+                            candidateID: "barter-physical-"
+                                + AgentAutonomousActivityDigest.make(key),
+                            actorAID: actorAID,
+                            actorBID: actorBID,
+                            actorAGood: actorAGood,
+                            actorBGood: actorBGood,
+                            distance: evidence.distanceManhattan,
+                            lineOfSight: evidence.lineOfSight,
+                            chunksReady: evidence.chunksReady,
+                            observedAtTick: session.tick,
+                            expiresAtTick: session.tick
+                                + configuration.offerLifetimeTicks
+                        ))
+                        if physicalPairs.count
+                            == configuration.maximumPhysicalPairCandidatesPerTick {
+                            break pairLoop
+                        }
+                    }
+                }
+            }
+        }
+        return physicalPairs.sorted { $0.candidateID < $1.candidateID }
+    }
+
+    private func observeCurrentBarterLegs(
+        agentIDText: String,
+        world: World,
+        session: AgentSimulationSession,
+        limit: Int
+    ) -> [AgentBarterLeg] {
+        guard limit > 0,
+              let agentID = AgentID(rawValue: agentIDText),
+              let probe = probesByAgentId[agentIDText],
+              probe.world === world, !probe.dead else { return [] }
+        let endpoint = PebbleAgentMaterialCustodyEndpoint.liveAgent(
+            PebbleAgentEmbodiment(probe: probe), in: world
+        )
+        guard let custody = try? materialCustodyGateway.inspect(endpoint),
+              let currentFingerprint = try? materialCustodyGateway.fingerprint(
+                endpoint
+              ) else { return [] }
+        let physical = custody.slots.compactMap { $0 }
+        let production = session.productionSnapshot().records.sorted {
+            $0.operationID < $1.operationID
+        }
+        return Array(session.materialRightsSnapshot().records.filter { record in
+            record.lastVerifiedHolder.holder == .agent(agentID)
+        }.sorted {
+            $0.asset.assetID < $1.asset.assetID
+        }.compactMap { record -> AgentBarterLeg? in
+            let observation = record.lastVerifiedHolder
+            let material = AgentMaterialStackSnapshot(
+                identity: observation.materialIdentity,
+                count: observation.quantity
+            )
+            let exactPhysicalQuantity = physical.filter { stack in
+                stack.identity == material.identity
+            }.reduce(0) { total, stack in
+                total + stack.count
+            }
+            guard observation.custodyFingerprint == currentFingerprint,
+                  exactPhysicalQuantity == material.count,
+                  (try? materialCustodyGateway.acquireAssetAuthority(
+                    material, at: endpoint
+                  ).status) == .exact else { return nil }
+            let disposition = session.evaluateMaterialUse(AgentMaterialUseRequest(
+                requestID: "barter-observe:\(record.asset.assetID.rawValue)",
+                assetID: record.asset.assetID,
+                actorID: agentID, use: .transferCustody,
+                verifiedHolder: observation
+            ))
+            guard disposition.verdict == .allowed else { return nil }
+            let matchingProduction = production.filter {
+                $0.actorID == agentID
+                    && $0.outputProduced.identity == material.identity
+            }
+            var provenance: [String] = []
+            var producedQuantity = 0
+            for output in matchingProduction where
+                producedQuantity + output.outputProduced.count <= material.count {
+                provenance.append(output.operationID)
+                producedQuantity += output.outputProduced.count
+                if producedQuantity == material.count { break }
+            }
+            if producedQuantity != material.count { provenance.removeAll() }
+            return AgentBarterLeg(
+                assetID: record.asset.assetID,
+                holderID: agentID,
+                material: material,
+                holderObservation: observation,
+                productionOperationIDs: provenance
+            )
+        }.prefix(limit))
     }
 
     private func produceBarterGood(
@@ -441,13 +622,16 @@ extension PebbleAgentController {
             + "completed=\(barter.totalCompletedCount) records=\(records.isEmpty ? "none" : records) "
             + "holdings=\(holdings.isEmpty ? "none" : holdings) "
             + "physicalLoss=0 physicalDuplication=0 syntheticMaterial=0 "
-            + "duplicateExchangeReceipts=0 duplicateReservations=0"
+            + "duplicateExchangeReceipts=0 duplicateReservations=0 "
+            + "barterProofFixtureDecisionAuthority=0 "
+            + "manualProductiveBarterCommandsAfterBootstrap=0"
         trace(message)
         return success(message)
     }
 
     private func proveBarterBoundaries(world: World) -> PebbleAgentCommandResult {
-        guard let session, activeWorld === world, let fixture = barterProofFixture,
+        guard let session, activeWorld === world,
+              let fixture = barterDisposableWorldFixture,
               let offeror = probesByAgentId[fixture.offerorID],
               let counterparty = probesByAgentId[fixture.counterpartyID],
               session.barterSnapshot().records.count == 1 else {
@@ -615,7 +799,7 @@ extension PebbleAgentController {
                 || $0.z != record.workshopPosition.z)
                 && world.getBlock($0.x, $0.y, $0.z) == Int(cell(B.stone))
         }
-        guard let target = barterProofFixture?.toolTarget ?? fallbackTarget,
+        guard let target = barterDisposableWorldFixture?.toolTarget ?? fallbackTarget,
               world.getBlock(target.x, target.y, target.z) == Int(cell(B.stone)) else {
             return failure("Bartered produced-tool target is no longer current.")
         }
@@ -714,7 +898,7 @@ extension PebbleAgentController {
     private func cleanupBarterProof(world: World) -> PebbleAgentCommandResult {
         guard let session, let production = session.productionSnapshot().records.first
         else { return failure("No barter production fixture to clean.") }
-        if let fixture = barterProofFixture {
+        if let fixture = barterDisposableWorldFixture {
             _ = world.setBlock(
                 fixture.workshop.x, fixture.workshop.y, fixture.workshop.z,
                 fixture.originalWorkshopCell, SET_SILENT
@@ -729,7 +913,7 @@ extension PebbleAgentController {
                 production.workshopPosition.z, 0, SET_SILENT
             )
         }
-        barterProofFixture = nil
+        barterDisposableWorldFixture = nil
         productionWorkshopPosition = nil
         productionToolTargetPosition = nil
         productionGateway.reset()

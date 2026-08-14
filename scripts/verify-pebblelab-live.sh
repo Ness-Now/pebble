@@ -1338,12 +1338,13 @@ if [ "$MODE" = "barter" ]; then
     [ -s "$CAPTURE_PRE_PATH" ] || fail "barter pre-exchange capture missing"
     [ -s "$CAPTURE_OFFER_PATH" ] || fail "barter offer capture missing"
     [ -s "$CAPTURE_POST_PATH" ] || fail "barter post-exchange capture missing"
-    require_trace 'barter setup offeror=agent_[0-9]+ counterparty=agent_[0-9]+ produced=stone_pickaxe:1,bread:2 physical=verified .*productPath=normal-autonomous' 'real CIV-34 outputs and local needs'
-    require_trace 'barter autonomous offer actor=agent_[0-9]+ to=agent_[0-9]+ offer=civ35-primary physicalMutation=0' 'explicit offer without matter movement'
-    require_trace_at_least 'barter autonomous decision actor=agent_[0-9]+ offer=civ35-primary decision=accepted .*physicalMutation=0' 2 'independent acceptance and retry'
-    require_trace 'barter mid-exchange mutation offer=civ35-primary .*candidatePhysicalMutation=1 publication=0' 'true first physical mutation seam'
-    require_trace 'CANDIDATE_PHYSICAL_ROLLBACK operation=advanceOneTick .*barterPostMutationBoundary.*registered=material-transfer:barter:civ35-primary:offered:[0-9]+ .*completed=material-transfer:barter:civ35-primary:offered:[0-9]+ .*publishedSession=unchanged .*publishedRecorder=unchanged' 'exact post-mutation compensation'
-    require_trace_count 'barter completed offer=civ35-primary ' 1 'one completed physical barter after immediate retry'
+    require_trace 'barter setup offeror=agent_[0-9]+ counterparty=agent_[0-9]+ produced=stone_pickaxe:1,bread:2 physical=verified .*opportunity=awaiting-normal-runtime .*productPath=normal-autonomous .*barterProofFixtureDecisionAuthority=0 .*manualProductiveBarterCommandsAfterBootstrap=0' 'bootstrap creates goods and needs but no decisive authority'
+    require_trace 'barter normal opportunity discovery .*normalOpportunityDiscovery=1 .*barterProofFixtureDecisionAuthority=0 .*bounds=agents:[0-9]+,counterparties:[0-9]+,goods:[0-9]+,pairs:[0-9]+,needs:[0-9]+,discoveries:[0-9]+' 'bounded normal runtime opportunity discovery'
+    require_trace 'barter normal offer decision actor=agent_[0-9]+ to=agent_[0-9]+ offer=barter-[0-9a-f]+ normalOfferDecision=1 barterProofFixtureDecisionAuthority=0 physicalMutation=0' 'normal explicit offer without matter movement'
+    require_trace_at_least 'barter normal counterparty decision actor=agent_[0-9]+ offer=barter-[0-9a-f]+ decision=accepted normalCounterpartyDecision=1 barterProofFixtureDecisionAuthority=0 .*physicalMutation=0' 2 'independent normal acceptance and retry'
+    require_trace 'barter mid-exchange mutation offer=barter-[0-9a-f]+ .*candidatePhysicalMutation=1 publication=0' 'true first physical mutation seam'
+    require_trace 'CANDIDATE_PHYSICAL_ROLLBACK operation=advanceOneTick .*barterPostMutationBoundary.*registered=material-transfer:barter:barter-[0-9a-f]+:offered:[0-9]+ .*completed=material-transfer:barter:barter-[0-9a-f]+:offered:[0-9]+ .*publishedSession=unchanged .*publishedRecorder=unchanged' 'exact post-mutation compensation'
+    require_trace_count 'barter completed offer=barter-[0-9a-f]+ ' 1 'one completed physical barter after immediate retry'
     require_trace 'barter proof normalProductPath=PASS .*producedGood=stone_pickaxe:1 .*after=agent_[0-9]+:bread:2;agent_[0-9]+:stone_pickaxe:1 .*stale=staleSource wrongQuantity=(invalidRequest|insufficientQuantity) missing=insufficientQuantity capacity=destinationFull adversarialPhysical=exact .*physicalLoss=0 physicalDuplication=0 syntheticMaterial=0' 'positive and adversarial physical matrix'
     require_trace 'checkpoint saved name=barter-v32 .*restartSafe=1 ' 'restart-safe completed barter checkpoint'
     require_trace 'summary .*runtimeErrors=1 .*probesRemoved=3 ' 'one expected injected failure and clean shutdown'
@@ -1372,12 +1373,12 @@ if [ "$MODE" = "barter" ]; then
     [ -s "$CAPTURE_USED_PATH" ] || fail "barter produced-tool-use capture missing"
     [ -s "$CAPTURE_PATH" ] || fail "barter final capture missing"
     require_trace "checkpoint loaded name=barter-v32 .*digest=$PHASE1_DIGEST .*restartSafe=1 .*custodyDuplicates=0 physicalBoundary=acquired" 'fresh-process physical custody restore'
-    require_trace 'barter enabled=1 .*civ35-primary:completed .*completed=1 .*physicalLoss=0 physicalDuplication=0 syntheticMaterial=0 duplicateExchangeReceipts=0 duplicateReservations=0' 'one durable exchange without replayed transfer'
+    require_trace 'barter enabled=1 .*barter-[0-9a-f]+:completed .*completed=1 .*physicalLoss=0 physicalDuplication=0 syntheticMaterial=0 duplicateExchangeReceipts=0 duplicateReservations=0 .*barterProofFixtureDecisionAuthority=0 .*manualProductiveBarterCommandsAfterBootstrap=0' 'one durable normal exchange without replayed transfer'
     require_trace 'bartered produced tool used producer=agent_[0-9]+ receiver=agent_[0-9]+ .*sameItem=stone_pickaxe damage=0>1 world=stone>air downstreamUse=PASS' 'receiver uses exact produced tool after restart'
     require_trace 'checkpoint saved name=barter-final-v32 .*restartSafe=1 ' 'final v32 checkpoint'
     require_trace 'Barter disposable fixture cleanup cells=exact exchangedCustody=retained' 'fixture cleanup retains exchanged goods'
     require_trace 'summary .*runtimeErrors=0 .*probesRemoved=3 ' 'fresh continuation clean shutdown'
-    reject_trace 'barter completed offer=civ35-primary ' 'completed barter repeated after restart'
+    reject_trace 'barter completed offer=barter-[0-9a-f]+ ' 'completed barter repeated after restart'
     reject_trace '^\[lab-live\] error ' 'unexpected continuation runtime error'
 
     FINAL_SESSION=$(/usr/bin/find "$PERSISTENCE_ROOT" -type f -path '*/checkpoints/barter-final-v32/session.json' -print -quit)
@@ -1389,7 +1390,7 @@ if [ "$MODE" = "barter" ]; then
         || /usr/bin/pgrep -x pebsmoke >/dev/null 2>&1; then
         fail "residual PebbleLab process after barter proof"
     fi
-    printf '\nPASS: CIV-35 local consent, atomic physical barter, rollback/retry, restart, downstream use, and cleanup verified.\n'
+    printf '\nPASS: CIV-35 normal discovery, local consent, sustainable offers, atomic rollback/retry, restart, downstream use, and cleanup verified.\n'
     printf 'Phase 1 trace: %s\n' "$PHASE1_TRACE"
     printf 'Phase 2 trace: %s\n' "$PHASE2_TRACE"
     printf 'Checkpoint schema: 32\n'

@@ -89,6 +89,45 @@ private func appendProduction(
     ))
 }
 
+private func fulfillExistingBarterNeed(
+    needID: AgentProductionNeedID,
+    actorID: AgentID,
+    item: String,
+    operationID: String,
+    session: inout AgentSimulationSession
+) throws {
+    let inputs = item == "stone_pickaxe"
+        ? [barterStack("cobblestone", 3), barterStack("stick", 2)]
+        : [barterStack("wheat", 3)]
+    let observation = AgentProductionOpportunityObservation(
+        opportunityID: AgentProductionOpportunityID(
+            rawValue: "production:\(needID.rawValue):fulfilled"
+        )!, needID: needID, actorID: actorID,
+        recipeID: "craft:\(item)",
+        workshopPosition: AgentPosition(x: 1, y: 64, z: 0),
+        workshopBlockKey: "crafting_table",
+        sourceLocationID: "agent:probe-\(actorID.rawValue)",
+        sourceCustodyFingerprint: "need-before:\(operationID)",
+        planFingerprint: "plan:\(operationID)", inputs: inputs,
+        output: barterStack(item, 1), observedAtTick: session.tick,
+        expiresAtTick: session.tick + 2
+    )
+    try session.recordProductionOpportunity(observation)
+    try session.recordVerifiedProduction(AgentVerifiedProductionOutcome(
+        operationID: operationID,
+        opportunityID: observation.opportunityID, actorID: actorID,
+        recipeID: observation.recipeID,
+        workshopPosition: observation.workshopPosition,
+        workshopBlockKey: observation.workshopBlockKey,
+        sourceLocationID: observation.sourceLocationID,
+        sourceCustodyFingerprintBefore: observation.sourceCustodyFingerprint,
+        sourceCustodyFingerprintAfter: "need-after:\(operationID)",
+        planFingerprint: observation.planFingerprint,
+        inputsConsumed: inputs, outputProduced: barterStack(item, 1),
+        physicalReceiptID: operationID, completedAtTick: session.tick
+    ))
+}
+
 private func registerBarterAsset(
     id: AgentMaterialAssetID,
     stack: AgentMaterialStackSnapshot,
@@ -115,7 +154,10 @@ private func registerBarterAsset(
     ))
 }
 
-private func barterFixture(_ id: String = "civ35-barter") -> BarterSmokeFixture {
+private func barterFixture(
+    _ id: String = "civ35-barter",
+    configuration: AgentBarterConfiguration = .live
+) -> BarterSmokeFixture {
     let a = AgentID(rawValue: "agent_a")!
     let b = AgentID(rawValue: "agent_b")!
     var session = try! AgentSimulationSession(
@@ -178,7 +220,7 @@ private func barterFixture(_ id: String = "civ35-barter") -> BarterSmokeFixture 
         observation: breadObservation, owner: b, witnesses: [a, b],
         session: &session
     )
-    try! session.setBarterEnabled(true)
+    try! session.setBarterEnabled(true, configuration: configuration)
     let needs = session.productionSnapshot().needs
     let opportunity = AgentBarterOpportunityObservation(
         opportunityID: "local:a:b:primary", offerorID: a, counterpartyID: b,
@@ -203,6 +245,100 @@ private func barterFixture(_ id: String = "civ35-barter") -> BarterSmokeFixture 
     return BarterSmokeFixture(
         session: session, opportunity: opportunity,
         pickaxeProductionID: pickaxeProductionID
+    )
+}
+
+private func barterPhysicalPair(
+    _ opportunity: AgentBarterOpportunityObservation,
+    tick: Int,
+    lifetime: Int,
+    suffix: String
+) -> AgentBarterPhysicalPairObservation {
+    AgentBarterPhysicalPairObservation(
+        candidateID: "physical:\(suffix):t\(tick)",
+        actorAID: opportunity.offerorID,
+        actorBID: opportunity.counterpartyID,
+        actorAGood: opportunity.offered,
+        actorBGood: opportunity.requested,
+        distance: opportunity.distance,
+        lineOfSight: opportunity.lineOfSight,
+        chunksReady: opportunity.chunksReady,
+        observedAtTick: tick,
+        expiresAtTick: tick + lifetime
+    )
+}
+
+private func discoverCurrentBarterOpportunity(
+    from template: AgentBarterOpportunityObservation,
+    suffix: String,
+    session: inout AgentSimulationSession
+) -> AgentBarterOpportunityObservation {
+    let lifetime = session.barterSnapshot().configuration!.offerLifetimeTicks
+    let physical = barterPhysicalPair(
+        template, tick: session.tick, lifetime: lifetime, suffix: suffix
+    )
+    let discovered = try! session.discoverBarterOpportunities(from: [physical])
+    precondition(discovered.count == 1)
+    try! session.recordBarterOpportunity(discovered[0])
+    return discovered[0]
+}
+
+private func addNonProducedBarterPair(
+    session: inout AgentSimulationSession
+) -> AgentBarterPhysicalPairObservation {
+    let a = AgentID(rawValue: "agent_a")!
+    let b = AgentID(rawValue: "agent_b")!
+    let logAsset = AgentMaterialAssetID(rawValue: "asset:a:oak-log")!
+    let cobbleAsset = AgentMaterialAssetID(rawValue: "asset:b:cobble-3")!
+    let logObservation = AgentMaterialHolderObservation(
+        holder: .agent(a), materialIdentity: barterIdentity("oak_log"),
+        quantity: 1, custodyFingerprint: "a-pickaxe",
+        physicalReceiptID: "observe:a-log", observedAtTick: session.tick
+    )
+    let cobbleObservation = AgentMaterialHolderObservation(
+        holder: .agent(b), materialIdentity: barterIdentity("cobblestone"),
+        quantity: 3, custodyFingerprint: "b-bread-2",
+        physicalReceiptID: "observe:b-cobble", observedAtTick: session.tick
+    )
+    try! registerBarterAsset(
+        id: logAsset, stack: barterStack("oak_log", 1),
+        observation: logObservation, owner: a, witnesses: [a, b],
+        session: &session
+    )
+    try! registerBarterAsset(
+        id: cobbleAsset, stack: barterStack("cobblestone", 3),
+        observation: cobbleObservation, owner: b, witnesses: [a, b],
+        session: &session
+    )
+    try! session.raiseProductionNeed(
+        needID: AgentProductionNeedID(rawValue: "need:a:value-cobble")!,
+        actorID: a, reason: .materialWork,
+        desiredOutputItemKey: "cobblestone", quantity: 3, priority: 88
+    )
+    try! session.raiseProductionNeed(
+        needID: AgentProductionNeedID(rawValue: "need:b:value-log")!,
+        actorID: b, reason: .materialWork,
+        desiredOutputItemKey: "oak_log", quantity: 1, priority: 87
+    )
+    let lifetime = session.barterSnapshot().configuration!.offerLifetimeTicks
+    return AgentBarterPhysicalPairObservation(
+        candidateID: "physical:non-produced:t\(session.tick)",
+        actorAID: a, actorBID: b,
+        actorAGood: AgentBarterLeg(
+            assetID: logAsset, holderID: a,
+            material: barterStack("oak_log", 1),
+            holderObservation: logObservation,
+            productionOperationIDs: []
+        ),
+        actorBGood: AgentBarterLeg(
+            assetID: cobbleAsset, holderID: b,
+            material: barterStack("cobblestone", 3),
+            holderObservation: cobbleObservation,
+            productionOperationIDs: []
+        ),
+        distance: 2, lineOfSight: true, chunksReady: true,
+        observedAtTick: session.tick,
+        expiresAtTick: session.tick + lifetime
     )
 }
 
@@ -241,6 +377,98 @@ private func successfulBarterOutcome(
 
 func runPebbleAgentsBarterSmoke() {
     section("CIV-35 spot barter, exact authority, persistence and replay")
+
+    var normalFixture = barterFixture("civ35-normal-runtime")
+    let normalPhysical = barterPhysicalPair(
+        normalFixture.opportunity,
+        tick: normalFixture.session.tick,
+        lifetime: normalFixture.session.barterSnapshot().configuration!
+            .offerLifetimeTicks,
+        suffix: "normal-runtime"
+    )
+    let normalBefore = try! normalFixture.session.durableStateBytes()
+    let normalDiscoveries = try! normalFixture.session
+        .discoverBarterOpportunities(from: [normalPhysical])
+    check("normal runtime discovers barter from bounded physical input without proof fixture",
+          normalDiscoveries.count == 1
+            && normalDiscoveries[0].offered.productionOperationIDs
+                == [normalFixture.pickaxeProductionID]
+            && (try! normalFixture.session.durableStateBytes()) == normalBefore)
+    try! normalFixture.session.recordBarterOpportunity(normalDiscoveries[0])
+    let normalProposal = normalFixture.session.nextAutonomousBarterOfferProposal()
+    check("normal runtime cognition creates stable offer without proof fixture",
+          normalProposal?.actorID == normalFixture.opportunity.offerorID
+            && normalProposal?.offerID.rawValue.hasPrefix("barter-") == true)
+    try! normalFixture.session.createBarterOffer(
+        offerID: normalProposal!.offerID,
+        opportunityID: normalProposal!.opportunityID,
+        actorID: normalProposal!.actorID
+    )
+    _ = try! normalFixture.session.advanceTick()
+    let localRefusal = normalFixture.session
+        .evaluateAutonomousBarterCounterpartyDecision(
+            AgentBarterCounterpartyDecisionObservation(
+                offerID: normalProposal!.offerID,
+                counterpartyID: normalFixture.opportunity.counterpartyID,
+                distance: 2, lineOfSight: false, chunksReady: true,
+                observedAtTick: normalFixture.session.tick
+            )
+        )
+    check("normal counterparty can refuse when current local evidence changes",
+          localRefusal?.accept == false)
+    let normalDecision = normalFixture.session
+        .evaluateAutonomousBarterCounterpartyDecision(
+            AgentBarterCounterpartyDecisionObservation(
+                offerID: normalProposal!.offerID,
+                counterpartyID: normalFixture.opportunity.counterpartyID,
+                distance: 2, lineOfSight: true, chunksReady: true,
+                observedAtTick: normalFixture.session.tick
+            )
+        )
+    check("normal counterparty independently accepts from current need and locality",
+          normalDecision?.accept == true
+            && normalDecision?.counterpartyID
+                == normalFixture.opportunity.counterpartyID)
+    try! normalFixture.session.decideBarterOffer(
+        offerID: normalDecision!.offerID,
+        counterpartyID: normalDecision!.counterpartyID,
+        accept: normalDecision!.accept,
+        reason: normalDecision!.reason
+    )
+
+    var changedNeedFixture = barterFixture("civ35-changed-need")
+    let changedOpportunity = discoverCurrentBarterOpportunity(
+        from: changedNeedFixture.opportunity,
+        suffix: "changed-need",
+        session: &changedNeedFixture.session
+    )
+    let changedProposal = changedNeedFixture.session
+        .nextAutonomousBarterOfferProposal()!
+    try! changedNeedFixture.session.createBarterOffer(
+        offerID: changedProposal.offerID,
+        opportunityID: changedProposal.opportunityID,
+        actorID: changedProposal.actorID
+    )
+    _ = try! changedNeedFixture.session.advanceTick()
+    try! fulfillExistingBarterNeed(
+        needID: changedOpportunity.counterpartyReason.needID,
+        actorID: changedOpportunity.counterpartyID,
+        item: changedOpportunity.offered.material.identity.itemKey,
+        operationID: "produce:changed-counterparty-need",
+        session: &changedNeedFixture.session
+    )
+    let changedNeedDecision = changedNeedFixture.session
+        .evaluateAutonomousBarterCounterpartyDecision(
+            AgentBarterCounterpartyDecisionObservation(
+                offerID: changedProposal.offerID,
+                counterpartyID: changedOpportunity.counterpartyID,
+                distance: 2, lineOfSight: true, chunksReady: true,
+                observedAtTick: changedNeedFixture.session.tick
+            )
+        )
+    check("fulfilled counterparty need changes normal decision to refusal",
+          changedNeedDecision?.accept == false
+            && changedNeedDecision?.reason.contains("no longer values") == true)
 
     var fixture = barterFixture()
     var session = fixture.session
@@ -529,6 +757,179 @@ func runPebbleAgentsBarterSmoke() {
           journal.records.map(\.operationKind) == [
               .barterOpportunity, .barterOffer, .barterDecision, .barterOutcome,
           ])
+
+    let churnConfiguration = try! AgentBarterConfiguration(
+        maximumOpportunities: 8,
+        maximumOffers: 8,
+        maximumRecords: 32,
+        maximumProcessedOperations: 128,
+        offerLifetimeTicks: 2,
+        maximumLocalDistance: 8
+    )
+    var churn = barterFixture(
+        "civ35-offer-churn", configuration: churnConfiguration
+    )
+    let terminalCycle: [AgentBarterOfferStatus] = [
+        .rejected, .withdrawn, .stale, .failed, .expired,
+    ]
+    var terminalStatusesObserved: Set<String> = []
+    var maximumRetainedOffers = 0
+    var lifetimeOfferAttempts = 0
+    for attempt in 0..<21 {
+        _ = discoverCurrentBarterOpportunity(
+            from: churn.opportunity,
+            suffix: "churn-\(attempt)",
+            session: &churn.session
+        )
+        let proposal = churn.session.nextAutonomousBarterOfferProposal()!
+        try! churn.session.createBarterOffer(
+            offerID: proposal.offerID,
+            opportunityID: proposal.opportunityID,
+            actorID: proposal.actorID
+        )
+        lifetimeOfferAttempts += 1
+        maximumRetainedOffers = max(
+            maximumRetainedOffers,
+            churn.session.barterSnapshot().offers.count
+        )
+        let terminal = terminalCycle[attempt % terminalCycle.count]
+        switch terminal {
+        case .rejected:
+            try! churn.session.decideBarterOffer(
+                offerID: proposal.offerID,
+                counterpartyID: churn.opportunity.counterpartyID,
+                accept: false, reason: "bounded churn rejection"
+            )
+        case .withdrawn:
+            try! churn.session.withdrawBarterOffer(
+                offerID: proposal.offerID,
+                actorID: churn.opportunity.offerorID,
+                reason: "bounded churn withdrawal"
+            )
+        case .stale, .failed:
+            try! churn.session.markBarterOfferFailed(
+                offerID: proposal.offerID,
+                status: terminal,
+                reason: "bounded churn \(terminal.rawValue)"
+            )
+        case .expired:
+            for _ in 0...churnConfiguration.offerLifetimeTicks {
+                _ = try! churn.session.advanceTick()
+            }
+            try! churn.session.markBarterOfferFailed(
+                offerID: proposal.offerID,
+                status: .expired,
+                reason: "bounded churn expiration"
+            )
+        case .open, .accepted, .completed:
+            preconditionFailure("terminal churn configured with pending status")
+        }
+        terminalStatusesObserved.insert(terminal.rawValue)
+        check("terminal churn attempt \(attempt + 1) releases reservation",
+              churn.session.barterSnapshot().offers.first {
+                  $0.offerID == proposal.offerID
+              }?.status == terminal
+                && churn.session.barterSnapshot().pendingOfferCount == 0)
+        if terminal != .expired { _ = try! churn.session.advanceTick() }
+    }
+    check("all rejected expired withdrawn stale and failed states participate in churn",
+          terminalStatusesObserved == Set(terminalCycle.map(\.rawValue)))
+    check("terminal offer churn beyond twice the configured cap remains bounded",
+          lifetimeOfferAttempts == 21
+            && maximumRetainedOffers == churnConfiguration.maximumOffers
+            && churn.session.barterSnapshot().offers.count
+                == churnConfiguration.maximumOffers
+            && churn.session.barterSnapshot().evictionCount > 0)
+
+    _ = discoverCurrentBarterOpportunity(
+        from: churn.opportunity,
+        suffix: "pending-original",
+        session: &churn.session
+    )
+    let retainedPending = churn.session.nextAutonomousBarterOfferProposal()!
+    try! churn.session.createBarterOffer(
+        offerID: retainedPending.offerID,
+        opportunityID: retainedPending.opportunityID,
+        actorID: retainedPending.actorID
+    )
+    lifetimeOfferAttempts += 1
+    maximumRetainedOffers = max(
+        maximumRetainedOffers, churn.session.barterSnapshot().offers.count
+    )
+    let nonProducedPhysical = addNonProducedBarterPair(session: &churn.session)
+    let nonProducedDiscoveries = try! churn.session.discoverBarterOpportunities(
+        from: [nonProducedPhysical]
+    )
+    check("ordinary rights-tracked goods do not require CIV-34 provenance",
+          nonProducedDiscoveries.count == 1
+            && nonProducedDiscoveries[0].offered.productionOperationIDs.isEmpty
+            && nonProducedDiscoveries[0].requested.productionOperationIDs.isEmpty)
+    try! churn.session.recordBarterOpportunity(nonProducedDiscoveries[0])
+    let secondPending = churn.session.nextAutonomousBarterOfferProposal()!
+    try! churn.session.createBarterOffer(
+        offerID: secondPending.offerID,
+        opportunityID: secondPending.opportunityID,
+        actorID: secondPending.actorID
+    )
+    lifetimeOfferAttempts += 1
+    maximumRetainedOffers = max(
+        maximumRetainedOffers, churn.session.barterSnapshot().offers.count
+    )
+    let pendingAfterCapacityReclaim = churn.session.barterSnapshot().offers
+        .filter { $0.status.isPending }.map(\.offerID)
+    check("capacity reclamation never evicts pending reservation authority",
+          pendingAfterCapacityReclaim.sorted()
+            == [retainedPending.offerID, secondPending.offerID].sorted()
+            && churn.session.barterSnapshot().offers.count
+                == churnConfiguration.maximumOffers)
+    try! churn.session.withdrawBarterOffer(
+        offerID: retainedPending.offerID,
+        actorID: churn.opportunity.offerorID,
+        reason: "prepare compacted restart"
+    )
+    try! churn.session.withdrawBarterOffer(
+        offerID: secondPending.offerID,
+        actorID: nonProducedDiscoveries[0].offerorID,
+        reason: "prepare compacted restart"
+    )
+    let compactedCheckpoint = try! churn.session.makeCheckpoint()
+    var compactedRestart = try! AgentSimulationSession.restoring(
+        compactedCheckpoint
+    )
+    let restoredCompactedBytes = try! compactedRestart.durableStateBytes()
+    check("terminal compaction checkpoint restores the same bounded semantics",
+          restoredCompactedBytes == (try! churn.session.durableStateBytes())
+            && compactedRestart.barterSnapshot().pendingOfferCount == 0
+            && compactedRestart.barterSnapshot().offers.count
+                == churnConfiguration.maximumOffers)
+    _ = try! compactedRestart.advanceTick()
+    _ = discoverCurrentBarterOpportunity(
+        from: churn.opportunity,
+        suffix: "after-compaction-restart",
+        session: &compactedRestart
+    )
+    let postRestartProposal = compactedRestart
+        .nextAutonomousBarterOfferProposal()!
+    try! compactedRestart.createBarterOffer(
+        offerID: postRestartProposal.offerID,
+        opportunityID: postRestartProposal.opportunityID,
+        actorID: postRestartProposal.actorID
+    )
+    lifetimeOfferAttempts += 1
+    maximumRetainedOffers = max(
+        maximumRetainedOffers,
+        compactedRestart.barterSnapshot().offers.count
+    )
+    check("new offer succeeds after more than maximumOffers terminal churn and restart",
+          lifetimeOfferAttempts == 24
+            && maximumRetainedOffers == churnConfiguration.maximumOffers
+            && compactedRestart.barterSnapshot().pendingOfferCount == 1
+            && compactedRestart.barterSnapshot().offers.contains {
+                $0.offerID == postRestartProposal.offerID && $0.status == .open
+            }
+            && compactedRestart.barterSnapshot().offers.allSatisfy {
+                $0.offerID == postRestartProposal.offerID || !$0.status.isPending
+            })
 
     fixture.session = session
     check("campaign accounting remains exact with no synthetic economic state",

@@ -86,6 +86,21 @@ public struct AgentBarterConfiguration: Codable, Equatable, Sendable {
     }
 
     public static let live = try! AgentBarterConfiguration()
+
+    /// Runtime discovery intentionally samples a small deterministic local
+    /// window rather than expanding to every inhabitant, right or inventory.
+    /// These are derived bounds, so schema-32 configuration encoding remains
+    /// compatible with the original local candidate.
+    public var maximumDiscoveryAgents: Int { min(8, maximumOpportunities) }
+    public var maximumNearbyCounterpartiesPerAgent: Int {
+        min(4, maximumDiscoveryAgents - 1)
+    }
+    public var maximumPhysicalGoodsPerAgent: Int { min(4, maximumOffers) }
+    public var maximumPhysicalPairCandidatesPerTick: Int {
+        min(32, maximumOpportunities)
+    }
+    public var maximumActiveNeedsPerAgent: Int { 8 }
+    public var maximumDiscoveriesPerTick: Int { min(4, maximumOpportunities) }
 }
 
 /// Binds a proposed side to a current Pebble observation. It is a description
@@ -126,6 +141,89 @@ public struct AgentBarterValueReason: Codable, Equatable, Sendable {
         quantity = need.quantity
         causalEventID = need.causalEventID
     }
+}
+
+/// A bounded read-only physical pair supplied by Pebble. It carries current
+/// custody and locality facts but no economic conclusion. PebbleAgents decides
+/// whether the two current goods satisfy two current local reasons.
+public struct AgentBarterPhysicalPairObservation: Codable, Equatable, Sendable {
+    public let candidateID: String
+    public let actorAID: AgentID
+    public let actorBID: AgentID
+    public let actorAGood: AgentBarterLeg
+    public let actorBGood: AgentBarterLeg
+    public let distance: Int
+    public let lineOfSight: Bool
+    public let chunksReady: Bool
+    public let observedAtTick: Int
+    public let expiresAtTick: Int
+
+    public init(
+        candidateID: String,
+        actorAID: AgentID,
+        actorBID: AgentID,
+        actorAGood: AgentBarterLeg,
+        actorBGood: AgentBarterLeg,
+        distance: Int,
+        lineOfSight: Bool,
+        chunksReady: Bool,
+        observedAtTick: Int,
+        expiresAtTick: Int
+    ) {
+        self.candidateID = String(candidateID.prefix(160))
+        self.actorAID = actorAID
+        self.actorBID = actorBID
+        self.actorAGood = actorAGood
+        self.actorBGood = actorBGood
+        self.distance = distance
+        self.lineOfSight = lineOfSight
+        self.chunksReady = chunksReady
+        self.observedAtTick = observedAtTick
+        self.expiresAtTick = expiresAtTick
+    }
+}
+
+/// A deterministic offeror decision produced by the civilization kernel.
+/// Applying it creates social authority only; no matter moves.
+public struct AgentBarterOfferProposal: Equatable, Sendable {
+    public let offerID: AgentBarterOfferID
+    public let opportunityID: String
+    public let actorID: AgentID
+    public let reason: String
+}
+
+/// Current local facts supplied for the named counterparty's independent
+/// decision. This observation grants no transfer authority.
+public struct AgentBarterCounterpartyDecisionObservation: Equatable, Sendable {
+    public let offerID: AgentBarterOfferID
+    public let counterpartyID: AgentID
+    public let distance: Int
+    public let lineOfSight: Bool
+    public let chunksReady: Bool
+    public let observedAtTick: Int
+
+    public init(
+        offerID: AgentBarterOfferID,
+        counterpartyID: AgentID,
+        distance: Int,
+        lineOfSight: Bool,
+        chunksReady: Bool,
+        observedAtTick: Int
+    ) {
+        self.offerID = offerID
+        self.counterpartyID = counterpartyID
+        self.distance = distance
+        self.lineOfSight = lineOfSight
+        self.chunksReady = chunksReady
+        self.observedAtTick = observedAtTick
+    }
+}
+
+public struct AgentBarterCounterpartyDecision: Equatable, Sendable {
+    public let offerID: AgentBarterOfferID
+    public let counterpartyID: AgentID
+    public let accept: Bool
+    public let reason: String
 }
 
 /// Bounded, co-located observation supplied by Pebble. No settlement scan or

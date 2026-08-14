@@ -109,7 +109,9 @@ final class PebbleAgentController {
     var candidateRenewableLateFailureProofInjected = false
     var productionWorkshopPosition: AgentPosition?
     var productionToolTargetPosition: PhysicalBlockPosition?
-    var barterProofFixture: PebbleAgentBarterProofFixture?
+    /// Disposable World restoration data only. It has no discovery, offer or
+    /// counterparty-decision authority.
+    var barterDisposableWorldFixture: PebbleAgentBarterDisposableWorldFixture?
     var barterMidExchangeFaultInjected = false
     var candidateAgricultureNavigationFailureProofInjected = false
     var ecologicalObservationProofFixture: PebbleAgentEcologicalObservationProofFixture?
