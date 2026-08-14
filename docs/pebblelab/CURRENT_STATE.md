@@ -14,6 +14,8 @@ SHA of the documentation commit that contains it.
   **ACQUIRED AND PUBLISHED** under contract `V4-GATE-D-v1`.
 - `CIV-00` through `CIV-34`: **COMPLETE AND PUBLISHED** in their bounded
   contracts.
+- `CIV-35 — Barter and Local Exchange V1`:
+  **IMPLEMENTED_LOCAL_REVIEW_CANDIDATE**; not published.
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
 
 Published canonical baseline evaluated by independent Gate D Evaluation 04
@@ -132,18 +134,23 @@ Its product implementation is
 `73db4cd7fbf1aff86a23aacb8928ca460774696e`; senior review approved reviewed
 evidence HEAD `24f0f72aae7543177ca746e892c57482496dabef` and bundle SHA-256
 `8a00bfef38c7d93dae0eff6867d58bc4d05bc872fb72b00f83616367dd682b6d`.
-The accepted proof covers canonical crafting, the transactional live gateway,
-the normal autonomous path, schema-31 restart, Observer schema 8 and
-downstream produced-tool use. `CIV-35` is not started and is the next eligible
-phase.
+The accepted CIV-34 proof covers canonical crafting, the transactional live
+gateway, the normal autonomous path, schema-31 restart, Observer schema 8 and
+downstream produced-tool use. CIV-35 is now an implemented local review
+candidate from exact baseline `8b7faa4cd03e315dec5696f72ec1ad75e333c77f`.
+Its normal local barter exchanges agent_0's real CIV-34 stone pickaxe for two
+real CIV-34 breads held by agent_1, compensates a true post-first-transfer
+fault exactly, retries successfully, restores once across a fresh process and
+uses the exact received pickaxe. Checkpoint/replay schema is 32 and Observer
+schema is 9. It remains unpublished; CIV-36 is not started.
 
 ## Current program position
 
 ```text
-active CIV phase: none
+active CIV phase: CIV-35 — LOCAL REVIEW CANDIDATE
 completed through: CIV-34
-next eligible phase: CIV-35
-next authorized action: CIV-35
+next eligible phase: none pending CIV-35 review
+next authorized action: SENIOR REVIEW OF CIV-35
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -170,7 +177,8 @@ Gate D Evaluation 10 status: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 10 status: BLOCKER_FIX_PUBLISHED
 Independent Gate D Evaluation 11 status: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 CIV-34 status: COMPLETE AND PUBLISHED
-CIV-35 status: NOT_STARTED — NEXT ELIGIBLE PHASE
+CIV-35 status: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE
+CIV-36 status: NOT_STARTED
 roadmap generation: V4
 ```
 
@@ -470,5 +478,6 @@ Gate D Evaluation 11 is **PASS — SENIOR REVIEW APPROVED**. Evaluations 01
 through 10 remain **FAIL — HISTORICAL IMMUTABLE EVIDENCE**, and Blockers 01
 through 10 remain **FIXED AND PUBLISHED**. Gate D is **ACQUIRED AND
 PUBLISHED**. `CIV-34 — Production, Tools and Workshops V1` is **COMPLETE AND
-PUBLISHED**. `CIV-35 — Barter and Local Exchange V1` is **NOT_STARTED — NEXT
-ELIGIBLE PHASE** and is the next authorized action.
+PUBLISHED**. `CIV-35 — Barter and Local Exchange V1` is
+**IMPLEMENTED_LOCAL_REVIEW_CANDIDATE** and is not published. `CIV-36` remains
+**NOT_STARTED**. The next authorized action is **SENIOR REVIEW OF CIV-35**.

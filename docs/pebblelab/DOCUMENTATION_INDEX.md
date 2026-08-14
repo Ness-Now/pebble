@@ -73,8 +73,9 @@ Gate D Evaluation 10: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 10: BLOCKER_FIX_PUBLISHED
 Independent Gate D Evaluation 11: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 CIV-34: COMPLETE AND PUBLISHED
-CIV-35: NOT_STARTED — NEXT ELIGIBLE PHASE
-next: CIV-35
+CIV-35: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE
+CIV-36: NOT_STARTED
+next: SENIOR REVIEW OF CIV-35
 ```
 
 The `CIV-33` completion is published on the canonical branch at
@@ -126,7 +127,11 @@ implementation is `73db4cd7fbf1aff86a23aacb8928ca460774696e`; senior review
 approved reviewed evidence HEAD
 `24f0f72aae7543177ca746e892c57482496dabef` and bundle SHA-256
 `8a00bfef38c7d93dae0eff6867d58bc4d05bc872fb72b00f83616367dd682b6d`.
-`CIV-35` is not started and is the next eligible phase and authorized action.
+`CIV-35 — Barter and Local Exchange V1` is implemented locally from exact
+baseline `8b7faa4cd03e315dec5696f72ec1ad75e333c77f`. Its bounded two-sided
+physical exchange, rollback/retry, schema-32 restart, Observer schema 9 and
+downstream use evidence are ready for senior review. It is not published;
+`CIV-36` is not started.
 
 ## Operational
 
@@ -226,6 +231,13 @@ PebbleCore recipe reuse, the transactional live production gateway, bounded
 needs and opportunities, normal autonomous stone-pickaxe and bread production,
 exact late rollback and retry, schema-31 checkpoint/replay, Observer schema 8,
 fresh-process physical custody restore and downstream real pickaxe use.
+
+[`CIV_35_PHASE_SUMMARY.md`](CIV_35_PHASE_SUMMARY.md) records bounded local
+spot barter, distinct offer and counterparty consent, exact stack-scoped
+authority, CIV-34 produced-good provenance, two-sided physical transfer,
+post-first-leg rollback and immediate retry, CIV-26 ownership/custody
+publication, schema-32 restart/replay, Observer schema 9 and fresh-process use
+of the exact exchanged pickaxe.
 
 [`RENEWABLE_SUBSISTENCE_MILESTONE_SUMMARY.md`](RENEWABLE_SUBSISTENCE_MILESTONE_SUMMARY.md)
 records the bounded physical carrot loop, exact input/output and food debit,

@@ -133,10 +133,10 @@ CIV-00 through CIV-34: COMPLETE AND PUBLISHED
 Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
-active CIV phase: none
+active CIV phase: CIV-35 — LOCAL REVIEW CANDIDATE
 completed through: CIV-34
-next eligible phase: CIV-35
-next authorized action: CIV-35
+next eligible phase: none pending CIV-35 review
+next authorized action: SENIOR REVIEW OF CIV-35
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
@@ -163,7 +163,8 @@ Gate D Evaluation 10: EVALUATED_FAIL_NOT_ACQUIRED — HISTORICAL EVIDENCE
 Gate D Blocker 10: BLOCKER_FIX_PUBLISHED
 Independent Gate D Evaluation 11: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 CIV-34: COMPLETE AND PUBLISHED
-CIV-35: NOT_STARTED — NEXT ELIGIBLE PHASE
+CIV-35: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE
+CIV-36: NOT_STARTED
 ```
 
 The `CIV-33` completion is published on the canonical branch at
@@ -229,8 +230,10 @@ published baseline `24c679581f7dfd93d26bffa2e9486a5340af0d9c`; senior review
 approved the evidence. Evaluations 01 through 10 remain immutable historical
 FAIL evidence and Blockers 01 through 10 remain fixed and published. `CIV-34`
 is complete and published from baseline
-`1bbf3df08ca8a05c79af61c888c424e52bb30801`; `CIV-35` remains not started and
-is the next eligible phase.
+`1bbf3df08ca8a05c79af61c888c424e52bb30801`. `CIV-35` is an implemented local
+review candidate from exact baseline
+`8b7faa4cd03e315dec5696f72ec1ad75e333c77f`; it is not published. `CIV-36`
+remains not started and the next action is senior review of CIV-35.
 
 Gate B is acquired under `V4-GATE-B-v1`, the bounded checkpoint proved by the
 published closure and subsequently hardened for normal-world bootstrap:
@@ -408,7 +411,8 @@ targeted Blocker 09 correction is **fixed and published**. Evaluation 10
 remains historical FAIL evidence; its targeted Blocker 10 correction is a
 **BLOCKER_FIX_PUBLISHED**. Independent Evaluation 11 is the first accepted
 whole-Gate PASS and is **SENIOR REVIEW APPROVED**. `CIV-34` is **COMPLETE AND
-PUBLISHED**. `CIV-35` is **NOT_STARTED — NEXT ELIGIBLE PHASE**.
+PUBLISHED**. `CIV-35` is **IMPLEMENTED_LOCAL_REVIEW_CANDIDATE** and not
+published. `CIV-36` is **NOT_STARTED**.
 
 | Phase | Requirement | Outcome |
 | --- | --- | --- |
@@ -745,8 +749,9 @@ No individual correction acquired Gate D. The independent composition proof is
 recorded in
 [`GATE_D_EVALUATION_11_REPORT.md`](GATE_D_EVALUATION_11_REPORT.md). Senior
 review approved it, so Gate D remains acquired and published. `CIV-34` is
-complete and published; `CIV-35` is not started and is the next eligible phase
-and authorized action.
+complete and published; `CIV-35` is an implemented local review candidate and
+is not published. `CIV-36` is not started. The next authorized action is senior
+review of CIV-35.
 
 ## Wave 3 — Local material economy
 
@@ -812,9 +817,51 @@ and a two-process live campaign supplies six inspected native captures and
 exact cleanup. The bounded proof is
 [`CIV_34_PHASE_SUMMARY.md`](CIV_34_PHASE_SUMMARY.md).
 
-This phase does not claim barter, markets, prices, currency, debt, general
+This phase did not itself claim barter, markets, prices, currency, debt, general
 contracts, guilds, large-scale industry, technology trees, full logistics,
-land/workshop property law or general organizations. `CIV-35` is not started.
+land/workshop property law or general organizations. CIV-35 now supplies the
+separate bounded local barter candidate below.
+
+### `CIV-35` — Barter and Local Exchange V1
+
+Status: **implemented local review candidate, required; not published**.
+
+Implementation baseline:
+
+```text
+exact published baseline: 8b7faa4cd03e315dec5696f72ec1ad75e333c77f
+local branch: codex/civ-35-barter-local-exchange-v1
+next action: SENIOR REVIEW OF CIV-35
+```
+
+Result: two distinct co-located inhabitants use active causal needs and current
+bounded physical observations to create an exact stack-scoped offer. The named
+counterparty independently accepts or rejects it. Offer and acceptance move no
+matter. Pebble reuses the existing material-custody gateway and candidate
+transaction to prevalidate, mutate and verify both Core inventory legs before
+the sole `AgentSimulationSession` publishes one exchange and two CIV-26 rights
+transitions.
+
+The decisive autonomous campaign exchanges agent_0's real CIV-34
+`stone_pickaxe x1` for agent_1's `bread x2`. A deterministic fault after the
+first real transfer compensates exactly and an immediate same-process retry
+completes once. Missing, wrong, stale, unauthorized, capacity-constrained,
+withdrawn, externally changed and concurrently reserved authority fails closed.
+The fresh process restores the exchanged custody with zero duplicates and
+agent_1 uses the exact received pickaxe in a real `stone -> air` action while
+durability evolves from damage zero to one.
+
+Schema 32 persists bounded terminal barter history and refuses checkpointing
+pending physical authority; replay never moves World matter. Observer schema 9
+projects exact goods, reasons, decisions, receipts and post-exchange rights
+read-only. The canonical gate passes 35/35 with 3830 assertions and the
+two-process live campaign supplies six inspected native captures. The bounded
+proof is [`CIV_35_PHASE_SUMMARY.md`](CIV_35_PHASE_SUMMARY.md).
+
+This phase does not claim debt, future promises, durable contracts, credit,
+markets, market price discovery, currency, accounting, merchant organizations,
+large-scale trade or global logistics. `CIV-36`, `CIV-37` and `CIV-38` remain
+unimplemented by CIV-35.
 
 ### `V4-GATE-E-v1` — Local Material Economy
 
