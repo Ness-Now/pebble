@@ -18,13 +18,18 @@ extension PebbleAgentController {
         world: World,
         player: Player
     ) -> PebbleAgentCommandResult {
-        let usage = "Usage: /lab contract <setup|status|proof|cleanup>"
-        guard arguments.count == 1 else { return failure(usage) }
+        let usage = "Usage: /lab contract <setup|status|proof|cleanup|drift consideration|drift fulfillment>"
         guard contractFeatureEnabled else {
             return failure(
                 "Contracts disabled. Set PEBBLELAB_APP_AGENTS_CONTRACTS=1 before launch."
             )
         }
+        if arguments.count == 2, arguments[0].lowercased() == "drift" {
+            return proveContractUnrelatedInventoryDrift(
+                leg: arguments[1].lowercased(), world: world
+            )
+        }
+        guard arguments.count == 1 else { return failure(usage) }
         switch arguments[0].lowercased() {
         case "setup": return setupContractProof(world: world, player: player)
         case "status": return contractStatus(world: world)
@@ -113,7 +118,14 @@ extension PebbleAgentController {
             promiseeProbe.carriedItems[0] = ItemStack(iid("cobblestone"), 3)
             promiseeProbe.carriedItems[1] = ItemStack(iid("stick"), 2)
             promisorProbe.carriedItems[0] = ItemStack(iid("wheat"), 3)
-            try candidate.setProductionEnabled(true)
+            let productionConfiguration = environment[
+                "PEBBLELAB_DISPOSABLE_CONTRACT_PRODUCTION_NEED_CAPACITY_PROOF"
+            ] == "1"
+                ? try AgentProductionConfiguration(maximumNeeds: 3)
+                : .live
+            try candidate.setProductionEnabled(
+                true, configuration: productionConfiguration
+            )
             let promiseeID = AgentID(rawValue: pair.0.id)!
             let promisorID = AgentID(rawValue: pair.1.id)!
             let considerationNeed = AgentProductionNeedID(
@@ -135,6 +147,10 @@ extension PebbleAgentController {
                 needID: preparationNeed, actor: promisee,
                 world: world, session: &candidate
             )
+            // These unrelated co-mingled controls are moved, never created or
+            // consumed, after the tracked asset observations are published.
+            promiseeProbe.carriedItems[6] = ItemStack(iid("dirt"), 1)
+            promisorProbe.carriedItems[6] = ItemStack(iid("sand"), 1)
             try candidate.raiseProductionNeed(
                 needID: considerationNeed, actorID: promisorID,
                 reason: .missingUsefulTool,
@@ -193,6 +209,8 @@ extension PebbleAgentController {
                 )
             productionWorkshopPosition = workshop
             contractFulfillmentFaultInjected = false
+            contractConsiderationPublicationFaultInjected = false
+            contractFulfillmentPublicationFaultInjected = false
             isPaused = true
             movementEnabled = false
             let message = "contract setup promisor=\(promisorID.rawValue) "
@@ -406,7 +424,7 @@ extension PebbleAgentController {
         let destinationID: AgentID
         let assetID: AgentMaterialAssetID
         let material: AgentMaterialStackSnapshot
-        let sourceObservation: AgentMaterialHolderObservation
+        let historicalSourceObservation: AgentMaterialHolderObservation
         let productionOperationIDs: [String]
         switch activity.candidate.actionKey {
         case "consideration":
@@ -423,7 +441,8 @@ extension PebbleAgentController {
             destinationID = obligation.promisorID
             assetID = proposal.opportunity.consideration.assetID
             material = proposal.opportunity.consideration.material
-            sourceObservation = proposal.opportunity.consideration.holderObservation
+            historicalSourceObservation = proposal.opportunity.consideration
+                .holderObservation
             productionOperationIDs = proposal.opportunity.consideration
                 .productionOperationIDs
         case "fulfillment":
@@ -446,7 +465,7 @@ extension PebbleAgentController {
             destinationID = obligation.promiseeID
             assetID = rights.asset.assetID
             material = obligation.promisedPerformance.material
-            sourceObservation = rights.lastVerifiedHolder
+            historicalSourceObservation = rights.lastVerifiedHolder
             productionOperationIDs = session.productionSnapshot().records.filter {
                 $0.actorID == obligation.promisorID
                     && $0.outputProduced == material
@@ -467,25 +486,92 @@ extension PebbleAgentController {
         let disposition = session.evaluateMaterialUse(AgentMaterialUseRequest(
             requestID: "contract:\(obligationID.rawValue):\(activity.candidate.actionKey)",
             assetID: assetID, actorID: sourceID, use: .transferCustody,
-            verifiedHolder: sourceObservation
+            verifiedHolder: historicalSourceObservation
         ))
-        guard disposition.verdict == .allowed,
-              (try materialCustodyGateway.acquireAssetAuthority(
-                  material, at: sourceEndpoint
-              )).status == .exact else {
+        let currentAuthority = try materialCustodyGateway.acquireAssetAuthority(
+            material, at: sourceEndpoint
+        )
+        guard disposition.verdict == .allowed, currentAuthority.isExact else {
             throw ControllerError.contractBoundary(
                 "current rights or exact physical authority refused"
             )
         }
+        let currentSourceObservation = AgentMaterialHolderObservation(
+            holder: .agent(sourceID), materialIdentity: material.identity,
+            quantity: material.count,
+            custodyFingerprint: currentAuthority.currentCustodyFingerprint,
+            physicalReceiptID: "contract-current-authority:"
+                + "\(obligationID.rawValue):\(activity.candidate.actionKey):t\(session.tick)",
+            observedAtTick: session.tick
+        )
+        trace(
+            "contract current asset authority obligation=\(obligationID.rawValue) "
+                + "action=\(activity.candidate.actionKey) status=exact "
+                + "holder=\(sourceID.rawValue) identity=\(material.identity.itemKey) "
+                + "quantity=\(material.count) historicalFullFingerprintCurrent="
+                + "\(historicalSourceObservation.custodyFingerprint == currentAuthority.currentCustodyFingerprint ? 1 : 0) "
+                + "currentFingerprintImmediatePrecondition=1"
+        )
         let destinationBefore = try materialCustodyGateway.fingerprint(
             destinationEndpoint
         )
         let receipt = "contract:\(obligationID.rawValue):"
             + "\(activity.candidate.actionKey)"
+        let preflightTransfer = AgentVerifiedContractTransfer(
+            assetID: assetID,
+            sourceObservation: currentSourceObservation,
+            destinationObservation: AgentMaterialHolderObservation(
+                holder: .agent(destinationID),
+                materialIdentity: material.identity,
+                quantity: material.count,
+                custodyFingerprint: destinationBefore,
+                physicalReceiptID: receipt,
+                observedAtTick: session.tick
+            ),
+            physicalReceiptID: receipt,
+            productionOperationIDs: productionOperationIDs
+        )
+        let preflightOperation: AgentReplayOperation
+        if activity.candidate.actionKey == "consideration" {
+            preflightOperation = .recordVerifiedContractConsideration(
+                AgentVerifiedContractConsiderationOutcome(
+                    operationID: receipt, obligationID: obligationID,
+                    transfer: preflightTransfer, completedAtTick: session.tick
+                )
+            )
+        } else {
+            preflightOperation = .recordVerifiedContractFulfillment(
+                AgentVerifiedContractFulfillmentOutcome(
+                    operationID: receipt, obligationID: obligationID,
+                    transfer: preflightTransfer, completedAtTick: session.tick
+                )
+            )
+        }
+        do {
+            try prevalidateContractPublication(
+                preflightOperation, session: session, recorder: recorder
+            )
+            trace(
+                "contract publication prevalidated obligation="
+                    + "\(obligationID.rawValue) action=\(activity.candidate.actionKey) "
+                    + "physicalMutation=0 sessionPublication=staged recorderPublication=staged"
+            )
+        } catch {
+            trace(
+                "contract publication prevalidation refused obligation="
+                    + "\(obligationID.rawValue) action=\(activity.candidate.actionKey) "
+                    + "physicalMutation=0 candidateCompensationDelta=0 "
+                    + "reason=\(String(describing: error).replacingOccurrences(of: " ", with: "_"))"
+            )
+            throw ControllerError.contractBoundary(
+                "publication prevalidation refused: \(error)"
+            )
+        }
         let transfer = materialCustodyGateway.transfer(
             PebbleAgentMaterialTransactionRequest(
                 transactionID: receipt, material: material,
-                expectedSourceFingerprint: sourceObservation.custodyFingerprint,
+                expectedSourceFingerprint:
+                    currentAuthority.currentCustodyFingerprint,
                 expectedDestinationFingerprint: destinationBefore
             ), from: sourceEndpoint, to: destinationEndpoint
         )
@@ -509,9 +595,29 @@ extension PebbleAgentController {
                 "injected after real fulfillment transfer before social close"
             )
         }
+        if activity.candidate.actionKey == "consideration",
+           environment[
+               "PEBBLELAB_DISPOSABLE_CONTRACT_CONSIDERATION_PUBLICATION_FAULT"
+           ] == "1",
+           !contractConsiderationPublicationFaultInjected {
+            contractConsiderationPublicationFaultInjected = true
+            throw ControllerError.contractBoundary(
+                "ordinary consideration publication rejected after transfer"
+            )
+        }
+        if activity.candidate.actionKey == "fulfillment",
+           environment[
+               "PEBBLELAB_DISPOSABLE_CONTRACT_FULFILLMENT_PUBLICATION_FAULT"
+           ] == "1",
+           !contractFulfillmentPublicationFaultInjected {
+            contractFulfillmentPublicationFaultInjected = true
+            throw ControllerError.contractBoundary(
+                "ordinary fulfillment publication rejected after transfer"
+            )
+        }
         let verifiedTransfer = AgentVerifiedContractTransfer(
             assetID: assetID,
-            sourceObservation: sourceObservation,
+            sourceObservation: currentSourceObservation,
             destinationObservation: AgentMaterialHolderObservation(
                 holder: .agent(destinationID),
                 materialIdentity: material.identity,
@@ -553,6 +659,32 @@ extension PebbleAgentController {
                 + "receipt=\(receipt) publication=verified"
         )
         return receipt
+    }
+
+    /// Runs the exact replay/session publication against disposable copies.
+    /// This makes every predictable capacity, duplicate, causal, Material
+    /// Rights, production-need, and contract invariant failure visible before
+    /// the live custody gateway is allowed to mutate either endpoint.
+    private func prevalidateContractPublication(
+        _ operation: AgentReplayOperation,
+        session: AgentSimulationSession,
+        recorder: AgentReplayRecorder?
+    ) throws {
+        var stagedSession = session
+        var stagedRecorder = recorder
+        if try applyRecordedOperationIfActive(
+            operation, session: &stagedSession, recorder: &stagedRecorder
+        ) != nil { return }
+        switch operation {
+        case let .recordVerifiedContractConsideration(outcome):
+            try stagedSession.recordVerifiedContractConsideration(outcome)
+        case let .recordVerifiedContractFulfillment(outcome):
+            try stagedSession.recordVerifiedContractFulfillment(outcome)
+        default:
+            throw ControllerError.contractBoundary(
+                "invalid contract publication prevalidation"
+            )
+        }
     }
 
     func registerContractPerformanceAssetIfNeeded(
@@ -928,6 +1060,92 @@ extension PebbleAgentController {
             try session.reviewContractParticipantContinuity()
         default:
             throw ControllerError.contractBoundary("invalid contract review")
+        }
+    }
+
+    private func proveContractUnrelatedInventoryDrift(
+        leg: String,
+        world: World
+    ) -> PebbleAgentCommandResult {
+        guard environment["PEBBLELAB_DISPOSABLE_WORLD_PROOF"] == "1",
+              let session, activeWorld === world
+        else {
+            return failure(
+                "Contract inventory drift is restricted to an active disposable proof."
+            )
+        }
+        let sourceID: AgentID
+        let material: AgentMaterialStackSnapshot
+        switch leg {
+        case "consideration":
+            guard let proposal = session.contractSnapshot().proposals.first(where: {
+                      $0.status == .open || $0.status == .accepted
+                  }) else {
+                return failure("Awaiting consideration authority is unavailable.")
+            }
+            sourceID = proposal.opportunity.promiseeID
+            material = proposal.opportunity.consideration.material
+        case "fulfillment":
+            guard let obligation = session.contractSnapshot().obligations.first,
+                  obligation.status == .outstanding
+                    || obligation.status == .overdue else {
+                return failure("Outstanding fulfillment authority is unavailable.")
+            }
+            sourceID = obligation.promisorID
+            material = obligation.promisedPerformance.material
+        default:
+            return failure("Contract drift leg must be consideration or fulfillment.")
+        }
+        guard let probe = probesByAgentId[sourceID.rawValue],
+              probe.world === world, !probe.dead else {
+            return failure("Contract drift source probe is unavailable.")
+        }
+        let endpoint = PebbleAgentMaterialCustodyEndpoint.liveAgent(
+            PebbleAgentEmbodiment(probe: probe), in: world
+        )
+        let beforeSlots = copyItemInventory(probe.carriedItems)
+        do {
+            let before = try materialCustodyGateway.acquireAssetAuthority(
+                material, at: endpoint
+            )
+            let bridge = PebbleAgentMaterialSnapshotBridge()
+            guard before.isExact,
+                  let unrelatedIndex = probe.carriedItems.indices.first(where: {
+                      guard let stack = probe.carriedItems[$0],
+                            let snapshot = try? bridge.snapshot(of: stack) else {
+                          return false
+                      }
+                      return snapshot.identity != material.identity
+                  }),
+                  let emptyIndex = probe.carriedItems.indices.first(where: {
+                      probe.carriedItems[$0] == nil
+                  }), unrelatedIndex != emptyIndex else {
+                throw ControllerError.contractBoundary(
+                    "unrelated drift control lacks exact asset and movable slot"
+                )
+            }
+            probe.carriedItems[emptyIndex] = probe.carriedItems[unrelatedIndex]
+            probe.carriedItems[unrelatedIndex] = nil
+            let after = try materialCustodyGateway.acquireAssetAuthority(
+                material, at: endpoint
+            )
+            guard after.isExact,
+                  before.currentCustodyFingerprint
+                    != after.currentCustodyFingerprint else {
+                throw ControllerError.contractBoundary(
+                    "unrelated drift did not preserve exact scoped authority"
+                )
+            }
+            let message = "contract unrelated inventory drift leg=\(leg) "
+                + "holder=\(sourceID.rawValue) tracked=\(material.identity.itemKey):"
+                + "\(material.count) currentAuthorityBefore=exact "
+                + "currentAuthorityAfter=exact fullFingerprintChanged=1 "
+                + "trackedIdentityChanged=0 trackedQuantityChanged=0"
+            trace(message)
+            return success(message)
+        } catch {
+            probe.carriedItems = beforeSlots
+            return failure("Contract inventory drift failed: \(error)")
         }
     }
 

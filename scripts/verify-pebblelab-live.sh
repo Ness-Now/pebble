@@ -208,8 +208,9 @@ if [ "$MODE" = "contracts" ]; then
     AUTONOMOUS_CIVILIZATION_GATE=1
     WORLD_NAME="PebbleLab-Disposable-Contracts-46"
     CAPTURE_NAME="contract-final.png"
-    CONTRACT_PHASE1_COMMANDS='/gamerule randomTickSpeed 0;/gamerule doMobSpawning false;/gamerule doDaylightCycle false;/gamerule doWeatherCycle false;/time set 1000;/weather clear;/tp 14 68 -18|/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab contract setup;/lab contract status;/lab overlay compact|/lab step;/lab contract status;/lab overlay compact|/lab step;/lab contract status;/lab checkpoint save contract-open-v33;/lab checkpoint status;/lab causality tail 20;/lab status'
-    CONTRACT_PHASE2_COMMANDS='/tp 14 68 -18;/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab checkpoint load contract-open-v33;/lab contract status;/lab overlay compact|/lab step;/lab contract status;/lab overlay compact|/lab step;/lab contract status;/lab overlay compact|/lab step;/lab contract status;/lab contract proof;/lab checkpoint save contract-fulfilled-v33;/lab checkpoint status;/lab causality tail 20;/lab status'
+    CONTRACT_CAPACITY_COMMANDS='/gamerule randomTickSpeed 0;/gamerule doMobSpawning false;/gamerule doDaylightCycle false;/gamerule doWeatherCycle false;/time set 1000;/weather clear;/tp 14 68 -18|/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab contract setup;/lab contract status|/lab step;/lab contract status|/lab step;/lab contract status;/lab contract cleanup;/lab status'
+    CONTRACT_PHASE1_COMMANDS='/gamerule randomTickSpeed 0;/gamerule doMobSpawning false;/gamerule doDaylightCycle false;/gamerule doWeatherCycle false;/time set 1000;/weather clear;/tp 14 68 -18|/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab contract setup;/lab contract status;/lab overlay compact|/lab step;/lab contract drift consideration;/lab contract status;/lab overlay compact|/lab step;/lab contract status;/lab overlay compact|/lab step;/lab contract status;/lab checkpoint save contract-open-v33;/lab checkpoint status;/lab causality tail 20;/lab status'
+    CONTRACT_PHASE2_COMMANDS='/tp 14 68 -18;/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab checkpoint load contract-open-v33;/lab contract status;/lab overlay compact|/lab step;/lab contract drift fulfillment;/lab contract status;/lab overlay compact|/lab step;/lab contract status;/lab overlay compact|/lab step;/lab contract status;/lab overlay compact|/lab step;/lab contract status;/lab contract proof;/lab checkpoint save contract-fulfilled-v33;/lab checkpoint status;/lab causality tail 20;/lab status'
     CONTRACT_PHASE3_COMMANDS='/tp 14 68 -18;/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab checkpoint load contract-fulfilled-v33;/lab contract status;/lab overlay compact|/lab step;/lab contract status;/lab contract proof;/lab checkpoint save contract-final-v33;/lab checkpoint status;/lab causality tail 20;/lab contract cleanup;/lab status'
     LAB_COMMANDS="$CONTRACT_PHASE1_COMMANDS"
 elif [ "$MODE" = "barter" ]; then
@@ -953,9 +954,10 @@ print_plan() {
     printf '  PEBBLELAB_DISPOSABLE_WORLD_PROOF=1\n'
     printf '  PEBBLE_CMD=%s\n' "$LAB_COMMANDS"
     if [ "$MODE" = "contracts" ]; then
-        printf '  PEBBLE_SHOT=-|%s/contract-before-promise.png|%s/contract-proposal.png|%s/contract-open-debt.png\n' \
+        printf '  Capacity proof PEBBLE_CMD=%s\n' "$CONTRACT_CAPACITY_COMMANDS"
+        printf '  PEBBLE_SHOT=-|%s/contract-before-promise.png|%s/contract-proposal.png|%s/contract-consideration-publication-rollback.png|%s/contract-open-debt.png\n' \
             "$(dirname "$capture_path")" "$(dirname "$capture_path")" \
-            "$(dirname "$capture_path")"
+            "$(dirname "$capture_path")" "$(dirname "$capture_path")"
         printf '  Restart 2 PEBBLE_CMD=%s\n' "$CONTRACT_PHASE2_COMMANDS"
         printf '  Restart 3 PEBBLE_CMD=%s\n' "$CONTRACT_PHASE3_COMMANDS"
     elif [ "$MODE" = "barter" ]; then
@@ -1021,9 +1023,10 @@ print_plan() {
     printf '\nOperator checks:\n'
     printf '  1. Wait for automatic disposable-world creation, commands, capture, and normal termination.\n'
     if [ "$MODE" = "contracts" ]; then
-        printf '  2. Confirm a normal proposal and distinct acceptance precede physical consideration and open debt.\n'
-        printf '  3. Confirm process two restores open debt, normally produces bread, rolls back a real fulfillment transfer, and retries.\n'
-        printf '  4. Confirm process three preserves fulfilled state and executes no duplicate fulfillment.\n'
+        printf '  2. Confirm saturated production-need capacity refuses before consideration mutation.\n'
+        printf '  3. Confirm ordinary consideration publication failure rolls back before the retry opens debt.\n'
+        printf '  4. Confirm process two restores open debt, normally produces bread, rolls back explicit and ordinary fulfillment failures, and retries.\n'
+        printf '  5. Confirm process three preserves fulfilled state and executes no duplicate fulfillment.\n'
     elif [ "$MODE" = "production" ]; then
         printf '  2. Confirm the real crafting table transforms exact canonical inputs into a stone pickaxe and bread.\n'
         printf '  3. Confirm the negative matrix, true late rollback, immediate retry, contention, and reserved-input refusal.\n'
@@ -1204,15 +1207,18 @@ DB_PATH="$SESSION_HOME/Library/Application Support/Pebble/pebble.db"
 [ ! -e "$DB_PATH" ] || fail "fresh disposable database already exists: $DB_PATH"
 /bin/mkdir -p "$SESSION_HOME" "$CAPTURE_DIR"
 if [ "$MODE" = "contracts" ]; then
+    CAPTURE_CAPACITY_PATH="$CAPTURE_DIR/contract-capacity-refusal.png"
     CAPTURE_BEFORE_PATH="$CAPTURE_DIR/contract-before-promise.png"
     CAPTURE_PROPOSAL_PATH="$CAPTURE_DIR/contract-proposal.png"
+    CAPTURE_CONSIDERATION_FAULT_PATH="$CAPTURE_DIR/contract-consideration-publication-rollback.png"
     CAPTURE_OPEN_PATH="$CAPTURE_DIR/contract-open-debt.png"
     CAPTURE_RESTORED_PATH="$CAPTURE_DIR/contract-restored-open-debt.png"
     CAPTURE_PRODUCED_PATH="$CAPTURE_DIR/contract-produced-bread.png"
     CAPTURE_FAULT_PATH="$CAPTURE_DIR/contract-fulfillment-rollback.png"
+    CAPTURE_PUBLICATION_FAULT_PATH="$CAPTURE_DIR/contract-fulfillment-publication-rollback.png"
     CAPTURE_FULFILLED_PATH="$CAPTURE_DIR/contract-fulfilled.png"
     CAPTURE_VERIFIED_PATH="$CAPTURE_DIR/contract-restored-fulfilled.png"
-    SHOT_SPEC="-|$CAPTURE_BEFORE_PATH|$CAPTURE_PROPOSAL_PATH|$CAPTURE_OPEN_PATH"
+    SHOT_SPEC="-|$CAPTURE_BEFORE_PATH|$CAPTURE_PROPOSAL_PATH|$CAPTURE_CONSIDERATION_FAULT_PATH|$CAPTURE_OPEN_PATH"
 elif [ "$MODE" = "barter" ]; then
     CAPTURE_PRE_PATH="$CAPTURE_DIR/barter-pre-exchange.png"
     CAPTURE_OFFER_PATH="$CAPTURE_DIR/barter-offer.png"
@@ -1298,6 +1304,7 @@ if [ "$MODE" = "contracts" ]; then
     [ -x "$PEBBLE_BINARY" ] \
         || fail "Release Pebble binary missing: $PEBBLE_BINARY"
 
+    PHASE_CAPACITY_TRACE="$SESSION_ROOT/contract-capacity.log"
     PHASE1_TRACE="$SESSION_ROOT/contract-phase1.log"
     PHASE2_TRACE="$SESSION_ROOT/contract-phase2.log"
     PHASE3_TRACE="$SESSION_ROOT/contract-phase3.log"
@@ -1309,7 +1316,10 @@ if [ "$MODE" = "contracts" ]; then
         create_world=$4
         command_world_tick=$5
         run_shots=$6
-        fulfillment_fault=$7
+        capacity_proof=$7
+        consideration_publication_fault=$8
+        fulfillment_fault=$9
+        fulfillment_publication_fault=${10}
         if [ "$create_world" -eq 1 ]; then
             CFFIXED_USER_HOME="$run_home" \
             PEBBLE_AUTOLOAD=1 \
@@ -1328,7 +1338,10 @@ if [ "$MODE" = "contracts" ]; then
             PEBBLELAB_APP_AGENTS_PRODUCTION=1 \
             PEBBLELAB_APP_AGENTS_CONTRACTS=1 \
             PEBBLELAB_APP_AGENTS_AUTONOMOUS_CIVILIZATION=1 \
+            PEBBLELAB_DISPOSABLE_CONTRACT_PRODUCTION_NEED_CAPACITY_PROOF="$capacity_proof" \
+            PEBBLELAB_DISPOSABLE_CONTRACT_CONSIDERATION_PUBLICATION_FAULT="$consideration_publication_fault" \
             PEBBLELAB_DISPOSABLE_CONTRACT_FULFILLMENT_FAULT="$fulfillment_fault" \
+            PEBBLELAB_DISPOSABLE_CONTRACT_FULFILLMENT_PUBLICATION_FAULT="$fulfillment_publication_fault" \
             PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
             PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
             PEBBLE_CMD="$run_commands" \
@@ -1350,7 +1363,10 @@ if [ "$MODE" = "contracts" ]; then
             PEBBLELAB_APP_AGENTS_PRODUCTION=1 \
             PEBBLELAB_APP_AGENTS_CONTRACTS=1 \
             PEBBLELAB_APP_AGENTS_AUTONOMOUS_CIVILIZATION=1 \
+            PEBBLELAB_DISPOSABLE_CONTRACT_PRODUCTION_NEED_CAPACITY_PROOF="$capacity_proof" \
+            PEBBLELAB_DISPOSABLE_CONTRACT_CONSIDERATION_PUBLICATION_FAULT="$consideration_publication_fault" \
             PEBBLELAB_DISPOSABLE_CONTRACT_FULFILLMENT_FAULT="$fulfillment_fault" \
+            PEBBLELAB_DISPOSABLE_CONTRACT_FULFILLMENT_PUBLICATION_FAULT="$fulfillment_publication_fault" \
             PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
             PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
             PEBBLE_CMD="$run_commands" \
@@ -1362,21 +1378,44 @@ if [ "$MODE" = "contracts" ]; then
         fi
     }
 
+    printf '\nContract capacity proof: real performance-need capacity refusal before transfer.\n'
+    CAPACITY_HOME="$SESSION_ROOT/capacity-home"
+    CAPACITY_SHOTS="-|-|-|$CAPTURE_CAPACITY_PATH"
+    run_contract_app \
+        "$CAPACITY_HOME" "$PHASE_CAPACITY_TRACE" "$CONTRACT_CAPACITY_COMMANDS" \
+        1 100 "$CAPACITY_SHOTS" 1 0 0 0
+    TRACE_PATH="$PHASE_CAPACITY_TRACE"
+    [ -s "$CAPTURE_CAPACITY_PATH" ] \
+        || fail "contract capacity-refusal capture missing"
+    require_trace 'contract publication prevalidation refused obligation=obligation-[0-9a-f]+ action=consideration physicalMutation=0 candidateCompensationDelta=0 reason=.*production_capacity_reached_needs' 'production need capacity refuses before physical transfer'
+    require_trace 'autonomous activity blocked actor=agent_[0-9]+ domain=contract reason=.*publication_prevalidation_refused' 'harmless pre-mutation refusal remains bounded blocked outcome'
+    require_trace 'contracts enabled=1 .*awaitingConsideration.*active=1 debts=0 fulfilled=0 ' 'accepted obligation remains awaiting consideration after capacity refusal'
+    require_trace 'summary .*runtimeErrors=0 .*probesRemoved=3 ' 'capacity proof clean shutdown'
+    reject_trace 'contract post-transfer mutation|CANDIDATE_PHYSICAL_ROLLBACK|CANDIDATE_PHYSICAL_HARD_FAILURE' 'capacity refusal physical mutation or rollback'
+
     printf '\nContract phase 1: normal promise, distinct acceptance, real consideration, and open debt checkpoint.\n'
     run_contract_app \
         "$SESSION_HOME" "$PHASE1_TRACE" "$CONTRACT_PHASE1_COMMANDS" \
-        1 100 "$SHOT_SPEC" 0
+        1 100 "$SHOT_SPEC" 0 1 0 0
     TRACE_PATH="$PHASE1_TRACE"
     [ -s "$CAPTURE_BEFORE_PATH" ] || fail "contract pre-promise capture missing"
     [ -s "$CAPTURE_PROPOSAL_PATH" ] || fail "contract proposal capture missing"
+    [ -s "$CAPTURE_CONSIDERATION_FAULT_PATH" ] \
+        || fail "contract consideration publication rollback capture missing"
     [ -s "$CAPTURE_OPEN_PATH" ] || fail "contract open-debt capture missing"
     require_trace 'contract setup promisor=agent_[0-9]+ promisee=agent_[0-9]+ reasonCurrent=stone_pickaxe:1 promisedFuture=bread:1 promisedHeldBefore=0 consideration=stone_pickaxe:1 physical=verified normalProposal=awaiting normalAcceptance=awaiting proofFixtureDecisionAuthority=0 manualProductiveContractCommandsAfterBootstrap=0' 'bootstrap creates current consideration, inputs, and reasons but no decisive promise'
     require_trace 'contract normal promise proposal proposal=promise-[0-9a-f]+ promisor=agent_[0-9]+ normalProposalDecision=1 proofFixtureDecisionAuthority=0 physicalMutation=0' 'normal promise decision'
     require_trace 'contract normal promisee decision proposal=promise-[0-9a-f]+ promisee=agent_[0-9]+ decision=accepted distinctAcceptance=1 normalAcceptanceDecision=1 proofFixtureDecisionAuthority=0 physicalMutation=0' 'distinct normal acceptance'
-    require_trace 'contract physical publication obligation=obligation-[0-9a-f]+ action=consideration from=agent_[0-9]+ to=agent_[0-9]+ material=stone_pickaxe:1 receipt=contract:obligation-[0-9a-f]+:consideration publication=verified' 'real current consideration opens debt'
+    require_trace 'contract unrelated inventory drift leg=consideration .*currentAuthorityBefore=exact currentAuthorityAfter=exact fullFingerprintChanged=1 trackedIdentityChanged=0 trackedQuantityChanged=0' 'consideration unrelated-slot drift positive control'
+    require_trace_at_least 'contract current asset authority obligation=obligation-[0-9a-f]+ action=consideration status=exact .*historicalFullFingerprintCurrent=0 currentFingerprintImmediatePrecondition=1' 2 'current consideration fingerprint used for fault and retry'
+    require_trace_at_least 'contract post-transfer mutation obligation=obligation-[0-9a-f]+ action=consideration .*candidatePhysicalMutation=1 publication=0' 2 'ordinary consideration failure and retry reach real transfer'
+    require_trace 'contract post-mutation error policy action=consideration candidateCompensationDelta=1 escapeCandidate=1 autonomousBlocked=0 error=.*ordinary_consideration_publication_rejected_after_transfer' 'ordinary consideration publication error escapes blocked path'
+    require_trace 'CANDIDATE_PHYSICAL_ROLLBACK operation=advanceOneTick .*contractBoundary.*ordinary consideration publication rejected after transfer.*registered=material-transfer:contract:obligation-[0-9a-f]+:consideration:[0-9]+ .*completed=material-transfer:contract:obligation-[0-9a-f]+:consideration:[0-9]+ .*publishedSession=unchanged .*publishedRecorder=unchanged' 'exact ordinary consideration publication rollback'
+    require_trace_count 'contract physical publication obligation=obligation-[0-9a-f]+ action=consideration ' 1 'one successful consideration publication after rollback'
     require_trace 'contracts enabled=1 .*active=1 debts=1 fulfilled=0 .*checkpointReady=1 .*proofFixtureDecisionAuthority=0 .*manualProductiveContractCommandsAfterBootstrap=0 .*physicalLoss=0 physicalDuplication=0 syntheticMaterial=0 duplicateFulfillmentReceipts=0 duplicateReservations=0 observerMutationCount=0' 'open debt has bounded truthful status'
     require_trace 'checkpoint saved name=contract-open-v33 .*restartSafe=1 ' 'restart-safe open debt checkpoint'
-    require_trace 'summary .*runtimeErrors=0 .*probesRemoved=3 ' 'phase-one clean shutdown'
+    require_trace 'summary .*runtimeErrors=1 .*probesRemoved=3 ' 'one expected consideration publication fault and clean phase-one shutdown'
+    reject_trace 'autonomous activity blocked .*domain=contract' 'ordinary post-mutation consideration error swallowed as blocked'
     reject_trace 'contract normal promised good obtained|action=fulfillment|CANDIDATE_PHYSICAL_HARD_FAILURE' 'premature performance or hard rollback failure'
 
     PERSISTENCE_ROOT="$SESSION_HOME/Library/Application Support/Pebble/PebbleLabAgents"
@@ -1393,23 +1432,30 @@ if [ "$MODE" = "contracts" ]; then
     continuation_command_tick=$((persisted_world_tick + 100))
 
     printf '\nContract phase 2: restore open debt, normal production, true fulfillment fault, rollback, and retry.\n'
-    PHASE2_SHOTS="$CAPTURE_RESTORED_PATH|$CAPTURE_PRODUCED_PATH|$CAPTURE_FAULT_PATH|$CAPTURE_FULFILLED_PATH"
+    PHASE2_SHOTS="$CAPTURE_RESTORED_PATH|$CAPTURE_PRODUCED_PATH|$CAPTURE_FAULT_PATH|$CAPTURE_PUBLICATION_FAULT_PATH|$CAPTURE_FULFILLED_PATH"
     run_contract_app \
         "$SESSION_HOME" "$PHASE2_TRACE" "$CONTRACT_PHASE2_COMMANDS" \
-        0 "$continuation_command_tick" "$PHASE2_SHOTS" 1
+        0 "$continuation_command_tick" "$PHASE2_SHOTS" 0 0 1 1
     TRACE_PATH="$PHASE2_TRACE"
     [ -s "$CAPTURE_RESTORED_PATH" ] || fail "contract restored-open capture missing"
     [ -s "$CAPTURE_PRODUCED_PATH" ] || fail "contract produced-good capture missing"
     [ -s "$CAPTURE_FAULT_PATH" ] || fail "contract rollback capture missing"
+    [ -s "$CAPTURE_PUBLICATION_FAULT_PATH" ] \
+        || fail "contract publication rollback capture missing"
     [ -s "$CAPTURE_FULFILLED_PATH" ] || fail "contract fulfilled capture missing"
     require_trace "checkpoint loaded name=contract-open-v33 .*digest=$OPEN_DIGEST .*restartSafe=1 .*custodyDuplicates=0 physicalBoundary=acquired" 'fresh-process open debt and custody restore'
     require_trace 'contract normal promised good obtained obligation=obligation-[0-9a-f]+ producer=agent_[0-9]+ material=bread:1 productionReceipt=produce:production:contract:obligation-[0-9a-f]+:perform:t[0-9]+:[0-9a-f]+ normalProductPath=1' 'later normal production obtains promised good'
-    require_trace_at_least 'contract post-transfer mutation obligation=obligation-[0-9a-f]+ action=fulfillment receipt=contract:obligation-[0-9a-f]+:fulfillment quantity=1 candidatePhysicalMutation=1 publication=0' 2 'faulted fulfillment and immediate retry both reach real mutation'
+    require_trace 'contract unrelated inventory drift leg=fulfillment .*currentAuthorityBefore=exact currentAuthorityAfter=exact fullFingerprintChanged=1 trackedIdentityChanged=0 trackedQuantityChanged=0' 'fulfillment unrelated-slot drift positive control'
+    require_trace_at_least 'contract current asset authority obligation=obligation-[0-9a-f]+ action=fulfillment status=exact .*historicalFullFingerprintCurrent=0 currentFingerprintImmediatePrecondition=1' 3 'current fulfillment fingerprint used for both faults and retry'
+    require_trace_at_least 'contract post-transfer mutation obligation=obligation-[0-9a-f]+ action=fulfillment receipt=contract:obligation-[0-9a-f]+:fulfillment quantity=1 candidatePhysicalMutation=1 publication=0' 3 'explicit fault, ordinary publication fault, and retry all reach real mutation'
+    require_trace_at_least 'contract post-mutation error policy action=fulfillment candidateCompensationDelta=1 escapeCandidate=1 autonomousBlocked=0 ' 2 'all fulfillment post-mutation errors escape blocked path'
     require_trace 'CANDIDATE_PHYSICAL_ROLLBACK operation=advanceOneTick .*contractPostMutationBoundary.*registered=material-transfer:contract:obligation-[0-9a-f]+:fulfillment:[0-9]+ .*completed=material-transfer:contract:obligation-[0-9a-f]+:fulfillment:[0-9]+ .*publishedSession=unchanged .*publishedRecorder=unchanged' 'exact post-fulfillment compensation with open published debt'
+    require_trace 'CANDIDATE_PHYSICAL_ROLLBACK operation=advanceOneTick .*contractBoundary.*ordinary fulfillment publication rejected after transfer.*registered=material-transfer:contract:obligation-[0-9a-f]+:fulfillment:[0-9]+ .*completed=material-transfer:contract:obligation-[0-9a-f]+:fulfillment:[0-9]+ .*publishedSession=unchanged .*publishedRecorder=unchanged' 'exact ordinary fulfillment publication rollback'
     require_trace_count 'contract physical publication obligation=obligation-[0-9a-f]+ action=fulfillment ' 1 'one successful physical fulfillment publication'
     require_trace 'contract proof result=PASS promise=explicit acceptance=distinct obligation=durable consideration=physical debt=open-before-fulfillment normalProductPath=PASS fulfillment=physical exactOnce=1 duplicateFulfillmentCount=0 observerMutationCount=0 proofFixtureDecisionAuthority=0 manualProductiveContractCommandsAfterBootstrap=0 physicalLoss=0 physicalDuplication=0 syntheticMaterial=0 duplicateFulfillmentReceipts=0 duplicateReservations=0' 'exact-once positive proof'
     require_trace 'checkpoint saved name=contract-fulfilled-v33 .*restartSafe=1 ' 'restart-safe fulfilled checkpoint'
-    require_trace 'summary .*runtimeErrors=1 .*probesRemoved=3 ' 'one expected fulfillment fault and clean phase-two shutdown'
+    require_trace 'summary .*runtimeErrors=2 .*probesRemoved=3 ' 'two expected fulfillment publication faults and clean phase-two shutdown'
+    reject_trace 'autonomous activity blocked .*domain=contract' 'ordinary post-mutation fulfillment error swallowed as blocked'
     reject_trace 'CANDIDATE_PHYSICAL_HARD_FAILURE' 'unverifiable contract rollback'
 
     FULFILLED_SESSION=$(/usr/bin/find "$PERSISTENCE_ROOT" -type f -path '*/checkpoints/contract-fulfilled-v33/session.json' -print -quit)
@@ -1428,7 +1474,7 @@ if [ "$MODE" = "contracts" ]; then
     PHASE3_SHOTS="$CAPTURE_VERIFIED_PATH|$CAPTURE_PATH"
     run_contract_app \
         "$SESSION_HOME" "$PHASE3_TRACE" "$CONTRACT_PHASE3_COMMANDS" \
-        0 "$continuation_command_tick" "$PHASE3_SHOTS" 0
+        0 "$continuation_command_tick" "$PHASE3_SHOTS" 0 0 0 0
     TRACE_PATH="$PHASE3_TRACE"
     [ -s "$CAPTURE_VERIFIED_PATH" ] || fail "contract restored-fulfilled capture missing"
     [ -s "$CAPTURE_PATH" ] || fail "contract final capture missing"
@@ -1449,7 +1495,8 @@ if [ "$MODE" = "contracts" ]; then
         || /usr/bin/pgrep -x pebsmoke >/dev/null 2>&1; then
         fail "residual PebbleLab process after contract proof"
     fi
-    printf '\nPASS: CIV-36 open debt, normal production, exact rollback/retry, three-process durability, exact-once fulfillment, and cleanup verified.\n'
+    printf '\nPASS: CIV-36 capacity prevalidation, current asset authority, ordinary and explicit exact rollback/retry, three-process durability, exact-once fulfillment, and cleanup verified.\n'
+    printf 'Capacity trace: %s\n' "$PHASE_CAPACITY_TRACE"
     printf 'Phase 1 trace: %s\n' "$PHASE1_TRACE"
     printf 'Phase 2 trace: %s\n' "$PHASE2_TRACE"
     printf 'Phase 3 trace: %s\n' "$PHASE3_TRACE"

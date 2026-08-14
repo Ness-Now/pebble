@@ -115,6 +115,8 @@ final class PebbleAgentController {
     var barterMidExchangeFaultInjected = false
     var contractDisposableWorldFixture: PebbleAgentContractDisposableWorldFixture?
     var contractFulfillmentFaultInjected = false
+    var contractConsiderationPublicationFaultInjected = false
+    var contractFulfillmentPublicationFaultInjected = false
     var candidateAgricultureNavigationFailureProofInjected = false
     var ecologicalObservationProofFixture: PebbleAgentEcologicalObservationProofFixture?
     var agricultureProofFixture: PebbleAgentAgricultureProofFixture?

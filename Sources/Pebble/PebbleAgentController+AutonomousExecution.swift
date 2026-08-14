@@ -21,6 +21,9 @@ extension PebbleAgentController {
         let occupied = session.snapshot().agents.filter { $0.id != actorIDText }.map {
             PhysicalBlockPosition(x: $0.position.x, y: $0.position.y, z: $0.position.z)
         }
+        let contractCompensationCountBefore = activity.candidate.domain == .contract
+            ? activeCandidatePhysicalTransaction?.registeredCompensationIDs.count ?? 0
+            : 0
         do {
             let causalBefore = session.causalLedgerSnapshot().summary.latestSequence
             let receipt: String
@@ -128,6 +131,21 @@ extension PebbleAgentController {
                     + "manualTrigger=0"
             )
         } catch {
+            let contractCompensationCountAfter =
+                activeCandidatePhysicalTransaction?.registeredCompensationIDs.count
+                    ?? contractCompensationCountBefore
+            if activity.candidate.domain == .contract,
+               contractCompensationCountAfter > contractCompensationCountBefore {
+                trace(
+                    "contract post-mutation error policy action="
+                        + "\(activity.candidate.actionKey) "
+                        + "candidateCompensationDelta="
+                        + "\(contractCompensationCountAfter - contractCompensationCountBefore) "
+                        + "escapeCandidate=1 autonomousBlocked=0 "
+                        + "error=\(String(describing: error).replacingOccurrences(of: " ", with: "_"))"
+                )
+                throw error
+            }
             if case ControllerError.barterPostMutationBoundary = error {
                 throw error
             }

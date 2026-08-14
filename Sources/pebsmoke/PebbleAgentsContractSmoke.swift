@@ -82,7 +82,8 @@ private struct ContractSmokeFixture {
 
 private func contractFixture(
     _ simulationID: String = "civ36-contract",
-    configuration: AgentContractConfiguration = .live
+    configuration: AgentContractConfiguration = .live,
+    productionConfiguration: AgentProductionConfiguration = .live
 ) -> ContractSmokeFixture {
     let creditor = AgentID(rawValue: "creditor")!
     let debtor = AgentID(rawValue: "debtor")!
@@ -95,7 +96,9 @@ private func contractFixture(
         ], simulationID: try! AgentSimulationID(validating: simulationID),
         causalLedgerPolicy: .bounded(maxEvents: 4096)
     )
-    try! session.setProductionEnabled(true)
+    try! session.setProductionEnabled(
+        true, configuration: productionConfiguration
+    )
     let debtorNeed = AgentProductionNeedID(
         rawValue: "contract:debtor:needs-pickaxe"
     )!
@@ -175,19 +178,28 @@ private func formContract(
     }!
 }
 
-private func contractConsideration(
+private func makeContractConsideration(
     obligation: AgentDurableContractObligation,
     fixture: ContractSmokeFixture,
     suffix: String,
-    session: inout AgentSimulationSession
-) throws -> AgentVerifiedContractConsiderationOutcome {
-    let outcome = AgentVerifiedContractConsiderationOutcome(
+    session: AgentSimulationSession,
+    sourceObservation: AgentMaterialHolderObservation? = nil
+) -> AgentVerifiedContractConsiderationOutcome {
+    let historical = fixture.opportunity.consideration.holderObservation
+    let currentSource = sourceObservation ?? AgentMaterialHolderObservation(
+        holder: historical.holder,
+        materialIdentity: historical.materialIdentity,
+        quantity: historical.quantity,
+        custodyFingerprint: historical.custodyFingerprint,
+        physicalReceiptID: "contract-current-authority-\(suffix)",
+        observedAtTick: session.tick
+    )
+    return AgentVerifiedContractConsiderationOutcome(
         operationID: "contract-consideration-\(suffix)",
         obligationID: obligation.obligationID,
         transfer: AgentVerifiedContractTransfer(
             assetID: fixture.considerationAssetID,
-            sourceObservation: fixture.opportunity.consideration
-                .holderObservation,
+            sourceObservation: currentSource,
             destinationObservation: AgentMaterialHolderObservation(
                 holder: .agent(obligation.promisorID),
                 materialIdentity: fixture.opportunity.consideration
@@ -199,6 +211,19 @@ private func contractConsideration(
             ), physicalReceiptID: "contract-consideration-\(suffix)",
             productionOperationIDs: []
         ), completedAtTick: session.tick
+    )
+}
+
+private func contractConsideration(
+    obligation: AgentDurableContractObligation,
+    fixture: ContractSmokeFixture,
+    suffix: String,
+    session: inout AgentSimulationSession,
+    sourceObservation: AgentMaterialHolderObservation? = nil
+) throws -> AgentVerifiedContractConsiderationOutcome {
+    let outcome = makeContractConsideration(
+        obligation: obligation, fixture: fixture, suffix: suffix,
+        session: session, sourceObservation: sourceObservation
     )
     try session.recordVerifiedContractConsideration(outcome)
     return outcome
@@ -258,18 +283,27 @@ private func produceContractPerformance(
     return (assetID, production)
 }
 
-private func fulfillContract(
+private func makeContractFulfillment(
     obligation: AgentDurableContractObligation,
     assetID: AgentMaterialAssetID,
     production: AgentVerifiedProductionOutcome,
     suffix: String,
-    session: inout AgentSimulationSession
-) throws -> AgentVerifiedContractFulfillmentOutcome {
-    let source = session.materialRightsSnapshot().records.first {
+    session: AgentSimulationSession,
+    sourceObservation: AgentMaterialHolderObservation? = nil
+) -> AgentVerifiedContractFulfillmentOutcome {
+    let historical = session.materialRightsSnapshot().records.first {
         $0.asset.assetID == assetID
     }!.lastVerifiedHolder
+    let source = sourceObservation ?? AgentMaterialHolderObservation(
+        holder: historical.holder,
+        materialIdentity: historical.materialIdentity,
+        quantity: historical.quantity,
+        custodyFingerprint: historical.custodyFingerprint,
+        physicalReceiptID: "contract-current-authority-\(suffix)",
+        observedAtTick: session.tick
+    )
     let receipt = "contract-fulfillment-\(suffix)"
-    let outcome = AgentVerifiedContractFulfillmentOutcome(
+    return AgentVerifiedContractFulfillmentOutcome(
         operationID: receipt, obligationID: obligation.obligationID,
         transfer: AgentVerifiedContractTransfer(
             assetID: assetID, sourceObservation: source,
@@ -282,6 +316,21 @@ private func fulfillContract(
             ), physicalReceiptID: receipt,
             productionOperationIDs: [production.operationID]
         ), completedAtTick: session.tick
+    )
+}
+
+private func fulfillContract(
+    obligation: AgentDurableContractObligation,
+    assetID: AgentMaterialAssetID,
+    production: AgentVerifiedProductionOutcome,
+    suffix: String,
+    session: inout AgentSimulationSession,
+    sourceObservation: AgentMaterialHolderObservation? = nil
+) throws -> AgentVerifiedContractFulfillmentOutcome {
+    let outcome = makeContractFulfillment(
+        obligation: obligation, assetID: assetID, production: production,
+        suffix: suffix, session: session,
+        sourceObservation: sourceObservation
     )
     try session.recordVerifiedContractFulfillment(outcome)
     return outcome
@@ -376,6 +425,41 @@ func runPebbleAgentsContractSmoke() {
                 reverseOpportunity
             )) == nil)
 
+    let capacityFixture = contractFixture(
+        "civ36-consideration-capacity",
+        productionConfiguration: try! AgentProductionConfiguration(
+            maximumNeeds: 2
+        )
+    )
+    var capacitySession = capacityFixture.session
+    let capacityObligation = try! formContract(
+        fixture: capacityFixture, proposalText: "promise-capacity",
+        session: &capacitySession
+    )
+    let capacityOutcome = makeContractConsideration(
+        obligation: capacityObligation, fixture: capacityFixture,
+        suffix: "capacity", session: capacitySession
+    )
+    let capacityBytes = try! capacitySession.durableStateBytes()
+    var capacityReason = ""
+    do {
+        try capacitySession.prevalidateVerifiedContractConsideration(
+            capacityOutcome
+        )
+    } catch {
+        capacityReason = String(describing: error)
+    }
+    check("consideration publication capacity is prevalidated before physical mutation",
+          capacitySession.productionSnapshot().needs.count == 2
+            && capacityReason.contains("production capacity reached needs")
+            && (try! capacitySession.durableStateBytes()) == capacityBytes
+            && (try? capacitySession.recordVerifiedContractConsideration(
+                capacityOutcome
+            )) == nil
+            && (try! capacitySession.durableStateBytes()) == capacityBytes
+            && capacitySession.contractSnapshot().obligations.first?.status
+                == .awaitingConsideration)
+
     let fixture = contractFixture()
     var session = fixture.session
     let rightsBeforeContract = session.materialRightsSnapshot()
@@ -396,10 +480,70 @@ func runPebbleAgentsContractSmoke() {
               proposalID: obligation.proposalID,
               promisorID: obligation.promisorID
           )) == nil)
-    let consideration = try! contractConsideration(
-        obligation: obligation, fixture: fixture,
-        suffix: "primary", session: &session
+    let historicalConsideration = fixture.opportunity.consideration
+        .holderObservation
+    let currentConsiderationSource = AgentMaterialHolderObservation(
+        holder: historicalConsideration.holder,
+        materialIdentity: historicalConsideration.materialIdentity,
+        quantity: historicalConsideration.quantity,
+        custodyFingerprint: "creditor-pickaxe-after-unrelated-slot-drift",
+        physicalReceiptID: "contract-current-authority-primary",
+        observedAtTick: session.tick
     )
+    let consideration = makeContractConsideration(
+        obligation: obligation, fixture: fixture, suffix: "primary",
+        session: session, sourceObservation: currentConsiderationSource
+    )
+    let awaitingBytes = try! session.durableStateBytes()
+    try! session.prevalidateVerifiedContractConsideration(consideration)
+    check("unrelated consideration custody drift accepts current asset authority",
+          currentConsiderationSource.custodyFingerprint
+                != historicalConsideration.custodyFingerprint
+            && (try! session.durableStateBytes()) == awaitingBytes)
+    let invalidConsiderationSources = [
+        AgentMaterialHolderObservation(
+            holder: .agent(obligation.promisorID),
+            materialIdentity: historicalConsideration.materialIdentity,
+            quantity: historicalConsideration.quantity,
+            custodyFingerprint: "wrong-holder", physicalReceiptID: "wrong-holder",
+            observedAtTick: session.tick
+        ),
+        AgentMaterialHolderObservation(
+            holder: historicalConsideration.holder,
+            materialIdentity: contractIdentity("iron_pickaxe"),
+            quantity: historicalConsideration.quantity,
+            custodyFingerprint: "wrong-identity", physicalReceiptID: "wrong-identity",
+            observedAtTick: session.tick
+        ),
+        AgentMaterialHolderObservation(
+            holder: historicalConsideration.holder,
+            materialIdentity: historicalConsideration.materialIdentity,
+            quantity: historicalConsideration.quantity + 1,
+            custodyFingerprint: "wrong-quantity", physicalReceiptID: "wrong-quantity",
+            observedAtTick: session.tick
+        ),
+    ]
+    check("tracked consideration holder identity and quantity changes fail closed",
+          invalidConsiderationSources.allSatisfy { source in
+              (try? session.prevalidateVerifiedContractConsideration(
+                  makeContractConsideration(
+                      obligation: obligation, fixture: fixture,
+                      suffix: source.physicalReceiptID, session: session,
+                      sourceObservation: source
+                  )
+              )) == nil
+          } && (try! session.durableStateBytes()) == awaitingBytes)
+    var failedConsiderationCandidate = session
+    try! failedConsiderationCandidate.recordVerifiedContractConsideration(
+        consideration
+    )
+    check("unexpected post-mutation consideration candidate can be discarded exactly",
+          (try! session.durableStateBytes()) == awaitingBytes
+            && session.contractSnapshot().obligations.first?.status
+                == .awaitingConsideration
+            && failedConsiderationCandidate.contractSnapshot().obligations
+                .first?.status == .outstanding)
+    try! session.recordVerifiedContractConsideration(consideration)
     check("real current consideration opens debt and transfers exact rights",
           session.contractSnapshot().obligations.first?.status == .outstanding
             && session.contractSnapshot().outstandingDebtCount == 1
@@ -466,21 +610,75 @@ func runPebbleAgentsContractSmoke() {
             && restoredOpen.productionSnapshot().records.contains {
                 $0.operationID == produced.1.operationID
             })
-    var failedCandidate = restoredOpen
-    _ = try! fulfillContract(
-        obligation: obligation, assetID: produced.0,
-        production: produced.1, suffix: "discarded-candidate",
-        session: &failedCandidate
+    let historicalPerformance = restoredOpen.materialRightsSnapshot().records
+        .first { $0.asset.assetID == produced.0 }!.lastVerifiedHolder
+    let currentPerformanceSource = AgentMaterialHolderObservation(
+        holder: historicalPerformance.holder,
+        materialIdentity: historicalPerformance.materialIdentity,
+        quantity: historicalPerformance.quantity,
+        custodyFingerprint: "debtor-bread-after-unrelated-slot-drift",
+        physicalReceiptID: "contract-current-authority-primary",
+        observedAtTick: restoredOpen.tick
     )
-    check("discarded post-transfer candidate leaves published debt open for retry",
-          restoredOpen.contractSnapshot().obligations.first?.status
+    let currentFulfillment = makeContractFulfillment(
+        obligation: obligation, assetID: produced.0,
+        production: produced.1, suffix: "primary", session: restoredOpen,
+        sourceObservation: currentPerformanceSource
+    )
+    let openProducedBytes = try! restoredOpen.durableStateBytes()
+    try! restoredOpen.prevalidateVerifiedContractFulfillment(
+        currentFulfillment
+    )
+    check("unrelated fulfillment custody drift accepts current asset authority",
+          currentPerformanceSource.custodyFingerprint
+                != historicalPerformance.custodyFingerprint
+            && (try! restoredOpen.durableStateBytes()) == openProducedBytes)
+    let invalidFulfillmentSources = [
+        AgentMaterialHolderObservation(
+            holder: .agent(obligation.promiseeID),
+            materialIdentity: historicalPerformance.materialIdentity,
+            quantity: historicalPerformance.quantity,
+            custodyFingerprint: "wrong-holder", physicalReceiptID: "wrong-holder",
+            observedAtTick: restoredOpen.tick
+        ),
+        AgentMaterialHolderObservation(
+            holder: historicalPerformance.holder,
+            materialIdentity: contractIdentity("wheat"),
+            quantity: historicalPerformance.quantity,
+            custodyFingerprint: "wrong-identity", physicalReceiptID: "wrong-identity",
+            observedAtTick: restoredOpen.tick
+        ),
+        AgentMaterialHolderObservation(
+            holder: historicalPerformance.holder,
+            materialIdentity: historicalPerformance.materialIdentity,
+            quantity: historicalPerformance.quantity + 1,
+            custodyFingerprint: "wrong-quantity", physicalReceiptID: "wrong-quantity",
+            observedAtTick: restoredOpen.tick
+        ),
+    ]
+    check("tracked fulfillment holder identity and quantity changes fail closed",
+          invalidFulfillmentSources.allSatisfy { source in
+              (try? restoredOpen.prevalidateVerifiedContractFulfillment(
+                  makeContractFulfillment(
+                      obligation: obligation, assetID: produced.0,
+                      production: produced.1,
+                      suffix: source.physicalReceiptID,
+                      session: restoredOpen, sourceObservation: source
+                  )
+              )) == nil
+          } && (try! restoredOpen.durableStateBytes()) == openProducedBytes)
+    var failedCandidate = restoredOpen
+    try! failedCandidate.recordVerifiedContractFulfillment(
+        currentFulfillment
+    )
+    check("unexpected post-mutation fulfillment candidate leaves published debt open for retry",
+          (try! restoredOpen.durableStateBytes()) == openProducedBytes
+            && restoredOpen.contractSnapshot().obligations.first?.status
                 == .outstanding
             && failedCandidate.contractSnapshot().obligations.first?.status
                 == .fulfilled)
-    let fulfillment = try! fulfillContract(
-        obligation: obligation, assetID: produced.0,
-        production: produced.1, suffix: "primary", session: &restoredOpen
-    )
+    try! restoredOpen.recordVerifiedContractFulfillment(currentFulfillment)
+    let fulfillment = currentFulfillment
     check("immediate retry fulfills exact obligation with real receipt once",
           restoredOpen.contractSnapshot().obligations.first?.status == .fulfilled
             && restoredOpen.contractSnapshot().totalFulfilledCount == 1

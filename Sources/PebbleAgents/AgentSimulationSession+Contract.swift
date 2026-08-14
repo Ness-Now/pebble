@@ -444,6 +444,13 @@ extension AgentSimulationSession {
     public func prevalidateVerifiedContractConsideration(
         _ outcome: AgentVerifiedContractConsiderationOutcome
     ) throws {
+        var candidate = self
+        try candidate.recordVerifiedContractConsiderationInPlace(outcome)
+    }
+
+    private func validateVerifiedContractConsideration(
+        _ outcome: AgentVerifiedContractConsiderationOutcome
+    ) throws {
         guard let state = contractState,
               let obligation = state.obligations.first(where: {
                   $0.obligationID == outcome.obligationID
@@ -461,7 +468,6 @@ extension AgentSimulationSession {
               validContractText(outcome.transfer.physicalReceiptID, maximum: 256),
               outcome.completedAtTick == tick,
               outcome.transfer.assetID == expected.assetID,
-              outcome.transfer.sourceObservation == expected.holderObservation,
               outcome.transfer.destinationObservation.holder
                 == .agent(obligation.promisorID),
               outcome.transfer.destinationObservation.materialIdentity
@@ -474,16 +480,12 @@ extension AgentSimulationSession {
                 == expected.productionOperationIDs else {
             throw AgentSessionError.contract(.invalidOutcome(outcome.operationID))
         }
-        let decision = evaluateMaterialUse(AgentMaterialUseRequest(
-            requestID: "contract-consideration:\(obligation.obligationID.rawValue)",
-            assetID: expected.assetID, actorID: obligation.promiseeID,
-            use: .transferCustody, verifiedHolder: expected.holderObservation
-        ))
-        guard decision.verdict == .allowed else {
-            throw AgentSessionError.contract(
-                .unauthorized(decision.reason.rawValue)
-            )
-        }
+        try validateCurrentContractSourceAuthority(
+            assetID: expected.assetID,
+            actorID: obligation.promiseeID,
+            historicalObservation: expected.holderObservation,
+            currentObservation: outcome.transfer.sourceObservation
+        )
         let needID = contractPerformanceNeedID(obligation.obligationID)
         guard productionState?.needs.contains(where: {
             $0.needID == needID
@@ -504,7 +506,7 @@ extension AgentSimulationSession {
     mutating func recordVerifiedContractConsiderationInPlace(
         _ outcome: AgentVerifiedContractConsiderationOutcome
     ) throws {
-        try prevalidateVerifiedContractConsideration(outcome)
+        try validateVerifiedContractConsideration(outcome)
         guard var state = contractState,
               let index = state.obligations.firstIndex(where: {
                   $0.obligationID == outcome.obligationID
@@ -551,6 +553,13 @@ extension AgentSimulationSession {
     public func prevalidateVerifiedContractFulfillment(
         _ outcome: AgentVerifiedContractFulfillmentOutcome
     ) throws {
+        var candidate = self
+        try candidate.recordVerifiedContractFulfillmentInPlace(outcome)
+    }
+
+    private func validateVerifiedContractFulfillment(
+        _ outcome: AgentVerifiedContractFulfillmentOutcome
+    ) throws {
         guard let state = contractState,
               let obligation = state.obligations.first(where: {
                   $0.obligationID == outcome.obligationID
@@ -579,6 +588,12 @@ extension AgentSimulationSession {
               outcome.transfer.productionOperationIDs
                 == Array(Set(outcome.transfer.productionOperationIDs)).sorted()
         else { throw AgentSessionError.contract(.invalidOutcome(outcome.operationID)) }
+        try validateCurrentContractSourceAuthority(
+            assetID: outcome.transfer.assetID,
+            actorID: obligation.promisorID,
+            historicalObservation: nil,
+            currentObservation: outcome.transfer.sourceObservation
+        )
         if !outcome.transfer.productionOperationIDs.isEmpty {
             let records = productionState?.records.filter {
                 outcome.transfer.productionOperationIDs.contains($0.operationID)
@@ -591,17 +606,6 @@ extension AgentSimulationSession {
                     == terms.count else {
                 throw AgentSessionError.contract(.invalidOutcome(outcome.operationID))
             }
-        }
-        let decision = evaluateMaterialUse(AgentMaterialUseRequest(
-            requestID: "contract-fulfillment:\(obligation.obligationID.rawValue)",
-            assetID: outcome.transfer.assetID,
-            actorID: obligation.promisorID, use: .transferCustody,
-            verifiedHolder: outcome.transfer.sourceObservation
-        ))
-        guard decision.verdict == .allowed else {
-            throw AgentSessionError.contract(
-                .unauthorized(decision.reason.rawValue)
-            )
         }
         try prevalidateCausalAppend(count: 2)
     }
@@ -617,7 +621,7 @@ extension AgentSimulationSession {
     mutating func recordVerifiedContractFulfillmentInPlace(
         _ outcome: AgentVerifiedContractFulfillmentOutcome
     ) throws {
-        try prevalidateVerifiedContractFulfillment(outcome)
+        try validateVerifiedContractFulfillment(outcome)
         guard var state = contractState,
               let index = state.obligations.firstIndex(where: {
                   $0.obligationID == outcome.obligationID
@@ -1045,11 +1049,21 @@ extension AgentSimulationSession {
         operationPrefix: String,
         cause: AgentCausalEventID
     ) throws {
+        try validateCurrentContractSourceAuthority(
+            assetID: transfer.assetID,
+            actorID: from,
+            historicalObservation: nil,
+            currentObservation: transfer.sourceObservation
+        )
         guard var rights = materialRightsState,
               let index = rights.records.firstIndex(where: {
                   $0.asset.assetID == transfer.assetID
-              }), rights.records[index].lastVerifiedHolder
-                == transfer.sourceObservation,
+              }), rights.records[index].lastVerifiedHolder.holder
+                == transfer.sourceObservation.holder,
+              rights.records[index].lastVerifiedHolder.materialIdentity
+                == transfer.sourceObservation.materialIdentity,
+              rights.records[index].lastVerifiedHolder.quantity
+                == transfer.sourceObservation.quantity,
               rights.records[index].recognizedOwnership?.ownerID == from,
               rights.records[index].claims.count
                 < rights.configuration.maximumClaimsPerAsset else {
@@ -1113,6 +1127,52 @@ extension AgentSimulationSession {
         }
         materialRightsState = rights
         try validateMaterialRightsStateIfEnabled()
+    }
+
+    /// Material Rights remains the social constraint while Pebble supplies the
+    /// immediate physical authority. A current observation may replace an old
+    /// full-custody fingerprint only for the same exact asset at the same
+    /// holder and quantity. It is published only as part of the verified
+    /// transfer and never becomes physical authority by itself.
+    private func validateCurrentContractSourceAuthority(
+        assetID: AgentMaterialAssetID,
+        actorID: AgentID,
+        historicalObservation: AgentMaterialHolderObservation?,
+        currentObservation: AgentMaterialHolderObservation
+    ) throws {
+        guard let record = materialRightsState?.records.first(where: {
+                  $0.asset.assetID == assetID
+              }), historicalObservation.map({ historical in
+                  historical.holder == record.lastVerifiedHolder.holder
+                    && historical.materialIdentity
+                        == record.lastVerifiedHolder.materialIdentity
+                    && historical.quantity
+                        == record.lastVerifiedHolder.quantity
+              }) ?? true,
+              record.lastVerifiedHolder.holder == .agent(actorID),
+              currentObservation.holder == record.lastVerifiedHolder.holder,
+              currentObservation.materialIdentity
+                == record.lastVerifiedHolder.materialIdentity,
+              currentObservation.quantity == record.lastVerifiedHolder.quantity,
+              currentObservation.observedAtTick == tick,
+              validContractText(
+                  currentObservation.custodyFingerprint, maximum: 8192
+              ),
+              validContractText(
+                  currentObservation.physicalReceiptID, maximum: 256
+              ) else {
+            throw AgentSessionError.contract(.staleAuthority(assetID.rawValue))
+        }
+        let decision = evaluateMaterialUse(AgentMaterialUseRequest(
+            requestID: "contract-current-authority:\(assetID.rawValue)",
+            assetID: assetID, actorID: actorID, use: .transferCustody,
+            verifiedHolder: record.lastVerifiedHolder
+        ))
+        guard decision.verdict == .allowed else {
+            throw AgentSessionError.contract(
+                .unauthorized(decision.reason.rawValue)
+            )
+        }
     }
 
     private func compactContractProposalsForCapacity(
