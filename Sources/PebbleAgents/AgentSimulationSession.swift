@@ -75,6 +75,7 @@ public struct AgentSimulationSession {
     public internal(set) var familyState: AgentFamilyState?
     public internal(set) var estateState: AgentEstateState?
     public internal(set) var productionState: AgentProductionState?
+    public internal(set) var barterState: AgentBarterState?
     var latestAutonomousTeachingReview: AgentAutonomousTeachingReviewSnapshot?
     // Runtime-only compatibility marker. A schema 23 childhood checkpoint
     // remains byte-identical until the first schema 24 supervision-progress
@@ -171,6 +172,7 @@ public struct AgentSimulationSession {
         familyState = nil
         estateState = nil
         productionState = nil
+        barterState = nil
         latestAutonomousTeachingReview = nil
         durableSchemaVersionOverride = nil
         try recordCausalEvent(

@@ -554,6 +554,8 @@ public struct AgentObserverSnapshot: Codable, Equatable, Sendable {
     public let renewableSubsistence: [AgentRenewableSubsistenceEvidence]?
     /// Read-only production facts; physical custody remains owned by Pebble.
     public let production: AgentProductionSnapshot?
+    /// Read-only local exchange facts. Offers and receipts grant no authority.
+    public let barter: AgentBarterSnapshot?
     public let truncation: AgentObserverTruncation
 }
 
@@ -655,6 +657,7 @@ extension AgentSimulationSession {
         let estates = estateSnapshot()
         let renewableSubsistence = renewableSubsistenceEvidence()
         let production = productionSnapshot()
+        let barter = barterSnapshot()
         let textLimit = configuration.maximumPresentationTextLength
 
         let materialTransitionByEventID = Dictionary(
@@ -851,6 +854,10 @@ extension AgentSimulationSession {
             production.enabled
                 ? "production:\(production.totalProductionCount):\(production.totalUseCount)"
                 : "production:none",
+            barter.enabled
+                ? "barter:\(barter.totalCompletedCount):\(barter.pendingOfferCount):"
+                    + barter.records.map { $0.outcome.operationID }.joined(separator: ",")
+                : "barter:none",
         ].joined(separator: "|")
         let familyAuthority = observerFamilyAuthority(family)
         let estateAuthority = observerEstateAuthority(
@@ -873,7 +880,7 @@ extension AgentSimulationSession {
         )
         return AgentObserverSnapshot(
             header: AgentObserverSnapshotHeader(
-                schemaVersion: production.enabled ? 8
+                schemaVersion: barter.enabled ? 9 : production.enabled ? 8
                     : renewableSubsistence.isEmpty ? (estates.enabled ? 6
                     : (childhood.enabled
                         ? (family.enabled ? 5 : 4)
@@ -894,6 +901,7 @@ extension AgentSimulationSession {
             renewableSubsistence: renewableSubsistence.isEmpty
                 ? nil : renewableSubsistence,
             production: production.enabled ? production : nil,
+            barter: barter.enabled ? barter : nil,
             truncation: truncation
         )
     }

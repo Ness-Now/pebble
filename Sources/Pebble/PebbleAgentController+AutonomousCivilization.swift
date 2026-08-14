@@ -128,6 +128,9 @@ extension PebbleAgentController {
         recorder: inout AgentReplayRecorder?
     ) throws {
         guard session.autonomousActivityEnabled else { return }
+        try advanceAutonomousBarterNegotiation(
+            world: world, session: &session, recorder: &recorder
+        )
         if session.productionEnabled && productionFeatureEnabled,
            let lifetime = session.productionSnapshot().configuration?
             .opportunityLifetimeTicks {
@@ -495,6 +498,34 @@ extension PebbleAgentController {
                     urgency: need?.priority ?? 70,
                     distance: distance(agent.position, opportunity.workshopPosition),
                     observedAtTick: opportunity.observedAtTick
+                )
+            ))
+        }
+        for offer in session.barterSnapshot().offers where
+            offer.status == .accepted {
+            guard let offeror = snapshot.agents.first(where: {
+                $0.id == offer.opportunity.offerorID.rawValue
+            }), let counterparty = snapshot.agents.first(where: {
+                $0.id == offer.opportunity.counterpartyID.rawValue
+            }) else { continue }
+            candidates.append(markingLogicalContinuity(
+                AgentAutonomousActivityCandidate(
+                    candidateID: "barter:\(offer.offerID.rawValue)",
+                    actorID: offer.opportunity.offerorID,
+                    domain: .barter,
+                    actionKey: "exchange",
+                    stableReference: offer.offerID.rawValue,
+                    target: counterparty.position,
+                    logicalTargetKey: "barter-offer:\(offer.offerID.rawValue)",
+                    physicalTarget: counterparty.position,
+                    approachPosition: counterparty.position,
+                    materialFingerprint: AgentAutonomousActivityDigest.make(
+                        offer.opportunity.offered.holderObservation.custodyFingerprint
+                            + "|" + offer.opportunity.requested.holderObservation.custodyFingerprint
+                    ),
+                    source: .opportunity, priorityBand: 6, urgency: 94,
+                    distance: distance(offeror.position, counterparty.position),
+                    observedAtTick: session.tick
                 )
             ))
         }

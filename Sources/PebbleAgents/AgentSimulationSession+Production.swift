@@ -304,10 +304,24 @@ extension AgentSimulationSession {
         guard var state = productionState else {
             throw AgentSessionError.production(.disabled)
         }
+        let barterRecord = barterState?.records.last(where: { exchange in
+            let opportunity = exchange.offer.opportunity
+            if opportunity.offered.productionOperationIDs.contains(
+                outcome.productionOperationID
+            ) {
+                return opportunity.counterpartyID == outcome.actorID
+            }
+            if opportunity.requested.productionOperationIDs.contains(
+                outcome.productionOperationID
+            ) {
+                return opportunity.offerorID == outcome.actorID
+            }
+            return false
+        })
         guard !state.processedOperationIDs.contains(outcome.operationID),
               let record = state.records.first(where: {
                   $0.operationID == outcome.productionOperationID
-              }), record.actorID == outcome.actorID,
+              }), record.actorID == outcome.actorID || barterRecord != nil,
               record.outputProduced.identity.itemKey
                 == outcome.identityBefore.identity.itemKey,
               outcome.identityBefore.count == outcome.identityAfter.count,
@@ -332,7 +346,8 @@ extension AgentSimulationSession {
             kind: .producedGoodUsed, origin: .productionTransition,
             actorID: outcome.actorID,
             operationID: AgentOperationID(rawValue: outcome.operationID),
-            causes: [record.causalEventID],
+            causes: ([record.causalEventID]
+                + (barterRecord.map { [$0.causalEventID] } ?? [])).sorted(),
             payload: .operation(
                 status: "succeeded",
                 detail: "pebble-produced-use: production=\(outcome.productionOperationID) item=\(outcome.identityAfter.identity.itemKey) damage=\(outcome.identityBefore.identity.damage)>\(outcome.identityAfter.identity.damage) effect=\(outcome.physicalEffect)"

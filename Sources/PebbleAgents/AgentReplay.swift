@@ -32,6 +32,7 @@ public enum AgentReplaySchema {
     public static let renewableSubsistenceVersion = 29
     public static let independentEcologicalReceiptVersion = 30
     public static let productionVersion = 31
+    public static let barterVersion = 32
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -51,6 +52,7 @@ public enum AgentReplaySchema {
             || version == renewableSubsistenceVersion
             || version == independentEcologicalReceiptVersion
             || version == productionVersion
+            || version == barterVersion
     }
 }
 
@@ -172,6 +174,11 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case productionOpportunity
     case productionOutcome
     case producedGoodUse
+    case barterFeature
+    case barterOpportunity
+    case barterOffer
+    case barterDecision
+    case barterOutcome
 }
 
 public enum AgentReplayOperation: Codable {
@@ -386,6 +393,22 @@ public enum AgentReplayOperation: Codable {
     case recordProductionOpportunity(AgentProductionOpportunityObservation)
     case recordVerifiedProduction(AgentVerifiedProductionOutcome)
     case recordProducedGoodUse(AgentProducedGoodUseOutcome)
+    case setBarterEnabled(Bool, configuration: AgentBarterConfiguration)
+    case recordBarterOpportunity(AgentBarterOpportunityObservation)
+    case createBarterOffer(
+        offerID: AgentBarterOfferID, opportunityID: String, actorID: AgentID
+    )
+    case decideBarterOffer(
+        offerID: AgentBarterOfferID, counterpartyID: AgentID,
+        accept: Bool, reason: String
+    )
+    case withdrawBarterOffer(
+        offerID: AgentBarterOfferID, actorID: AgentID, reason: String
+    )
+    case markBarterOfferFailed(
+        offerID: AgentBarterOfferID, status: AgentBarterOfferStatus, reason: String
+    )
+    case recordVerifiedBarter(AgentVerifiedBarterOutcome)
 
     public var kind: AgentReplayOperationKind {
         switch self {
@@ -502,6 +525,12 @@ public enum AgentReplayOperation: Codable {
         case .recordProductionOpportunity: return .productionOpportunity
         case .recordVerifiedProduction: return .productionOutcome
         case .recordProducedGoodUse: return .producedGoodUse
+        case .setBarterEnabled: return .barterFeature
+        case .recordBarterOpportunity: return .barterOpportunity
+        case .createBarterOffer: return .barterOffer
+        case .decideBarterOffer, .withdrawBarterOffer,
+             .markBarterOfferFailed: return .barterDecision
+        case .recordVerifiedBarter: return .barterOutcome
         }
     }
 
@@ -540,6 +569,18 @@ public enum AgentReplayOperation: Codable {
         case let .recordVerifiedProduction(outcome):
             raw = outcome.operationID
         case let .recordProducedGoodUse(outcome):
+            raw = outcome.operationID
+        case let .recordBarterOpportunity(observation):
+            raw = "barter-observe:\(observation.opportunityID)"
+        case let .createBarterOffer(offerID, _, _):
+            raw = "barter-offer:\(offerID.rawValue)"
+        case let .decideBarterOffer(offerID, _, accept, _):
+            raw = "barter-decision:\(offerID.rawValue):\(accept ? "accepted" : "rejected")"
+        case let .withdrawBarterOffer(offerID, _, _):
+            raw = "barter-decision:\(offerID.rawValue):withdrawn"
+        case let .markBarterOfferFailed(offerID, status, _):
+            raw = "barter-decision:\(offerID.rawValue):\(status.rawValue)"
+        case let .recordVerifiedBarter(outcome):
             raw = outcome.operationID
         case let .provideDependentNourishment(intent): raw = intent.provisionID
         case let .startApprenticeship(request):
@@ -858,6 +899,9 @@ public struct AgentReplayRecorder {
         simulationID = checkpoint.simulationID
         initialTick = checkpoint.tick.rawValue
         schemaVersion = checkpoint.schemaVersion
+            == AgentCheckpointSchema.barterVersion
+            ? AgentReplaySchema.barterVersion
+            : checkpoint.schemaVersion
             == AgentCheckpointSchema.productionVersion
             ? AgentReplaySchema.productionVersion
             : checkpoint.schemaVersion
@@ -1127,6 +1171,16 @@ public struct AgentReplayRecorder {
             }
             schemaVersion = AgentReplaySchema.productionVersion
         }
+        if case let .setBarterEnabled(enabled, _) = operation,
+           enabled,
+           schemaVersion < AgentReplaySchema.barterVersion {
+            guard records.isEmpty else {
+                throw AgentReplayError.invalidJournal(
+                    "barter activation must be the first v32 replay operation"
+                )
+            }
+            schemaVersion = AgentReplaySchema.barterVersion
+        }
         guard session.simulationID == simulationID else { throw AgentReplayError.currentStateMismatch }
         let preDigest = try session.durableStateDigest()
         let tickBefore = session.tick
@@ -1370,6 +1424,8 @@ public enum AgentSessionReplayer {
             || (manifest.schemaVersion == AgentReplaySchema.productionVersion
                 && checkpoint.schemaVersion
                     <= AgentCheckpointSchema.independentEcologicalReceiptVersion)
+            || (manifest.schemaVersion == AgentReplaySchema.barterVersion
+                && checkpoint.schemaVersion <= AgentCheckpointSchema.productionVersion)
         guard manifest.baseCheckpointID == checkpoint.checkpointID,
               manifest.baseCheckpointDigest == checkpoint.semanticDigest,
               manifest.simulationID == checkpoint.simulationID,
@@ -1772,6 +1828,30 @@ extension AgentSimulationSession {
             try candidate.recordVerifiedProduction(outcome)
         case let .recordProducedGoodUse(outcome):
             try candidate.recordProducedGoodUse(outcome)
+        case let .setBarterEnabled(enabled, configuration):
+            try candidate.setBarterEnabled(enabled, configuration: configuration)
+        case let .recordBarterOpportunity(observation):
+            try candidate.recordBarterOpportunity(observation)
+        case let .createBarterOffer(offerID, opportunityID, actorID):
+            try candidate.createBarterOffer(
+                offerID: offerID, opportunityID: opportunityID,
+                actorID: actorID
+            )
+        case let .decideBarterOffer(offerID, counterpartyID, accept, reason):
+            try candidate.decideBarterOffer(
+                offerID: offerID, counterpartyID: counterpartyID,
+                accept: accept, reason: reason
+            )
+        case let .withdrawBarterOffer(offerID, actorID, reason):
+            try candidate.withdrawBarterOffer(
+                offerID: offerID, actorID: actorID, reason: reason
+            )
+        case let .markBarterOfferFailed(offerID, status, reason):
+            try candidate.markBarterOfferFailed(
+                offerID: offerID, status: status, reason: reason
+            )
+        case let .recordVerifiedBarter(outcome):
+            try candidate.recordVerifiedBarter(outcome)
         }
         self = candidate
         let causal = causalLedgerSnapshot().summary

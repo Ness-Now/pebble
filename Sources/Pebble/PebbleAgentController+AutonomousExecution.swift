@@ -55,6 +55,11 @@ extension PebbleAgentController {
                     activity: activity, actor: embodiment, world: world,
                     session: &session, recorder: &recorder
                 )
+            case .barter:
+                receipt = try executeAutonomousBarter(
+                    activity: activity, actor: embodiment, world: world,
+                    session: &session, recorder: &recorder
+                )
             case .dependentCare, .teaching, .construction, .materialHandling:
                 throw ControllerError.feedbackBoundary(
                     "autonomous domain remains owned by its existing cognitive path"
@@ -118,6 +123,9 @@ extension PebbleAgentController {
                     + "manualTrigger=0"
             )
         } catch {
+            if case ControllerError.barterPostMutationBoundary = error {
+                throw error
+            }
             let outcome = AgentAutonomousActivityOutcome(
                 activityID: activity.activityID, actorID: actorID,
                 lifecycle: .blocked, completedAtTick: session.tick,
@@ -135,6 +143,161 @@ extension PebbleAgentController {
                     + "reason=\(String(describing: error).replacingOccurrences(of: " ", with: "_"))"
             )
         }
+    }
+
+    private func executeAutonomousBarter(
+        activity: AgentAutonomousActivity,
+        actor: PebbleAgentEmbodiment,
+        world: World,
+        session: inout AgentSimulationSession,
+        recorder: inout AgentReplayRecorder?
+    ) throws -> String {
+        guard let offerID = AgentBarterOfferID(
+            rawValue: activity.candidate.stableReference
+        ), let offer = session.barterSnapshot().offers.first(where: {
+            $0.offerID == offerID && $0.status == .accepted
+        }), offer.opportunity.offerorID.rawValue == actor.agentID,
+              let counterpartyProbe = probesByAgentId[
+                offer.opportunity.counterpartyID.rawValue
+              ], counterpartyProbe.world === world, !counterpartyProbe.dead else {
+            throw ControllerError.barterBoundary("accepted local offer unavailable")
+        }
+        let counterparty = PebbleAgentEmbodiment(probe: counterpartyProbe)
+        let offerorEndpoint = PebbleAgentMaterialCustodyEndpoint.liveAgent(
+            actor, in: world
+        )
+        let counterpartyEndpoint = PebbleAgentMaterialCustodyEndpoint.liveAgent(
+            counterparty, in: world
+        )
+        let offeredDecision = session.evaluateMaterialUse(AgentMaterialUseRequest(
+            requestID: "barter:\(offerID.rawValue):offered",
+            assetID: offer.opportunity.offered.assetID,
+            actorID: offer.opportunity.offerorID,
+            use: .transferCustody,
+            verifiedHolder: offer.opportunity.offered.holderObservation
+        ))
+        let requestedDecision = session.evaluateMaterialUse(AgentMaterialUseRequest(
+            requestID: "barter:\(offerID.rawValue):requested",
+            assetID: offer.opportunity.requested.assetID,
+            actorID: offer.opportunity.counterpartyID,
+            use: .transferCustody,
+            verifiedHolder: offer.opportunity.requested.holderObservation
+        ))
+        guard offeredDecision.verdict == .allowed,
+              requestedDecision.verdict == .allowed else {
+            try session.markBarterOfferFailed(
+                offerID: offerID, status: .failed,
+                reason: "rights refused offered=\(offeredDecision.reason.rawValue) requested=\(requestedDecision.reason.rawValue)"
+            )
+            throw ControllerError.barterBoundary("voluntary disposition refused")
+        }
+        let prevalidation = materialCustodyGateway.prevalidateBarter(
+            PebbleAgentBarterPrevalidationRequest(
+                transactionID: "barter:\(offerID.rawValue)",
+                offered: offer.opportunity.offered.material,
+                requested: offer.opportunity.requested.material,
+                expectedOfferorFingerprint:
+                    offer.opportunity.offered.holderObservation.custodyFingerprint,
+                expectedCounterpartyFingerprint:
+                    offer.opportunity.requested.holderObservation.custodyFingerprint
+            ), offeror: offerorEndpoint, counterparty: counterpartyEndpoint
+        )
+        guard prevalidation == .succeeded else {
+            try session.markBarterOfferFailed(
+                offerID: offerID, status: .stale,
+                reason: "physical prevalidation \(prevalidation.rawValue)"
+            )
+            throw ControllerError.barterBoundary(
+                "physical prevalidation \(prevalidation.rawValue)"
+            )
+        }
+        let firstReceipt = "barter:\(offerID.rawValue):offered"
+        let first = materialCustodyGateway.transfer(
+            PebbleAgentMaterialTransactionRequest(
+                transactionID: firstReceipt,
+                material: offer.opportunity.offered.material,
+                expectedSourceFingerprint:
+                    offer.opportunity.offered.holderObservation.custodyFingerprint,
+                expectedDestinationFingerprint:
+                    offer.opportunity.requested.holderObservation.custodyFingerprint
+            ), from: offerorEndpoint, to: counterpartyEndpoint
+        )
+        guard first.succeeded,
+              let offerorIntermediate = first.sourceFingerprint,
+              let counterpartyIntermediate = first.destinationFingerprint else {
+            throw ControllerError.barterBoundary(
+                "first physical leg \(first.status.rawValue)"
+            )
+        }
+        trace(
+            "barter mid-exchange mutation offer=\(offerID.rawValue) "
+                + "firstReceipt=\(firstReceipt) quantity=\(first.quantityMoved) "
+                + "candidatePhysicalMutation=1 publication=0"
+        )
+        if environment["PEBBLELAB_DISPOSABLE_BARTER_MID_FAULT"] == "1",
+           !barterMidExchangeFaultInjected {
+            barterMidExchangeFaultInjected = true
+            throw ControllerError.barterPostMutationBoundary(
+                "injected after first real barter transfer"
+            )
+        }
+        let secondReceipt = "barter:\(offerID.rawValue):requested"
+        let second = materialCustodyGateway.transfer(
+            PebbleAgentMaterialTransactionRequest(
+                transactionID: secondReceipt,
+                material: offer.opportunity.requested.material,
+                expectedSourceFingerprint: counterpartyIntermediate,
+                expectedDestinationFingerprint: offerorIntermediate
+            ), from: counterpartyEndpoint, to: offerorEndpoint
+        )
+        guard second.succeeded,
+              let counterpartyFinal = second.sourceFingerprint,
+              let offerorFinal = second.destinationFingerprint else {
+            throw ControllerError.barterPostMutationBoundary(
+                "second physical leg \(second.status.rawValue)"
+            )
+        }
+        let outcome = AgentVerifiedBarterOutcome(
+            operationID: "barter:\(offerID.rawValue):completed",
+            offerID: offerID,
+            offeredLeg: AgentVerifiedBarterLeg(
+                assetID: offer.opportunity.offered.assetID,
+                sourceObservation: offer.opportunity.offered.holderObservation,
+                destinationObservation: AgentMaterialHolderObservation(
+                    holder: .agent(offer.opportunity.counterpartyID),
+                    materialIdentity: offer.opportunity.offered.material.identity,
+                    quantity: offer.opportunity.offered.material.count,
+                    custodyFingerprint: counterpartyFinal,
+                    physicalReceiptID: firstReceipt, observedAtTick: session.tick
+                ), physicalReceiptID: firstReceipt
+            ),
+            requestedLeg: AgentVerifiedBarterLeg(
+                assetID: offer.opportunity.requested.assetID,
+                sourceObservation: offer.opportunity.requested.holderObservation,
+                destinationObservation: AgentMaterialHolderObservation(
+                    holder: .agent(offer.opportunity.offerorID),
+                    materialIdentity: offer.opportunity.requested.material.identity,
+                    quantity: offer.opportunity.requested.material.count,
+                    custodyFingerprint: offerorFinal,
+                    physicalReceiptID: secondReceipt, observedAtTick: session.tick
+                ), physicalReceiptID: secondReceipt
+            ), completedAtTick: session.tick
+        )
+        if try applyRecordedOperationIfActive(
+            .recordVerifiedBarter(outcome),
+            session: &session, recorder: &recorder
+        ) == nil {
+            try session.recordVerifiedBarter(outcome)
+        }
+        trace(
+            "barter completed offer=\(offerID.rawValue) "
+                + "offeror=\(offer.opportunity.offerorID.rawValue) "
+                + "counterparty=\(offer.opportunity.counterpartyID.rawValue) "
+                + "offered=\(offer.opportunity.offered.material.identity.itemKey):\(offer.opportunity.offered.material.count) "
+                + "requested=\(offer.opportunity.requested.material.identity.itemKey):\(offer.opportunity.requested.material.count) "
+                + "receipts=\(firstReceipt),\(secondReceipt) publication=verified"
+        )
+        return "barter:\(offerID.rawValue):completed"
     }
 
     private func executeAutonomousProduction(

@@ -48,6 +48,12 @@ if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
     exit(failed > 0 ? 1 : 0)
 }
 
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "barter" {
+    runPebbleAgentsBarterSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
 if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "survival-economy" {
     registerAllBlocks()
     registerAllItems()
@@ -2453,6 +2459,7 @@ runPebbleAgentsUnionsFamilyLineagesHousesSmoke()
 runPebbleAgentsEstatesInheritanceSuccessionSmoke()
 runPebbleCoreProductionSmoke()
 runPebbleAgentsProductionSmoke()
+runPebbleAgentsBarterSmoke()
 
 print("\n\(passed) passed, \(failed) failed")
 exit(failed > 0 ? 1 : 0)

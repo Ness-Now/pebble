@@ -10,7 +10,7 @@ WORLD_SEED="12345"
 
 usage() {
     cat <<EOF
-Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--harvest|--construction|--embodiment|--build|--social|--physical|--material|--rights|--production|--cooperation|--persistence|--population|--multiscale|--ecology|--mortality|--reproduction|--kinship|--households|--care|--skills|--teaching|--integrated-teaching|--ecological-observation|--agriculture|--wild-subsistence|--physical-food-survival|--livestock|--work-professions|--work-demand-refresh|--gate-b-passive]
+Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--harvest|--construction|--embodiment|--build|--social|--physical|--material|--rights|--production|--barter|--cooperation|--persistence|--population|--multiscale|--ecology|--mortality|--reproduction|--kinship|--households|--care|--skills|--teaching|--integrated-teaching|--ecological-observation|--agriculture|--wild-subsistence|--physical-food-survival|--livestock|--work-professions|--work-demand-refresh|--gate-b-passive]
        scripts/verify-pebblelab-live.sh --help
 
 Launches Pebble for a reproducible, operator-verified Phase J live check. The app is
@@ -40,6 +40,7 @@ Options:
   --material Run real agent/container custody, transactions, consumption, and CIV-15 seams.
   --rights Run CIV-26 real custody, claims, permissions, transgression, and rollback.
   --production Run CIV-34 real recipes, workshop, custody, restart, and produced-tool use.
+  --barter Run CIV-35 local consent, two-sided custody, rollback, restart, and tool use.
   --cooperation Run shared construction-material task, delivery, and shelter completion.
   --persistence Run checkpoint, real process restart, causal replay, and uninterrupted control.
   --population Run bounded migrant admission, mid-route restart, arrival, and uninterrupted control.
@@ -133,6 +134,7 @@ for option in "$@"; do
         --material) MODE="material"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --rights) MODE="rights"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --production) MODE="production"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
+        --barter) MODE="barter"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --cooperation) MODE="cooperation"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --persistence) MODE="persistence"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --population) MODE="population"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
@@ -184,6 +186,7 @@ WILD_SUBSISTENCE_GATE=0
 LIVESTOCK_GATE=0
 WORK_PROFESSIONS_GATE=0
 PRODUCTION_GATE=0
+BARTER_GATE=0
 AUTONOMOUS_CIVILIZATION_GATE=0
 INTEGRATED_TEACHING_PROOF=0
 PASSIVE_OBSERVER_INPUT_PROOF=0
@@ -193,7 +196,22 @@ GATE_B3_ACCEPTANCE=0
 GATE_B3_COGNITIVE_HZ=4
 GATE_B3_HORIZON=0
 GATE_B3_RANDOM_TICK_SPEED=3
-if [ "$MODE" = "production" ]; then
+if [ "$MODE" = "barter" ]; then
+    WORLD_SEED="46"
+    MATERIAL_GATE=1
+    PERSISTENCE_GATE=1
+    POPULATION_GATE=1
+    LIFECYCLE_GATE=1
+    SKILL_GATE=1
+    PRODUCTION_GATE=1
+    BARTER_GATE=1
+    AUTONOMOUS_CIVILIZATION_GATE=1
+    WORLD_NAME="PebbleLab-Disposable-Barter-46"
+    CAPTURE_NAME="barter-final.png"
+    BARTER_PHASE1_COMMANDS='/gamerule randomTickSpeed 0;/gamerule doMobSpawning false;/gamerule doDaylightCycle false;/gamerule doWeatherCycle false;/time set 1000;/weather clear;/tp 14 68 -18|/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab population on;/lab lifecycle on;/lab skills on;/lab barter setup;/lab barter status;/lab overlay compact|/lab step;/lab barter status;/lab overlay compact|/lab step;/lab barter status|/lab step;/lab barter status;/lab barter proof;/lab checkpoint save barter-v32;/lab checkpoint status;/lab causality tail 20;/lab status'
+    BARTER_PHASE2_COMMANDS='/tp 14 68 -18;/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab population on;/lab lifecycle on;/lab skills on;/lab checkpoint load barter-v32;/lab barter status;/lab overlay compact|/lab barter use-produced-tool;/lab barter status;/lab causality tail 20;/lab overlay compact|/lab checkpoint save barter-final-v32;/lab checkpoint status;/lab barter cleanup;/lab status'
+    LAB_COMMANDS="$BARTER_PHASE1_COMMANDS"
+elif [ "$MODE" = "production" ]; then
     WORLD_SEED="46"
     MATERIAL_GATE=1
     PERSISTENCE_GATE=1
@@ -906,6 +924,7 @@ print_plan() {
     printf '  PEBBLELAB_APP_AGENTS_LIVESTOCK=%s\n' "$LIVESTOCK_GATE"
     printf '  PEBBLELAB_APP_AGENTS_WORK_PROFESSIONS=%s\n' "$WORK_PROFESSIONS_GATE"
     printf '  PEBBLELAB_APP_AGENTS_PRODUCTION=%s\n' "$PRODUCTION_GATE"
+    printf '  PEBBLELAB_APP_AGENTS_BARTER=%s\n' "$BARTER_GATE"
     printf '  PEBBLELAB_APP_AGENTS_AUTONOMOUS_CIVILIZATION=%s\n' "$AUTONOMOUS_CIVILIZATION_GATE"
     printf '  PEBBLELAB_INTEGRATED_TEACHING_PROOF=%s\n' "$INTEGRATED_TEACHING_PROOF"
     printf '  PEBBLELAB_PASSIVE_OBSERVER_INPUT_PROOF=%s\n' "$PASSIVE_OBSERVER_INPUT_PROOF"
@@ -916,7 +935,11 @@ print_plan() {
     printf '  PEBBLELAB_GATE_B3_HORIZON=%s\n' "$GATE_B3_HORIZON"
     printf '  PEBBLELAB_DISPOSABLE_WORLD_PROOF=1\n'
     printf '  PEBBLE_CMD=%s\n' "$LAB_COMMANDS"
-    if [ "$MODE" = "production" ]; then
+    if [ "$MODE" = "barter" ]; then
+        printf '  2. Confirm two local residents retain distinct produced goods before exchange.\n'
+        printf '  3. Confirm offer, acceptance, compensated mid-transfer fault, exact retry, and swapped custody.\n'
+        printf '  4. Confirm the fresh process preserves one exchange and the receiver uses the produced pickaxe.\n'
+    elif [ "$MODE" = "production" ]; then
         printf '  PEBBLE_SHOT=-|%s/production-workshop.png|%s/production-tool.png|%s/production-output.png\n' \
             "$(dirname "$capture_path")" "$(dirname "$capture_path")" \
             "$(dirname "$capture_path")"
@@ -1107,13 +1130,13 @@ print_plan() {
         && [ "$MODE" != "mortality" ] && [ "$MODE" != "reproduction" ] \
         && [ "$MODE" != "kinship" ] && [ "$MODE" != "households" ] \
         && [ "$MODE" != "care" ] && [ "$MODE" != "skills" ]; then
-        if [ "$MODE" = "material" ] || [ "$MODE" = "rights" ] || [ "$MODE" = "production" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "integrated-teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ] || [ "$MODE" = "work-demand-refresh" ] || [ "$MODE" = "gate-b-passive" ]; then
+        if [ "$MODE" = "material" ] || [ "$MODE" = "rights" ] || [ "$MODE" = "production" ] || [ "$MODE" = "barter" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "integrated-teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ] || [ "$MODE" = "work-demand-refresh" ] || [ "$MODE" = "gate-b-passive" ]; then
             printf '  5. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
         else
             printf '  4. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
         fi
     fi
-    if [ "$MODE" = "material" ] || [ "$MODE" = "rights" ] || [ "$MODE" = "production" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "integrated-teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ] || [ "$MODE" = "work-demand-refresh" ] || [ "$MODE" = "gate-b-passive" ]; then
+    if [ "$MODE" = "material" ] || [ "$MODE" = "rights" ] || [ "$MODE" = "production" ] || [ "$MODE" = "barter" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "integrated-teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ] || [ "$MODE" = "work-demand-refresh" ] || [ "$MODE" = "gate-b-passive" ]; then
         printf '  6. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
     else
         printf '  5. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
@@ -1153,7 +1176,14 @@ TRACE_PATH="$SESSION_ROOT/pebble-live.log"
 DB_PATH="$SESSION_HOME/Library/Application Support/Pebble/pebble.db"
 [ ! -e "$DB_PATH" ] || fail "fresh disposable database already exists: $DB_PATH"
 /bin/mkdir -p "$SESSION_HOME" "$CAPTURE_DIR"
-if [ "$MODE" = "production" ]; then
+if [ "$MODE" = "barter" ]; then
+    CAPTURE_PRE_PATH="$CAPTURE_DIR/barter-pre-exchange.png"
+    CAPTURE_OFFER_PATH="$CAPTURE_DIR/barter-offer.png"
+    CAPTURE_POST_PATH="$CAPTURE_DIR/barter-post-exchange.png"
+    CAPTURE_RESTORED_PATH="$CAPTURE_DIR/barter-restored.png"
+    CAPTURE_USED_PATH="$CAPTURE_DIR/barter-produced-tool-used.png"
+    SHOT_SPEC="-|$CAPTURE_PRE_PATH|$CAPTURE_OFFER_PATH|-|$CAPTURE_POST_PATH"
+elif [ "$MODE" = "production" ]; then
     CAPTURE_WORKSHOP_PATH="$CAPTURE_DIR/production-workshop.png"
     CAPTURE_TOOL_PATH="$CAPTURE_DIR/production-tool.png"
     CAPTURE_OUTPUT_PATH="$CAPTURE_DIR/production-output.png"
@@ -1222,6 +1252,151 @@ printf '\nLaunching Pebble now. Personal Pebble data is hidden by CFFIXED_USER_H
 
 if /usr/bin/pgrep -x Pebble >/dev/null 2>&1; then
     fail "a Pebble process is already running; refusing an ambiguous live baseline"
+fi
+
+if [ "$MODE" = "barter" ]; then
+    cd "$ROOT_DIR"
+    swift build -c release --product Pebble
+    PEBBLE_BINARY="$ROOT_DIR/.build/release/Pebble"
+    [ -x "$PEBBLE_BINARY" ] \
+        || fail "Release Pebble binary missing: $PEBBLE_BINARY"
+
+    PHASE1_TRACE="$SESSION_ROOT/barter-phase1.log"
+    PHASE2_TRACE="$SESSION_ROOT/barter-phase2.log"
+
+    run_barter_app() {
+        run_home=$1
+        run_trace=$2
+        run_commands=$3
+        create_world=$4
+        command_world_tick=$5
+        run_shots=$6
+        mid_fault=$7
+        if [ "$create_world" -eq 1 ]; then
+            CFFIXED_USER_HOME="$run_home" \
+            PEBBLE_AUTOLOAD=1 \
+            PEBBLE_NEWWORLD="$WORLD_SEED" \
+            PEBBLE_NEWWORLD_NAME="$WORLD_NAME" \
+            PEBBLELAB_APP_AGENTS=1 \
+            PEBBLELAB_APP_AGENTS_MOVE=1 \
+            PEBBLELAB_APP_PROBES=1 \
+            PEBBLELAB_DEBUG_ENTITIES=1 \
+            PEBBLELAB_APP_AGENTS_OVERLAY=1 \
+            PEBBLELAB_APP_AGENTS_TRACE=1 \
+            PEBBLELAB_APP_AGENTS_TRACE_EVERY=1 \
+            PEBBLELAB_APP_AGENTS_INTERACT=1 \
+            PEBBLELAB_APP_AGENTS_MATERIAL=1 \
+            PEBBLELAB_APP_AGENTS_PERSISTENCE=1 \
+            PEBBLELAB_APP_AGENTS_POPULATION=1 \
+            PEBBLELAB_APP_AGENTS_LIFECYCLE=1 \
+            PEBBLELAB_APP_AGENTS_SKILLS=1 \
+            PEBBLELAB_APP_AGENTS_PRODUCTION=1 \
+            PEBBLELAB_APP_AGENTS_BARTER=1 \
+            PEBBLELAB_APP_AGENTS_AUTONOMOUS_CIVILIZATION=1 \
+            PEBBLELAB_DISPOSABLE_BARTER_MID_FAULT="$mid_fault" \
+            PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
+            PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
+            PEBBLE_CMD="$run_commands" \
+            PEBBLE_SHOT="$run_shots" \
+            "$PEBBLE_BINARY" 2>&1 | /usr/bin/tee "$run_trace"
+        else
+            CFFIXED_USER_HOME="$run_home" \
+            PEBBLE_AUTOLOAD=1 \
+            PEBBLELAB_APP_AGENTS=1 \
+            PEBBLELAB_APP_AGENTS_MOVE=1 \
+            PEBBLELAB_APP_PROBES=1 \
+            PEBBLELAB_DEBUG_ENTITIES=1 \
+            PEBBLELAB_APP_AGENTS_OVERLAY=1 \
+            PEBBLELAB_APP_AGENTS_TRACE=1 \
+            PEBBLELAB_APP_AGENTS_TRACE_EVERY=1 \
+            PEBBLELAB_APP_AGENTS_INTERACT=1 \
+            PEBBLELAB_APP_AGENTS_MATERIAL=1 \
+            PEBBLELAB_APP_AGENTS_PERSISTENCE=1 \
+            PEBBLELAB_APP_AGENTS_POPULATION=1 \
+            PEBBLELAB_APP_AGENTS_LIFECYCLE=1 \
+            PEBBLELAB_APP_AGENTS_SKILLS=1 \
+            PEBBLELAB_APP_AGENTS_PRODUCTION=1 \
+            PEBBLELAB_APP_AGENTS_BARTER=1 \
+            PEBBLELAB_APP_AGENTS_AUTONOMOUS_CIVILIZATION=1 \
+            PEBBLELAB_DISPOSABLE_BARTER_MID_FAULT="$mid_fault" \
+            PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
+            PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
+            PEBBLE_CMD="$run_commands" \
+            PEBBLE_SHOT="$run_shots" \
+            "$PEBBLE_BINARY" 2>&1 | /usr/bin/tee "$run_trace"
+        fi
+        if /usr/bin/pgrep -x Pebble >/dev/null 2>&1; then
+            fail "Pebble process remained after barter phase: $run_trace"
+        fi
+    }
+
+    printf '\nBarter phase 1: production, local consent, injected mid-transfer rollback, and retry.\n'
+    run_barter_app \
+        "$SESSION_HOME" "$PHASE1_TRACE" "$BARTER_PHASE1_COMMANDS" \
+        1 100 "$SHOT_SPEC" 1
+    TRACE_PATH="$PHASE1_TRACE"
+    [ -s "$CAPTURE_PRE_PATH" ] || fail "barter pre-exchange capture missing"
+    [ -s "$CAPTURE_OFFER_PATH" ] || fail "barter offer capture missing"
+    [ -s "$CAPTURE_POST_PATH" ] || fail "barter post-exchange capture missing"
+    require_trace 'barter setup offeror=agent_[0-9]+ counterparty=agent_[0-9]+ produced=stone_pickaxe:1,bread:2 physical=verified .*productPath=normal-autonomous' 'real CIV-34 outputs and local needs'
+    require_trace 'barter autonomous offer actor=agent_[0-9]+ to=agent_[0-9]+ offer=civ35-primary physicalMutation=0' 'explicit offer without matter movement'
+    require_trace_at_least 'barter autonomous decision actor=agent_[0-9]+ offer=civ35-primary decision=accepted .*physicalMutation=0' 2 'independent acceptance and retry'
+    require_trace 'barter mid-exchange mutation offer=civ35-primary .*candidatePhysicalMutation=1 publication=0' 'true first physical mutation seam'
+    require_trace 'CANDIDATE_PHYSICAL_ROLLBACK operation=advanceOneTick .*barterPostMutationBoundary.*registered=material-transfer:barter:civ35-primary:offered:[0-9]+ .*completed=material-transfer:barter:civ35-primary:offered:[0-9]+ .*publishedSession=unchanged .*publishedRecorder=unchanged' 'exact post-mutation compensation'
+    require_trace_count 'barter completed offer=civ35-primary ' 1 'one completed physical barter after immediate retry'
+    require_trace 'barter proof normalProductPath=PASS .*producedGood=stone_pickaxe:1 .*after=agent_[0-9]+:bread:2;agent_[0-9]+:stone_pickaxe:1 .*stale=staleSource wrongQuantity=(invalidRequest|insufficientQuantity) missing=insufficientQuantity capacity=destinationFull adversarialPhysical=exact .*physicalLoss=0 physicalDuplication=0 syntheticMaterial=0' 'positive and adversarial physical matrix'
+    require_trace 'checkpoint saved name=barter-v32 .*restartSafe=1 ' 'restart-safe completed barter checkpoint'
+    require_trace 'summary .*runtimeErrors=1 .*probesRemoved=3 ' 'one expected injected failure and clean shutdown'
+    reject_trace 'CANDIDATE_PHYSICAL_HARD_FAILURE' 'unverifiable barter rollback'
+
+    PERSISTENCE_ROOT="$SESSION_HOME/Library/Application Support/Pebble/PebbleLabAgents"
+    PHASE1_SESSION=$(/usr/bin/find "$PERSISTENCE_ROOT" -type f -path '*/checkpoints/barter-v32/session.json' -print -quit)
+    [ -n "$PHASE1_SESSION" ] || fail "barter-v32 session.json missing"
+    /usr/bin/grep -q '"schemaVersion":32' "$PHASE1_SESSION" \
+        || fail "barter-v32 checkpoint is not schema 32"
+    PHASE1_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint saved name=barter-v32 .* digest=\([0-9a-f]*\) storageDigest=.*/\1/p' "$PHASE1_TRACE" | /usr/bin/tail -1)
+    [ -n "$PHASE1_DIGEST" ] || fail "barter-v32 digest extraction failed"
+    persisted_world_tick=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT json_extract(json, '$.dims.\"0\".time') FROM worlds;")
+    case "$persisted_world_tick" in
+        ''|*[!0-9]*) fail "invalid persisted barter World tick: $persisted_world_tick" ;;
+    esac
+    continuation_command_tick=$((persisted_world_tick + 100))
+
+    printf '\nBarter phase 2: fresh process, exact rights/custody restore, and receiver tool use.\n'
+    PHASE2_SHOTS="$CAPTURE_RESTORED_PATH|$CAPTURE_USED_PATH|$CAPTURE_PATH"
+    run_barter_app \
+        "$SESSION_HOME" "$PHASE2_TRACE" "$BARTER_PHASE2_COMMANDS" \
+        0 "$continuation_command_tick" "$PHASE2_SHOTS" 0
+    TRACE_PATH="$PHASE2_TRACE"
+    [ -s "$CAPTURE_RESTORED_PATH" ] || fail "barter restart capture missing"
+    [ -s "$CAPTURE_USED_PATH" ] || fail "barter produced-tool-use capture missing"
+    [ -s "$CAPTURE_PATH" ] || fail "barter final capture missing"
+    require_trace "checkpoint loaded name=barter-v32 .*digest=$PHASE1_DIGEST .*restartSafe=1 .*custodyDuplicates=0 physicalBoundary=acquired" 'fresh-process physical custody restore'
+    require_trace 'barter enabled=1 .*civ35-primary:completed .*completed=1 .*physicalLoss=0 physicalDuplication=0 syntheticMaterial=0 duplicateExchangeReceipts=0 duplicateReservations=0' 'one durable exchange without replayed transfer'
+    require_trace 'bartered produced tool used producer=agent_[0-9]+ receiver=agent_[0-9]+ .*sameItem=stone_pickaxe damage=0>1 world=stone>air downstreamUse=PASS' 'receiver uses exact produced tool after restart'
+    require_trace 'checkpoint saved name=barter-final-v32 .*restartSafe=1 ' 'final v32 checkpoint'
+    require_trace 'Barter disposable fixture cleanup cells=exact exchangedCustody=retained' 'fixture cleanup retains exchanged goods'
+    require_trace 'summary .*runtimeErrors=0 .*probesRemoved=3 ' 'fresh continuation clean shutdown'
+    reject_trace 'barter completed offer=civ35-primary ' 'completed barter repeated after restart'
+    reject_trace '^\[lab-live\] error ' 'unexpected continuation runtime error'
+
+    FINAL_SESSION=$(/usr/bin/find "$PERSISTENCE_ROOT" -type f -path '*/checkpoints/barter-final-v32/session.json' -print -quit)
+    [ -n "$FINAL_SESSION" ] || fail "barter-final-v32 session.json missing"
+    /usr/bin/grep -q '"schemaVersion":32' "$FINAL_SESSION" \
+        || fail "barter-final-v32 checkpoint is not schema 32"
+    if /usr/bin/pgrep -x Pebble >/dev/null 2>&1 \
+        || /usr/bin/pgrep -x swift-run >/dev/null 2>&1 \
+        || /usr/bin/pgrep -x pebsmoke >/dev/null 2>&1; then
+        fail "residual PebbleLab process after barter proof"
+    fi
+    printf '\nPASS: CIV-35 local consent, atomic physical barter, rollback/retry, restart, downstream use, and cleanup verified.\n'
+    printf 'Phase 1 trace: %s\n' "$PHASE1_TRACE"
+    printf 'Phase 2 trace: %s\n' "$PHASE2_TRACE"
+    printf 'Checkpoint schema: 32\n'
+    printf 'Observer schema: 9\n'
+    printf 'Final capture: %s\n' "$CAPTURE_PATH"
+    printf 'Retained isolated session: %s\n' "$SESSION_ROOT"
+    exit 0
 fi
 
 if [ "$MODE" = "production" ]; then
@@ -3465,6 +3640,7 @@ PEBBLELAB_APP_AGENTS_WILD_SUBSISTENCE="$WILD_SUBSISTENCE_GATE" \
 PEBBLELAB_APP_AGENTS_LIVESTOCK="$LIVESTOCK_GATE" \
 PEBBLELAB_APP_AGENTS_WORK_PROFESSIONS="$WORK_PROFESSIONS_GATE" \
 PEBBLELAB_APP_AGENTS_PRODUCTION="$PRODUCTION_GATE" \
+PEBBLELAB_APP_AGENTS_BARTER="$BARTER_GATE" \
 PEBBLELAB_APP_AGENTS_AUTONOMOUS_CIVILIZATION="$AUTONOMOUS_CIVILIZATION_GATE" \
 PEBBLELAB_INTEGRATED_TEACHING_PROOF="$INTEGRATED_TEACHING_PROOF" \
 PEBBLELAB_PASSIVE_OBSERVER_INPUT_PROOF="$PASSIVE_OBSERVER_INPUT_PROOF" \

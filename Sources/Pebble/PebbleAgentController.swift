@@ -109,6 +109,8 @@ final class PebbleAgentController {
     var candidateRenewableLateFailureProofInjected = false
     var productionWorkshopPosition: AgentPosition?
     var productionToolTargetPosition: PhysicalBlockPosition?
+    var barterProofFixture: PebbleAgentBarterProofFixture?
+    var barterMidExchangeFaultInjected = false
     var candidateAgricultureNavigationFailureProofInjected = false
     var ecologicalObservationProofFixture: PebbleAgentEcologicalObservationProofFixture?
     var agricultureProofFixture: PebbleAgentAgricultureProofFixture?
@@ -213,6 +215,9 @@ final class PebbleAgentController {
     }
     var productionFeatureEnabled: Bool {
         environment["PEBBLELAB_APP_AGENTS_PRODUCTION"] == "1"
+    }
+    var barterFeatureEnabled: Bool {
+        environment["PEBBLELAB_APP_AGENTS_BARTER"] == "1"
     }
     var safeBootstrapLateFailureProofEnabled: Bool {
         environment["PEBBLELAB_DISPOSABLE_SAFE_BOOTSTRAP_LATE_FAILURE_PROOF"] == "1"
@@ -324,5 +329,7 @@ final class PebbleAgentController {
         case bootstrapPlacementBoundary(String)
         case bootstrapRollbackBoundary(String)
         case familyBoundary(String)
+        case barterBoundary(String)
+        case barterPostMutationBoundary(String)
     }
 }

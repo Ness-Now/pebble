@@ -33,6 +33,7 @@ public enum AgentCheckpointSchema {
     public static let renewableSubsistenceVersion = 29
     public static let independentEcologicalReceiptVersion = 30
     public static let productionVersion = 31
+    public static let barterVersion = 32
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -52,6 +53,7 @@ public enum AgentCheckpointSchema {
             || version == renewableSubsistenceVersion
             || version == independentEcologicalReceiptVersion
             || version == productionVersion
+            || version == barterVersion
     }
 }
 
@@ -250,9 +252,12 @@ public struct AgentSessionDurableState: Codable {
     public let familyState: AgentFamilyState?
     public let estateState: AgentEstateState?
     public let productionState: AgentProductionState?
+    public let barterState: AgentBarterState?
 
     init(session: AgentSimulationSession) {
-        if session.productionState != nil {
+        if session.barterState != nil {
+            schemaVersion = AgentCheckpointSchema.barterVersion
+        } else if session.productionState != nil {
             schemaVersion = AgentCheckpointSchema.productionVersion
         } else if session.ecologicalObservationState?.observations.isEmpty == false
             || session.agricultureState?.plots.isEmpty == false {
@@ -420,6 +425,7 @@ public struct AgentSessionDurableState: Codable {
         familyState = session.familyState
         estateState = session.estateState
         productionState = session.productionState
+        barterState = session.barterState
     }
 }
 
@@ -1049,6 +1055,10 @@ extension AgentSimulationSession {
             reasons.append("ecology conservation is not exact")
         }
         if pendingOperationCount != 0 { reasons.append("pending operations: \(pendingOperationCount)") }
+        let pendingBarters = barterState?.offers.filter { $0.status.isPending }.count ?? 0
+        if pendingBarters != 0 {
+            reasons.append("pending barter offers: \(pendingBarters)")
+        }
         let ledger = causalLedgerSnapshot().summary
         if ledger.currentTick.rawValue != tick { reasons.append("causal clock differs from session clock") }
         return AgentCheckpointReadiness(
@@ -1215,6 +1225,7 @@ extension AgentSimulationSession {
         familyState = state.familyState
         estateState = state.estateState
         productionState = state.productionState
+        barterState = state.barterState
         latestAutonomousTeachingReview = nil
         durableSchemaVersionOverride =
             state.schemaVersion == AgentCheckpointSchema.childhoodVersion
@@ -1229,6 +1240,7 @@ extension AgentSimulationSession {
         try validateMaterialRightsStateIfEnabled()
         try validatePersistenceReconciliationStateIfEnabled()
         try validateProductionStateIfEnabled()
+        try validateBarterStateIfEnabled()
         if let settlementMetricsState {
             try validateSettlementMetricsState(settlementMetricsState)
         }
@@ -1248,8 +1260,10 @@ extension AgentSimulationSession {
             == AgentCheckpointSchema.renewableSubsistenceVersion
         let productionSchema = state.schemaVersion
             == AgentCheckpointSchema.productionVersion
+        let barterSchema = state.schemaVersion
+            == AgentCheckpointSchema.barterVersion
         let latestSchema = renewableSchema || independentReceiptSchema
-            || productionSchema
+            || productionSchema || barterSchema
         let estateSchema =
             state.schemaVersion == AgentCheckpointSchema.legacyEstateVersion
             || state.schemaVersion == AgentCheckpointSchema.estateVersion
@@ -1542,7 +1556,14 @@ extension AgentSimulationSession {
                         .allSatisfy({
                             $0.physicalObservationReceiptID != nil
                         }) == true)
-                || (productionSchema && state.productionState != nil) else {
+                || (productionSchema && state.productionState != nil)
+                || (barterSchema
+                    && state.productionState != nil
+                    && state.materialRightsState != nil
+                    && state.barterState != nil
+                    && state.barterState?.offers.contains(where: {
+                        $0.status.isPending
+                    }) == false) else {
                 throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
             }
         }
@@ -2190,7 +2211,8 @@ extension AgentSimulationSession {
                 || state.schemaVersion
                     == AgentCheckpointSchema
                         .independentEcologicalReceiptVersion
-                || state.schemaVersion == AgentCheckpointSchema.productionVersion {
+                || state.schemaVersion == AgentCheckpointSchema.productionVersion
+                || state.schemaVersion == AgentCheckpointSchema.barterVersion {
                 guard mortality.historicalEvidenceVersion
                         == AgentCompactedDeathSummary.currentVersion,
                       mortality.compactedDeathSummaries != nil else {

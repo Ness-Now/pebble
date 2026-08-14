@@ -30,6 +30,17 @@ struct PebbleAgentMaterialBatchTransactionRequest {
     let expectedDestinationFingerprint: String
 }
 
+/// Read-only two-sided prevalidation. Both current endpoint fingerprints and
+/// both exact quantities must pass Core extraction/insertion rules before the
+/// first real mutation is allowed.
+struct PebbleAgentBarterPrevalidationRequest {
+    let transactionID: String
+    let offered: AgentMaterialStackSnapshot
+    let requested: AgentMaterialStackSnapshot
+    let expectedOfferorFingerprint: String
+    let expectedCounterpartyFingerprint: String
+}
+
 struct PebbleAgentMaterialTransactionOutcome: Equatable {
     let transactionID: String
     let status: PebbleAgentMaterialTransactionStatus
@@ -304,6 +315,79 @@ final class PebbleAgentMaterialCustodyGateway {
             exactMatchingStackCount: exact.count,
             exactMatchingQuantity: exactQuantity
         )
+    }
+
+    func prevalidateBarter(
+        _ request: PebbleAgentBarterPrevalidationRequest,
+        offeror: PebbleAgentMaterialCustodyEndpoint,
+        counterparty: PebbleAgentMaterialCustodyEndpoint
+    ) -> PebbleAgentMaterialTransactionStatus {
+        guard !request.transactionID.isEmpty,
+              request.transactionID.utf8.count <= 256,
+              request.offered.count > 0, request.requested.count > 0,
+              request.offered.identity != request.requested.identity,
+              offeror.locationID != counterparty.locationID,
+              offeror.isValid, counterparty.isValid,
+              let offerorBefore = offeror.read(),
+              let counterpartyBefore = counterparty.read() else {
+            return .invalidRequest
+        }
+        let offeredPrototype: ItemStack
+        let requestedPrototype: ItemStack
+        do {
+            offeredPrototype = try bridge.itemStack(from: request.offered)
+            requestedPrototype = try bridge.itemStack(from: request.requested)
+        } catch PebbleAgentMaterialBridgeError.unknownItemKey {
+            return .unknownMaterialIdentity
+        } catch {
+            return .invalidRequest
+        }
+        guard (try? fingerprint(offeror)) == request.expectedOfferorFingerprint else {
+            return .staleSource
+        }
+        guard (try? fingerprint(counterparty))
+                == request.expectedCounterpartyFingerprint else {
+            return .staleDestination
+        }
+        var offerorAfter = copyItemInventory(offerorBefore)
+        var counterpartyAfter = copyItemInventory(counterpartyBefore)
+        guard itemInventoryQuantity(
+            matching: offeredPrototype, in: offerorAfter
+        ) >= request.offered.count,
+              itemInventoryQuantity(
+                matching: requestedPrototype, in: counterpartyAfter
+              ) >= request.requested.count else {
+            return .insufficientQuantity
+        }
+        guard let offered = extractItemStack(
+            matching: offeredPrototype, quantity: request.offered.count,
+            from: &offerorAfter
+        ) else { return .insufficientQuantity }
+        guard itemInventoryInsertionCapacity(
+            for: offeredPrototype, in: counterpartyAfter
+        ) >= request.offered.count,
+              insertItemStack(
+                offered, quantity: request.offered.count, into: &counterpartyAfter
+              ) == request.offered.count,
+              offered.count == 0 else { return .destinationFull }
+        guard let requested = extractItemStack(
+            matching: requestedPrototype, quantity: request.requested.count,
+            from: &counterpartyAfter
+        ) else { return .insufficientQuantity }
+        guard itemInventoryInsertionCapacity(
+            for: requestedPrototype, in: offerorAfter
+        ) >= request.requested.count,
+              insertItemStack(
+                requested, quantity: request.requested.count, into: &offerorAfter
+              ) == request.requested.count,
+              requested.count == 0 else { return .destinationFull }
+        guard (try? transferConservesIdentity(
+            sourceBefore: offerorBefore,
+            destinationBefore: counterpartyBefore,
+            sourceAfter: offerorAfter,
+            destinationAfter: counterpartyAfter
+        )) == true else { return .verificationFailure }
+        return .succeeded
     }
 
     func transfer(
