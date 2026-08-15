@@ -41,6 +41,7 @@ These documents form the minimal permanent memory of the project:
 | [`ROADMAP_MANIFEST.json`](ROADMAP_MANIFEST.json) | Deterministic machine projection of the V4 roadmap and status. |
 | [`DOCUMENTATION_INDEX.md`](DOCUMENTATION_INDEX.md) | Classification and navigation for the documentation set. |
 | [`CIV_36_PHASE_SUMMARY.md`](CIV_36_PHASE_SUMMARY.md) | Published architecture, contract semantics, correction history, physical proof, validation and non-claims for CIV-36. |
+| [`CIV_37_PHASE_SUMMARY.md`](CIV_37_PHASE_SUMMARY.md) | Local review-candidate architecture, physical-market proof, price causality, validation and non-claims for CIV-37. |
 
 Canonical status at the product baseline reconciled by this documentation:
 
@@ -76,12 +77,13 @@ Independent Gate D Evaluation 11: PASS — SENIOR REVIEW APPROVED — PUBLISHED 
 CIV-34: COMPLETE AND PUBLISHED
 CIV-35: COMPLETE AND PUBLISHED
 CIV-36: COMPLETE AND PUBLISHED
-CIV-37: NOT_STARTED — NEXT ELIGIBLE PHASE
+CIV-37: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE
+CIV-38: OPTIONAL — NOT STARTED
 V4-GATE-E-v1: PLANNED — NOT ACQUIRED
-active phase: null
+active phase: CIV-37
 completed through: CIV-36
-next eligible phase: CIV-37
-next authorized action: CIV-37
+next eligible phase: null — CIV-37 review pending
+next authorized action: SENIOR REVIEW OF CIV-37
 ```
 
 The `CIV-33` completion is published on the canonical branch at
@@ -161,8 +163,14 @@ ordinary and explicit verified rollback/retry, normal CIV-34 production,
 exact-once fulfillment, Observer schema 10, 30/30 focused checks, 3892/3892
 repository assertions and four-process live proof are indexed in
 [`CIV_36_PHASE_SUMMARY.md`](CIV_36_PHASE_SUMMARY.md). CIV-36 is complete and
-published. CIV-37 is not started and is the next eligible phase; Gate E is not
-acquired, and the next authorized action is CIV-37.
+published. CIV-37 was implemented locally from exact baseline
+`9f13ffee3f312caaaa68ddd6f2c2c27e5942474e` at product/proof commit
+`e279362e1d5b71ed82d20e2f17e492fa22579c37`; its bounded physical market,
+schema-34 restart, exact rollback, local price history and four-process proof
+are indexed in [`CIV_37_PHASE_SUMMARY.md`](CIV_37_PHASE_SUMMARY.md). Its status
+is **IMPLEMENTED_LOCAL_REVIEW_CANDIDATE**, not published or approved. CIV-38 is
+optional and not started. Gate E remains planned and not acquired. The next
+authorized action is senior review of CIV-37.
 
 ## Operational
 

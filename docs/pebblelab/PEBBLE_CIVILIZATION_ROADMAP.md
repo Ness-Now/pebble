@@ -130,13 +130,15 @@ f55b64305027bee3fb67a2e27b422578124c4e00
 
 ```text
 CIV-00 through CIV-36: COMPLETE AND PUBLISHED
+CIV-37: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE
+CIV-38: OPTIONAL — NOT STARTED
 Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
-active CIV phase: null
+active CIV phase: CIV-37
 completed and published through: CIV-36
-next eligible phase: CIV-37
-next authorized action: CIV-37
+next eligible phase: null — CIV-37 review pending
+next authorized action: SENIOR REVIEW OF CIV-37
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
@@ -165,7 +167,8 @@ Independent Gate D Evaluation 11: PASS — SENIOR REVIEW APPROVED — PUBLISHED 
 CIV-34: COMPLETE AND PUBLISHED
 CIV-35: COMPLETE AND PUBLISHED
 CIV-36: COMPLETE AND PUBLISHED
-CIV-37: NOT_STARTED — NEXT ELIGIBLE PHASE
+CIV-37: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE
+CIV-38: OPTIONAL — NOT STARTED
 V4-GATE-E-v1: PLANNED — NOT ACQUIRED
 ```
 
@@ -248,9 +251,12 @@ was not independently approved. Senior review approved corrected
 evidence/documentation HEAD `3494abea0211a843ca54bb0748b1a6d9bdbddd3f`
 and final review bundle SHA-256
 `7947b0ae2e1c86a551403d24f3d75769e8203baf43f8b0e5958a94d038d21951`
-with 47/47 internal checksums and passing unzip validation. CIV-37 is not
-started and is the next eligible phase; Gate E is not acquired and the next
-authorized action is CIV-37.
+with 47/47 internal checksums and passing unzip validation. CIV-37 is an
+**IMPLEMENTED_LOCAL_REVIEW_CANDIDATE** from exact baseline
+`9f13ffee3f312caaaa68ddd6f2c2c27e5942474e` at product/proof commit
+`e279362e1d5b71ed82d20e2f17e492fa22579c37`. It is not published or approved.
+CIV-38 remains optional and not started; Gate E remains planned and not
+acquired. The next authorized action is senior review of CIV-37.
 
 Gate B is acquired under `V4-GATE-B-v1`, the bounded checkpoint proved by the
 published closure and subsequently hardened for normal-world bootstrap:
@@ -428,8 +434,9 @@ targeted Blocker 09 correction is **fixed and published**. Evaluation 10
 remains historical FAIL evidence; its targeted Blocker 10 correction is a
 **BLOCKER_FIX_PUBLISHED**. Independent Evaluation 11 is the first accepted
 whole-Gate PASS and is **SENIOR REVIEW APPROVED**. `CIV-34` through `CIV-36`
-are **COMPLETE AND PUBLISHED**. `CIV-37` is **NOT_STARTED — NEXT ELIGIBLE
-PHASE** and Gate E remains **PLANNED — NOT ACQUIRED**.
+are **COMPLETE AND PUBLISHED**. `CIV-37` is
+**IMPLEMENTED_LOCAL_REVIEW_CANDIDATE** and awaits senior review. `CIV-38` is
+**OPTIONAL — NOT STARTED** and Gate E remains **PLANNED — NOT ACQUIRED**.
 
 | Phase | Requirement | Outcome |
 | --- | --- | --- |
@@ -766,8 +773,9 @@ No individual correction acquired Gate D. The independent composition proof is
 recorded in
 [`GATE_D_EVALUATION_11_REPORT.md`](GATE_D_EVALUATION_11_REPORT.md). Senior
 review approved it, so Gate D remains acquired and published. `CIV-34` through
-`CIV-36` are complete and published. `CIV-37` is not started and is the next
-eligible phase and authorized action.
+`CIV-36` are complete and published. `CIV-37` is an implemented local review
+candidate, and senior review of CIV-37 is the next authorized action. CIV-38
+is optional and not started; Gate E remains planned and not acquired.
 
 ## Wave 3 — Local material economy
 
@@ -919,7 +927,7 @@ final review bundle SHA-256: 7947b0ae2e1c86a551403d24f3d75769e8203baf43f8b0e5958
 internal checksums: 47/47 PASS
 unzip: PASS
 publication: COMPLETE AND PUBLISHED
-next action: CIV-37
+next action at CIV-36 publication: CIV-37
 ```
 
 Result: a bounded local observation may lead one inhabitant to explicitly
@@ -965,9 +973,76 @@ fulfillment. Twelve native captures were inspected. The bounded proof is
 This phase does not claim physical markets, price discovery, currency,
 interest, banking, bankruptcy, general legal enforcement, courts, contract
 inheritance, merchant organizations, taxation, large-scale finance, collateral
-or general contract language. CIV-37 physical markets and local price
-discovery remain not started and are the next eligible phase. Gate E remains
-planned and is not acquired.
+or general contract language. This remains the bounded published CIV-36 scope;
+CIV-37 does not retroactively broaden it.
+
+### `CIV-37` — Physical Markets and Local Price Discovery V1
+
+Status: **IMPLEMENTED_LOCAL_REVIEW_CANDIDATE, required**.
+
+Candidate identity:
+
+```text
+exact baseline: 9f13ffee3f312caaaa68ddd6f2c2c27e5942474e
+product/proof commit: e279362e1d5b71ed82d20e2f17e492fa22579c37
+published: NO
+senior review: PENDING
+Gate E: PLANNED — NOT ACQUIRED
+next action: SENIOR REVIEW OF CIV-37
+```
+
+Result: a physical market is one bounded World place with a real container,
+finite slots and local interaction radius. Pebble discovers current physical
+goods and current local participants through the normal runtime path. A
+verified deposit moves one exact rights-tracked lot into container custody
+while the seller remains owner. A listing references that exact deposited lot
+and moves no matter. Buyer proposal and distinct seller acceptance reserve the
+lot but create neither a trade nor price history.
+
+Settlement is one candidate-owned three-endpoint operation: market-to-buyer
+offered good plus buyer-to-seller consideration, followed by verified CIV-26
+holder, custodian and ownership publication. Both current asset authorities
+are reacquired at execution. A retained fault after the first physical leg and
+an ordinary failure after both physical legs each roll back exactly, preserve
+published session/recorder state and create no price row. Immediate retry
+completes once. Only a completed physical trade creates one exact, oriented,
+integer market-local price observation. The later comparable listing consults
+only completed history from the same physical market and commodity direction;
+foreign-market history is refused.
+
+Schema 34 persists open market custody, listings, completed trade receipts,
+withdrawals and bounded price provenance. Fresh processes restore the physical
+boundary before publication and never reexecute completed settlement. Replay
+schema 34 reconstructs deterministic social history without World mutation.
+Observer schema 11 is bounded and read-only. Deterministic terminal-only
+compaction protects live listings and reservations while permitting continued
+activity after historical capacity fills.
+
+The seed-46 four-process rendered campaign uses a real nine-slot chest at
+`18,69,-21`. It proves physical capacity refusal, real deposit, open-listing
+restart, explicit ask/counter/acceptance, both rollback seams, one completed
+trade, completed-history restart, a history-informed later quote and second
+trade, expiry without teleportation, verified unsold withdrawal, final restart
+without reexecution and exact disposable-cell cleanup. The campaign goods are
+ordinary, physically real and rights-tracked fixture goods; the evidence does
+not claim they were actually produced through CIV-34. Focused tests pass 20/20
+and the repository gate passes 35/35 with 3912 assertions. Twelve native
+captures were inspected. Full bounded evidence is
+[`CIV_37_PHASE_SUMMARY.md`](CIV_37_PHASE_SUMMARY.md).
+
+Participant death cannot authorize a market action: current active-agent,
+need, locality, rights and physical custody checks must all still pass. The
+market does not transfer a deceased seller's listing to an heir or invent
+contract inheritance; unresolved physical custody remains subordinate to the
+existing mortality, estate and Material Rights authorities.
+
+This phase does not claim currency, a unit of account, banking, general
+accounting, a credit market, interest, loans, securities, derivatives, market
+regulation, merchant guilds, taxation, courts, global markets,
+inter-settlement price transmission, general firms, an automated market maker
+or global equilibrium. CIV-38 remains optional and not started. Gate E remains
+planned and not acquired pending CIV-37 senior review, publication and a later
+independent Gate E composition evaluation.
 
 ### `V4-GATE-E-v1` — Local Material Economy
 
