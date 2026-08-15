@@ -559,6 +559,9 @@ public struct AgentObserverSnapshot: Codable, Equatable, Sendable {
     /// Read-only promises, accepted obligations, debts, and fulfillment proof.
     /// This projection grants no custody, ownership, or execution authority.
     public let contracts: AgentContractSnapshot?
+    /// Read-only places, custody-backed listings, completed trades and their
+    /// pair-specific local history. This projection grants no market authority.
+    public let markets: AgentMarketSnapshot?
     public let truncation: AgentObserverTruncation
 }
 
@@ -662,6 +665,7 @@ extension AgentSimulationSession {
         let production = productionSnapshot()
         let barter = barterSnapshot()
         let contracts = contractSnapshot()
+        let markets = marketSnapshot()
         let textLimit = configuration.maximumPresentationTextLength
 
         let materialTransitionByEventID = Dictionary(
@@ -849,6 +853,17 @@ extension AgentSimulationSession {
             ? "contracts:\(contracts.totalObligationCount):"
                 + "\(contracts.totalFulfilledCount):\(contractObligationDigest)"
             : "contracts:none"
+        let marketPriceDigest = markets.priceHistory.map { row in
+            [
+                row.marketID.rawValue, row.tradeID.rawValue,
+                row.terms.baseItemKey, row.terms.quoteItemKey,
+                String(row.terms.baseQuantity), String(row.terms.quoteQuantity),
+            ].joined(separator: ":")
+        }.joined(separator: ",")
+        let marketGeneration = markets.enabled
+            ? "markets:\(markets.totalDepositCount):"
+                + "\(markets.totalTradeCount):\(marketPriceDigest)"
+            : "markets:none"
         let generationSource = [
             "observer-v1", simulationID.rawValue, worldBinding.worldID,
             worldBinding.storageIdentity, String(tick),
@@ -870,6 +885,7 @@ extension AgentSimulationSession {
                     + barter.records.map { $0.outcome.operationID }.joined(separator: ",")
                 : "barter:none",
             contractGeneration,
+            marketGeneration,
         ].joined(separator: "|")
         let familyAuthority = observerFamilyAuthority(family)
         let estateAuthority = observerEstateAuthority(
@@ -892,7 +908,7 @@ extension AgentSimulationSession {
         )
         return AgentObserverSnapshot(
             header: AgentObserverSnapshotHeader(
-                schemaVersion: contracts.enabled ? 10
+                schemaVersion: markets.enabled ? 11 : contracts.enabled ? 10
                     : barter.enabled ? 9 : production.enabled ? 8
                     : renewableSubsistence.isEmpty ? (estates.enabled ? 6
                     : (childhood.enabled
@@ -916,6 +932,7 @@ extension AgentSimulationSession {
             production: production.enabled ? production : nil,
             barter: barter.enabled ? barter : nil,
             contracts: contracts.enabled ? contracts : nil,
+            markets: markets.enabled ? markets : nil,
             truncation: truncation
         )
     }

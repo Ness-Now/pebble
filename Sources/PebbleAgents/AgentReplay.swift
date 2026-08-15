@@ -34,6 +34,7 @@ public enum AgentReplaySchema {
     public static let productionVersion = 31
     public static let barterVersion = 32
     public static let contractVersion = 33
+    public static let marketVersion = 34
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -55,6 +56,7 @@ public enum AgentReplaySchema {
             || version == productionVersion
             || version == barterVersion
             || version == contractVersion
+            || version == marketVersion
     }
 }
 
@@ -188,6 +190,15 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case contractConsideration
     case contractFulfillment
     case contractReview
+    case marketFeature
+    case marketRegistration
+    case marketOpportunity
+    case marketDeposit
+    case marketListing
+    case marketProposal
+    case marketDecision
+    case marketTrade
+    case marketWithdrawal
 }
 
 public enum AgentReplayOperation: Codable {
@@ -440,6 +451,30 @@ public enum AgentReplayOperation: Codable {
     )
     case reviewContractDueBoundaries
     case reviewContractParticipantContinuity
+    case setMarketEnabled(Bool, configuration: AgentMarketConfiguration)
+    case registerMarketPlace(
+        operationID: String, marketID: AgentMarketID,
+        position: AgentPosition, containerLocationID: String,
+        containerBlockFingerprint: Int, interactionRadius: Int,
+        physicalSlotCapacity: Int
+    )
+    case recordMarketDepositOpportunities([AgentMarketDepositOpportunity])
+    case recordVerifiedMarketDeposit(AgentVerifiedMarketDeposit)
+    case createMarketListing(
+        operationID: String, proposal: AgentMarketListingProposal
+    )
+    case proposeMarketPurchase(
+        operationID: String, proposal: AgentMarketBuyerProposal
+    )
+    case decideMarketProposal(
+        operationID: String, decision: AgentMarketSellerDecision
+    )
+    case closeMarketListing(
+        operationID: String, listingID: AgentMarketListingID,
+        reason: AgentMarketListingStatus
+    )
+    case recordVerifiedMarketTrade(AgentVerifiedMarketTrade)
+    case recordVerifiedMarketWithdrawal(AgentVerifiedMarketWithdrawal)
 
     public var kind: AgentReplayOperationKind {
         switch self {
@@ -571,6 +606,15 @@ public enum AgentReplayOperation: Codable {
         case .recordVerifiedContractFulfillment: return .contractFulfillment
         case .reviewContractDueBoundaries,
              .reviewContractParticipantContinuity: return .contractReview
+        case .setMarketEnabled: return .marketFeature
+        case .registerMarketPlace: return .marketRegistration
+        case .recordMarketDepositOpportunities: return .marketOpportunity
+        case .recordVerifiedMarketDeposit: return .marketDeposit
+        case .createMarketListing: return .marketListing
+        case .proposeMarketPurchase: return .marketProposal
+        case .decideMarketProposal, .closeMarketListing: return .marketDecision
+        case .recordVerifiedMarketTrade: return .marketTrade
+        case .recordVerifiedMarketWithdrawal: return .marketWithdrawal
         }
     }
 
@@ -635,6 +679,25 @@ public enum AgentReplayOperation: Codable {
         case let .recordVerifiedContractConsideration(outcome):
             raw = outcome.operationID
         case let .recordVerifiedContractFulfillment(outcome):
+            raw = outcome.operationID
+        case let .registerMarketPlace(operationID, _, _, _, _, _, _):
+            raw = operationID
+        case let .recordMarketDepositOpportunities(observations):
+            raw = observations.map(\.opportunityID).sorted()
+                .joined(separator: "+")
+        case let .recordVerifiedMarketDeposit(outcome):
+            raw = outcome.operationID
+        case let .createMarketListing(operationID, _):
+            raw = operationID
+        case let .proposeMarketPurchase(operationID, _):
+            raw = operationID
+        case let .decideMarketProposal(operationID, _):
+            raw = operationID
+        case let .closeMarketListing(operationID, _, _):
+            raw = operationID
+        case let .recordVerifiedMarketTrade(outcome):
+            raw = outcome.operationID
+        case let .recordVerifiedMarketWithdrawal(outcome):
             raw = outcome.operationID
         case let .provideDependentNourishment(intent): raw = intent.provisionID
         case let .startApprenticeship(request):
@@ -953,6 +1016,9 @@ public struct AgentReplayRecorder {
         simulationID = checkpoint.simulationID
         initialTick = checkpoint.tick.rawValue
         schemaVersion = checkpoint.schemaVersion
+            == AgentCheckpointSchema.marketVersion
+            ? AgentReplaySchema.marketVersion
+            : checkpoint.schemaVersion
             == AgentCheckpointSchema.contractVersion
             ? AgentReplaySchema.contractVersion
             : checkpoint.schemaVersion
@@ -1248,6 +1314,16 @@ public struct AgentReplayRecorder {
             }
             schemaVersion = AgentReplaySchema.contractVersion
         }
+        if case let .setMarketEnabled(enabled, _) = operation,
+           enabled,
+           schemaVersion < AgentReplaySchema.marketVersion {
+            guard records.isEmpty else {
+                throw AgentReplayError.invalidJournal(
+                    "market activation must be the first v34 replay operation"
+                )
+            }
+            schemaVersion = AgentReplaySchema.marketVersion
+        }
         guard session.simulationID == simulationID else { throw AgentReplayError.currentStateMismatch }
         let preDigest = try session.durableStateDigest()
         let tickBefore = session.tick
@@ -1495,6 +1571,8 @@ public enum AgentSessionReplayer {
                 && checkpoint.schemaVersion <= AgentCheckpointSchema.productionVersion)
             || (manifest.schemaVersion == AgentReplaySchema.contractVersion
                 && checkpoint.schemaVersion <= AgentCheckpointSchema.barterVersion)
+            || (manifest.schemaVersion == AgentReplaySchema.marketVersion
+                && checkpoint.schemaVersion <= AgentCheckpointSchema.contractVersion)
         guard manifest.baseCheckpointID == checkpoint.checkpointID,
               manifest.baseCheckpointDigest == checkpoint.semanticDigest,
               manifest.simulationID == checkpoint.simulationID,
@@ -1951,6 +2029,43 @@ extension AgentSimulationSession {
             try candidate.reviewContractDueBoundaries()
         case .reviewContractParticipantContinuity:
             try candidate.reviewContractParticipantContinuity()
+        case let .setMarketEnabled(enabled, configuration):
+            try candidate.setMarketEnabled(enabled, configuration: configuration)
+        case let .registerMarketPlace(
+            operationID, marketID, position, containerLocationID,
+            containerBlockFingerprint, interactionRadius, physicalSlotCapacity
+        ):
+            try candidate.registerMarketPlace(
+                operationID: operationID, marketID: marketID,
+                position: position, containerLocationID: containerLocationID,
+                containerBlockFingerprint: containerBlockFingerprint,
+                interactionRadius: interactionRadius,
+                physicalSlotCapacity: physicalSlotCapacity
+            )
+        case let .recordMarketDepositOpportunities(observations):
+            try candidate.recordMarketDepositOpportunities(observations)
+        case let .recordVerifiedMarketDeposit(outcome):
+            try candidate.applyVerifiedMarketDeposit(outcome)
+        case let .createMarketListing(operationID, proposal):
+            try candidate.createMarketListing(
+                operationID: operationID, proposal: proposal
+            )
+        case let .proposeMarketPurchase(operationID, proposal):
+            try candidate.proposeMarketPurchase(
+                operationID: operationID, proposal: proposal
+            )
+        case let .decideMarketProposal(operationID, decision):
+            try candidate.decideMarketProposal(
+                operationID: operationID, decision: decision
+            )
+        case let .closeMarketListing(operationID, listingID, reason):
+            try candidate.closeMarketListing(
+                operationID: operationID, listingID: listingID, reason: reason
+            )
+        case let .recordVerifiedMarketTrade(outcome):
+            try candidate.completeVerifiedMarketTrade(outcome)
+        case let .recordVerifiedMarketWithdrawal(outcome):
+            try candidate.completeVerifiedMarketWithdrawal(outcome)
         }
         self = candidate
         let causal = causalLedgerSnapshot().summary

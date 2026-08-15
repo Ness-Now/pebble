@@ -79,7 +79,7 @@ extension AgentSimulationSession {
                     requiredCapability = .harvest
                 case .construction, .production:
                     requiredCapability = .build
-                case .materialHandling, .barter, .contract:
+                case .materialHandling, .barter, .contract, .market:
                     requiredCapability = .deliver
                 case .dependentCare, .teaching:
                     requiredCapability = .cooperateAsWorker

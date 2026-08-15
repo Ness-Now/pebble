@@ -98,6 +98,7 @@ public enum AgentSessionError: Error, Equatable {
     case production(AgentProductionError)
     case barter(AgentBarterError)
     case contract(AgentContractError)
+    case market(AgentMarketError)
 }
 
 public struct AgentSessionConfiguration: Codable {

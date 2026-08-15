@@ -117,6 +117,9 @@ final class PebbleAgentController {
     var contractFulfillmentFaultInjected = false
     var contractConsiderationPublicationFaultInjected = false
     var contractFulfillmentPublicationFaultInjected = false
+    var marketMidSettlementFaultInjected = false
+    var marketPostMutationFaultInjected = false
+    var marketDisposableWorldFixture: PebbleAgentMarketDisposableWorldFixture?
     var candidateAgricultureNavigationFailureProofInjected = false
     var ecologicalObservationProofFixture: PebbleAgentEcologicalObservationProofFixture?
     var agricultureProofFixture: PebbleAgentAgricultureProofFixture?
@@ -227,6 +230,9 @@ final class PebbleAgentController {
     }
     var contractFeatureEnabled: Bool {
         environment["PEBBLELAB_APP_AGENTS_CONTRACTS"] == "1"
+    }
+    var marketFeatureEnabled: Bool {
+        environment["PEBBLELAB_APP_AGENTS_MARKETS"] == "1"
     }
     var safeBootstrapLateFailureProofEnabled: Bool {
         environment["PEBBLELAB_DISPOSABLE_SAFE_BOOTSTRAP_LATE_FAILURE_PROOF"] == "1"
@@ -342,5 +348,7 @@ final class PebbleAgentController {
         case barterPostMutationBoundary(String)
         case contractBoundary(String)
         case contractPostMutationBoundary(String)
+        case marketBoundary(String)
+        case marketPostMutationBoundary(String)
     }
 }

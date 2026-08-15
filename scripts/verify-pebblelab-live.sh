@@ -10,7 +10,7 @@ WORLD_SEED="12345"
 
 usage() {
     cat <<EOF
-Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--harvest|--construction|--embodiment|--build|--social|--physical|--material|--rights|--production|--barter|--contracts|--cooperation|--persistence|--population|--multiscale|--ecology|--mortality|--reproduction|--kinship|--households|--care|--skills|--teaching|--integrated-teaching|--ecological-observation|--agriculture|--wild-subsistence|--physical-food-survival|--livestock|--work-professions|--work-demand-refresh|--gate-b-passive]
+Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--harvest|--construction|--embodiment|--build|--social|--physical|--material|--rights|--production|--barter|--contracts|--markets|--cooperation|--persistence|--population|--multiscale|--ecology|--mortality|--reproduction|--kinship|--households|--care|--skills|--teaching|--integrated-teaching|--ecological-observation|--agriculture|--wild-subsistence|--physical-food-survival|--livestock|--work-professions|--work-demand-refresh|--gate-b-passive]
        scripts/verify-pebblelab-live.sh --help
 
 Launches Pebble for a reproducible, operator-verified Phase J live check. The app is
@@ -42,6 +42,7 @@ Options:
   --production Run CIV-34 real recipes, workshop, custody, restart, and produced-tool use.
   --barter Run CIV-35 local consent, two-sided custody, rollback, restart, and tool use.
   --contracts Run CIV-36 open debt, three-process restart, fulfillment rollback, and exact-once proof.
+  --markets Run CIV-37 physical deposits, local price discovery, rollback, restart, and withdrawal.
   --cooperation Run shared construction-material task, delivery, and shelter completion.
   --persistence Run checkpoint, real process restart, causal replay, and uninterrupted control.
   --population Run bounded migrant admission, mid-route restart, arrival, and uninterrupted control.
@@ -137,6 +138,7 @@ for option in "$@"; do
         --production) MODE="production"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --barter) MODE="barter"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --contracts) MODE="contracts"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
+        --markets) MODE="markets"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --cooperation) MODE="cooperation"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --persistence) MODE="persistence"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --population) MODE="population"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
@@ -190,6 +192,7 @@ WORK_PROFESSIONS_GATE=0
 PRODUCTION_GATE=0
 BARTER_GATE=0
 CONTRACT_GATE=0
+MARKET_GATE=0
 AUTONOMOUS_CIVILIZATION_GATE=0
 INTEGRATED_TEACHING_PROOF=0
 PASSIVE_OBSERVER_INPUT_PROOF=0
@@ -199,7 +202,21 @@ GATE_B3_ACCEPTANCE=0
 GATE_B3_COGNITIVE_HZ=4
 GATE_B3_HORIZON=0
 GATE_B3_RANDOM_TICK_SPEED=3
-if [ "$MODE" = "contracts" ]; then
+if [ "$MODE" = "markets" ]; then
+    WORLD_SEED="46"
+    MATERIAL_GATE=1
+    PERSISTENCE_GATE=1
+    PRODUCTION_GATE=1
+    MARKET_GATE=1
+    AUTONOMOUS_CIVILIZATION_GATE=1
+    WORLD_NAME="PebbleLab-Disposable-Markets-46"
+    CAPTURE_NAME="market-final-cleanup.png"
+    MARKET_PHASE1_COMMANDS='/gamerule randomTickSpeed 0;/gamerule doMobSpawning false;/gamerule doDaylightCycle false;/gamerule doWeatherCycle false;/time set 1000;/weather clear;/tp 14 68 -18|/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab market setup;/lab market status;/lab overlay compact|/lab step;/lab market status|/lab step;/lab market status;/lab overlay compact|/lab step;/lab market status;/lab market proof;/lab checkpoint save market-open-v34;/lab checkpoint status;/lab causality tail 20;/lab status'
+    MARKET_PHASE2_COMMANDS='/tp 14 68 -18;/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab checkpoint load market-open-v34;/lab market status;/lab market proof;/lab overlay compact|/lab step;/lab market status|/lab step;/lab market status;/lab overlay compact|/lab step;/lab market status;/lab overlay compact|/lab step;/lab market status;/lab market proof;/lab checkpoint save market-traded-v34;/lab checkpoint status;/lab causality tail 20;/lab status'
+    MARKET_PHASE3_COMMANDS='/tp 14 68 -18;/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab checkpoint load market-traded-v34;/lab market status;/lab market proof;/lab overlay compact|/lab step;/lab market status|/lab step;/lab market status|/lab step;/lab market status|/lab step;/lab market status|/lab step;/lab market status;/lab overlay compact|/lab step;/lab market status|/lab step;/lab market status|/lab step;/lab market status;/lab overlay compact|/lab step;/lab step;/lab step;/lab step;/lab step;/lab market status;/lab market proof;/lab checkpoint save market-final-v34;/lab checkpoint status;/lab causality tail 20;/lab status'
+    MARKET_PHASE4_COMMANDS='/tp 14 68 -18;/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab checkpoint load market-final-v34;/lab market status;/lab market proof;/lab overlay compact|/lab step;/lab market status;/lab market proof;/lab market cleanup;/lab status'
+    LAB_COMMANDS="$MARKET_PHASE1_COMMANDS"
+elif [ "$MODE" = "contracts" ]; then
     WORLD_SEED="46"
     MATERIAL_GATE=1
     PERSISTENCE_GATE=1
@@ -943,6 +960,7 @@ print_plan() {
     printf '  PEBBLELAB_APP_AGENTS_PRODUCTION=%s\n' "$PRODUCTION_GATE"
     printf '  PEBBLELAB_APP_AGENTS_BARTER=%s\n' "$BARTER_GATE"
     printf '  PEBBLELAB_APP_AGENTS_CONTRACTS=%s\n' "$CONTRACT_GATE"
+    printf '  PEBBLELAB_APP_AGENTS_MARKETS=%s\n' "$MARKET_GATE"
     printf '  PEBBLELAB_APP_AGENTS_AUTONOMOUS_CIVILIZATION=%s\n' "$AUTONOMOUS_CIVILIZATION_GATE"
     printf '  PEBBLELAB_INTEGRATED_TEACHING_PROOF=%s\n' "$INTEGRATED_TEACHING_PROOF"
     printf '  PEBBLELAB_PASSIVE_OBSERVER_INPUT_PROOF=%s\n' "$PASSIVE_OBSERVER_INPUT_PROOF"
@@ -953,7 +971,11 @@ print_plan() {
     printf '  PEBBLELAB_GATE_B3_HORIZON=%s\n' "$GATE_B3_HORIZON"
     printf '  PEBBLELAB_DISPOSABLE_WORLD_PROOF=1\n'
     printf '  PEBBLE_CMD=%s\n' "$LAB_COMMANDS"
-    if [ "$MODE" = "contracts" ]; then
+    if [ "$MODE" = "markets" ]; then
+        printf '  Restart 2 PEBBLE_CMD=%s\n' "$MARKET_PHASE2_COMMANDS"
+        printf '  Restart 3 PEBBLE_CMD=%s\n' "$MARKET_PHASE3_COMMANDS"
+        printf '  Restart 4 PEBBLE_CMD=%s\n' "$MARKET_PHASE4_COMMANDS"
+    elif [ "$MODE" = "contracts" ]; then
         printf '  Capacity proof PEBBLE_CMD=%s\n' "$CONTRACT_CAPACITY_COMMANDS"
         printf '  PEBBLE_SHOT=-|%s/contract-before-promise.png|%s/contract-proposal.png|%s/contract-consideration-publication-rollback.png|%s/contract-open-debt.png\n' \
             "$(dirname "$capture_path")" "$(dirname "$capture_path")" \
@@ -1022,7 +1044,12 @@ print_plan() {
     IFS=$old_ifs
     printf '\nOperator checks:\n'
     printf '  1. Wait for automatic disposable-world creation, commands, capture, and normal termination.\n'
-    if [ "$MODE" = "contracts" ]; then
+    if [ "$MODE" = "markets" ]; then
+        printf '  2. Confirm normal deposit/listing behavior and an open physical lot at the first checkpoint.\n'
+        printf '  3. Confirm fresh restore, two exact rollback faults, immediate retry, and one completed local price row.\n'
+        printf '  4. Confirm restored history informs a later quote/trade and the unsold lot is physically withdrawn.\n'
+        printf '  5. Confirm a final fresh restore does not repeat settlement or withdrawal, then restores the empty stall cell.\n'
+    elif [ "$MODE" = "contracts" ]; then
         printf '  2. Confirm saturated production-need capacity refuses before consideration mutation.\n'
         printf '  3. Confirm ordinary consideration publication failure rolls back before the retry opens debt.\n'
         printf '  4. Confirm process two restores open debt, normally produces bread, rolls back explicit and ordinary fulfillment failures, and retries.\n'
@@ -1160,13 +1187,13 @@ print_plan() {
         && [ "$MODE" != "mortality" ] && [ "$MODE" != "reproduction" ] \
         && [ "$MODE" != "kinship" ] && [ "$MODE" != "households" ] \
         && [ "$MODE" != "care" ] && [ "$MODE" != "skills" ]; then
-        if [ "$MODE" = "material" ] || [ "$MODE" = "rights" ] || [ "$MODE" = "production" ] || [ "$MODE" = "barter" ] || [ "$MODE" = "contracts" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "integrated-teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ] || [ "$MODE" = "work-demand-refresh" ] || [ "$MODE" = "gate-b-passive" ]; then
+        if [ "$MODE" = "material" ] || [ "$MODE" = "rights" ] || [ "$MODE" = "production" ] || [ "$MODE" = "barter" ] || [ "$MODE" = "contracts" ] || [ "$MODE" = "markets" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "integrated-teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ] || [ "$MODE" = "work-demand-refresh" ] || [ "$MODE" = "gate-b-passive" ]; then
             printf '  5. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
         else
             printf '  4. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
         fi
     fi
-    if [ "$MODE" = "material" ] || [ "$MODE" = "rights" ] || [ "$MODE" = "production" ] || [ "$MODE" = "barter" ] || [ "$MODE" = "contracts" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "integrated-teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ] || [ "$MODE" = "work-demand-refresh" ] || [ "$MODE" = "gate-b-passive" ]; then
+    if [ "$MODE" = "material" ] || [ "$MODE" = "rights" ] || [ "$MODE" = "production" ] || [ "$MODE" = "barter" ] || [ "$MODE" = "contracts" ] || [ "$MODE" = "markets" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "integrated-teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ] || [ "$MODE" = "work-demand-refresh" ] || [ "$MODE" = "gate-b-passive" ]; then
         printf '  6. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
     else
         printf '  5. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
@@ -1206,7 +1233,20 @@ TRACE_PATH="$SESSION_ROOT/pebble-live.log"
 DB_PATH="$SESSION_HOME/Library/Application Support/Pebble/pebble.db"
 [ ! -e "$DB_PATH" ] || fail "fresh disposable database already exists: $DB_PATH"
 /bin/mkdir -p "$SESSION_HOME" "$CAPTURE_DIR"
-if [ "$MODE" = "contracts" ]; then
+if [ "$MODE" = "markets" ]; then
+    CAPTURE_BEFORE_PATH="$CAPTURE_DIR/market-established.png"
+    CAPTURE_DEPOSITED_PATH="$CAPTURE_DIR/market-deposited.png"
+    CAPTURE_OPEN_PATH="$CAPTURE_DIR/market-open-listing.png"
+    CAPTURE_RESTORED_PATH="$CAPTURE_DIR/market-restored-open.png"
+    CAPTURE_MID_FAULT_PATH="$CAPTURE_DIR/market-mid-settlement-rollback.png"
+    CAPTURE_POST_FAULT_PATH="$CAPTURE_DIR/market-post-mutation-rollback.png"
+    CAPTURE_COMPLETED_PATH="$CAPTURE_DIR/market-completed-trade.png"
+    CAPTURE_HISTORY_PATH="$CAPTURE_DIR/market-restored-history.png"
+    CAPTURE_LATER_PATH="$CAPTURE_DIR/market-history-informed-trade.png"
+    CAPTURE_WITHDRAWAL_PATH="$CAPTURE_DIR/market-unsold-withdrawal.png"
+    CAPTURE_FINAL_RESTORE_PATH="$CAPTURE_DIR/market-final-restored.png"
+    SHOT_SPEC="-|$CAPTURE_BEFORE_PATH|$CAPTURE_DEPOSITED_PATH|$CAPTURE_OPEN_PATH"
+elif [ "$MODE" = "contracts" ]; then
     CAPTURE_CAPACITY_PATH="$CAPTURE_DIR/contract-capacity-refusal.png"
     CAPTURE_BEFORE_PATH="$CAPTURE_DIR/contract-before-promise.png"
     CAPTURE_PROPOSAL_PATH="$CAPTURE_DIR/contract-proposal.png"
@@ -1295,6 +1335,180 @@ printf '\nLaunching Pebble now. Personal Pebble data is hidden by CFFIXED_USER_H
 
 if /usr/bin/pgrep -x Pebble >/dev/null 2>&1; then
     fail "a Pebble process is already running; refusing an ambiguous live baseline"
+fi
+
+if [ "$MODE" = "markets" ]; then
+    cd "$ROOT_DIR"
+    swift build -c release --product Pebble
+    PEBBLE_BINARY="$ROOT_DIR/.build/release/Pebble"
+    [ -x "$PEBBLE_BINARY" ] \
+        || fail "Release Pebble binary missing: $PEBBLE_BINARY"
+
+    PHASE1_TRACE="$SESSION_ROOT/market-phase1.log"
+    PHASE2_TRACE="$SESSION_ROOT/market-phase2.log"
+    PHASE3_TRACE="$SESSION_ROOT/market-phase3.log"
+    PHASE4_TRACE="$SESSION_ROOT/market-phase4.log"
+
+    run_market_app() {
+        run_home=$1
+        run_trace=$2
+        run_commands=$3
+        create_world=$4
+        command_world_tick=$5
+        run_shots=$6
+        mid_fault=$7
+        post_fault=$8
+        if [ "$create_world" -eq 1 ]; then
+            market_world_args="PEBBLE_NEWWORLD=$WORLD_SEED"
+        else
+            market_world_args=""
+        fi
+        env \
+            CFFIXED_USER_HOME="$run_home" \
+            PEBBLE_AUTOLOAD=1 \
+            ${market_world_args:+$market_world_args} \
+            PEBBLE_NEWWORLD_NAME="$WORLD_NAME" \
+            PEBBLELAB_APP_AGENTS=1 \
+            PEBBLELAB_APP_AGENTS_MOVE=1 \
+            PEBBLELAB_APP_PROBES=1 \
+            PEBBLELAB_DEBUG_ENTITIES=1 \
+            PEBBLELAB_APP_AGENTS_OVERLAY=1 \
+            PEBBLELAB_APP_AGENTS_TRACE=1 \
+            PEBBLELAB_APP_AGENTS_TRACE_EVERY=1 \
+            PEBBLELAB_APP_AGENTS_INTERACT=1 \
+            PEBBLELAB_APP_AGENTS_MATERIAL=1 \
+            PEBBLELAB_APP_AGENTS_PERSISTENCE=1 \
+            PEBBLELAB_APP_AGENTS_PRODUCTION=1 \
+            PEBBLELAB_APP_AGENTS_MARKETS=1 \
+            PEBBLELAB_APP_AGENTS_AUTONOMOUS_CIVILIZATION=1 \
+            PEBBLELAB_DISPOSABLE_MARKET_MID_FAULT="$mid_fault" \
+            PEBBLELAB_DISPOSABLE_MARKET_POST_MUTATION_FAULT="$post_fault" \
+            PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
+            PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
+            PEBBLE_CMD="$run_commands" \
+            PEBBLE_SHOT="$run_shots" \
+            "$PEBBLE_BINARY" 2>&1 | /usr/bin/tee "$run_trace"
+        if /usr/bin/pgrep -x Pebble >/dev/null 2>&1; then
+            fail "Pebble process remained after market phase: $run_trace"
+        fi
+    }
+
+    printf '\nMarket phase 1: physical place, bounded capacity, normal deposit/listing, and open checkpoint.\n'
+    PHASE1_SHOTS="-|$CAPTURE_BEFORE_PATH|-|$CAPTURE_DEPOSITED_PATH|$CAPTURE_OPEN_PATH"
+    run_market_app "$SESSION_HOME" "$PHASE1_TRACE" \
+        "$MARKET_PHASE1_COMMANDS" 1 100 "$PHASE1_SHOTS" 0 0
+    TRACE_PATH="$PHASE1_TRACE"
+    [ -s "$CAPTURE_BEFORE_PATH" ] || fail "market established capture missing"
+    [ -s "$CAPTURE_DEPOSITED_PATH" ] || fail "market deposited capture missing"
+    [ -s "$CAPTURE_OPEN_PATH" ] || fail "market open-listing capture missing"
+    require_trace 'market setup market=central .*marketCapacityPhysical=bounded capacityRefusal=destinationFull marketProofFixtureDecisionAuthority=0 .*manualProductiveMarketCommandsAfterBootstrap=0' 'physical market bootstrap and real full-container refusal'
+    require_trace 'market normal deposit discovery .*normalMarketDiscovery=1 .*globalInventoryScan=0 .*marketProofFixtureDecisionAuthority=0' 'bounded normal local market discovery'
+    require_trace 'market deposit completed .*normalDepositDecision=1 depositPhysicalMutation=1 .*owner=agent_[0-9]+ .*publication=verified duplicateDeposits=0' 'normal exact physical deposit retaining seller ownership'
+    require_trace 'market normal listing decision .*normalListingDecision=1 firstProposedTerms=stone_pickaxe:1/bread:3 .*historyUsed=false .*marketProofFixtureDecisionAuthority=0' 'initial local ask through normal cognition'
+    require_trace 'market proof schema=34 observerSchema=11 openCheckpointSafe=1 ' 'open listing restart readiness'
+    require_trace 'checkpoint saved name=market-open-v34 .*restartSafe=1 ' 'open physical market checkpoint'
+    require_trace 'summary .*runtimeErrors=0 .*probesRemoved=3 ' 'clean first process termination'
+    reject_trace 'market normal buyer decision|market settlement completed|market unsold withdrawal completed|CANDIDATE_PHYSICAL_HARD_FAILURE' 'premature market decision, settlement, withdrawal, or hard failure'
+
+    PERSISTENCE_ROOT="$SESSION_HOME/Library/Application Support/Pebble/PebbleLabAgents"
+    OPEN_SESSION=$(/usr/bin/find "$PERSISTENCE_ROOT" -type f -path '*/checkpoints/market-open-v34/session.json' -print -quit)
+    [ -n "$OPEN_SESSION" ] || fail "market-open-v34 session.json missing"
+    /usr/bin/grep -q '"schemaVersion":34' "$OPEN_SESSION" \
+        || fail "open market checkpoint is not schema 34"
+    OPEN_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint saved name=market-open-v34 .* digest=\([0-9a-f]*\) storageDigest=.*/\1/p' "$PHASE1_TRACE" | /usr/bin/tail -1)
+    [ -n "$OPEN_DIGEST" ] || fail "open market digest extraction failed"
+    persisted_world_tick=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT json_extract(json, '$.dims.\"0\".time') FROM worlds;")
+    case "$persisted_world_tick" in
+        ''|*[!0-9]*) fail "invalid persisted market World tick: $persisted_world_tick" ;;
+    esac
+    continuation_command_tick=$((persisted_world_tick + 100))
+
+    printf '\nMarket phase 2: fresh open restore, two real post-mutation rollbacks, and exact retry.\n'
+    PHASE2_SHOTS="$CAPTURE_RESTORED_PATH|-|$CAPTURE_MID_FAULT_PATH|$CAPTURE_POST_FAULT_PATH|$CAPTURE_COMPLETED_PATH"
+    run_market_app "$SESSION_HOME" "$PHASE2_TRACE" \
+        "$MARKET_PHASE2_COMMANDS" 0 "$continuation_command_tick" \
+        "$PHASE2_SHOTS" 1 1
+    TRACE_PATH="$PHASE2_TRACE"
+    [ -s "$CAPTURE_RESTORED_PATH" ] || fail "market restored-open capture missing"
+    [ -s "$CAPTURE_MID_FAULT_PATH" ] || fail "market mid-fault capture missing"
+    [ -s "$CAPTURE_POST_FAULT_PATH" ] || fail "market post-fault capture missing"
+    [ -s "$CAPTURE_COMPLETED_PATH" ] || fail "market completed capture missing"
+    require_trace "checkpoint loaded name=market-open-v34 .*digest=$OPEN_DIGEST .*restartSafe=1 .*custodyDuplicates=0 physicalBoundary=acquired" 'fresh process restores exact open market custody'
+    require_trace_at_least 'market normal buyer decision .*normalBuyerDecision=1 rejectedAsk=true revisedTerms=stone_pickaxe:1/bread:2 .*localPresence=1' 3 'normal counteroffer reconstructed for both failures and retry'
+    require_trace_at_least 'market true mid-settlement mutation .*candidatePhysicalMutation=1 publication=0' 3 'both fault paths and retry cross a real first leg'
+    require_trace_count 'CANDIDATE_PHYSICAL_ROLLBACK operation=advanceOneTick .*marketPostMutationBoundary' 2 'two exact candidate physical rollbacks'
+    require_trace_at_least 'CANDIDATE_PHYSICAL_ROLLBACK .*publishedSession=unchanged .*publishedRecorder=unchanged' 2 'session and recorder remain unpublished on both errors'
+    require_trace 'market settlement completed .*completedTerms=stone_pickaxe:1/bread:2 .*localPriceHistoryCreated=1 duplicateMarketTradeReceipts=0 duplicateReservations=0 .*publication=verified' 'retry completes exactly one physical trade and price row'
+    require_trace 'market proof schema=34 observerSchema=11 .*priceRows=1 trades=1 withdrawals=0 .*candidateMidFaultInjected=1 candidatePostMutationFaultInjected=1 manualProductiveMarketCommandsAfterBootstrap=0' 'bounded proof after exact retry'
+    require_trace 'checkpoint saved name=market-traded-v34 .*restartSafe=1 ' 'completed market checkpoint'
+    require_trace 'summary .*runtimeErrors=2 .*probesRemoved=3 ' 'two expected runtime failures and clean second termination'
+    reject_trace 'CANDIDATE_PHYSICAL_HARD_FAILURE' 'market compensation hard failure'
+
+    TRADED_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint saved name=market-traded-v34 .* digest=\([0-9a-f]*\) storageDigest=.*/\1/p' "$PHASE2_TRACE" | /usr/bin/tail -1)
+    [ -n "$TRADED_DIGEST" ] || fail "traded market digest extraction failed"
+    persisted_world_tick=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT json_extract(json, '$.dims.\"0\".time') FROM worlds;")
+    continuation_command_tick=$((persisted_world_tick + 100))
+
+    printf '\nMarket phase 3: restored price memory, later comparable trade, expiry, and real withdrawal.\n'
+    PHASE3_SHOTS="$CAPTURE_HISTORY_PATH|-|-|-|-|$CAPTURE_LATER_PATH|-|-|-|$CAPTURE_WITHDRAWAL_PATH"
+    run_market_app "$SESSION_HOME" "$PHASE3_TRACE" \
+        "$MARKET_PHASE3_COMMANDS" 0 "$continuation_command_tick" \
+        "$PHASE3_SHOTS" 0 0
+    TRACE_PATH="$PHASE3_TRACE"
+    [ -s "$CAPTURE_HISTORY_PATH" ] || fail "market restored-history capture missing"
+    [ -s "$CAPTURE_LATER_PATH" ] || fail "market later-trade capture missing"
+    [ -s "$CAPTURE_WITHDRAWAL_PATH" ] || fail "market withdrawal capture missing"
+    require_trace "checkpoint loaded name=market-traded-v34 .*digest=$TRADED_DIGEST .*restartSafe=1 .*custodyDuplicates=0 physicalBoundary=acquired" 'fresh process restores completed trade and price history'
+    require_trace 'market normal listing decision .*firstProposedTerms=stone_pickaxe:1/bread:2 .*historyUsed=true laterDecisionUsedPriceHistory=1 ' 'restored local price evidence informs later comparable ask'
+    require_trace 'market normal buyer decision .*normalBuyerDecision=1 rejectedAsk=false revisedTerms=stone_pickaxe:1/bread:2 ' 'later buyer selects history-informed terms for current need'
+    require_trace 'market status .*trades=2 withdrawals=1 priceHistory=stone_pickaxe/bread=2/1@' 'second trade and unsold withdrawal retained'
+    require_trace 'market listing expired .*reservationReleased=1 physicalMutation=0' 'unsold listing expiry moves no matter'
+    require_trace 'market unsold withdrawal completed .*publication=verified' 'unsold exact lot physically returns to seller'
+    require_trace 'market proof schema=34 observerSchema=11 .*priceRows=2 trades=2 withdrawals=1 ' 'final bounded market truth'
+    require_trace 'checkpoint saved name=market-final-v34 .*restartSafe=1 ' 'final market checkpoint'
+    require_trace 'summary .*runtimeErrors=0 .*probesRemoved=3 ' 'clean third process termination'
+    reject_trace 'CANDIDATE_PHYSICAL_HARD_FAILURE|CANDIDATE_PHYSICAL_ROLLBACK' 'unexpected third-process market rollback'
+
+    FINAL_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint saved name=market-final-v34 .* digest=\([0-9a-f]*\) storageDigest=.*/\1/p' "$PHASE3_TRACE" | /usr/bin/tail -1)
+    [ -n "$FINAL_DIGEST" ] || fail "final market digest extraction failed"
+    FINAL_SESSION=$(/usr/bin/find "$PERSISTENCE_ROOT" -type f -path '*/checkpoints/market-final-v34/session.json' -print -quit)
+    [ -n "$FINAL_SESSION" ] && /usr/bin/grep -q '"schemaVersion":34' "$FINAL_SESSION" \
+        || fail "final market checkpoint is not schema 34"
+    persisted_world_tick=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT json_extract(json, '$.dims.\"0\".time') FROM worlds;")
+    continuation_command_tick=$((persisted_world_tick + 100))
+
+    printf '\nMarket phase 4: final fresh restore, exact-once verification, and empty-stall cleanup.\n'
+    PHASE4_SHOTS="$CAPTURE_FINAL_RESTORE_PATH|$CAPTURE_PATH"
+    run_market_app "$SESSION_HOME" "$PHASE4_TRACE" \
+        "$MARKET_PHASE4_COMMANDS" 0 "$continuation_command_tick" \
+        "$PHASE4_SHOTS" 0 0
+    TRACE_PATH="$PHASE4_TRACE"
+    [ -s "$CAPTURE_FINAL_RESTORE_PATH" ] || fail "market final-restore capture missing"
+    [ -s "$CAPTURE_PATH" ] || fail "market cleanup capture missing"
+    require_trace "checkpoint loaded name=market-final-v34 .*digest=$FINAL_DIGEST .*restartSafe=1 .*custodyDuplicates=0 physicalBoundary=acquired" 'fresh process restores final price and withdrawal truth'
+    require_trace_at_least 'market status .*trades=2 withdrawals=1 priceHistory=stone_pickaxe/bread=2/1@' 2 'final restart remains exact across another product tick'
+    require_trace 'Restored disposable market air cell after restart; completed economic custody was preserved.' 'empty physical stall cleanup'
+    require_trace 'summary .*runtimeErrors=0 .*probesRemoved=3 ' 'clean fourth process termination'
+    reject_trace 'market settlement completed|market unsold withdrawal completed|CANDIDATE_PHYSICAL_ROLLBACK|CANDIDATE_PHYSICAL_HARD_FAILURE' 'reexecuted final market outcome or rollback'
+
+    world_facts=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT count(*), json_extract(json, '$.seed'), json_extract(json, '$.name'), json_extract(json, '$.dims.\"0\".dayTime'), json_extract(json, '$.dims.\"0\".raining'), json_extract(json, '$.dims.\"0\".thundering'), json_extract(json, '$.gameRules.doMobSpawning'), json_extract(json, '$.gameRules.doDaylightCycle'), json_extract(json, '$.gameRules.doWeatherCycle') FROM worlds;")
+    expected_world_facts="1|$WORLD_SEED|$WORLD_NAME|1000|0|0|0|0|0"
+    [ "$world_facts" = "$expected_world_facts" ] \
+        || fail "unexpected market disposable World facts: $world_facts"
+    if /usr/bin/pgrep -x Pebble >/dev/null 2>&1 \
+        || /usr/bin/pgrep -x swift-run >/dev/null 2>&1 \
+        || /usr/bin/pgrep -x pebsmoke >/dev/null 2>&1; then
+        fail "residual PebbleLab process after market proof"
+    fi
+    printf '\nPASS: physical market custody, two exact settlement rollbacks, restart, local price discovery, later quote, withdrawal, and cleanup verified.\n'
+    printf 'Phase 1 trace: %s\n' "$PHASE1_TRACE"
+    printf 'Phase 2 trace: %s\n' "$PHASE2_TRACE"
+    printf 'Phase 3 trace: %s\n' "$PHASE3_TRACE"
+    printf 'Phase 4 trace: %s\n' "$PHASE4_TRACE"
+    printf 'Checkpoint schema: 34\n'
+    printf 'Observer schema: 11\n'
+    printf 'Retained isolated session: %s\n' "$SESSION_ROOT"
+    exit 0
 fi
 
 if [ "$MODE" = "contracts" ]; then

@@ -258,6 +258,16 @@ public enum AgentCausalEventKind: String, Codable, CaseIterable, Sendable {
     case contractOverdue
     case contractParticipantDeathBlocked
     case contractFulfilled
+    case marketsInitialized
+    case marketRegistered
+    case marketDepositObserved
+    case marketDepositCompleted
+    case marketListingCreated
+    case marketProposalCreated
+    case marketProposalDecided
+    case marketListingClosed
+    case marketTradeCompleted
+    case marketWithdrawalCompleted
 }
 
 public enum AgentCausalOrigin: String, Codable, Sendable {
@@ -294,6 +304,7 @@ public enum AgentCausalOrigin: String, Codable, Sendable {
     case productionTransition
     case barterTransition
     case contractTransition
+    case marketTransition
 }
 
 public enum AgentCausalPayload: Codable, Equatable, Sendable {
@@ -1073,7 +1084,17 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
              (.contractConsiderationVerified, .operation),
              (.contractOverdue, .operation),
              (.contractParticipantDeathBlocked, .operation),
-             (.contractFulfilled, .operation):
+             (.contractFulfilled, .operation),
+             (.marketsInitialized, .feature),
+             (.marketRegistered, .operation),
+             (.marketDepositObserved, .operation),
+             (.marketDepositCompleted, .operation),
+             (.marketListingCreated, .operation),
+             (.marketProposalCreated, .operation),
+             (.marketProposalDecided, .operation),
+             (.marketListingClosed, .operation),
+             (.marketTradeCompleted, .operation),
+             (.marketWithdrawalCompleted, .operation):
             matches = true
         default:
             matches = false

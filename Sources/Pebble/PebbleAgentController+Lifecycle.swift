@@ -551,6 +551,9 @@ extension PebbleAgentController {
         let followStatus = followMode.statusText
         let wasDemo = demoActive
         let cleanupWorld = activeWorld ?? fallbackWorld
+        // Durable market custody intentionally survives process termination.
+        // The disposable live campaign removes the now-empty stall explicitly
+        // only after its final fresh-process verification.
         if let cleanupWorld,
            !cleanupPassiveSocietyFixture(world: cleanupWorld) {
             runtimeErrorCount += 1
@@ -792,6 +795,9 @@ extension PebbleAgentController {
         workDemandRefreshAudit = PebbleAgentWorkDemandRefreshAudit()
         rightsProofFixture = nil
         contractDisposableWorldFixture = nil
+        marketDisposableWorldFixture = nil
+        marketMidSettlementFaultInjected = false
+        marketPostMutationFaultInjected = false
         contractFulfillmentFaultInjected = false
         autoInteractionEnabled = false
         lastAutoInteractionReason = "none"

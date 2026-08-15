@@ -1355,6 +1355,9 @@ extension PebbleAgentController {
                 production.records.map(\.workshopPosition)
             )
         }
+        if let markets = state.marketState {
+            positions.formUnion(markets.markets.map(\.position))
+        }
         guard positions.count <= AgentCheckpointLimits.maximumBoundWorldCells else {
             throw AgentCheckpointError.invalidBound("World binding cells")
         }
@@ -1495,6 +1498,16 @@ extension PebbleAgentController {
             trace("checkpoint load refused name=\(name.rawValue) reason=contractGate")
             return failure(
                 "Checkpoint load refused: contract gate or dependency is disabled."
+            )
+        }
+        if candidate.marketEnabled
+            && (!marketFeatureEnabled || !productionFeatureEnabled
+                || !featureEnabled || !persistenceFeatureEnabled
+                || !materialFeatureEnabled
+                || !autonomousCivilizationFeatureEnabled) {
+            trace("checkpoint load refused name=\(name.rawValue) reason=marketGate")
+            return failure(
+                "Checkpoint load refused: market gate or dependency is disabled."
             )
         }
         let checkpointDigest = try candidate.durableStateDigest()

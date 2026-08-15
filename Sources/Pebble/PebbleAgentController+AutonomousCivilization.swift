@@ -134,6 +134,9 @@ extension PebbleAgentController {
         try advanceAutonomousContractNegotiation(
             world: world, session: &session, recorder: &recorder
         )
+        try advanceAutonomousMarketNegotiation(
+            world: world, session: &session, recorder: &recorder
+        )
         if session.productionEnabled && productionFeatureEnabled,
            let lifetime = session.productionSnapshot().configuration?
             .opportunityLifetimeTicks {
@@ -532,6 +535,9 @@ extension PebbleAgentController {
                 )
             ))
         }
+        candidates += autonomousMarketCandidates(session: session).map(
+            markingLogicalContinuity
+        )
         candidates += autonomousContractCandidates(session: session).map(
             markingLogicalContinuity
         )

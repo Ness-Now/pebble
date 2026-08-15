@@ -41,6 +41,18 @@ struct PebbleAgentBarterPrevalidationRequest {
     let expectedCounterpartyFingerprint: String
 }
 
+/// Read-only three-endpoint market settlement plan. The quoted good leaves
+/// the market container for the buyer before consideration leaves that same
+/// buyer for the seller; all three endpoint states are simulated before leg 1.
+struct PebbleAgentMarketPrevalidationRequest {
+    let transactionID: String
+    let offered: AgentMaterialStackSnapshot
+    let consideration: AgentMaterialStackSnapshot
+    let expectedMarketFingerprint: String
+    let expectedSellerFingerprint: String
+    let expectedBuyerFingerprint: String
+}
+
 struct PebbleAgentMaterialTransactionOutcome: Equatable {
     let transactionID: String
     let status: PebbleAgentMaterialTransactionStatus
@@ -387,6 +399,83 @@ final class PebbleAgentMaterialCustodyGateway {
             sourceAfter: offerorAfter,
             destinationAfter: counterpartyAfter
         )) == true else { return .verificationFailure }
+        return .succeeded
+    }
+
+    func prevalidateMarketSettlement(
+        _ request: PebbleAgentMarketPrevalidationRequest,
+        market: PebbleAgentMaterialCustodyEndpoint,
+        seller: PebbleAgentMaterialCustodyEndpoint,
+        buyer: PebbleAgentMaterialCustodyEndpoint
+    ) -> PebbleAgentMaterialTransactionStatus {
+        guard !request.transactionID.isEmpty,
+              request.transactionID.utf8.count <= 256,
+              request.offered.count > 0, request.consideration.count > 0,
+              request.offered.identity != request.consideration.identity,
+              Set([market.locationID, seller.locationID, buyer.locationID]).count == 3,
+              market.isValid, seller.isValid, buyer.isValid,
+              let marketBefore = market.read(),
+              let sellerBefore = seller.read(),
+              let buyerBefore = buyer.read() else { return .invalidRequest }
+        let offeredPrototype: ItemStack
+        let considerationPrototype: ItemStack
+        do {
+            offeredPrototype = try bridge.itemStack(from: request.offered)
+            considerationPrototype = try bridge.itemStack(from: request.consideration)
+        } catch PebbleAgentMaterialBridgeError.unknownItemKey {
+            return .unknownMaterialIdentity
+        } catch { return .invalidRequest }
+        guard (try? fingerprint(market)) == request.expectedMarketFingerprint else {
+            return .staleSource
+        }
+        guard (try? fingerprint(seller)) == request.expectedSellerFingerprint,
+              (try? fingerprint(buyer)) == request.expectedBuyerFingerprint else {
+            return .staleDestination
+        }
+        var marketAfter = copyItemInventory(marketBefore)
+        var sellerAfter = copyItemInventory(sellerBefore)
+        var buyerAfter = copyItemInventory(buyerBefore)
+        guard itemInventoryQuantity(
+            matching: offeredPrototype, in: marketAfter
+        ) >= request.offered.count,
+              itemInventoryQuantity(
+                matching: considerationPrototype, in: buyerAfter
+              ) >= request.consideration.count else { return .insufficientQuantity }
+        guard let offered = extractItemStack(
+            matching: offeredPrototype, quantity: request.offered.count,
+            from: &marketAfter
+        ), itemInventoryInsertionCapacity(
+            for: offeredPrototype, in: buyerAfter
+        ) >= request.offered.count,
+              insertItemStack(
+                offered, quantity: request.offered.count, into: &buyerAfter
+              ) == request.offered.count,
+              offered.count == 0 else { return .destinationFull }
+        guard let consideration = extractItemStack(
+            matching: considerationPrototype,
+            quantity: request.consideration.count, from: &buyerAfter
+        ), itemInventoryInsertionCapacity(
+            for: considerationPrototype, in: sellerAfter
+        ) >= request.consideration.count,
+              insertItemStack(
+                consideration, quantity: request.consideration.count,
+                into: &sellerAfter
+              ) == request.consideration.count,
+              consideration.count == 0 else { return .destinationFull }
+        do {
+            let before = try bridge.custodySnapshot(
+                locationID: "market-settlement-before",
+                slots: marketBefore + sellerBefore + buyerBefore
+            )
+            let after = try bridge.custodySnapshot(
+                locationID: "market-settlement-after",
+                slots: marketAfter + sellerAfter + buyerAfter
+            )
+            guard bridge.normalizedTotals(in: before)
+                    == bridge.normalizedTotals(in: after) else {
+                return .verificationFailure
+            }
+        } catch { return .verificationFailure }
         return .succeeded
     }
 

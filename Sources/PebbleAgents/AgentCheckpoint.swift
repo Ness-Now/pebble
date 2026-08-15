@@ -35,6 +35,7 @@ public enum AgentCheckpointSchema {
     public static let productionVersion = 31
     public static let barterVersion = 32
     public static let contractVersion = 33
+    public static let marketVersion = 34
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -56,6 +57,7 @@ public enum AgentCheckpointSchema {
             || version == productionVersion
             || version == barterVersion
             || version == contractVersion
+            || version == marketVersion
     }
 }
 
@@ -256,9 +258,12 @@ public struct AgentSessionDurableState: Codable {
     public let productionState: AgentProductionState?
     public let barterState: AgentBarterState?
     public let contractState: AgentContractState?
+    public let marketState: AgentMarketState?
 
     init(session: AgentSimulationSession) {
-        if session.contractState != nil {
+        if session.marketState != nil {
+            schemaVersion = AgentCheckpointSchema.marketVersion
+        } else if session.contractState != nil {
             schemaVersion = AgentCheckpointSchema.contractVersion
         } else if session.barterState != nil {
             schemaVersion = AgentCheckpointSchema.barterVersion
@@ -432,6 +437,7 @@ public struct AgentSessionDurableState: Codable {
         productionState = session.productionState
         barterState = session.barterState
         contractState = session.contractState
+        marketState = session.marketState
     }
 }
 
@@ -1236,6 +1242,7 @@ extension AgentSimulationSession {
         productionState = state.productionState
         barterState = state.barterState
         contractState = state.contractState
+        marketState = state.marketState
         latestAutonomousTeachingReview = nil
         durableSchemaVersionOverride =
             state.schemaVersion == AgentCheckpointSchema.childhoodVersion
@@ -1252,6 +1259,7 @@ extension AgentSimulationSession {
         try validateProductionStateIfEnabled()
         try validateBarterStateIfEnabled()
         try validateContractStateIfEnabled()
+        try validateMarketStateIfEnabled()
         if let settlementMetricsState {
             try validateSettlementMetricsState(settlementMetricsState)
         }
@@ -1275,8 +1283,10 @@ extension AgentSimulationSession {
             == AgentCheckpointSchema.barterVersion
         let contractSchema = state.schemaVersion
             == AgentCheckpointSchema.contractVersion
+        let marketSchema = state.schemaVersion
+            == AgentCheckpointSchema.marketVersion
         let latestSchema = renewableSchema || independentReceiptSchema
-            || productionSchema || barterSchema || contractSchema
+            || productionSchema || barterSchema || contractSchema || marketSchema
         let estateSchema =
             state.schemaVersion == AgentCheckpointSchema.legacyEstateVersion
             || state.schemaVersion == AgentCheckpointSchema.estateVersion
@@ -1580,7 +1590,11 @@ extension AgentSimulationSession {
                 || (contractSchema
                     && state.productionState != nil
                     && state.materialRightsState != nil
-                    && state.contractState != nil) else {
+                    && state.contractState != nil)
+                || (marketSchema
+                    && state.productionState != nil
+                    && state.materialRightsState != nil
+                    && state.marketState != nil) else {
                 throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
             }
         }
@@ -2230,7 +2244,8 @@ extension AgentSimulationSession {
                         .independentEcologicalReceiptVersion
                 || state.schemaVersion == AgentCheckpointSchema.productionVersion
                 || state.schemaVersion == AgentCheckpointSchema.barterVersion
-                || state.schemaVersion == AgentCheckpointSchema.contractVersion {
+                || state.schemaVersion == AgentCheckpointSchema.contractVersion
+                || state.schemaVersion == AgentCheckpointSchema.marketVersion {
                 guard mortality.historicalEvidenceVersion
                         == AgentCompactedDeathSummary.currentVersion,
                       mortality.compactedDeathSummaries != nil else {

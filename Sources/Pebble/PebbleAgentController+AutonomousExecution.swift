@@ -21,7 +21,9 @@ extension PebbleAgentController {
         let occupied = session.snapshot().agents.filter { $0.id != actorIDText }.map {
             PhysicalBlockPosition(x: $0.position.x, y: $0.position.y, z: $0.position.z)
         }
-        let contractCompensationCountBefore = activity.candidate.domain == .contract
+        let protectedCompensationCountBefore =
+            activity.candidate.domain == .contract
+                || activity.candidate.domain == .market
             ? activeCandidatePhysicalTransaction?.registeredCompensationIDs.count ?? 0
             : 0
         do {
@@ -65,6 +67,11 @@ extension PebbleAgentController {
                 )
             case .contract:
                 receipt = try executeAutonomousContract(
+                    activity: activity, actor: embodiment, world: world,
+                    session: &session, recorder: &recorder
+                )
+            case .market:
+                receipt = try executeAutonomousMarket(
                     activity: activity, actor: embodiment, world: world,
                     session: &session, recorder: &recorder
                 )
@@ -131,16 +138,18 @@ extension PebbleAgentController {
                     + "manualTrigger=0"
             )
         } catch {
-            let contractCompensationCountAfter =
+            let protectedCompensationCountAfter =
                 activeCandidatePhysicalTransaction?.registeredCompensationIDs.count
-                    ?? contractCompensationCountBefore
-            if activity.candidate.domain == .contract,
-               contractCompensationCountAfter > contractCompensationCountBefore {
+                    ?? protectedCompensationCountBefore
+            if (activity.candidate.domain == .contract
+                    || activity.candidate.domain == .market),
+               protectedCompensationCountAfter > protectedCompensationCountBefore {
                 trace(
-                    "contract post-mutation error policy action="
+                    "protected post-mutation error policy domain="
+                        + "\(activity.candidate.domain.rawValue) action="
                         + "\(activity.candidate.actionKey) "
                         + "candidateCompensationDelta="
-                        + "\(contractCompensationCountAfter - contractCompensationCountBefore) "
+                        + "\(protectedCompensationCountAfter - protectedCompensationCountBefore) "
                         + "escapeCandidate=1 autonomousBlocked=0 "
                         + "error=\(String(describing: error).replacingOccurrences(of: " ", with: "_"))"
                 )
@@ -150,6 +159,9 @@ extension PebbleAgentController {
                 throw error
             }
             if case ControllerError.contractPostMutationBoundary = error {
+                throw error
+            }
+            if case ControllerError.marketPostMutationBoundary = error {
                 throw error
             }
             let outcome = AgentAutonomousActivityOutcome(

@@ -1070,7 +1070,8 @@ extension AgentSimulationSession {
                     .independentEcologicalReceiptVersion
             || schemaVersion == AgentCheckpointSchema.productionVersion
             || schemaVersion == AgentCheckpointSchema.barterVersion
-            || schemaVersion == AgentCheckpointSchema.contractVersion else {
+            || schemaVersion == AgentCheckpointSchema.contractVersion
+            || schemaVersion == AgentCheckpointSchema.marketVersion else {
             throw AgentFamilyError.invalidState("bounds, ordering or counters")
         }
         let proposalIDs = family.proposals.map(\.proposalID)

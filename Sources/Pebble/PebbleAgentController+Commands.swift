@@ -47,6 +47,10 @@ extension PebbleAgentController {
             return handleContracts(
                 Array(arguments.dropFirst()), world: world, player: player
             )
+        case "market", "markets":
+            return handleMarket(
+                Array(arguments.dropFirst()), world: world, player: player
+            )
         case "start":
             guard arguments.count == 1 else { return failure("Usage: /lab start") }
             return start(world: world, player: player)
@@ -353,11 +357,15 @@ extension PebbleAgentController {
 
     private func isManualProductiveCommand(_ arguments: [String]) -> Bool {
         guard let command = arguments.first?.lowercased() else { return false }
+        if command == "market" || command == "markets" {
+            let subcommand = arguments.dropFirst().first?.lowercased()
+            return subcommand != "status" && subcommand != "proof"
+        }
         let productiveDomains: Set<String> = [
             "interaction", "gateway", "material", "harvest", "construction",
             "economy", "natural", "ecology", "ecological-observation",
             "agriculture", "wild-subsistence", "livestock", "work-professions",
-            "forage", "care", "teaching", "build",
+            "forage", "care", "teaching", "build", "market", "markets",
         ]
         guard productiveDomains.contains(command) else { return false }
         let inspectionOrGate = arguments.dropFirst().first?.lowercased()
