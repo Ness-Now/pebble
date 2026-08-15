@@ -1046,9 +1046,10 @@ print_plan() {
     printf '  1. Wait for automatic disposable-world creation, commands, capture, and normal termination.\n'
     if [ "$MODE" = "markets" ]; then
         printf '  2. Confirm normal deposit/listing behavior and an open physical lot at the first checkpoint.\n'
-        printf '  3. Confirm fresh restore, two exact rollback faults, immediate retry, and one completed local price row.\n'
-        printf '  4. Confirm restored history informs a later quote/trade and the unsold lot is physically withdrawn.\n'
-        printf '  5. Confirm a final fresh restore does not repeat settlement or withdrawal, then restores the empty stall cell.\n'
+        printf '  3. Confirm normal seller rejection/acceptance, then a real remote buyer refusal with zero mutation/publication and exact locality restore.\n'
+        printf '  4. Confirm both exact rollback faults, immediate retry, and one completed local price row.\n'
+        printf '  5. Confirm restored history causally changes a later quote, the second trade completes, and the unsold lot is physically withdrawn.\n'
+        printf '  6. Confirm a final fresh restore does not repeat settlement or withdrawal, then restores the empty stall cell.\n'
     elif [ "$MODE" = "contracts" ]; then
         printf '  2. Confirm saturated production-need capacity refuses before consideration mutation.\n'
         printf '  3. Confirm ordinary consideration publication failure rolls back before the retry opens debt.\n'
@@ -1187,13 +1188,17 @@ print_plan() {
         && [ "$MODE" != "mortality" ] && [ "$MODE" != "reproduction" ] \
         && [ "$MODE" != "kinship" ] && [ "$MODE" != "households" ] \
         && [ "$MODE" != "care" ] && [ "$MODE" != "skills" ]; then
-        if [ "$MODE" = "material" ] || [ "$MODE" = "rights" ] || [ "$MODE" = "production" ] || [ "$MODE" = "barter" ] || [ "$MODE" = "contracts" ] || [ "$MODE" = "markets" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "integrated-teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ] || [ "$MODE" = "work-demand-refresh" ] || [ "$MODE" = "gate-b-passive" ]; then
+        if [ "$MODE" = "markets" ]; then
+            printf '  7. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
+        elif [ "$MODE" = "material" ] || [ "$MODE" = "rights" ] || [ "$MODE" = "production" ] || [ "$MODE" = "barter" ] || [ "$MODE" = "contracts" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "integrated-teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ] || [ "$MODE" = "work-demand-refresh" ] || [ "$MODE" = "gate-b-passive" ]; then
             printf '  5. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
         else
             printf '  4. Inspect the PNG manually; the hook does not provide a pixel assertion.\n'
         fi
     fi
-    if [ "$MODE" = "material" ] || [ "$MODE" = "rights" ] || [ "$MODE" = "production" ] || [ "$MODE" = "barter" ] || [ "$MODE" = "contracts" ] || [ "$MODE" = "markets" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "integrated-teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ] || [ "$MODE" = "work-demand-refresh" ] || [ "$MODE" = "gate-b-passive" ]; then
+    if [ "$MODE" = "markets" ]; then
+        printf '  8. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
+    elif [ "$MODE" = "material" ] || [ "$MODE" = "rights" ] || [ "$MODE" = "production" ] || [ "$MODE" = "barter" ] || [ "$MODE" = "contracts" ] || [ "$MODE" = "harvest" ] || [ "$MODE" = "construction" ] || [ "$MODE" = "embodiment" ] || [ "$MODE" = "teaching" ] || [ "$MODE" = "integrated-teaching" ] || [ "$MODE" = "ecological-observation" ] || [ "$MODE" = "agriculture" ] || [ "$MODE" = "wild-subsistence" ] || [ "$MODE" = "physical-food-survival" ] || [ "$MODE" = "livestock" ] || [ "$MODE" = "work-professions" ] || [ "$MODE" = "work-demand-refresh" ] || [ "$MODE" = "gate-b-passive" ]; then
         printf '  6. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
     else
         printf '  5. Keep or manually remove only this validated PebbleLab temporary session directory. The script deletes nothing.\n'
