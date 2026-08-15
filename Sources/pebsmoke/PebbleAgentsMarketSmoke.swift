@@ -62,7 +62,8 @@ private func registerMarketAsset(
     _ = try session.applyMaterialRightsOperation(.register(
         operationID: "rights:\(id.rawValue):register",
         asset: AgentMaterialAssetReference(
-            assetID: id, materialIdentity: marketIdentity(item), quantity: count
+            assetID: id, materialIdentity: observation.materialIdentity,
+            quantity: count
         ), observation: observation
     ))
     _ = try session.applyMaterialRightsOperation(.assertClaim(
@@ -83,10 +84,12 @@ private struct MarketFixture {
     let buyer: AgentID
     let laterSeller: AgentID
     let pickaxe: AgentMaterialAssetID
+    let lowBread: AgentMaterialAssetID
     let bread: AgentMaterialAssetID
     let sellerReason: AgentBarterValueReason
     let buyerReason: AgentBarterValueReason
     let pickaxeSource: AgentMaterialHolderObservation
+    let lowBreadSource: AgentMaterialHolderObservation
     let breadSource: AgentMaterialHolderObservation
 }
 
@@ -120,6 +123,7 @@ private func marketFixture(
     )
     try! session.setMaterialRightsEnabled(true)
     let pickaxe = AgentMaterialAssetID(rawValue: "asset:seller:pickaxe")!
+    let lowBread = AgentMaterialAssetID(rawValue: "asset:buyer:bread1")!
     let bread = AgentMaterialAssetID(rawValue: "asset:buyer:bread2")!
     let pickaxeSource = marketObservation(
         holder: .agent(seller), item: "stone_pickaxe", count: 1,
@@ -131,9 +135,19 @@ private func marketFixture(
         fingerprint: "buyer:bread2", receipt: "observe:buyer:bread2",
         tick: session.tick
     )
+    let lowBreadSource = marketObservation(
+        holder: .agent(buyer), item: "bread", count: 1,
+        fingerprint: "buyer:bread1+2", receipt: "observe:buyer:bread1",
+        tick: session.tick
+    )
     try! registerMarketAsset(
         pickaxe, owner: seller, item: "stone_pickaxe", count: 1,
         observation: pickaxeSource, witnesses: [seller, buyer, laterSeller],
+        session: &session
+    )
+    try! registerMarketAsset(
+        lowBread, owner: buyer, item: "bread", count: 1,
+        observation: lowBreadSource, witnesses: [seller, buyer, laterSeller],
         session: &session
     )
     try! registerMarketAsset(
@@ -155,12 +169,58 @@ private func marketFixture(
     return MarketFixture(
         session: session, marketID: AgentMarketID(rawValue: "market:central")!,
         location: "1,64,0", seller: seller, buyer: buyer,
-        laterSeller: laterSeller, pickaxe: pickaxe, bread: bread,
+        laterSeller: laterSeller, pickaxe: pickaxe, lowBread: lowBread,
+        bread: bread,
         sellerReason: AgentBarterValueReason(
             need: needs.first { $0.needID == sellerNeed }!
         ), buyerReason: AgentBarterValueReason(
             need: needs.first { $0.needID == buyerNeed }!
-        ), pickaxeSource: pickaxeSource, breadSource: breadSource
+        ), pickaxeSource: pickaxeSource, lowBreadSource: lowBreadSource,
+        breadSource: breadSource
+    )
+}
+
+private func marketLocalityEvidence(
+    marketID: AgentMarketID,
+    marketPosition: AgentPosition,
+    sellerID: AgentID,
+    sellerPosition: AgentPosition,
+    buyerID: AgentID,
+    buyerPosition: AgentPosition,
+    tick: Int,
+    marketValid: Bool = true,
+    chunksReady: Bool = true
+) -> AgentMarketCurrentLocalityEvidence {
+    func participant(
+        _ id: AgentID, _ position: AgentPosition
+    ) -> AgentMarketParticipantLocality {
+        AgentMarketParticipantLocality(
+            marketID: marketID, participantID: id,
+            participantPhysicalID: "physical:\(id.rawValue)",
+            participantPosition: position, marketPosition: marketPosition,
+            participantAlive: true, participantChunkReady: chunksReady,
+            marketChunkReady: chunksReady,
+            marketContainerValid: marketValid, observedAtTick: tick
+        )
+    }
+    return AgentMarketCurrentLocalityEvidence(
+        seller: participant(sellerID, sellerPosition),
+        buyer: participant(buyerID, buyerPosition)
+    )
+}
+
+private func initialMarketLocality(
+    _ fixture: MarketFixture,
+    session: AgentSimulationSession,
+    sellerPosition: AgentPosition = AgentPosition(x: 0, y: 64, z: 0),
+    buyerPosition: AgentPosition = AgentPosition(x: 2, y: 64, z: 0)
+) -> AgentMarketCurrentLocalityEvidence {
+    marketLocalityEvidence(
+        marketID: fixture.marketID,
+        marketPosition: AgentPosition(x: 1, y: 64, z: 0),
+        sellerID: fixture.seller, sellerPosition: sellerPosition,
+        buyerID: fixture.buyer, buyerPosition: buyerPosition,
+        tick: session.tick
     )
 }
 
@@ -220,11 +280,77 @@ private func createInitialMarketListing(
     }!
 }
 
+private struct InitialMarketNegotiationProof {
+    let rejected: AgentMarketProposal
+    let rejectionDecision: AgentMarketSellerDecision
+    let accepted: AgentMarketProposal
+    let acceptanceDecision: AgentMarketSellerDecision
+    let remoteSellerRefusedWithoutMutation: Bool
+    let unconditionalAuthorityRefusedWithoutMutation: Bool
+}
+
 private func negotiateInitialMarketTrade(
     fixture: MarketFixture,
     listing: AgentMarketListing,
     session: inout AgentSimulationSession
-) -> AgentMarketProposal {
+) -> InitialMarketNegotiationProof {
+    let lowBuyerProposal = AgentMarketBuyerProposal(
+        proposalID: AgentMarketProposalID(rawValue: "proposal:insufficient")!,
+        observation: AgentMarketBuyerObservation(
+            observationID: "buyer-observation:insufficient",
+            listingID: listing.listingID, buyerID: fixture.buyer,
+            consideration: AgentBarterLeg(
+                assetID: fixture.lowBread, holderID: fixture.buyer,
+                material: marketStack("bread", 1),
+                holderObservation: fixture.lowBreadSource
+            ), buyerReason: fixture.buyerReason, distance: 1,
+            chunksReady: true, observedAtTick: session.tick
+        ), terms: AgentMarketPriceTerms(
+            baseItemKey: "stone_pickaxe", quoteItemKey: "bread",
+            baseQuantity: 1, quoteQuantity: 1
+        ), rejectedAsk: true,
+        reason: "buyer offers one physical bread below the seller floor"
+    )
+    try! session.proposeMarketPurchase(
+        operationID: "market:proposal:insufficient", proposal: lowBuyerProposal
+    )
+    let beforeRemoteDecision = try! session.durableStateBytes()
+    let remoteSellerEvidence = initialMarketLocality(
+        fixture, session: session,
+        sellerPosition: AgentPosition(x: 10, y: 64, z: 0)
+    )
+    let remoteSellerRefused = (try? session.nextAutonomousMarketSellerDecision(
+        proposalID: lowBuyerProposal.proposalID,
+        currentLocality: remoteSellerEvidence
+    )) == nil && (try! session.durableStateBytes()) == beforeRemoteDecision
+    let rejectionDecision = try! session.nextAutonomousMarketSellerDecision(
+        proposalID: lowBuyerProposal.proposalID,
+        currentLocality: initialMarketLocality(fixture, session: session)
+    )
+    var forgedAcceptanceSession = session
+    let beforeForgedAcceptance = try! forgedAcceptanceSession.durableStateBytes()
+    let forgedAcceptance = AgentMarketSellerDecision(
+        proposalID: lowBuyerProposal.proposalID, sellerID: fixture.seller,
+        accept: true, reason: "proof fixture says accept",
+        currentLocality: initialMarketLocality(
+            fixture, session: forgedAcceptanceSession
+        )
+    )
+    let unconditionalAuthorityRefused =
+        (try? forgedAcceptanceSession.decideMarketProposal(
+            operationID: "market:decision:forged-unconditional",
+            decision: forgedAcceptance
+        )) == nil
+        && (try! forgedAcceptanceSession.durableStateBytes())
+            == beforeForgedAcceptance
+    try! session.decideMarketProposal(
+        operationID: "market:decision:insufficient",
+        decision: rejectionDecision
+    )
+    let rejected = session.marketSnapshot().proposals.first {
+        $0.proposalID == lowBuyerProposal.proposalID
+    }!
+
     let observation = AgentMarketBuyerObservation(
         observationID: "buyer-observation:initial",
         listingID: listing.listingID, buyerID: fixture.buyer,
@@ -247,17 +373,24 @@ private func negotiateInitialMarketTrade(
     try! session.proposeMarketPurchase(
         operationID: "market:proposal:initial", proposal: buyerProposal
     )
+    let acceptanceDecision = try! session.nextAutonomousMarketSellerDecision(
+        proposalID: buyerProposal.proposalID,
+        currentLocality: initialMarketLocality(fixture, session: session)
+    )
     try! session.decideMarketProposal(
         operationID: "market:decision:initial",
-        decision: AgentMarketSellerDecision(
-            proposalID: buyerProposal.proposalID, sellerID: fixture.seller,
-            accept: true,
-            reason: "active food need makes two current bread acceptable"
-        )
+        decision: acceptanceDecision
     )
-    return session.marketSnapshot().proposals.first {
+    let accepted = session.marketSnapshot().proposals.first {
         $0.proposalID == buyerProposal.proposalID
     }!
+    return InitialMarketNegotiationProof(
+        rejected: rejected, rejectionDecision: rejectionDecision,
+        accepted: accepted, acceptanceDecision: acceptanceDecision,
+        remoteSellerRefusedWithoutMutation: remoteSellerRefused,
+        unconditionalAuthorityRefusedWithoutMutation:
+            unconditionalAuthorityRefused
+    )
 }
 
 private func initialMarketTrade(
@@ -366,6 +499,11 @@ func runPebbleAgentsMarketSmoke() {
             && listing.initialTerms.quoteQuantity == 3
             && !listing.historyInformed
             && session.marketSnapshot().priceHistory.isEmpty)
+    check("listing is automatically posted only under verified local deposit authorization",
+          session.nextAutonomousMarketListingProposal() == nil
+            && listing.status == .open
+            && session.marketSnapshot().deposits.first?.depositReceiptID
+                == "physical:deposit:pickaxe")
 
     let openCheckpoint = try! session.makeCheckpoint()
     let openRestored = try! AgentSimulationSession.restoring(openCheckpoint)
@@ -405,14 +543,68 @@ func runPebbleAgentsMarketSmoke() {
           )) == nil
             && (try! session.durableStateBytes()) == buyerLocalityBefore)
 
-    let accepted = negotiateInitialMarketTrade(
+    let negotiation = negotiateInitialMarketTrade(
         fixture: fixture, listing: listing, session: &session
     )
+    let accepted = negotiation.accepted
+    check("seller moves away before decision and cannot decide remotely without mutation",
+          negotiation.remoteSellerRefusedWithoutMutation)
+    check("seller decision authority is normal cognition rather than unconditional acceptance",
+          negotiation.unconditionalAuthorityRefusedWithoutMutation
+            && !negotiation.rejectionDecision.accept
+            && negotiation.rejectionDecision.reason.contains(
+                "requested=bread:1"
+            )
+            && negotiation.rejectionDecision.reason.contains("initial=bread:3")
+            && negotiation.rejectionDecision.reason.contains("sellerReason=bread:3"))
+    check("normal seller cognition rejects an economically insufficient counteroffer",
+          negotiation.rejected.status == .rejected
+            && negotiation.rejected.proposedTerms.quoteQuantity == 1
+            && !negotiation.rejectionDecision.accept)
+    check("normal seller cognition later accepts the coherent two-bread counteroffer",
+          negotiation.acceptanceDecision.accept
+            && negotiation.acceptanceDecision.reason.contains("minimum=2"))
     check("buyer rejects initial ask and seller explicitly accepts local counteroffer",
           accepted.rejectedAsk && accepted.proposedTerms.quoteQuantity == 2
             && accepted.status == .accepted
             && session.marketSnapshot().listings.first?.revisionCount == 1
             && session.marketSnapshot().priceHistory.isEmpty)
+
+    let reservationBytes = try! session.durableStateBytes()
+    let remoteBuyerEvidence = initialMarketLocality(
+        fixture, session: session,
+        buyerPosition: AgentPosition(x: 10, y: 64, z: 0)
+    )
+    check("buyer moves away after accepted proposal and settlement is refused without mutation",
+          (try? session.prevalidateMarketSettlementLocality(
+              proposalID: accepted.proposalID,
+              currentLocality: remoteBuyerEvidence
+          )) == nil
+            && (try! session.durableStateBytes()) == reservationBytes
+            && session.marketSnapshot().totalTradeCount == 0
+            && session.marketSnapshot().priceHistory.isEmpty)
+    let remoteSellerEvidence = initialMarketLocality(
+        fixture, session: session,
+        sellerPosition: AgentPosition(x: 10, y: 64, z: 0)
+    )
+    check("seller moves away before settlement and settlement is refused without mutation",
+          (try? session.prevalidateMarketSettlementLocality(
+              proposalID: accepted.proposalID,
+              currentLocality: remoteSellerEvidence
+          )) == nil
+            && (try! session.durableStateBytes()) == reservationBytes
+            && session.marketSnapshot().totalTradeCount == 0
+            && session.marketSnapshot().priceHistory.isEmpty)
+    let returnedLocality = initialMarketLocality(fixture, session: session)
+    let localityRetry = (try? session.prevalidateMarketSettlementLocality(
+        proposalID: accepted.proposalID, currentLocality: returnedLocality
+    )) != nil
+    check("return to the local market permits coherent retry before bounded expiry",
+          localityRetry
+            && (try! session.durableStateBytes()) == reservationBytes
+            && session.marketSnapshot().proposals.first {
+                $0.proposalID == accepted.proposalID
+            }?.status == .accepted)
 
     let outcome = initialMarketTrade(
         fixture: fixture, listing: listing, proposal: accepted, session: session
@@ -453,6 +645,24 @@ func runPebbleAgentsMarketSmoke() {
             .recognizedOwnership?.ownerID == fixture.buyer
             && rightsAfter.first { $0.asset.assetID == fixture.bread }?
                 .recognizedOwnership?.ownerID == fixture.seller)
+    let reasonsAfterInitialTrade = session.productionSnapshot().needs
+    let sellerReasonAfterTrade = reasonsAfterInitialTrade.first {
+        $0.needID == fixture.sellerReason.needID
+    }
+    let buyerReasonAfterTrade = reasonsAfterInitialTrade.first {
+        $0.needID == fixture.buyerReason.needID
+    }
+    check("underfilled seller need is not marked fully fulfilled",
+          fixture.sellerReason.quantity == 3
+            && outcome.considerationLeg.destinationObservation.quantity == 2
+            && sellerReasonAfterTrade?.status == .active
+            && sellerReasonAfterTrade?.fulfilledByOperationID == nil)
+    check("buyer quantity-bearing need closes only after sufficient physical receipt",
+          fixture.buyerReason.quantity == 1
+            && outcome.offeredLeg.destinationObservation.quantity == 1
+            && buyerReasonAfterTrade?.status == .fulfilled
+            && buyerReasonAfterTrade?.fulfilledByOperationID
+                == outcome.operationID)
     let completedBytes = try! session.durableStateBytes()
     try! session.completeVerifiedMarketTrade(outcome)
     check("completed listing cannot double-sell or add another price row",
@@ -568,12 +778,12 @@ func runPebbleAgentsMarketSmoke() {
 
     let laterSeller = fixture.laterSeller
     let laterPickaxe = AgentMaterialAssetID(rawValue: "asset:later:pickaxe")!
-    let laterBreadNeed = AgentProductionNeedID(rawValue: "need:later:bread2")!
+    let laterBreadNeed = AgentProductionNeedID(rawValue: "need:later:bread3")!
     let originalSellerNeed = AgentProductionNeedID(rawValue: "need:seller:pickaxe")!
     try! restored.raiseProductionNeed(
         needID: laterBreadNeed, actorID: laterSeller,
         reason: .physicalFoodNeed, desiredOutputItemKey: "bread",
-        quantity: 2, priority: 93
+        quantity: 3, priority: 93
     )
     try! restored.raiseProductionNeed(
         needID: originalSellerNeed, actorID: fixture.seller,
@@ -638,6 +848,11 @@ func runPebbleAgentsMarketSmoke() {
             && historyListing.historyTradeIDs == [outcome.tradeID]
             && historyListing.currentTerms.quoteQuantity == 2
             && historyListing.currentTerms.baseQuantity == 1)
+    check("restored local price history causally changes later terms from the current reason",
+          laterReason.quantity == 3
+            && historyListing.currentTerms.quoteQuantity == 2
+            && historyListing.currentTerms.quoteQuantity != laterReason.quantity
+            && historyListing.historyTradeIDs == [outcome.tradeID])
 
     let breadNow = restored.materialRightsSnapshot().records.first {
         $0.asset.assetID == fixture.bread
@@ -663,12 +878,20 @@ func runPebbleAgentsMarketSmoke() {
     try! restored.proposeMarketPurchase(
         operationID: "market:proposal:later", proposal: laterBuyerProposal
     )
-    try! restored.decideMarketProposal(
-        operationID: "market:decision:later",
-        decision: AgentMarketSellerDecision(
-            proposalID: laterBuyerProposal.proposalID, sellerID: laterSeller,
-            accept: true, reason: "current need and local history agree"
+    let laterDecision = try! restored.nextAutonomousMarketSellerDecision(
+        proposalID: laterBuyerProposal.proposalID,
+        currentLocality: marketLocalityEvidence(
+            marketID: fixture.marketID,
+            marketPosition: AgentPosition(x: 1, y: 64, z: 0),
+            sellerID: laterSeller,
+            sellerPosition: AgentPosition(x: 3, y: 64, z: 0),
+            buyerID: fixture.seller,
+            buyerPosition: AgentPosition(x: 0, y: 64, z: 0),
+            tick: restored.tick
         )
+    )
+    try! restored.decideMarketProposal(
+        operationID: "market:decision:later", decision: laterDecision
     )
     let laterTrade = AgentVerifiedMarketTrade(
         operationID: "market:trade:later",

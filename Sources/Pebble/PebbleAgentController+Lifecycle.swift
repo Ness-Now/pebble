@@ -798,6 +798,10 @@ extension PebbleAgentController {
         marketDisposableWorldFixture = nil
         marketMidSettlementFaultInjected = false
         marketPostMutationFaultInjected = false
+        marketRemoteSettlementRefusalCount = 0
+        marketNormalSellerRejectionCount = 0
+        marketNormalSellerAcceptanceCount = 0
+        marketRemoteBuyerRestoreState = nil
         contractFulfillmentFaultInjected = false
         autoInteractionEnabled = false
         lastAutoInteractionReason = "none"

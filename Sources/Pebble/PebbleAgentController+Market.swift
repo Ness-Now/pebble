@@ -18,7 +18,7 @@ extension PebbleAgentController {
         world: World,
         player: Player
     ) -> PebbleAgentCommandResult {
-        let usage = "Usage: /lab market <setup|status|proof|cleanup>"
+        let usage = "Usage: /lab market <setup|status|proof|remote-buyer|restore-locality|cleanup>"
         guard arguments.count == 1 else { return failure(usage) }
         guard marketFeatureEnabled else {
             return failure(
@@ -29,9 +29,65 @@ extension PebbleAgentController {
         case "setup": return setupMarketProof(world: world, player: player)
         case "status": return marketStatus(world: world)
         case "proof": return marketProofStatus(world: world)
+        case "remote-buyer": return stageRemoteMarketBuyer(world: world)
+        case "restore-locality": return restoreRemoteMarketBuyer(world: world)
         case "cleanup": return cleanupMarketProof(world: world)
         default: return failure(usage)
         }
+    }
+
+    /// Adversarial live-proof staging only. It moves the already-reserved
+    /// buyer's real Core probe outside the market radius; it supplies no
+    /// discovery, proposal, decision, settlement, or fixture authority.
+    private func stageRemoteMarketBuyer(
+        world: World
+    ) -> PebbleAgentCommandResult {
+        guard environment["PEBBLELAB_DISPOSABLE_WORLD_PROOF"] == "1",
+              marketRemoteBuyerRestoreState == nil,
+              let session,
+              let proposal = session.marketSnapshot().proposals.first(where: {
+                  $0.status == .accepted
+              }),
+              let listing = session.marketSnapshot().listings.first(where: {
+                  $0.listingID == proposal.listingID && $0.status == .reserved
+              }), let market = session.marketSnapshot().markets.first(where: {
+                  $0.marketID == listing.marketID
+              }), let probe = probesByAgentId[proposal.buyerID.rawValue],
+              probe.world === world, !probe.dead else {
+            return failure("Remote-buyer proof requires one accepted local reservation.")
+        }
+        let before = probe.capturePhysicalState()
+        probe.y = Double(market.position.y + market.interactionRadius + 2)
+        guard let evidence = currentMarketLocalityEvidence(
+            proposal: proposal, listing: listing, world: world, session: session
+        ), marketDistance(
+            evidence.buyer.participantPosition, market.position
+        ) > market.interactionRadius else {
+            _ = probe.restorePhysicalState(before)
+            return failure("Remote-buyer proof could not establish current nonlocality.")
+        }
+        marketRemoteBuyerRestoreState = before
+        let message = "market remote buyer staged buyer=\(proposal.buyerID.rawValue) currentWorldDistance=\(marketDistance(evidence.buyer.participantPosition, market.position)) proposalHistoricalLocalityAuthority=0 marketProofFixtureDecisionAuthority=0"
+        trace(message)
+        return success(message)
+    }
+
+    private func restoreRemoteMarketBuyer(
+        world: World
+    ) -> PebbleAgentCommandResult {
+        guard let before = marketRemoteBuyerRestoreState,
+              let session,
+              let proposal = session.marketSnapshot().proposals.first(where: {
+                  $0.status == .accepted
+              }), let probe = probesByAgentId[proposal.buyerID.rawValue],
+              probe.world === world, !probe.dead,
+              probe.restorePhysicalState(before) else {
+            return failure("No exact remote-buyer locality proof state is restorable.")
+        }
+        marketRemoteBuyerRestoreState = nil
+        let message = "market remote buyer locality restored exact=1 retryableBeforeExpiry=1 physicalTradeMutation=0"
+        trace(message)
+        return success(message)
     }
 
     private func setupMarketProof(
@@ -131,7 +187,10 @@ extension PebbleAgentController {
             world.setBlockEntity(container)
             installedContainer = container
             sellerProbe.carriedItems[0] = ItemStack(iid("stone_pickaxe"), 1)
-            buyerProbe.carriedItems[0] = ItemStack(iid("bread"), 2)
+            buyerProbe.carriedItems[0] = ItemStack(
+                iid("bread"), 1, label: "market-insufficient-offer"
+            )
+            buyerProbe.carriedItems[1] = ItemStack(iid("bread"), 2)
             laterSellerProbe.carriedItems[0] = ItemStack(
                 iid("stone_pickaxe"), 1
             )
@@ -169,7 +228,7 @@ extension PebbleAgentController {
             try candidate.raiseProductionNeed(
                 needID: laterBreadNeed, actorID: later,
                 reason: .physicalFoodNeed, desiredOutputItemKey: "bread",
-                quantity: 2, priority: 94
+                quantity: 3, priority: 94
             )
             try candidate.raiseProductionNeed(
                 needID: laterIronNeed, actorID: later,
@@ -196,7 +255,8 @@ extension PebbleAgentController {
             let pickaxe = try bridge.snapshot(of:
                 sellerProbe.carriedItems[0]!
             )
-            let bread = try bridge.snapshot(of: buyerProbe.carriedItems[0]!)
+            let lowBread = try bridge.snapshot(of: buyerProbe.carriedItems[0]!)
+            let bread = try bridge.snapshot(of: buyerProbe.carriedItems[1]!)
             let laterPickaxe = try bridge.snapshot(of:
                 laterSellerProbe.carriedItems[0]!
             )
@@ -209,6 +269,14 @@ extension PebbleAgentController {
                 custodyFingerprint: try materialCustodyGateway
                     .fingerprint(sellerEndpoint),
                 physicalReceiptID: "market-bootstrap:observe-pickaxe",
+                observedAtTick: candidate.tick
+            )
+            let lowBreadObservation = AgentMaterialHolderObservation(
+                holder: .agent(buyer), materialIdentity: lowBread.identity,
+                quantity: lowBread.count,
+                custodyFingerprint: try materialCustodyGateway
+                    .fingerprint(buyerEndpoint),
+                physicalReceiptID: "market-bootstrap:observe-low-bread",
                 observedAtTick: candidate.tick
             )
             let breadObservation = AgentMaterialHolderObservation(
@@ -259,12 +327,23 @@ extension PebbleAgentController {
             )
             try registerMarketBootstrapAsset(
                 assetID: AgentMaterialAssetID(
+                    rawValue: "market-asset:8-insufficient-bread1"
+                )!, stack: lowBread, observation: lowBreadObservation,
+                owner: buyer, witnesses: [seller, buyer, later],
+                session: &candidate
+            )
+            try registerMarketBootstrapAsset(
+                assetID: AgentMaterialAssetID(
                     rawValue: "market-asset:9-consideration-bread2"
                 )!, stack: bread, observation: breadObservation,
                 owner: buyer, witnesses: [seller, buyer, later],
                 session: &candidate
             )
-            try candidate.setMarketEnabled(true)
+            try candidate.setMarketEnabled(
+                true, configuration: try AgentMarketConfiguration(
+                    listingLifetimeTicks: 8
+                )
+            )
             let marketID = AgentMarketID(rawValue: "market:central")!
             try candidate.registerMarketPlace(
                 operationID: "market:register:central", marketID: marketID,
@@ -315,9 +394,13 @@ extension PebbleAgentController {
             movementEnabled = false
             marketMidSettlementFaultInjected = false
             marketPostMutationFaultInjected = false
+            marketRemoteSettlementRefusalCount = 0
+            marketNormalSellerRejectionCount = 0
+            marketNormalSellerAcceptanceCount = 0
+            marketRemoteBuyerRestoreState = nil
             passiveObserverBootstrapComplete = true
             manualProductiveCommandsAfterBootstrap = 0
-            let message = "market setup market=central container=\(position.x),\(position.y),\(position.z) slots=9 seller=\(pair.0.id) buyer=\(pair.1.id) laterSeller=\(laterSeller.id) goods=initial_stone_pickaxe:1,bread:2,later_stone_pickaxe:1,unsold_oak_log:1 initialAsk=stone_pickaxe:1/bread:3 opportunity=awaiting-normal-runtime marketCapacityPhysical=bounded capacityRefusal=destinationFull marketProofFixtureDecisionAuthority=0 paused=1 manualProductiveMarketCommandsAfterBootstrap=0"
+            let message = "market setup market=central container=\(position.x),\(position.y),\(position.z) slots=9 seller=\(pair.0.id) buyer=\(pair.1.id) laterSeller=\(laterSeller.id) goods=initial_stone_pickaxe:1,insufficient_bread:1,bread:2,later_stone_pickaxe:1,unsold_oak_log:1 initialAsk=stone_pickaxe:1/bread:3 opportunity=awaiting-normal-runtime marketCapacityPhysical=bounded capacityRefusal=destinationFull marketProofFixtureDecisionAuthority=0 paused=1 manualProductiveMarketCommandsAfterBootstrap=0"
             trace(message)
             return success(message)
         } catch {
@@ -375,7 +458,7 @@ extension PebbleAgentController {
             }
         }
         let ready = session.checkpointReadiness().ready
-        let message = "market proof schema=34 observerSchema=11 openCheckpointSafe=\(openRestorable && ready ? 1 : 0) threeEndpointSettlement=1 completedTradePriceProvenance=\(completed ? 1 : 0) priceRows=\(state.priceHistory.count) trades=\(state.totalTradeCount) withdrawals=\(state.totalWithdrawalCount) physicalLoss=0 physicalDuplication=0 syntheticTradeMaterial=0 duplicateReservations=0 duplicateDeposits=0 observerMutationCount=0 candidateMidFaultInjected=\(marketMidSettlementFaultInjected ? 1 : 0) candidatePostMutationFaultInjected=\(marketPostMutationFaultInjected ? 1 : 0) manualProductiveMarketCommandsAfterBootstrap=\(manualProductiveCommandsAfterBootstrap)"
+        let message = "market proof schema=34 observerSchema=11 openCheckpointSafe=\(openRestorable && ready ? 1 : 0) threeEndpointSettlement=1 currentLocalityExecutionPrecondition=1 sellerDecisionAuthority=normal-cognition sellerUnconditionalAccept=0 normalSellerRejections=\(marketNormalSellerRejectionCount) normalSellerAcceptances=\(marketNormalSellerAcceptanceCount) remoteSettlementAttempts=\(marketRemoteSettlementRefusalCount) remoteSettlementPhysicalMutation=0 remoteSettlementTradePublication=0 remoteSettlementPriceHistoryPublication=0 completedTradePriceProvenance=\(completed ? 1 : 0) priceRows=\(state.priceHistory.count) trades=\(state.totalTradeCount) withdrawals=\(state.totalWithdrawalCount) physicalLoss=0 physicalDuplication=0 syntheticTradeMaterial=0 duplicateReservations=0 duplicateDeposits=0 observerMutationCount=0 candidateMidFaultInjected=\(marketMidSettlementFaultInjected ? 1 : 0) candidatePostMutationFaultInjected=\(marketPostMutationFaultInjected ? 1 : 0) manualProductiveMarketCommandsAfterBootstrap=\(manualProductiveCommandsAfterBootstrap)"
         trace(message)
         return success(message)
     }
@@ -489,36 +572,52 @@ extension PebbleAgentController {
                     operationID: operationID, proposal: proposal
                 )
             }
-            trace("market normal listing decision seller=\(proposal.sellerID.rawValue) listing=\(proposal.listingID.rawValue) price=\(proposal.terms.baseItemKey):\(proposal.terms.baseQuantity)/\(proposal.terms.quoteItemKey):\(proposal.terms.quoteQuantity) normalListingDecision=1 firstProposedTerms=\(proposal.terms.baseItemKey):\(proposal.terms.baseQuantity)/\(proposal.terms.quoteItemKey):\(proposal.terms.quoteQuantity) historyUsed=\(!proposal.historyTradeIDs.isEmpty) laterDecisionUsedPriceHistory=\(!proposal.historyTradeIDs.isEmpty ? 1 : 0) physicalMutation=0 marketProofFixtureDecisionAuthority=0")
+            let reasonQuantity = session.productionSnapshot().needs.first {
+                $0.actorID == proposal.sellerID && $0.status == .active
+                    && $0.desiredOutputItemKey == proposal.terms.quoteItemKey
+            }?.quantity ?? -1
+            trace("market normal listing decision seller=\(proposal.sellerID.rawValue) listing=\(proposal.listingID.rawValue) price=\(proposal.terms.baseItemKey):\(proposal.terms.baseQuantity)/\(proposal.terms.quoteItemKey):\(proposal.terms.quoteQuantity) normalListingDecision=1 listingAuthority=verified-local-deposit automaticPosting=1 newSellerAction=0 firstProposedTerms=\(proposal.terms.baseItemKey):\(proposal.terms.baseQuantity)/\(proposal.terms.quoteItemKey):\(proposal.terms.quoteQuantity) sellerReasonQuoteQuantity=\(reasonQuantity) historySelectedQuoteQuantity=\(proposal.terms.quoteQuantity) priceHistoryCausalControl=\(!proposal.historyTradeIDs.isEmpty && reasonQuantity != proposal.terms.quoteQuantity ? 1 : 0) historyUsed=\(!proposal.historyTradeIDs.isEmpty) laterDecisionUsedPriceHistory=\(!proposal.historyTradeIDs.isEmpty ? 1 : 0) physicalMutation=0 marketProofFixtureDecisionAuthority=0")
         }
 
-        if let buyerProposal = nextLocalMarketBuyerProposal(
-            world: world, session: session
-        ) {
-            let operationID = "market:proposal:\(buyerProposal.proposalID.rawValue)"
-            if try applyRecordedOperationIfActive(
-                .proposeMarketPurchase(
-                    operationID: operationID, proposal: buyerProposal
-                ), session: &session, recorder: &recorder
-            ) == nil {
-                try session.proposeMarketPurchase(
-                    operationID: operationID, proposal: buyerProposal
-                )
+        let decisionLimit = session.marketSnapshot().configuration?
+            .maximumBuyerObservationsPerTick ?? 1
+        for _ in 0..<decisionLimit {
+            if !session.marketSnapshot().proposals.contains(where: {
+                $0.status == .proposed
+            }), let buyerProposal = nextLocalMarketBuyerProposal(
+                world: world, session: session
+            ) {
+                let operationID = "market:proposal:\(buyerProposal.proposalID.rawValue)"
+                if try applyRecordedOperationIfActive(
+                    .proposeMarketPurchase(
+                        operationID: operationID, proposal: buyerProposal
+                    ), session: &session, recorder: &recorder
+                ) == nil {
+                    try session.proposeMarketPurchase(
+                        operationID: operationID, proposal: buyerProposal
+                    )
+                }
+                trace("market normal buyer decision buyer=\(buyerProposal.observation.buyerID.rawValue) listing=\(buyerProposal.observation.listingID.rawValue) normalBuyerDecision=1 rejectedAsk=\(buyerProposal.rejectedAsk) revisedTerms=\(buyerProposal.terms.baseItemKey):\(buyerProposal.terms.baseQuantity)/\(buyerProposal.terms.quoteItemKey):\(buyerProposal.terms.quoteQuantity) localPresence=1 physicalMutation=0")
             }
-            trace("market normal buyer decision buyer=\(buyerProposal.observation.buyerID.rawValue) listing=\(buyerProposal.observation.listingID.rawValue) normalBuyerDecision=1 rejectedAsk=\(buyerProposal.rejectedAsk) revisedTerms=\(buyerProposal.terms.baseItemKey):\(buyerProposal.terms.baseQuantity)/\(buyerProposal.terms.quoteItemKey):\(buyerProposal.terms.quoteQuantity) localPresence=1 physicalMutation=0")
-        }
-
-        if let proposal = session.marketSnapshot().proposals.filter({
-            $0.status == .proposed
-        }).sorted(by: { $0.proposalID < $1.proposalID }).first,
-           let listing = session.marketSnapshot().listings.first(where: {
-               $0.listingID == proposal.listingID && $0.status == .open
-           }) {
-            let decision = AgentMarketSellerDecision(
-                proposalID: proposal.proposalID, sellerID: listing.sellerID,
-                accept: true,
-                reason: "current local material need accepts bounded physical consideration"
-            )
+            guard let proposal = session.marketSnapshot().proposals.filter({
+                $0.status == .proposed
+            }).sorted(by: { $0.proposalID < $1.proposalID }).first,
+                  let listing = session.marketSnapshot().listings.first(where: {
+                      $0.listingID == proposal.listingID && $0.status == .open
+                  }), let currentLocality = currentMarketLocalityEvidence(
+                      proposal: proposal, listing: listing, world: world,
+                      session: session
+                  ) else { break }
+            let decision: AgentMarketSellerDecision
+            do {
+                decision = try session.nextAutonomousMarketSellerDecision(
+                    proposalID: proposal.proposalID,
+                    currentLocality: currentLocality
+                )
+            } catch {
+                trace("market seller decision locality refused seller=\(listing.sellerID.rawValue) buyer=\(proposal.buyerID.rawValue) proposal=\(proposal.proposalID.rawValue) sellerCurrentLocalityAtDecision=0 buyerCurrentLocalityAtDecision=0 physicalMutation=0 tradePublication=0 priceHistoryPublication=0 retryableUntilExpiry=1")
+                break
+            }
             let operationID = "market:decision:\(proposal.proposalID.rawValue)"
             if try applyRecordedOperationIfActive(
                 .decideMarketProposal(
@@ -529,7 +628,14 @@ extension PebbleAgentController {
                     operationID: operationID, decision: decision
                 )
             }
-            trace("market normal seller decision seller=\(listing.sellerID.rawValue) proposal=\(proposal.proposalID.rawValue) accepted=1 reservation=exact-deposit physicalMutation=0")
+            let reservation = decision.accept ? "exact-deposit" : "none"
+            trace("market normal seller decision seller=\(listing.sellerID.rawValue) proposal=\(proposal.proposalID.rawValue) accepted=\(decision.accept ? 1 : 0) requestedQuoteItem=\(proposal.proposedTerms.quoteItemKey) requestedQuoteQuantity=\(proposal.proposedTerms.quoteQuantity) initialQuoteQuantity=\(listing.initialTerms.quoteQuantity) currentQuoteQuantity=\(listing.currentTerms.quoteQuantity) sellerDecisionAuthority=normal-cognition sellerUnconditionalAccept=0 sellerCurrentLocalityAtDecision=1 buyerCurrentLocalityAtDecision=1 reservation=\(reservation) physicalMutation=0 marketProofFixtureDecisionAuthority=0")
+            if decision.accept {
+                marketNormalSellerAcceptanceCount += 1
+            } else {
+                marketNormalSellerRejectionCount += 1
+            }
+            if decision.accept { break }
         }
     }
 
@@ -564,7 +670,8 @@ extension PebbleAgentController {
                 observedAtTick: session.tick
             ))
         }
-        for proposal in marketSnapshot.proposals where proposal.status == .accepted {
+        for proposal in marketSnapshot.proposals where
+            proposal.status == .accepted && proposal.proposedAtTick < session.tick {
             guard let listing = marketSnapshot.listings.first(where: {
                 $0.listingID == proposal.listingID && $0.status == .reserved
             }), let market = marketSnapshot.markets.first(where: {
@@ -738,6 +845,34 @@ extension PebbleAgentController {
               ) else {
             throw ControllerError.marketBoundary("accepted settlement unavailable")
         }
+        guard let currentLocality = currentMarketLocalityEvidence(
+            proposal: proposal, listing: listing, world: world,
+            session: session
+        ) else {
+            throw ControllerError.marketBoundary(
+                "current settlement locality evidence unavailable"
+            )
+        }
+        do {
+            try session.prevalidateMarketSettlementLocality(
+                proposalID: proposalID, currentLocality: currentLocality
+            )
+        } catch {
+            marketRemoteSettlementRefusalCount += 1
+            let market = session.marketSnapshot().markets.first {
+                $0.marketID == listing.marketID
+            }!
+            let sellerLocal = marketDistance(
+                currentLocality.seller.participantPosition, market.position
+            ) <= market.interactionRadius
+            let buyerLocal = marketDistance(
+                currentLocality.buyer.participantPosition, market.position
+            ) <= market.interactionRadius
+            trace("market remote settlement refused proposal=\(proposalID.rawValue) sellerCurrentLocalityAtSettlement=\(sellerLocal ? 1 : 0) buyerCurrentLocalityAtSettlement=\(buyerLocal ? 1 : 0) proposalHistoricalLocalityAuthority=0 physicalMutation=0 tradePublication=0 priceHistoryPublication=0 retryableUntilExpiry=1")
+            throw ControllerError.marketBoundary(
+                "current seller/buyer market locality"
+            )
+        }
         let marketEndpoint = PebbleAgentMaterialCustodyEndpoint.container(
             container, in: world
         )
@@ -879,7 +1014,16 @@ extension PebbleAgentController {
         ) == nil {
             try session.completeVerifiedMarketTrade(outcome)
         }
-        trace("market settlement completed trade=\(tradeID.rawValue) endpoints=market,seller,buyer prevalidated=1 receipts=\(offeredReceipt),\(considerationReceipt) completedTerms=\(proposal.proposedTerms.baseItemKey):\(proposal.proposedTerms.baseQuantity)/\(proposal.proposedTerms.quoteItemKey):\(proposal.proposedTerms.quoteQuantity) priceHistoryAppended=1 localPriceHistoryCreated=1 duplicateMarketTradeReceipts=0 duplicateReservations=0 marketFinalFingerprint=\(marketFinal) publication=verified")
+        let needs = session.productionSnapshot().needs
+        let sellerNeed = needs.first {
+            $0.needID == deposit.quoteReason.needID
+        }
+        let buyerNeed = needs.first {
+            $0.needID == proposal.buyerReason.needID
+        }
+        let sellerNeedStatus = sellerNeed?.status.rawValue ?? "missing"
+        let buyerNeedStatus = buyerNeed?.status.rawValue ?? "missing"
+        trace("market settlement completed trade=\(tradeID.rawValue) endpoints=market,seller,buyer prevalidated=1 buyerCurrentLocalityAtSettlement=1 sellerCurrentLocalityAtSettlement=1 marketCurrentPhysicalValidityAtSettlement=1 receipts=\(offeredReceipt),\(considerationReceipt) completedTerms=\(proposal.proposedTerms.baseItemKey):\(proposal.proposedTerms.baseQuantity)/\(proposal.proposedTerms.quoteItemKey):\(proposal.proposedTerms.quoteQuantity) sellerNeedRequestedQuantity=\(sellerNeed?.quantity ?? -1) sellerPhysicalQuantityReceived=\(proposal.consideration.material.count) sellerNeedFinalStatus=\(sellerNeedStatus) buyerNeedRequestedQuantity=\(buyerNeed?.quantity ?? -1) buyerPhysicalQuantityReceived=\(deposit.material.count) buyerNeedFinalStatus=\(buyerNeedStatus) priceHistoryAppended=1 localPriceHistoryCreated=1 duplicateMarketTradeReceipts=0 duplicateReservations=0 marketFinalFingerprint=\(marketFinal) publication=verified")
         return "\(offeredReceipt)+\(considerationReceipt)"
     }
 
@@ -994,12 +1138,21 @@ extension PebbleAgentController {
                       record.recognizedOwnership?.ownerID == owner,
                       !session.marketSnapshot().deposits.contains(where: {
                           $0.assetID == record.asset.assetID
-                      }), let agent = session.snapshot().agents.first(where: {
-                          $0.id == owner.rawValue
                       }), let probe = probesByAgentId[owner.rawValue],
-                      probe.world === world, !probe.dead else { continue }
-                let distance = marketDistance(agent.position, market.position)
-                guard distance <= market.interactionRadius else { continue }
+                      let sellerEmbodiment = try? PebbleAgentEmbodiment.resolve(
+                          agentID: owner.rawValue, in: world,
+                          mappedByAgentID: probesByAgentId
+                      ), sellerEmbodiment.probe === probe else { continue }
+                let distance = marketDistance(
+                    sellerEmbodiment.position, market.position
+                )
+                guard distance <= market.interactionRadius,
+                      world.isChunkReady(
+                          sellerEmbodiment.position.x >> 4,
+                          sellerEmbodiment.position.z >> 4
+                      ), world.isChunkReady(
+                          market.position.x >> 4, market.position.z >> 4
+                      ) else { continue }
                 let needs = activeNeeds.filter {
                     $0.actorID == owner
                         && $0.desiredOutputItemKey
@@ -1085,12 +1238,20 @@ extension PebbleAgentController {
                             && $0.desiredOutputItemKey
                                 == listing.currentTerms.baseItemKey
                       }).sorted(by: { $0.needID < $1.needID }).first,
-                      let buyerState = session.snapshot().agents.first(where: {
-                          $0.id == buyer.rawValue
-                      }), marketDistance(buyerState.position, market.position)
-                        <= market.interactionRadius,
                       let probe = probesByAgentId[buyer.rawValue],
-                      probe.world === world, !probe.dead else { continue }
+                      let buyerEmbodiment = try? PebbleAgentEmbodiment.resolve(
+                          agentID: buyer.rawValue, in: world,
+                          mappedByAgentID: probesByAgentId
+                      ), buyerEmbodiment.probe === probe,
+                      marketDistance(
+                          buyerEmbodiment.position, market.position
+                      ) <= market.interactionRadius,
+                      world.isChunkReady(
+                          buyerEmbodiment.position.x >> 4,
+                          buyerEmbodiment.position.z >> 4
+                      ), world.isChunkReady(
+                          market.position.x >> 4, market.position.z >> 4
+                      ) else { continue }
                 let endpoint = PebbleAgentMaterialCustodyEndpoint.liveAgent(
                     probe, in: world
                 )
@@ -1119,6 +1280,9 @@ extension PebbleAgentController {
                     "proposal-" + AgentAutonomousActivityDigest.make(
                         "\(listing.listingID.rawValue)|\(buyer.rawValue)|\(stack.count)"
                     ))!
+                guard !marketSnapshot.proposals.contains(where: {
+                    $0.proposalID == proposalID
+                }) else { continue }
                 return AgentMarketBuyerProposal(
                     proposalID: proposalID,
                     observation: AgentMarketBuyerObservation(
@@ -1129,10 +1293,8 @@ extension PebbleAgentController {
                             material: stack, holderObservation: observation
                         ), buyerReason: AgentBarterValueReason(need: buyerNeed),
                         distance: marketDistance(
-                            buyerState.position, market.position
-                        ), chunksReady: world.isChunkReady(
-                            market.position.x >> 4, market.position.z >> 4
-                        ), observedAtTick: session.tick
+                            buyerEmbodiment.position, market.position
+                        ), chunksReady: true, observedAtTick: session.tick
                     ), terms: terms,
                     rejectedAsk: terms != listing.currentTerms,
                     reason: terms == listing.currentTerms
@@ -1142,6 +1304,51 @@ extension PebbleAgentController {
             }
         }
         return nil
+    }
+
+    /// Rebuilds decisive evidence from the live World. No proposal distance,
+    /// session position, fixture position or earlier observation is accepted
+    /// as current physical presence.
+    private func currentMarketLocalityEvidence(
+        proposal: AgentMarketProposal,
+        listing: AgentMarketListing,
+        world: World,
+        session: AgentSimulationSession
+    ) -> AgentMarketCurrentLocalityEvidence? {
+        guard let market = session.marketSnapshot().markets.first(where: {
+            $0.marketID == listing.marketID && $0.status == .active
+        }), marketContainer(
+            market.marketID, world: world, session: session
+        ) != nil,
+              let seller = try? PebbleAgentEmbodiment.resolve(
+                  agentID: listing.sellerID.rawValue, in: world,
+                  mappedByAgentID: probesByAgentId
+              ), let buyer = try? PebbleAgentEmbodiment.resolve(
+                  agentID: proposal.buyerID.rawValue, in: world,
+                  mappedByAgentID: probesByAgentId
+              ) else { return nil }
+        let marketChunkReady = world.isChunkReady(
+            market.position.x >> 4, market.position.z >> 4
+        )
+        func participant(
+            _ embodiment: PebbleAgentEmbodiment,
+            id: AgentID
+        ) -> AgentMarketParticipantLocality {
+            AgentMarketParticipantLocality(
+                marketID: market.marketID, participantID: id,
+                participantPhysicalID: embodiment.physicalID,
+                participantPosition: embodiment.position,
+                marketPosition: market.position, participantAlive: true,
+                participantChunkReady: world.isChunkReady(
+                    embodiment.position.x >> 4, embodiment.position.z >> 4
+                ), marketChunkReady: marketChunkReady,
+                marketContainerValid: true, observedAtTick: session.tick
+            )
+        }
+        return AgentMarketCurrentLocalityEvidence(
+            seller: participant(seller, id: listing.sellerID),
+            buyer: participant(buyer, id: proposal.buyerID)
+        )
     }
 
     private func marketContainer(

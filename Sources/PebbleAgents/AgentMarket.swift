@@ -426,6 +426,61 @@ public struct AgentMarketBuyerProposal: Codable, Equatable, Sendable {
     }
 }
 
+/// Current Pebble-owned physical evidence for one participant at a market.
+///
+/// This is deliberately separate from proposal observations: a proposal is
+/// durable social authority, while this evidence is a same-tick report from
+/// the live World boundary. PebbleAgents validates it but never reads World
+/// state directly.
+public struct AgentMarketParticipantLocality: Codable, Equatable, Sendable {
+    public let marketID: AgentMarketID
+    public let participantID: AgentID
+    public let participantPhysicalID: String
+    public let participantPosition: AgentPosition
+    public let marketPosition: AgentPosition
+    public let participantAlive: Bool
+    public let participantChunkReady: Bool
+    public let marketChunkReady: Bool
+    public let marketContainerValid: Bool
+    public let observedAtTick: Int
+
+    public init(
+        marketID: AgentMarketID, participantID: AgentID,
+        participantPhysicalID: String, participantPosition: AgentPosition,
+        marketPosition: AgentPosition, participantAlive: Bool,
+        participantChunkReady: Bool, marketChunkReady: Bool,
+        marketContainerValid: Bool, observedAtTick: Int
+    ) {
+        self.marketID = marketID
+        self.participantID = participantID
+        self.participantPhysicalID = participantPhysicalID
+        self.participantPosition = participantPosition
+        self.marketPosition = marketPosition
+        self.participantAlive = participantAlive
+        self.participantChunkReady = participantChunkReady
+        self.marketChunkReady = marketChunkReady
+        self.marketContainerValid = marketContainerValid
+        self.observedAtTick = observedAtTick
+    }
+}
+
+/// Same-tick current World evidence for both parties at a decisive market
+/// boundary. Seller cognition and physical settlement each require a freshly
+/// constructed value; the earlier buyer proposal is never reused as presence.
+public struct AgentMarketCurrentLocalityEvidence:
+    Codable, Equatable, Sendable {
+    public let seller: AgentMarketParticipantLocality
+    public let buyer: AgentMarketParticipantLocality
+
+    public init(
+        seller: AgentMarketParticipantLocality,
+        buyer: AgentMarketParticipantLocality
+    ) {
+        self.seller = seller
+        self.buyer = buyer
+    }
+}
+
 public enum AgentMarketProposalStatus: String, Codable, CaseIterable, Sendable {
     case proposed
     case accepted
@@ -455,15 +510,20 @@ public struct AgentMarketSellerDecision: Codable, Equatable, Sendable {
     public let sellerID: AgentID
     public let accept: Bool
     public let reason: String
+    /// Optional only for additive schema-34 decoding compatibility. New
+    /// seller decisions are invalid unless this same-tick evidence is present.
+    public let currentLocality: AgentMarketCurrentLocalityEvidence?
 
     public init(
         proposalID: AgentMarketProposalID, sellerID: AgentID,
-        accept: Bool, reason: String
+        accept: Bool, reason: String,
+        currentLocality: AgentMarketCurrentLocalityEvidence? = nil
     ) {
         self.proposalID = proposalID
         self.sellerID = sellerID
         self.accept = accept
         self.reason = reason
+        self.currentLocality = currentLocality
     }
 }
 

@@ -274,21 +274,70 @@ extension AgentSimulationSession {
                     sellerID: deposit.sellerID, terms: terms,
                     historyTradeIDs: history.prefix(8).map(\.tradeID).sorted(),
                     reason: history.isEmpty
-                        ? "active need establishes initial local ask"
-                        : "restored completed local trades inform comparable ask"
+                        ? "verified local deposit authorizes automatic posting; active need establishes initial local ask"
+                        : "verified local deposit authorizes automatic posting; restored completed local trades inform comparable ask"
                 )
             }
         }
+    }
+
+    /// Generic deterministic seller cognition. It consumes the current
+    /// proposal, initial/current listing terms, the seller's current reason,
+    /// same-market completed-price evidence and fresh World locality evidence.
+    /// Callers do not supply acceptance authority.
+    public func nextAutonomousMarketSellerDecision(
+        proposalID: AgentMarketProposalID,
+        currentLocality: AgentMarketCurrentLocalityEvidence
+    ) throws -> AgentMarketSellerDecision {
+        guard let state = marketState,
+              let proposal = state.proposals.first(where: {
+                  $0.proposalID == proposalID && $0.status == .proposed
+              }), let listing = state.listings.first(where: {
+                  $0.listingID == proposal.listingID && $0.status == .open
+              }), let deposit = state.deposits.first(where: {
+                  $0.depositID == listing.depositID
+              }) else {
+            throw AgentSessionError.market(.invalidProposal(proposalID.rawValue))
+        }
+        return try evaluateMarketSellerDecision(
+            proposal: proposal, listing: listing, deposit: deposit,
+            currentLocality: currentLocality, state: state
+        )
+    }
+
+    /// Current locality is an immediate physical precondition, not a durable
+    /// reservation capability. Refusal is non-mutating and the reservation
+    /// remains retryable until its existing bounded expiry.
+    public func prevalidateMarketSettlementLocality(
+        proposalID: AgentMarketProposalID,
+        currentLocality: AgentMarketCurrentLocalityEvidence
+    ) throws {
+        guard let state = marketState,
+              let proposal = state.proposals.first(where: {
+                  $0.proposalID == proposalID && $0.status == .accepted
+              }), let listing = state.listings.first(where: {
+                  $0.listingID == proposal.listingID && $0.status == .reserved
+              }) else {
+            throw AgentSessionError.market(.invalidProposal(proposalID.rawValue))
+        }
+        try validateMarketCurrentLocality(
+            currentLocality, proposal: proposal, listing: listing, state: state
+        )
     }
 
     public mutating func createMarketListing(
         operationID: String,
         proposal: AgentMarketListingProposal
     ) throws {
+        // Listing is not a second remote seller act in V1. Only the exact
+        // deterministic posting authorized by the verified local deposit and
+        // its still-current reason can be published.
+        let depositAuthorizedProposal = nextAutonomousMarketListingProposal()
         try marketTransaction { session, state in
             if state.processedOperationIDs.contains(operationID) { return }
             session.compactTerminalMarketState(state: &state)
-            guard let depositIndex = state.deposits.firstIndex(where: {
+            guard proposal == depositAuthorizedProposal,
+                  let depositIndex = state.deposits.firstIndex(where: {
                 $0.depositID == proposal.depositID
             }), state.deposits[depositIndex].status == .deposited,
                   state.deposits[depositIndex].sellerID == proposal.sellerID,
@@ -429,12 +478,20 @@ extension AgentSimulationSession {
                 ))
             }
             let deposit = state.deposits[depositIndex]
-            if decision.accept {
-                try session.requireActiveMarketReason(
-                    deposit.quoteReason, actor: decision.sellerID,
-                    desiredItem: state.proposals[proposalIndex]
-                        .proposedTerms.quoteItemKey
-                )
+            guard let currentLocality = decision.currentLocality else {
+                throw AgentSessionError.market(.unauthorized(
+                    "seller decision requires current World locality"
+                ))
+            }
+            let expected = try session.evaluateMarketSellerDecision(
+                proposal: state.proposals[proposalIndex],
+                listing: state.listings[listingIndex], deposit: deposit,
+                currentLocality: currentLocality, state: state
+            )
+            guard decision == expected else {
+                throw AgentSessionError.market(.unauthorized(
+                    "seller decision must equal normal deterministic cognition"
+                ))
             }
             let event = try session.requiredMarketEvent(
                 kind: .marketProposalDecided, actorID: decision.sellerID,
@@ -572,10 +629,12 @@ extension AgentSimulationSession {
             ))
             session.fulfillMarketNeed(
                 state.deposits[depositIndex].quoteReason.needID,
+                received: outcome.considerationLeg.destinationObservation,
                 operationID: outcome.operationID
             )
             session.fulfillMarketNeed(
                 state.proposals[proposalIndex].buyerReason.needID,
+                received: outcome.offeredLeg.destinationObservation,
                 operationID: outcome.operationID
             )
             state.totalTradeCount += 1
@@ -927,13 +986,110 @@ extension AgentSimulationSession {
 
     private mutating func fulfillMarketNeed(
         _ needID: AgentProductionNeedID,
+        received: AgentMaterialHolderObservation,
         operationID: String
     ) {
         guard let index = productionState?.needs.firstIndex(where: {
             $0.needID == needID && $0.status == .active
-        }) else { return }
+        }), productionState!.needs[index].desiredOutputItemKey
+                == received.materialIdentity.itemKey,
+              received.quantity >= productionState!.needs[index].quantity else {
+            // V1 does not invent partial-need accounting. A verified trade may
+            // advance a motive without falsely fulfilling a larger need.
+            return
+        }
         productionState!.needs[index].status = .fulfilled
         productionState!.needs[index].fulfilledByOperationID = operationID
+    }
+
+    private func evaluateMarketSellerDecision(
+        proposal: AgentMarketProposal,
+        listing: AgentMarketListing,
+        deposit: AgentMarketDeposit,
+        currentLocality: AgentMarketCurrentLocalityEvidence,
+        state: AgentMarketState
+    ) throws -> AgentMarketSellerDecision {
+        try validateMarketCurrentLocality(
+            currentLocality, proposal: proposal, listing: listing, state: state
+        )
+        try requireActiveMarketReason(
+            deposit.quoteReason, actor: listing.sellerID,
+            desiredItem: proposal.proposedTerms.quoteItemKey
+        )
+        let termsMatch = proposal.proposedTerms.baseItemKey
+                == listing.initialTerms.baseItemKey
+            && proposal.proposedTerms.quoteItemKey
+                == listing.initialTerms.quoteItemKey
+            && proposal.proposedTerms.baseQuantity
+                == listing.initialTerms.baseQuantity
+            && proposal.proposedTerms.quoteQuantity
+                == proposal.consideration.material.count
+        let reasonQuantity = deposit.quoteReason.quantity
+        let autonomousConcessionFloor = max(
+            1, min(listing.initialTerms.quoteQuantity, reasonQuantity) - 1
+        )
+        let minimumQuote = listing.historyInformed
+            ? listing.currentTerms.quoteQuantity : autonomousConcessionFloor
+        let accept = termsMatch
+            && proposal.proposedTerms.quoteQuantity >= minimumQuote
+        let result = accept ? "accept" : "reject"
+        let reason = "normal-cognition requested=\(proposal.proposedTerms.quoteItemKey):\(proposal.proposedTerms.quoteQuantity) initial=\(listing.initialTerms.quoteItemKey):\(listing.initialTerms.quoteQuantity) current=\(listing.currentTerms.quoteItemKey):\(listing.currentTerms.quoteQuantity) sellerReason=\(deposit.quoteReason.desiredItemKey):\(reasonQuantity) localHistory=\(listing.historyInformed ? 1 : 0) minimum=\(minimumQuote) result=\(result)"
+        return AgentMarketSellerDecision(
+            proposalID: proposal.proposalID, sellerID: listing.sellerID,
+            accept: accept, reason: reason,
+            currentLocality: currentLocality
+        )
+    }
+
+    private func validateMarketCurrentLocality(
+        _ evidence: AgentMarketCurrentLocalityEvidence,
+        proposal: AgentMarketProposal,
+        listing: AgentMarketListing,
+        state: AgentMarketState
+    ) throws {
+        guard let market = state.markets.first(where: {
+            $0.marketID == listing.marketID && $0.status == .active
+        }), evidence.seller.marketID == market.marketID,
+              evidence.buyer.marketID == market.marketID,
+              evidence.seller.participantID == listing.sellerID,
+              evidence.buyer.participantID == proposal.buyerID,
+              evidence.seller.participantID != evidence.buyer.participantID,
+              statesById[evidence.seller.participantID.rawValue] != nil,
+              statesById[evidence.buyer.participantID.rawValue] != nil,
+              validMarketText(
+                  evidence.seller.participantPhysicalID, maximum: 160
+              ), validMarketText(
+                  evidence.buyer.participantPhysicalID, maximum: 160
+              ), evidence.seller.participantPhysicalID
+                != evidence.buyer.participantPhysicalID,
+              evidence.seller.marketPosition == market.position,
+              evidence.buyer.marketPosition == market.position,
+              evidence.seller.participantAlive,
+              evidence.buyer.participantAlive,
+              evidence.seller.participantChunkReady,
+              evidence.buyer.participantChunkReady,
+              evidence.seller.marketChunkReady,
+              evidence.buyer.marketChunkReady,
+              evidence.seller.marketContainerValid,
+              evidence.buyer.marketContainerValid,
+              evidence.seller.observedAtTick == tick,
+              evidence.buyer.observedAtTick == tick,
+              marketDistance(
+                  evidence.seller.participantPosition, market.position
+              ) <= market.interactionRadius,
+              marketDistance(
+                  evidence.buyer.participantPosition, market.position
+              ) <= market.interactionRadius else {
+            throw AgentSessionError.market(.unauthorized(
+                "current seller/buyer market locality"
+            ))
+        }
+    }
+
+    private func marketDistance(
+        _ lhs: AgentPosition, _ rhs: AgentPosition
+    ) -> Int {
+        abs(lhs.x - rhs.x) + abs(lhs.y - rhs.y) + abs(lhs.z - rhs.z)
     }
 
     private func validMarketText(_ text: String, maximum: Int) -> Bool {

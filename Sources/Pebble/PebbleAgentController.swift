@@ -119,6 +119,10 @@ final class PebbleAgentController {
     var contractFulfillmentPublicationFaultInjected = false
     var marketMidSettlementFaultInjected = false
     var marketPostMutationFaultInjected = false
+    var marketRemoteSettlementRefusalCount = 0
+    var marketNormalSellerRejectionCount = 0
+    var marketNormalSellerAcceptanceCount = 0
+    var marketRemoteBuyerRestoreState: LabCoreAgentPhysicalState?
     var marketDisposableWorldFixture: PebbleAgentMarketDisposableWorldFixture?
     var candidateAgricultureNavigationFailureProofInjected = false
     var ecologicalObservationProofFixture: PebbleAgentEcologicalObservationProofFixture?

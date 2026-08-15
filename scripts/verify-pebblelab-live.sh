@@ -212,8 +212,8 @@ if [ "$MODE" = "markets" ]; then
     WORLD_NAME="PebbleLab-Disposable-Markets-46"
     CAPTURE_NAME="market-final-cleanup.png"
     MARKET_PHASE1_COMMANDS='/gamerule randomTickSpeed 0;/gamerule doMobSpawning false;/gamerule doDaylightCycle false;/gamerule doWeatherCycle false;/time set 1000;/weather clear;/tp 14 68 -18|/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab market setup;/lab market status;/lab overlay compact|/lab step;/lab market status|/lab step;/lab market status;/lab overlay compact|/lab step;/lab market status;/lab market proof;/lab checkpoint save market-open-v34;/lab checkpoint status;/lab causality tail 20;/lab status'
-    MARKET_PHASE2_COMMANDS='/tp 14 68 -18;/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab checkpoint load market-open-v34;/lab market status;/lab market proof;/lab overlay compact|/lab step;/lab market status|/lab step;/lab market status;/lab overlay compact|/lab step;/lab market status;/lab overlay compact|/lab step;/lab market status;/lab market proof;/lab checkpoint save market-traded-v34;/lab checkpoint status;/lab causality tail 20;/lab status'
-    MARKET_PHASE3_COMMANDS='/tp 14 68 -18;/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab checkpoint load market-traded-v34;/lab market status;/lab market proof;/lab overlay compact|/lab step;/lab market status|/lab step;/lab market status|/lab step;/lab market status|/lab step;/lab market status|/lab step;/lab market status;/lab overlay compact|/lab step;/lab market status|/lab step;/lab market status|/lab step;/lab market status;/lab overlay compact|/lab step;/lab step;/lab step;/lab step;/lab step;/lab market status;/lab market proof;/lab checkpoint save market-final-v34;/lab checkpoint status;/lab causality tail 20;/lab status'
+    MARKET_PHASE2_COMMANDS='/tp 14 68 -18;/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab checkpoint load market-open-v34;/lab market status;/lab market proof;/lab overlay compact|/lab step;/lab market status|/lab step;/lab market status;/lab market remote-buyer|/lab market status;/lab market proof;/lab overlay compact|/lab step;/lab market status;/lab market proof;/lab market restore-locality|/lab step;/lab market status;/lab overlay compact|/lab step;/lab market status;/lab overlay compact|/lab step;/lab market status;/lab market proof;/lab checkpoint save market-traded-v34;/lab checkpoint status;/lab causality tail 20;/lab status'
+    MARKET_PHASE3_COMMANDS='/tp 14 68 -18;/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab checkpoint load market-traded-v34;/lab market status;/lab market proof;/lab overlay compact|/lab step;/lab market status|/lab step;/lab market status|/lab step;/lab market status|/lab step;/lab market status|/lab step;/lab market status;/lab overlay compact|/lab step;/lab market status|/lab step;/lab market status|/lab step;/lab market status;/lab overlay compact|/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab market status;/lab market proof;/lab checkpoint save market-final-v34;/lab checkpoint status;/lab causality tail 20;/lab status'
     MARKET_PHASE4_COMMANDS='/tp 14 68 -18;/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab checkpoint load market-final-v34;/lab market status;/lab market proof;/lab overlay compact|/lab step;/lab market status;/lab market proof;/lab market cleanup;/lab status'
     LAB_COMMANDS="$MARKET_PHASE1_COMMANDS"
 elif [ "$MODE" = "contracts" ]; then
@@ -1238,6 +1238,7 @@ if [ "$MODE" = "markets" ]; then
     CAPTURE_DEPOSITED_PATH="$CAPTURE_DIR/market-deposited.png"
     CAPTURE_OPEN_PATH="$CAPTURE_DIR/market-open-listing.png"
     CAPTURE_RESTORED_PATH="$CAPTURE_DIR/market-restored-open.png"
+    CAPTURE_REMOTE_PATH="$CAPTURE_DIR/market-remote-buyer-refusal.png"
     CAPTURE_MID_FAULT_PATH="$CAPTURE_DIR/market-mid-settlement-rollback.png"
     CAPTURE_POST_FAULT_PATH="$CAPTURE_DIR/market-post-mutation-rollback.png"
     CAPTURE_COMPLETED_PATH="$CAPTURE_DIR/market-completed-trade.png"
@@ -1404,7 +1405,7 @@ if [ "$MODE" = "markets" ]; then
     require_trace 'market setup market=central .*marketCapacityPhysical=bounded capacityRefusal=destinationFull marketProofFixtureDecisionAuthority=0 .*manualProductiveMarketCommandsAfterBootstrap=0' 'physical market bootstrap and real full-container refusal'
     require_trace 'market normal deposit discovery .*normalMarketDiscovery=1 .*globalInventoryScan=0 .*marketProofFixtureDecisionAuthority=0' 'bounded normal local market discovery'
     require_trace 'market deposit completed .*normalDepositDecision=1 depositPhysicalMutation=1 .*owner=agent_[0-9]+ .*publication=verified duplicateDeposits=0' 'normal exact physical deposit retaining seller ownership'
-    require_trace 'market normal listing decision .*normalListingDecision=1 firstProposedTerms=stone_pickaxe:1/bread:3 .*historyUsed=false .*marketProofFixtureDecisionAuthority=0' 'initial local ask through normal cognition'
+    require_trace 'market normal listing decision .*normalListingDecision=1 listingAuthority=verified-local-deposit automaticPosting=1 newSellerAction=0 firstProposedTerms=stone_pickaxe:1/bread:3 .*historyUsed=false .*marketProofFixtureDecisionAuthority=0' 'initial local ask through verified deposit authorization and normal cognition'
     require_trace 'market proof schema=34 observerSchema=11 openCheckpointSafe=1 ' 'open listing restart readiness'
     require_trace 'checkpoint saved name=market-open-v34 .*restartSafe=1 ' 'open physical market checkpoint'
     require_trace 'summary .*runtimeErrors=0 .*probesRemoved=3 ' 'clean first process termination'
@@ -1424,24 +1425,30 @@ if [ "$MODE" = "markets" ]; then
     continuation_command_tick=$((persisted_world_tick + 100))
 
     printf '\nMarket phase 2: fresh open restore, two real post-mutation rollbacks, and exact retry.\n'
-    PHASE2_SHOTS="$CAPTURE_RESTORED_PATH|-|$CAPTURE_MID_FAULT_PATH|$CAPTURE_POST_FAULT_PATH|$CAPTURE_COMPLETED_PATH"
+    PHASE2_SHOTS="$CAPTURE_RESTORED_PATH|-|-|$CAPTURE_REMOTE_PATH|-|$CAPTURE_MID_FAULT_PATH|$CAPTURE_POST_FAULT_PATH|$CAPTURE_COMPLETED_PATH"
     run_market_app "$SESSION_HOME" "$PHASE2_TRACE" \
         "$MARKET_PHASE2_COMMANDS" 0 "$continuation_command_tick" \
         "$PHASE2_SHOTS" 1 1
     TRACE_PATH="$PHASE2_TRACE"
     [ -s "$CAPTURE_RESTORED_PATH" ] || fail "market restored-open capture missing"
+    [ -s "$CAPTURE_REMOTE_PATH" ] || fail "market remote-buyer capture missing"
     [ -s "$CAPTURE_MID_FAULT_PATH" ] || fail "market mid-fault capture missing"
     [ -s "$CAPTURE_POST_FAULT_PATH" ] || fail "market post-fault capture missing"
     [ -s "$CAPTURE_COMPLETED_PATH" ] || fail "market completed capture missing"
     require_trace "checkpoint loaded name=market-open-v34 .*digest=$OPEN_DIGEST .*restartSafe=1 .*custodyDuplicates=0 physicalBoundary=acquired" 'fresh process restores exact open market custody'
-    require_trace_at_least 'market normal buyer decision .*normalBuyerDecision=1 rejectedAsk=true revisedTerms=stone_pickaxe:1/bread:2 .*localPresence=1' 3 'normal counteroffer reconstructed for both failures and retry'
+    require_trace 'market normal seller decision .*accepted=0 requestedQuoteItem=bread requestedQuoteQuantity=1 .*sellerDecisionAuthority=normal-cognition sellerUnconditionalAccept=0 .*marketProofFixtureDecisionAuthority=0' 'normal seller cognition rejects insufficient one-bread counteroffer'
+    require_trace 'market normal seller decision .*accepted=1 requestedQuoteItem=bread requestedQuoteQuantity=2 .*sellerDecisionAuthority=normal-cognition sellerUnconditionalAccept=0 .*marketProofFixtureDecisionAuthority=0' 'normal seller cognition later accepts coherent two-bread counteroffer'
+    require_trace 'market remote buyer staged .*proposalHistoricalLocalityAuthority=0 marketProofFixtureDecisionAuthority=0' 'real buyer probe moved outside the market after reservation'
+    require_trace 'market remote settlement refused .*buyerCurrentLocalityAtSettlement=0 .*physicalMutation=0 tradePublication=0 priceHistoryPublication=0 retryableUntilExpiry=1' 'remote settlement refused before physical mutation or publication'
+    require_trace 'market remote buyer locality restored exact=1 retryableBeforeExpiry=1 physicalTradeMutation=0' 'bounded reservation retry restores exact locality'
+    require_trace_at_least 'market normal buyer decision .*normalBuyerDecision=1 rejectedAsk=true revisedTerms=stone_pickaxe:1/bread:2 .*localPresence=1' 1 'normal two-bread counteroffer follows rejected insufficient offer'
     require_trace_at_least 'market true mid-settlement mutation .*candidatePhysicalMutation=1 publication=0' 3 'both fault paths and retry cross a real first leg'
     require_trace_count 'CANDIDATE_PHYSICAL_ROLLBACK operation=advanceOneTick .*marketPostMutationBoundary' 2 'two exact candidate physical rollbacks'
     require_trace_at_least 'CANDIDATE_PHYSICAL_ROLLBACK .*publishedSession=unchanged .*publishedRecorder=unchanged' 2 'session and recorder remain unpublished on both errors'
     require_trace 'market settlement completed .*completedTerms=stone_pickaxe:1/bread:2 .*localPriceHistoryCreated=1 duplicateMarketTradeReceipts=0 duplicateReservations=0 .*publication=verified' 'retry completes exactly one physical trade and price row'
-    require_trace 'market proof schema=34 observerSchema=11 .*priceRows=1 trades=1 withdrawals=0 .*candidateMidFaultInjected=1 candidatePostMutationFaultInjected=1 manualProductiveMarketCommandsAfterBootstrap=0' 'bounded proof after exact retry'
+    require_trace 'market proof schema=34 observerSchema=11 .*sellerDecisionAuthority=normal-cognition sellerUnconditionalAccept=0 normalSellerRejections=1 normalSellerAcceptances=1 remoteSettlementAttempts=1 remoteSettlementPhysicalMutation=0 remoteSettlementTradePublication=0 remoteSettlementPriceHistoryPublication=0 .*priceRows=1 trades=1 withdrawals=0 .*candidateMidFaultInjected=1 candidatePostMutationFaultInjected=1 manualProductiveMarketCommandsAfterBootstrap=0' 'bounded locality, cognition and exact retry proof'
     require_trace 'checkpoint saved name=market-traded-v34 .*restartSafe=1 ' 'completed market checkpoint'
-    require_trace 'summary .*runtimeErrors=2 .*probesRemoved=3 ' 'two expected runtime failures and clean second termination'
+    require_trace 'summary .*runtimeErrors=3 .*probesRemoved=3 ' 'three expected locality/fault runtime failures and clean second termination'
     reject_trace 'CANDIDATE_PHYSICAL_HARD_FAILURE' 'market compensation hard failure'
 
     TRADED_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint saved name=market-traded-v34 .* digest=\([0-9a-f]*\) storageDigest=.*/\1/p' "$PHASE2_TRACE" | /usr/bin/tail -1)
@@ -1459,7 +1466,7 @@ if [ "$MODE" = "markets" ]; then
     [ -s "$CAPTURE_LATER_PATH" ] || fail "market later-trade capture missing"
     [ -s "$CAPTURE_WITHDRAWAL_PATH" ] || fail "market withdrawal capture missing"
     require_trace "checkpoint loaded name=market-traded-v34 .*digest=$TRADED_DIGEST .*restartSafe=1 .*custodyDuplicates=0 physicalBoundary=acquired" 'fresh process restores completed trade and price history'
-    require_trace 'market normal listing decision .*firstProposedTerms=stone_pickaxe:1/bread:2 .*historyUsed=true laterDecisionUsedPriceHistory=1 ' 'restored local price evidence informs later comparable ask'
+    require_trace 'market normal listing decision .*firstProposedTerms=stone_pickaxe:1/bread:2 .*sellerReasonQuoteQuantity=3 historySelectedQuoteQuantity=2 priceHistoryCausalControl=1 historyUsed=true laterDecisionUsedPriceHistory=1 ' 'restored local price evidence causally changes later comparable ask'
     require_trace 'market normal buyer decision .*normalBuyerDecision=1 rejectedAsk=false revisedTerms=stone_pickaxe:1/bread:2 ' 'later buyer selects history-informed terms for current need'
     require_trace 'market status .*trades=2 withdrawals=1 priceHistory=stone_pickaxe/bread=2/1@' 'second trade and unsold withdrawal retained'
     require_trace 'market listing expired .*reservationReleased=1 physicalMutation=0' 'unsold listing expiry moves no matter'
