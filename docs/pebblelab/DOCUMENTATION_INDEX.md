@@ -42,6 +42,7 @@ These documents form the minimal permanent memory of the project:
 | [`DOCUMENTATION_INDEX.md`](DOCUMENTATION_INDEX.md) | Classification and navigation for the documentation set. |
 | [`CIV_36_PHASE_SUMMARY.md`](CIV_36_PHASE_SUMMARY.md) | Published architecture, contract semantics, correction history, physical proof, validation and non-claims for CIV-36. |
 | [`CIV_37_PHASE_SUMMARY.md`](CIV_37_PHASE_SUMMARY.md) | Published architecture, correction history, physical-market proof, price causality, validation and non-claims for CIV-37. |
+| [`GATE_E_BLOCKER_01_EXACT_PRODUCTION_PROVENANCE.md`](GATE_E_BLOCKER_01_EXACT_PRODUCTION_PROVENANCE.md) | Local Blocker 01 product-correction record; preserves Evaluation 01 FAIL and documents exact asset-bound production provenance. |
 
 Canonical status at the product baseline reconciled by this documentation:
 
@@ -83,7 +84,10 @@ V4-GATE-E-v1: PLANNED — NOT ACQUIRED
 active phase: null
 completed through: CIV-37
 next eligible phase: null
-next authorized action: NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-01
+Gate E Evaluation 01: FAIL — PRODUCT CORRECTION REQUIRED — HISTORICAL IMMUTABLE EVIDENCE
+V4-GATE-E-v1 Blocker 01: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE
+Gate E Evaluation 02: NOT_STARTED
+next authorized action: SENIOR_REVIEW_V4_GATE_E_BLOCKER_01
 ```
 
 The `CIV-33` completion is published on the canonical branch at
@@ -180,9 +184,16 @@ bundle SHA-256 is
 `7a0b48bb69f67b541670bfb91f7720ee0c19cfb5a5ca922bf8ac16a4902796bd`, with
 55/55 internal checksums and passing unzip validation. The accepted evidence has
 31/31 focused checks, 3923/3923 repository assertions and 13 inspected captures.
-CIV-38 is optional and not started. Gate E remains planned and not acquired.
-The next authorized action is
-`NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-01`.
+CIV-38 is optional and not started. Independent Gate E Evaluation 01 evaluated
+exact published baseline `5bc9d3088c2550fb042fe065235cb0154a226ff0` and
+remains `FAIL — PRODUCT CORRECTION REQUIRED` at immutable evidence HEAD
+`e75ab82981169baf1cdc67d9454e6d569e989167`. Its review bundle SHA-256 is
+`9db1a5b478f1ed0ca9efcac5612efc29928b61143a92e198123285920444fc93`.
+V4-GATE-E-v1 Blocker 01 is an implemented local review candidate from that
+exact baseline; it is not published and does not acquire Gate E. Evaluation 02
+is not started. The next authorized action is senior review and manual
+publication of the correction, followed by remote verification before any new
+independent evaluation.
 
 ## Operational
 

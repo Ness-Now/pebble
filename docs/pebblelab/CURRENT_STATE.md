@@ -21,6 +21,17 @@ SHA of the documentation commit that contains it.
   **OPTIONAL — NOT STARTED**.
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
 
+Local status beyond the published baseline:
+
+- Gate E Evaluation 01: **FAIL — PRODUCT CORRECTION REQUIRED — HISTORICAL
+  IMMUTABLE EVIDENCE**.
+- V4-GATE-E-v1 Blocker 01: **IMPLEMENTED_LOCAL_REVIEW_CANDIDATE**.
+- Gate E Evaluation 02: **NOT_STARTED**.
+
+The Blocker 01 candidate binds exact production origin to an exact durable
+Material Rights asset. It is local and unreviewed; it is not publication or Gate
+E acquisition evidence.
+
 Published canonical baseline evaluated by independent Gate D Evaluation 04
 and affected by Gate D Blocker 04:
 
@@ -257,7 +268,7 @@ composition evaluation is not part of this publication.
 active CIV phase: null
 completed and published through: CIV-37
 next eligible phase: null
-next authorized action: NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-01
+next authorized action: SENIOR_REVIEW_V4_GATE_E_BLOCKER_01
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -288,6 +299,9 @@ CIV-35 status: COMPLETE AND PUBLISHED
 CIV-36 status: COMPLETE AND PUBLISHED
 CIV-37 status: COMPLETE AND PUBLISHED
 CIV-38 status: OPTIONAL — NOT STARTED
+Gate E Evaluation 01 status: FAIL — PRODUCT CORRECTION REQUIRED — HISTORICAL IMMUTABLE EVIDENCE
+V4-GATE-E-v1 Blocker 01 status: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE
+Gate E Evaluation 02 status: NOT_STARTED
 V4-GATE-E-v1 status: PLANNED — NOT ACQUIRED
 roadmap generation: V4
 ```
@@ -592,6 +606,10 @@ PUBLISHED**. `CIV-35 — Barter and Local Exchange V1` is **COMPLETE AND
 PUBLISHED**. `CIV-36 — Debt, Promises and Durable Contracts V1` is **COMPLETE
 AND PUBLISHED**. `CIV-37 — Physical Markets and Local Price Discovery V1` is
 **COMPLETE AND PUBLISHED** after senior-review approval. `CIV-38` is
-**OPTIONAL — NOT STARTED**. Gate E remains **PLANNED — NOT ACQUIRED**. The next
-authorized action is **NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-01**; this
-publication does not evaluate or acquire Gate E.
+**OPTIONAL — NOT STARTED**. Gate E Evaluation 01 remains **FAIL — PRODUCT
+CORRECTION REQUIRED — HISTORICAL IMMUTABLE EVIDENCE**. V4-GATE-E-v1 Blocker 01
+is an **IMPLEMENTED_LOCAL_REVIEW_CANDIDATE**, not a publication. Gate E remains
+**PLANNED — NOT ACQUIRED**; Evaluation 02 is **NOT_STARTED**. The next
+authorized action is senior review and manual publication of Blocker 01. A
+fresh independent Evaluation 02 may begin only after that correction is
+published and remotely verified.
