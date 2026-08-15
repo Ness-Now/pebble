@@ -594,18 +594,12 @@ extension AgentSimulationSession {
             historicalObservation: nil,
             currentObservation: outcome.transfer.sourceObservation
         )
-        if !outcome.transfer.productionOperationIDs.isEmpty {
-            let records = productionState?.records.filter {
-                outcome.transfer.productionOperationIDs.contains($0.operationID)
-            } ?? []
-            guard records.count == outcome.transfer.productionOperationIDs.count,
-                  records.allSatisfy({
-                      $0.actorID == obligation.promisorID
-                        && $0.outputProduced.identity == terms.identity
-                  }), records.reduce(0, { $0 + $1.outputProduced.count })
-                    == terms.count else {
-                throw AgentSessionError.contract(.invalidOutcome(outcome.operationID))
-            }
+        guard materialProductionProvenanceMatches(
+            assetID: outcome.transfer.assetID,
+            material: terms,
+            operationIDs: outcome.transfer.productionOperationIDs
+        ) else {
+            throw AgentSessionError.contract(.invalidOutcome(outcome.operationID))
         }
         try prevalidateCausalAppend(count: 2)
     }
@@ -633,12 +627,11 @@ extension AgentSimulationSession {
             kind: .contractFulfilled, origin: .contractTransition,
             actorID: obligation.promisorID, subjectID: obligation.promiseeID,
             operationID: AgentOperationID(rawValue: outcome.operationID),
-            causes: [obligation.considerationEventID ?? obligation.obligationEventID]
-                + outcome.transfer.productionOperationIDs.compactMap { operationID in
-                    productionState?.records.first(where: {
-                        $0.operationID == operationID
-                    })?.causalEventID
-                },
+            causes: ([obligation.considerationEventID ?? obligation.obligationEventID]
+                + materialProductionCausalEventIDs(
+                    assetID: outcome.transfer.assetID,
+                    operationIDs: outcome.transfer.productionOperationIDs
+                )).sorted(),
             payload: .operation(
                 status: "fulfilled",
                 detail: "obligation=\(obligation.obligationID.rawValue) receipt=\(outcome.transfer.physicalReceiptID)"
@@ -960,22 +953,11 @@ extension AgentSimulationSession {
     }
 
     private func validateContractLegProvenance(_ leg: AgentBarterLeg) throws {
-        guard leg.productionOperationIDs
-                == Array(Set(leg.productionOperationIDs)).sorted() else {
-            throw AgentSessionError.contract(
-                .invalidOpportunity(leg.assetID.rawValue)
-            )
-        }
-        if leg.productionOperationIDs.isEmpty { return }
-        let records = productionState?.records.filter {
-            leg.productionOperationIDs.contains($0.operationID)
-        } ?? []
-        guard records.count == leg.productionOperationIDs.count,
-              records.allSatisfy({
-                  $0.actorID == leg.holderID
-                    && $0.outputProduced.identity == leg.material.identity
-              }), records.reduce(0, { $0 + $1.outputProduced.count })
-                == leg.material.count else {
+        guard materialProductionProvenanceMatches(
+            assetID: leg.assetID,
+            material: leg.material,
+            operationIDs: leg.productionOperationIDs
+        ) else {
             throw AgentSessionError.contract(
                 .invalidOpportunity(leg.assetID.rawValue)
             )

@@ -270,6 +270,10 @@ extension AgentSimulationSession {
             workshopPosition: outcome.workshopPosition,
             workshopBlockKey: outcome.workshopBlockKey,
             sourceLocationID: outcome.sourceLocationID,
+            sourceCustodyFingerprintBefore:
+                outcome.sourceCustodyFingerprintBefore,
+            sourceCustodyFingerprintAfter:
+                outcome.sourceCustodyFingerprintAfter,
             inputsConsumed: outcome.inputsConsumed,
             outputProduced: outcome.outputProduced,
             physicalReceiptID: outcome.physicalReceiptID,
@@ -318,11 +322,31 @@ extension AgentSimulationSession {
             }
             return false
         })
+        let retainedRecord = state.records.first(where: {
+            $0.operationID == outcome.productionOperationID
+        })
+        let boundAsset = materialRightsState?.records.first(where: { record in
+            record.productionProvenance?.operationIDs.contains(
+                outcome.productionOperationID
+            ) == true
+        })
+        let boundOrigin = boundAsset?.productionProvenance?.origins.first {
+            $0.operationID == outcome.productionOperationID
+        }
+        let originProducer = retainedRecord?.actorID ?? boundOrigin?.producerID
+        let originOutput = retainedRecord?.outputProduced
+            ?? boundOrigin?.outputProduced
+        let originEventID = retainedRecord?.causalEventID
+            ?? boundOrigin?.causalEventID
+        let currentRightsAuthorizeUse = boundAsset.map { asset in
+            asset.lastVerifiedHolder.holder == .agent(outcome.actorID)
+                && asset.recognizedOwnership?.ownerID == outcome.actorID
+        } == true
         guard !state.processedOperationIDs.contains(outcome.operationID),
-              let record = state.records.first(where: {
-                  $0.operationID == outcome.productionOperationID
-              }), record.actorID == outcome.actorID || barterRecord != nil,
-              record.outputProduced.identity.itemKey
+              let originProducer, let originOutput, let originEventID,
+              originProducer == outcome.actorID || barterRecord != nil
+                || currentRightsAuthorizeUse,
+              originOutput.identity.itemKey
                 == outcome.identityBefore.identity.itemKey,
               outcome.identityBefore.count == outcome.identityAfter.count,
               outcome.identityAfter.identity.itemKey
@@ -337,7 +361,7 @@ extension AgentSimulationSession {
         }
         let priorIdentity = state.useRecords.last(where: {
             $0.outcome.productionOperationID == outcome.productionOperationID
-        })?.outcome.identityAfter ?? record.outputProduced
+        })?.outcome.identityAfter ?? originOutput
         guard priorIdentity == outcome.identityBefore else {
             throw AgentSessionError.production(.invalidOutcome(outcome.operationID))
         }
@@ -346,7 +370,7 @@ extension AgentSimulationSession {
             kind: .producedGoodUsed, origin: .productionTransition,
             actorID: outcome.actorID,
             operationID: AgentOperationID(rawValue: outcome.operationID),
-            causes: ([record.causalEventID]
+            causes: ([originEventID]
                 + (barterRecord.map { [$0.causalEventID] } ?? [])).sorted(),
             payload: .operation(
                 status: "succeeded",

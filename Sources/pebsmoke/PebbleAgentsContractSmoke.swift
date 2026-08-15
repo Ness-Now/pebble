@@ -41,6 +41,7 @@ private func contractRegisterAsset(
     holder: AgentID,
     fingerprint: String,
     receipt: String,
+    productionOperationIDs: [String] = [],
     session: inout AgentSimulationSession
 ) throws -> AgentMaterialHolderObservation {
     let observation = AgentMaterialHolderObservation(
@@ -59,6 +60,13 @@ private func contractRegisterAsset(
             quantity: stack.count
         ), observation: observation
     ))
+    if !productionOperationIDs.isEmpty {
+        _ = try session.applyMaterialRightsOperation(.bindProductionProvenance(
+            operationID: "contract-rights:\(id.rawValue):production-provenance",
+            assetID: id,
+            productionOperationIDs: productionOperationIDs.sorted()
+        ))
+    }
     _ = try session.applyMaterialRightsOperation(.assertClaim(
         operationID: "contract-rights:\(id.rawValue):claim",
         assetID: id, claimID: claim, claimantID: holder,
@@ -278,7 +286,8 @@ private func produceContractPerformance(
         id: assetID, stack: obligation.promisedPerformance.material,
         holder: obligation.promisorID,
         fingerprint: production.sourceCustodyFingerprintAfter,
-        receipt: production.physicalReceiptID, session: &session
+        receipt: production.physicalReceiptID,
+        productionOperationIDs: [production.operationID], session: &session
     )
     return (assetID, production)
 }

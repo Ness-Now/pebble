@@ -689,18 +689,11 @@ extension AgentSimulationSession {
     }
 
     private func validateBarterLegProvenance(_ leg: AgentBarterLeg) throws {
-        guard leg.productionOperationIDs == Array(Set(leg.productionOperationIDs)).sorted()
-        else { throw AgentSessionError.barter(.invalidOpportunity(leg.assetID.rawValue)) }
-        if leg.productionOperationIDs.isEmpty { return }
-        let records = productionState?.records.filter {
-            leg.productionOperationIDs.contains($0.operationID)
-        } ?? []
-        guard records.count == leg.productionOperationIDs.count,
-              records.allSatisfy({
-                  $0.actorID == leg.holderID
-                    && $0.outputProduced.identity == leg.material.identity
-              }), records.reduce(0, { $0 + $1.outputProduced.count })
-                == leg.material.count else {
+        guard materialProductionProvenanceMatches(
+            assetID: leg.assetID,
+            material: leg.material,
+            operationIDs: leg.productionOperationIDs
+        ) else {
             throw AgentSessionError.barter(.invalidOpportunity(leg.assetID.rawValue))
         }
     }

@@ -199,6 +199,7 @@ public enum AgentCausalEventKind: String, Codable, CaseIterable, Sendable {
     case workReputationUpdated
     case materialRightsInitialized
     case materialAssetRegistered
+    case materialProductionProvenanceBound
     case materialPhysicalCustodyObserved
     case materialClaimChanged
     case materialOwnershipRecognized
@@ -1026,6 +1027,7 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
              (.workReputationUpdated, .work),
              (.materialRightsInitialized, .feature),
              (.materialAssetRegistered, .operation),
+             (.materialProductionProvenanceBound, .operation),
              (.materialPhysicalCustodyObserved, .operation),
              (.materialClaimChanged, .operation),
              (.materialOwnershipRecognized, .operation),

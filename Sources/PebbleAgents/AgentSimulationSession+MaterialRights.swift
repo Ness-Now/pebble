@@ -165,6 +165,100 @@ extension AgentSimulationSession {
                 []
             )
 
+        case let .bindProductionProvenance(
+            _, id, productionOperationIDs
+        ):
+            let index = try materialRightsRecordIndex(id, in: rights)
+            let record = rights.records[index]
+            guard record.productionProvenance == nil,
+                  !productionOperationIDs.isEmpty,
+                  productionOperationIDs.count
+                    <= AgentCausalEvent.maximumCauseCount,
+                  productionOperationIDs
+                    == Array(Set(productionOperationIDs)).sorted(),
+                  !rights.records.contains(where: { candidate in
+                      candidate.productionProvenance?.operationIDs.contains {
+                          productionOperationIDs.contains($0)
+                      } == true
+                  }) else {
+                throw AgentSessionError.materialRights(
+                    .invalidState("production provenance binding")
+                )
+            }
+            let productionRecords = productionState?.records.filter {
+                productionOperationIDs.contains($0.operationID)
+            } ?? []
+            guard productionRecords.count == productionOperationIDs.count else {
+                throw AgentSessionError.materialRights(
+                    .invalidState("missing production provenance")
+                )
+            }
+            let ordered = productionRecords.sorted { lhs, rhs in
+                if lhs.causalEventID != rhs.causalEventID {
+                    return lhs.causalEventID < rhs.causalEventID
+                }
+                return lhs.operationID < rhs.operationID
+            }
+            guard let first = ordered.first,
+                  let last = ordered.last,
+                  case let .agent(holderID) = record.lastVerifiedHolder.holder,
+                  holderID == first.actorID,
+                  record.lastVerifiedHolder.materialIdentity
+                    == record.asset.materialIdentity,
+                  record.lastVerifiedHolder.quantity == record.asset.quantity,
+                  record.lastVerifiedHolder.custodyFingerprint
+                    == last.sourceCustodyFingerprintAfter,
+                  record.lastVerifiedHolder.physicalReceiptID
+                    == last.physicalReceiptID,
+                  ordered.allSatisfy({ production in
+                      production.actorID == first.actorID
+                        && production.sourceLocationID == first.sourceLocationID
+                        && production.outputProduced.identity
+                            == record.asset.materialIdentity
+                        && production.sourceCustodyFingerprintBefore != nil
+                        && production.sourceCustodyFingerprintAfter != nil
+                  }), ordered.reduce(0, {
+                      $0 + $1.outputProduced.count
+                  }) == record.asset.quantity,
+                  zip(ordered, ordered.dropFirst()).allSatisfy({ prior, next in
+                      prior.sourceCustodyFingerprintAfter
+                        == next.sourceCustodyFingerprintBefore
+                  }) else {
+                throw AgentSessionError.materialRights(
+                    .invalidState("ambiguous production provenance")
+                )
+            }
+            let origins = try ordered.map { production in
+                guard let before = production.sourceCustodyFingerprintBefore,
+                      let after = production.sourceCustodyFingerprintAfter else {
+                    throw AgentSessionError.materialRights(
+                        .invalidState("missing production custody chain")
+                    )
+                }
+                return AgentMaterialProductionOriginProof(
+                    operationID: production.operationID,
+                    producerID: production.actorID,
+                    outputProduced: production.outputProduced,
+                    physicalReceiptID: production.physicalReceiptID,
+                    sourceLocationID: production.sourceLocationID,
+                    sourceCustodyFingerprintBefore: before,
+                    sourceCustodyFingerprintAfter: after,
+                    completedAtTick: production.completedAtTick,
+                    causalEventID: production.causalEventID
+                )
+            }
+            rights.records[index].productionProvenance =
+                AgentMaterialProductionProvenance(origins: origins)
+            transition = (
+                .productionProvenanceBound,
+                .materialProductionProvenanceBound,
+                first.actorID,
+                "applied",
+                "exact production provenance bound operations="
+                    + productionOperationIDs.joined(separator: ","),
+                origins.map(\.causalEventID).sorted()
+            )
+
         case let .assertClaim(_, id, claimID, claimantID, basis):
             try requireMaterialRightsAgent(claimantID)
             let index = try materialRightsRecordIndex(id, in: rights)
@@ -612,6 +706,20 @@ extension AgentSimulationSession {
                     try validateHistoricalMaterialRightsSubject(witness)
                 }
             }
+            if let provenance = record.productionProvenance {
+                try validateMaterialProductionProvenance(
+                    provenance, for: record.asset
+                )
+            }
+        }
+        let boundProductionOperationIDs = rights.records.flatMap {
+            $0.productionProvenance?.operationIDs ?? []
+        }
+        guard boundProductionOperationIDs.count
+                == Set(boundProductionOperationIDs).count else {
+            throw AgentSessionError.materialRights(
+                .invalidState("production provenance reused")
+            )
         }
         guard rights.recentTransitions.allSatisfy({ transition in
             rights.records.contains(where: {
@@ -627,7 +735,8 @@ extension AgentSimulationSession {
     ) throws -> AgentMaterialAssetID {
         switch operation {
         case let .register(_, asset, _): return asset.assetID
-        case let .assertClaim(_, id, _, _, _),
+        case let .bindProductionProvenance(_, id, _),
+             let .assertClaim(_, id, _, _, _),
              let .withdrawClaim(_, id, _, _),
              let .recognizeOwnership(_, id, _, _),
              let .delegateCustody(_, id, _, _),
@@ -704,6 +813,123 @@ extension AgentSimulationSession {
                 throw AgentSessionError.materialRights(.invalidPhysicalOutcome(
                     asset.assetID.rawValue
                 ))
+            }
+        }
+    }
+
+    func materialProductionOperationIDs(
+        for assetID: AgentMaterialAssetID
+    ) -> [String] {
+        materialRightsState?.records.first {
+            $0.asset.assetID == assetID
+        }?.productionProvenance?.operationIDs ?? []
+    }
+
+    func materialProductionProvenanceMatches(
+        assetID: AgentMaterialAssetID,
+        material: AgentMaterialStackSnapshot,
+        operationIDs: [String]
+    ) -> Bool {
+        guard let record = materialRightsState?.records.first(where: {
+            $0.asset.assetID == assetID
+        }) else { return false }
+        guard operationIDs == Array(Set(operationIDs)).sorted() else {
+            return false
+        }
+        guard let provenance = record.productionProvenance else {
+            return operationIDs.isEmpty
+        }
+        return operationIDs == provenance.operationIDs
+            && provenance.representedQuantity == material.count
+            && record.asset.quantity == material.count
+            && record.asset.materialIdentity == material.identity
+            && (try? validateMaterialProductionProvenance(
+                provenance, for: record.asset
+            )) != nil
+    }
+
+    func materialProductionCausalEventIDs(
+        assetID: AgentMaterialAssetID,
+        operationIDs: [String]
+    ) -> [AgentCausalEventID] {
+        guard let provenance = materialRightsState?.records.first(where: {
+            $0.asset.assetID == assetID
+        })?.productionProvenance,
+              provenance.operationIDs == operationIDs else { return [] }
+        return provenance.origins.map(\.causalEventID).sorted()
+    }
+
+    private func validateMaterialProductionProvenance(
+        _ provenance: AgentMaterialProductionProvenance,
+        for asset: AgentMaterialAssetReference
+    ) throws {
+        let origins = provenance.origins
+        let causalOrder = origins.sorted { lhs, rhs in
+            if lhs.causalEventID != rhs.causalEventID {
+                return lhs.causalEventID < rhs.causalEventID
+            }
+            return lhs.operationID < rhs.operationID
+        }
+        guard !origins.isEmpty,
+              origins.count <= AgentCausalEvent.maximumCauseCount,
+              provenance.operationIDs
+                == Array(Set(provenance.operationIDs)).sorted(),
+              provenance.representedQuantity == asset.quantity,
+              let first = causalOrder.first,
+              origins.allSatisfy({ origin in
+                  origin.hasValidDigest
+                    && AgentOperationID(rawValue: origin.operationID) != nil
+                    && origin.producerID == first.producerID
+                    && origin.sourceLocationID == first.sourceLocationID
+                    && origin.outputProduced.identity == asset.materialIdentity
+                    && origin.outputProduced.count > 0
+                    && validMaterialRightsText(
+                        origin.physicalReceiptID, maximum: 256
+                    )
+                    && validMaterialRightsText(
+                        origin.sourceLocationID, maximum: 256
+                    )
+                    && validMaterialRightsText(
+                        origin.sourceCustodyFingerprintBefore, maximum: 8192
+                    )
+                    && validMaterialRightsText(
+                        origin.sourceCustodyFingerprintAfter, maximum: 8192
+                    )
+                    && origin.sourceCustodyFingerprintBefore
+                        != origin.sourceCustodyFingerprintAfter
+                    && origin.completedAtTick >= 0
+                    && origin.completedAtTick <= tick
+                    && origin.causalEventID.simulationID == simulationID
+                    && origin.causalEventID.sequence.rawValue
+                        <= causalLedger.latestSequence
+              }), zip(causalOrder, causalOrder.dropFirst()).allSatisfy({
+                  prior, next in
+                  prior.sourceCustodyFingerprintAfter
+                    == next.sourceCustodyFingerprintBefore
+              }) else {
+            throw AgentSessionError.materialRights(
+                .invalidState("invalid production provenance")
+            )
+        }
+        try validateHistoricalMaterialRightsSubject(first.producerID)
+        for origin in origins {
+            if let retained = productionState?.records.first(where: {
+                $0.operationID == origin.operationID
+            }) {
+                guard retained.actorID == origin.producerID,
+                      retained.outputProduced == origin.outputProduced,
+                      retained.physicalReceiptID == origin.physicalReceiptID,
+                      retained.sourceLocationID == origin.sourceLocationID,
+                      retained.sourceCustodyFingerprintBefore
+                        == origin.sourceCustodyFingerprintBefore,
+                      retained.sourceCustodyFingerprintAfter
+                        == origin.sourceCustodyFingerprintAfter,
+                      retained.completedAtTick == origin.completedAtTick,
+                      retained.causalEventID == origin.causalEventID else {
+                    throw AgentSessionError.materialRights(
+                        .invalidState("divergent production provenance")
+                    )
+                }
             }
         }
     }

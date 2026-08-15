@@ -150,17 +150,17 @@ extension PebbleAgentController {
                     quantity: need.4, priority: need.5
                 )
             }
-            try produceBarterGood(
+            let pickaxeProduction = try produceBarterGood(
                 needID: AgentProductionNeedID(
                     rawValue: "barter:\(pair.0.id):produce-pickaxe"
                 )!, actor: offeror, world: world, session: &candidate
             )
-            try produceBarterGood(
+            let breadProduction1 = try produceBarterGood(
                 needID: AgentProductionNeedID(
                     rawValue: "barter:\(pair.1.id):produce-bread-1"
                 )!, actor: counterparty, world: world, session: &candidate
             )
-            try produceBarterGood(
+            let breadProduction2 = try produceBarterGood(
                 needID: AgentProductionNeedID(
                     rawValue: "barter:\(pair.1.id):produce-bread-2"
                 )!, actor: counterparty, world: world, session: &candidate
@@ -193,22 +193,30 @@ extension PebbleAgentController {
             let pickaxeObservation = AgentMaterialHolderObservation(
                 holder: .agent(offerorID), materialIdentity: pickaxe.identity,
                 quantity: 1, custodyFingerprint: offerorFingerprint,
-                physicalReceiptID: "barter-observe:pickaxe", observedAtTick: candidate.tick
+                physicalReceiptID: pickaxeProduction.physicalReceiptID,
+                observedAtTick: candidate.tick
             )
             let breadObservation = AgentMaterialHolderObservation(
                 holder: .agent(counterpartyID), materialIdentity: bread.identity,
                 quantity: 2, custodyFingerprint: counterpartyFingerprint,
-                physicalReceiptID: "barter-observe:bread", observedAtTick: candidate.tick
+                physicalReceiptID: breadProduction2.physicalReceiptID,
+                observedAtTick: candidate.tick
             )
             try registerProducedBarterAsset(
                 assetID: pickaxeAsset, material: pickaxe,
                 observation: pickaxeObservation, ownerID: offerorID,
-                witnesses: [offerorID, counterpartyID], session: &candidate
+                witnesses: [offerorID, counterpartyID],
+                productionOperationIDs: [pickaxeProduction.operationID],
+                session: &candidate
             )
             try registerProducedBarterAsset(
                 assetID: breadAsset, material: bread,
                 observation: breadObservation, ownerID: counterpartyID,
-                witnesses: [offerorID, counterpartyID], session: &candidate
+                witnesses: [offerorID, counterpartyID],
+                productionOperationIDs: [
+                    breadProduction1.operationID,
+                    breadProduction2.operationID,
+                ].sorted(), session: &candidate
             )
             try candidate.setBarterEnabled(true)
             if !candidate.autonomousActivityEnabled {
@@ -488,9 +496,6 @@ extension PebbleAgentController {
                 endpoint
               ) else { return [] }
         let physical = custody.slots.compactMap { $0 }
-        let production = session.productionSnapshot().records.sorted {
-            $0.operationID < $1.operationID
-        }
         return Array(session.materialRightsSnapshot().records.filter { record in
             record.lastVerifiedHolder.holder == .agent(agentID)
         }.sorted {
@@ -518,25 +523,13 @@ extension PebbleAgentController {
                 verifiedHolder: observation
             ))
             guard disposition.verdict == .allowed else { return nil }
-            let matchingProduction = production.filter {
-                $0.actorID == agentID
-                    && $0.outputProduced.identity == material.identity
-            }
-            var provenance: [String] = []
-            var producedQuantity = 0
-            for output in matchingProduction where
-                producedQuantity + output.outputProduced.count <= material.count {
-                provenance.append(output.operationID)
-                producedQuantity += output.outputProduced.count
-                if producedQuantity == material.count { break }
-            }
-            if producedQuantity != material.count { provenance.removeAll() }
             return AgentBarterLeg(
                 assetID: record.asset.assetID,
                 holderID: agentID,
                 material: material,
                 holderObservation: observation,
-                productionOperationIDs: provenance
+                productionOperationIDs:
+                    record.productionProvenance?.operationIDs ?? []
             )
         }.prefix(limit))
     }
@@ -546,7 +539,7 @@ extension PebbleAgentController {
         actor: PebbleAgentEmbodiment,
         world: World,
         session: inout AgentSimulationSession
-    ) throws {
+    ) throws -> AgentVerifiedProductionOutcome {
         guard let need = session.productionSnapshot().needs.first(where: {
             $0.needID == needID && $0.status == .active
         }), let lifetime = session.productionSnapshot().configuration?
@@ -567,11 +560,12 @@ extension PebbleAgentController {
             ), actor: actor, world: world,
             publish: { try session.recordVerifiedProduction($0) }
         )
-        guard result.succeeded else {
+        guard result.succeeded, let verified = result.verified else {
             throw ControllerError.barterBoundary(
                 "production \(needID.rawValue) \(result.status.rawValue)"
             )
         }
+        return verified
     }
 
     private func registerProducedBarterAsset(
@@ -580,6 +574,7 @@ extension PebbleAgentController {
         observation: AgentMaterialHolderObservation,
         ownerID: AgentID,
         witnesses: [AgentID],
+        productionOperationIDs: [String],
         session: inout AgentSimulationSession
     ) throws {
         let prefix = "barter-rights:\(assetID.rawValue)"
@@ -590,6 +585,11 @@ extension PebbleAgentController {
                 assetID: assetID, materialIdentity: material.identity,
                 quantity: material.count
             ), observation: observation
+        ))
+        _ = try session.applyMaterialRightsOperation(.bindProductionProvenance(
+            operationID: "\(prefix):production-provenance",
+            assetID: assetID,
+            productionOperationIDs: productionOperationIDs.sorted()
         ))
         _ = try session.applyMaterialRightsOperation(.assertClaim(
             operationID: "\(prefix):claim", assetID: assetID,

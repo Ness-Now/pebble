@@ -112,6 +112,126 @@ public struct AgentMaterialHolderObservation: Codable, Equatable, Sendable {
     }
 }
 
+/// Minimal durable origin evidence for one exact rights-tracked asset.
+///
+/// This is historical provenance only. It never authorizes a current World
+/// mutation, and it remains unchanged when holder, custodian, or owner changes.
+public struct AgentMaterialProductionOriginProof: Codable, Equatable, Sendable {
+    public let operationID: String
+    public let producerID: AgentID
+    public let outputProduced: AgentMaterialStackSnapshot
+    public let physicalReceiptID: String
+    public let sourceLocationID: String
+    public let sourceCustodyFingerprintBefore: String
+    public let sourceCustodyFingerprintAfter: String
+    public let completedAtTick: Int
+    public let causalEventID: AgentCausalEventID
+    public let proofDigest: String
+
+    public init(
+        operationID: String,
+        producerID: AgentID,
+        outputProduced: AgentMaterialStackSnapshot,
+        physicalReceiptID: String,
+        sourceLocationID: String,
+        sourceCustodyFingerprintBefore: String,
+        sourceCustodyFingerprintAfter: String,
+        completedAtTick: Int,
+        causalEventID: AgentCausalEventID
+    ) {
+        self.operationID = operationID
+        self.producerID = producerID
+        self.outputProduced = outputProduced
+        self.physicalReceiptID = physicalReceiptID
+        self.sourceLocationID = sourceLocationID
+        self.sourceCustodyFingerprintBefore = sourceCustodyFingerprintBefore
+        self.sourceCustodyFingerprintAfter = sourceCustodyFingerprintAfter
+        self.completedAtTick = completedAtTick
+        self.causalEventID = causalEventID
+        proofDigest = Self.digest(
+            operationID: operationID,
+            producerID: producerID,
+            outputProduced: outputProduced,
+            physicalReceiptID: physicalReceiptID,
+            sourceLocationID: sourceLocationID,
+            sourceCustodyFingerprintBefore: sourceCustodyFingerprintBefore,
+            sourceCustodyFingerprintAfter: sourceCustodyFingerprintAfter,
+            completedAtTick: completedAtTick,
+            causalEventID: causalEventID
+        )
+    }
+
+    public var hasValidDigest: Bool {
+        proofDigest == Self.digest(
+            operationID: operationID,
+            producerID: producerID,
+            outputProduced: outputProduced,
+            physicalReceiptID: physicalReceiptID,
+            sourceLocationID: sourceLocationID,
+            sourceCustodyFingerprintBefore: sourceCustodyFingerprintBefore,
+            sourceCustodyFingerprintAfter: sourceCustodyFingerprintAfter,
+            completedAtTick: completedAtTick,
+            causalEventID: causalEventID
+        )
+    }
+
+    private static func digest(
+        operationID: String,
+        producerID: AgentID,
+        outputProduced: AgentMaterialStackSnapshot,
+        physicalReceiptID: String,
+        sourceLocationID: String,
+        sourceCustodyFingerprintBefore: String,
+        sourceCustodyFingerprintAfter: String,
+        completedAtTick: Int,
+        causalEventID: AgentCausalEventID
+    ) -> String {
+        let identity = outputProduced.identity
+        let enchantments = identity.enchantments.map {
+            "\($0.id):\($0.level)"
+        }.joined(separator: ",")
+        return AgentProductionDigest.make([
+            operationID,
+            producerID.rawValue,
+            identity.itemKey,
+            String(identity.damage),
+            enchantments,
+            identity.label ?? "",
+            identity.canonicalDataJSON,
+            String(outputProduced.count),
+            physicalReceiptID,
+            sourceLocationID,
+            sourceCustodyFingerprintBefore,
+            sourceCustodyFingerprintAfter,
+            String(completedAtTick),
+            causalEventID.rawValue,
+        ].joined(separator: "|"))
+    }
+}
+
+public struct AgentMaterialProductionProvenance: Codable, Equatable, Sendable {
+    public let origins: [AgentMaterialProductionOriginProof]
+
+    public init(origins: [AgentMaterialProductionOriginProof]) {
+        self.origins = origins.sorted { $0.operationID < $1.operationID }
+    }
+
+    public var operationIDs: [String] { origins.map(\.operationID) }
+    public var representedQuantity: Int {
+        var total = 0
+        for origin in origins {
+            let (next, overflow) = total.addingReportingOverflow(
+                origin.outputProduced.count
+            )
+            if overflow {
+                return origin.outputProduced.count >= 0 ? Int.max : Int.min
+            }
+            total = next
+        }
+        return total
+    }
+}
+
 public enum AgentMaterialClaimBasis: String, Codable, CaseIterable, Sendable {
     case produced
     case received
@@ -240,6 +360,7 @@ public struct AgentMaterialRightsRecord: Codable, Equatable, Sendable {
     public internal(set) var claims: [AgentMaterialClaim]
     public internal(set) var recognizedOwnership: AgentMaterialRecognizedOwnership?
     public internal(set) var permissions: [AgentMaterialUsePermission]
+    public internal(set) var productionProvenance: AgentMaterialProductionProvenance?
 
     public init(
         asset: AgentMaterialAssetReference,
@@ -247,7 +368,8 @@ public struct AgentMaterialRightsRecord: Codable, Equatable, Sendable {
         custodianID: AgentID? = nil,
         claims: [AgentMaterialClaim] = [],
         recognizedOwnership: AgentMaterialRecognizedOwnership? = nil,
-        permissions: [AgentMaterialUsePermission] = []
+        permissions: [AgentMaterialUsePermission] = [],
+        productionProvenance: AgentMaterialProductionProvenance? = nil
     ) {
         self.asset = asset
         self.lastVerifiedHolder = lastVerifiedHolder
@@ -255,6 +377,7 @@ public struct AgentMaterialRightsRecord: Codable, Equatable, Sendable {
         self.claims = claims.sorted { $0.claimID < $1.claimID }
         self.recognizedOwnership = recognizedOwnership
         self.permissions = permissions.sorted { $0.permissionID < $1.permissionID }
+        self.productionProvenance = productionProvenance
     }
 
     public var hasConflict: Bool {
@@ -414,6 +537,11 @@ public enum AgentMaterialRightsOperation: Codable, Equatable, Sendable {
         asset: AgentMaterialAssetReference,
         observation: AgentMaterialHolderObservation
     )
+    case bindProductionProvenance(
+        operationID: String,
+        assetID: AgentMaterialAssetID,
+        productionOperationIDs: [String]
+    )
     case assertClaim(
         operationID: String,
         assetID: AgentMaterialAssetID,
@@ -461,6 +589,7 @@ public enum AgentMaterialRightsOperation: Codable, Equatable, Sendable {
     public var operationID: String {
         switch self {
         case let .register(id, _, _),
+             let .bindProductionProvenance(id, _, _),
              let .assertClaim(id, _, _, _, _),
              let .withdrawClaim(id, _, _, _),
              let .recognizeOwnership(id, _, _, _),
@@ -477,6 +606,7 @@ public enum AgentMaterialRightsOperation: Codable, Equatable, Sendable {
 
 public enum AgentMaterialRightsTransitionKind: String, Codable, Sendable {
     case assetRegistered
+    case productionProvenanceBound
     case claimAsserted
     case claimWithdrawn
     case ownershipRecognized

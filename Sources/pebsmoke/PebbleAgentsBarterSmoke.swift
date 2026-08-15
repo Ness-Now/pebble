@@ -134,6 +134,7 @@ private func registerBarterAsset(
     observation: AgentMaterialHolderObservation,
     owner: AgentID,
     witnesses: [AgentID],
+    productionOperationIDs: [String] = [],
     session: inout AgentSimulationSession
 ) throws {
     let claimID = AgentMaterialClaimID(rawValue: "claim:\(id.rawValue):produced")!
@@ -144,6 +145,13 @@ private func registerBarterAsset(
             quantity: stack.count
         ), observation: observation
     ))
+    if !productionOperationIDs.isEmpty {
+        _ = try session.applyMaterialRightsOperation(.bindProductionProvenance(
+            operationID: "rights:\(id.rawValue):production-provenance",
+            assetID: id,
+            productionOperationIDs: productionOperationIDs.sorted()
+        ))
+    }
     _ = try session.applyMaterialRightsOperation(.assertClaim(
         operationID: "rights:\(id.rawValue):claim", assetID: id,
         claimID: claimID, claimantID: owner, basis: .produced
@@ -203,21 +211,25 @@ private func barterFixture(
     let pickaxeObservation = AgentMaterialHolderObservation(
         holder: .agent(a), materialIdentity: barterIdentity("stone_pickaxe"),
         quantity: 1, custodyFingerprint: "a-pickaxe",
-        physicalReceiptID: "observe:a-pickaxe", observedAtTick: 0
+        physicalReceiptID: pickaxeProductionID, observedAtTick: 0
     )
     let breadObservation = AgentMaterialHolderObservation(
         holder: .agent(b), materialIdentity: barterIdentity("bread"),
         quantity: 2, custodyFingerprint: "b-bread-2",
-        physicalReceiptID: "observe:b-bread-2", observedAtTick: 0
+        physicalReceiptID: "produce:agent_b:bread:2", observedAtTick: 0
     )
     try! registerBarterAsset(
         id: pickaxeAsset, stack: barterStack("stone_pickaxe", 1),
         observation: pickaxeObservation, owner: a, witnesses: [a, b],
+        productionOperationIDs: [pickaxeProductionID],
         session: &session
     )
     try! registerBarterAsset(
         id: breadAsset, stack: barterStack("bread", 2),
         observation: breadObservation, owner: b, witnesses: [a, b],
+        productionOperationIDs: [
+            "produce:agent_b:bread:1", "produce:agent_b:bread:2",
+        ],
         session: &session
     )
     try! session.setBarterEnabled(true, configuration: configuration)

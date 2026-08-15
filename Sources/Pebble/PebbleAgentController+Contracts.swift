@@ -18,7 +18,7 @@ extension PebbleAgentController {
         world: World,
         player: Player
     ) -> PebbleAgentCommandResult {
-        let usage = "Usage: /lab contract <setup|status|proof|cleanup|drift consideration|drift fulfillment>"
+        let usage = "Usage: /lab contract <setup|status|proof|provenance|cleanup|drift consideration|drift fulfillment|displace fulfillment|return fulfillment>"
         guard contractFeatureEnabled else {
             return failure(
                 "Contracts disabled. Set PEBBLELAB_APP_AGENTS_CONTRACTS=1 before launch."
@@ -29,11 +29,26 @@ extension PebbleAgentController {
                 leg: arguments[1].lowercased(), world: world
             )
         }
+        if arguments.count == 2,
+           arguments[0].lowercased() == "displace",
+           arguments[1].lowercased() == "fulfillment" {
+            return moveContractBlocker01Performance(
+                returning: false, world: world
+            )
+        }
+        if arguments.count == 2,
+           arguments[0].lowercased() == "return",
+           arguments[1].lowercased() == "fulfillment" {
+            return moveContractBlocker01Performance(
+                returning: true, world: world
+            )
+        }
         guard arguments.count == 1 else { return failure(usage) }
         switch arguments[0].lowercased() {
         case "setup": return setupContractProof(world: world, player: player)
         case "status": return contractStatus(world: world)
         case "proof": return proveContractBoundaries(world: world)
+        case "provenance": return contractBlocker01ProvenanceStatus(world: world)
         case "cleanup": return cleanupContractProof(world: world)
         default: return failure(usage)
         }
@@ -107,17 +122,43 @@ extension PebbleAgentController {
         )
         let originalPromisee = copyItemInventory(promiseeProbe.carriedItems)
         let originalPromisor = copyItemInventory(promisorProbe.carriedItems)
+        let blocker01 = environment["PEBBLELAB_GATE_E_BLOCKER_01"] == "1"
+        let keeperProbe = agents.first(where: {
+            $0.id != pair.0.id && $0.id != pair.1.id
+        }).flatMap { probesByAgentId[$0.id] }
+        guard !blocker01 || (keeperProbe?.world === world
+            && keeperProbe?.dead == false
+            && keeperProbe?.carriedItems.allSatisfy({ $0 == nil }) == true) else {
+            return failure(
+                "Blocker 01 setup requires a third live agent with empty custody."
+            )
+        }
+        let originalKeeper = keeperProbe.map {
+            copyItemInventory($0.carriedItems)
+        }
+        let blockerContainer = blocker01 ? contractBlocker01ContainerCandidates(
+            workshop: workshop
+        ).first(where: { position in
+            world.isChunkReady(position.x >> 4, position.z >> 4)
+                && world.getBlock(position.x, position.y, position.z) == 0
+                && world.getBlockEntity(position.x, position.y, position.z) == nil
+                && agents.allSatisfy { $0.position != position }
+        }) : nil
+        guard !blocker01 || blockerContainer != nil else {
+            return failure("Blocker 01 setup found no disposable container cell.")
+        }
         do {
             _ = world.setBlock(
                 workshop.x, workshop.y, workshop.z,
                 Int(cell(B.crafting_table)), SET_SILENT
             )
-            // The promisee's current consideration is produced before the
-            // contract bootstrap completes. The promisor only has inputs for
-            // the promised good; no bread exists yet.
+            // Disposable inputs only. All outputs below still cross the real
+            // recipe, production, custody, verification and rights adapters.
             promiseeProbe.carriedItems[0] = ItemStack(iid("cobblestone"), 3)
             promiseeProbe.carriedItems[1] = ItemStack(iid("stick"), 2)
-            promisorProbe.carriedItems[0] = ItemStack(iid("wheat"), 3)
+            promisorProbe.carriedItems[0] = ItemStack(
+                iid("wheat"), blocker01 ? 9 : 3
+            )
             let productionConfiguration = environment[
                 "PEBBLELAB_DISPOSABLE_CONTRACT_PRODUCTION_NEED_CAPACITY_PROOF"
             ] == "1"
@@ -126,8 +167,112 @@ extension PebbleAgentController {
             try candidate.setProductionEnabled(
                 true, configuration: productionConfiguration
             )
+            try candidate.setMaterialRightsEnabled(true)
             let promiseeID = AgentID(rawValue: pair.0.id)!
             let promisorID = AgentID(rawValue: pair.1.id)!
+            if blocker01 {
+                guard let keeperProbe, let blockerContainer,
+                      let keeperID = AgentID(
+                        rawValue: PebbleAgentEmbodiment(
+                            probe: keeperProbe
+                        ).agentID
+                      ) else {
+                    throw ControllerError.contractBoundary(
+                        "Blocker 01 physical holders unavailable"
+                    )
+                }
+                _ = world.setBlock(
+                    blockerContainer.x, blockerContainer.y, blockerContainer.z,
+                    Int(cell(B.chest)), SET_SILENT
+                )
+                let container = makeContainerBE(
+                    blockerContainer.x, blockerContainer.y, blockerContainer.z, 27
+                )
+                world.setBlockEntity(container)
+                guard world.getBlockEntity(
+                    blockerContainer.x, blockerContainer.y, blockerContainer.z
+                ) === container else {
+                    throw ControllerError.contractBoundary(
+                        "Blocker 01 displacement container unavailable"
+                    )
+                }
+                let destinations: [(
+                    AgentMaterialPhysicalHolder,
+                    PebbleAgentMaterialCustodyEndpoint
+                )] = [
+                    (
+                        .agent(promiseeID),
+                        .liveAgent(promisee, in: world)
+                    ),
+                    (
+                        .container(
+                            "\(blockerContainer.x),\(blockerContainer.y),"
+                                + "\(blockerContainer.z)"
+                        ),
+                        .container(container, in: world)
+                    ),
+                ]
+                var productionIDs: [String] = []
+                for ordinal in 1...3 {
+                    let needID = AgentProductionNeedID(
+                        rawValue: "gate-e-blocker-01:\(promisorID.rawValue):bread:p\(ordinal)"
+                    )!
+                    try candidate.raiseProductionNeed(
+                        needID: needID, actorID: promisorID,
+                        reason: .physicalFoodNeed,
+                        desiredOutputItemKey: "bread", quantity: 1,
+                        priority: 100 - ordinal
+                    )
+                    let verified = try produceContractBootstrapConsideration(
+                        needID: needID, actor: promisor,
+                        world: world, session: &candidate
+                    )
+                    let breadAssetID = AgentMaterialAssetID(
+                        rawValue: "contract-blocker-01-bread-p\(ordinal):\(promisorID.rawValue)"
+                    )!
+                    let observation = AgentMaterialHolderObservation(
+                        holder: .agent(promisorID),
+                        materialIdentity: verified.outputProduced.identity,
+                        quantity: verified.outputProduced.count,
+                        custodyFingerprint:
+                            verified.sourceCustodyFingerprintAfter,
+                        physicalReceiptID: verified.physicalReceiptID,
+                        observedAtTick: candidate.tick
+                    )
+                    try registerContractAsset(
+                        assetID: breadAssetID,
+                        material: verified.outputProduced,
+                        observation: observation, ownerID: promisorID,
+                        witnesses: [promiseeID, promisorID, keeperID],
+                        basis: .produced,
+                        operationPrefix:
+                            "gate-e-blocker-01-rights:p\(ordinal):\(promisorID.rawValue)",
+                        productionOperationIDs: [verified.operationID],
+                        session: &candidate, recorder: nil
+                    )
+                    if ordinal < 3 {
+                        try transferContractBlocker01Asset(
+                            assetID: breadAssetID,
+                            actorID: promisorID,
+                            destinationHolder: destinations[ordinal - 1].0,
+                            source: .liveAgent(promisor, in: world),
+                            destination: destinations[ordinal - 1].1,
+                            operationID:
+                                "gate-e-blocker-01-park:p\(ordinal):\(promisorID.rawValue)",
+                            session: &candidate
+                        )
+                    }
+                    productionIDs.append(verified.operationID)
+                }
+                trace(
+                    "gate-e blocker-01 bootstrap producer=\(promisorID.rawValue) "
+                        + "matchingHistorical=3 promisedAsset="
+                        + "contract-blocker-01-bread-p3:\(promisorID.rawValue) "
+                        + "quantity=1 productionOperations="
+                        + productionIDs.joined(separator: ",")
+                        + " proofFixtureDecisionAuthority=0"
+                )
+            }
             let considerationNeed = AgentProductionNeedID(
                 rawValue: "contract:\(promisorID.rawValue):needs-pickaxe"
             )!
@@ -137,20 +282,21 @@ extension PebbleAgentController {
             let preparationNeed = AgentProductionNeedID(
                 rawValue: "contract:\(promiseeID.rawValue):prepare-pickaxe"
             )!
+            // Co-mingled controls are present before the tracked
+            // consideration is produced and bound. The later drift command
+            // moves them without changing tracked identity or quantity.
+            promiseeProbe.carriedItems[6] = ItemStack(iid("dirt"), 1)
+            promisorProbe.carriedItems[6] = ItemStack(iid("sand"), 1)
             try candidate.raiseProductionNeed(
                 needID: preparationNeed, actorID: promiseeID,
                 reason: .missingUsefulTool,
                 desiredOutputItemKey: "stone_pickaxe", quantity: 1,
                 priority: 99
             )
-            try produceContractBootstrapConsideration(
+            let considerationProduction = try produceContractBootstrapConsideration(
                 needID: preparationNeed, actor: promisee,
                 world: world, session: &candidate
             )
-            // These unrelated co-mingled controls are moved, never created or
-            // consumed, after the tracked asset observations are published.
-            promiseeProbe.carriedItems[6] = ItemStack(iid("dirt"), 1)
-            promisorProbe.carriedItems[6] = ItemStack(iid("sand"), 1)
             try candidate.raiseProductionNeed(
                 needID: considerationNeed, actorID: promisorID,
                 reason: .missingUsefulTool,
@@ -163,7 +309,6 @@ extension PebbleAgentController {
                 desiredOutputItemKey: "bread", quantity: 1,
                 priority: 95
             )
-            try candidate.setMaterialRightsEnabled(true)
             let endpoint = PebbleAgentMaterialCustodyEndpoint.liveAgent(
                 promisee, in: world
             )
@@ -183,7 +328,7 @@ extension PebbleAgentController {
                 holder: .agent(promiseeID),
                 materialIdentity: pickaxe.identity, quantity: pickaxe.count,
                 custodyFingerprint: fingerprint,
-                physicalReceiptID: "contract-bootstrap:pickaxe",
+                physicalReceiptID: considerationProduction.physicalReceiptID,
                 observedAtTick: candidate.tick
             )
             try registerContractAsset(
@@ -191,6 +336,7 @@ extension PebbleAgentController {
                 observation: observation, ownerID: promiseeID,
                 witnesses: [promiseeID, promisorID],
                 basis: .produced, operationPrefix: "contract-bootstrap-rights",
+                productionOperationIDs: [considerationProduction.operationID],
                 session: &candidate, recorder: nil
             )
             try candidate.setContractsEnabled(true)
@@ -215,7 +361,8 @@ extension PebbleAgentController {
             movementEnabled = false
             let message = "contract setup promisor=\(promisorID.rawValue) "
                 + "promisee=\(promiseeID.rawValue) reasonCurrent=stone_pickaxe:1 "
-                + "promisedFuture=bread:1 promisedHeldBefore=0 "
+                + "promisedFuture=bread:1 promisedHeldBefore="
+                + "\(blocker01 ? 1 : 0) "
                 + "consideration=stone_pickaxe:1 physical=verified "
                 + "normalProposal=awaiting normalAcceptance=awaiting "
                 + "proofFixtureDecisionAuthority=0 "
@@ -225,10 +372,19 @@ extension PebbleAgentController {
         } catch {
             promiseeProbe.carriedItems = originalPromisee
             promisorProbe.carriedItems = originalPromisor
+            if let keeperProbe, let originalKeeper {
+                keeperProbe.carriedItems = originalKeeper
+            }
             _ = world.setBlock(
                 workshop.x, workshop.y, workshop.z,
                 originalWorkshop, SET_SILENT
             )
+            if let blockerContainer {
+                _ = world.setBlock(
+                    blockerContainer.x, blockerContainer.y,
+                    blockerContainer.z, 0, SET_SILENT
+                )
+            }
             productionGateway.reset()
             materialCustodyGateway.reset()
             return failure("Contract setup failed: \(error)")
@@ -466,10 +622,7 @@ extension PebbleAgentController {
             assetID = rights.asset.assetID
             material = obligation.promisedPerformance.material
             historicalSourceObservation = rights.lastVerifiedHolder
-            productionOperationIDs = session.productionSnapshot().records.filter {
-                $0.actorID == obligation.promisorID
-                    && $0.outputProduced == material
-            }.map(\.operationID).sorted()
+            productionOperationIDs = rights.productionProvenance?.operationIDs ?? []
         default:
             throw ControllerError.contractBoundary("unknown contract activity")
         }
@@ -731,6 +884,7 @@ extension PebbleAgentController {
             basis: .produced,
             operationPrefix: "contract-performance-rights:"
                 + obligation.obligationID.rawValue,
+            productionOperationIDs: [verified.operationID],
             session: &session, recorder: &recorder
         )
         // Verify the gateway's post-mutation fingerprint is still current.
@@ -867,7 +1021,6 @@ extension PebbleAgentController {
               let fingerprint = try? materialCustodyGateway.fingerprint(endpoint)
         else { return [] }
         let physical = custody.slots.compactMap { $0 }
-        let production = session.productionSnapshot().records
         return Array(session.materialRightsSnapshot().records.filter {
             $0.lastVerifiedHolder.holder == .agent(agentID)
                 && $0.recognizedOwnership?.ownerID == agentID
@@ -893,13 +1046,11 @@ extension PebbleAgentController {
                 use: .transferCustody, verifiedHolder: observation
             ))
             guard disposition.verdict == .allowed else { return nil }
-            let provenance = production.filter {
-                $0.actorID == agentID && $0.outputProduced == material
-            }.map(\.operationID).sorted()
             return AgentBarterLeg(
                 assetID: record.asset.assetID, holderID: agentID,
                 material: material, holderObservation: observation,
-                productionOperationIDs: provenance
+                productionOperationIDs:
+                    record.productionProvenance?.operationIDs ?? []
             )
         }.prefix(limit))
     }
@@ -909,7 +1060,7 @@ extension PebbleAgentController {
         actor: PebbleAgentEmbodiment,
         world: World,
         session: inout AgentSimulationSession
-    ) throws {
+    ) throws -> AgentVerifiedProductionOutcome {
         guard let need = session.productionSnapshot().needs.first(where: {
             $0.needID == needID && $0.status == .active
         }), let lifetime = session.productionSnapshot().configuration?
@@ -938,11 +1089,12 @@ extension PebbleAgentController {
             ), actor: actor, world: world,
             publish: { try session.recordVerifiedProduction($0) }
         )
-        guard outcome.succeeded else {
+        guard outcome.succeeded, let verified = outcome.verified else {
             throw ControllerError.contractBoundary(
                 "bootstrap production \(outcome.status.rawValue)"
             )
         }
+        return verified
     }
 
     private func registerContractAsset(
@@ -953,6 +1105,7 @@ extension PebbleAgentController {
         witnesses: [AgentID],
         basis: AgentMaterialClaimBasis,
         operationPrefix: String,
+        productionOperationIDs: [String],
         session: inout AgentSimulationSession,
         recorder: AgentReplayRecorder?
     ) throws {
@@ -969,6 +1122,11 @@ extension PebbleAgentController {
                     assetID: assetID, materialIdentity: material.identity,
                     quantity: material.count
                 ), observation: observation
+            ),
+            .bindProductionProvenance(
+                operationID: "\(operationPrefix):production-provenance",
+                assetID: assetID,
+                productionOperationIDs: productionOperationIDs.sorted()
             ),
             .assertClaim(
                 operationID: "\(operationPrefix):claim",
@@ -1008,6 +1166,7 @@ extension PebbleAgentController {
         witnesses: [AgentID],
         basis: AgentMaterialClaimBasis,
         operationPrefix: String,
+        productionOperationIDs: [String],
         session: inout AgentSimulationSession,
         recorder: inout AgentReplayRecorder?
     ) throws {
@@ -1023,6 +1182,11 @@ extension PebbleAgentController {
                     assetID: assetID, materialIdentity: material.identity,
                     quantity: material.count
                 ), observation: observation
+            ),
+            .bindProductionProvenance(
+                operationID: "\(operationPrefix):production-provenance",
+                assetID: assetID,
+                productionOperationIDs: productionOperationIDs.sorted()
             ),
             .assertClaim(
                 operationID: "\(operationPrefix):claim",
@@ -1248,6 +1412,243 @@ extension PebbleAgentController {
         let message = "Contract disposable fixture cleanup cells=exact fulfilledCustody=retained"
         trace(message)
         return success(message)
+    }
+
+    private func contractBlocker01ContainerCandidates(
+        workshop: AgentPosition
+    ) -> [AgentPosition] {
+        [
+            (3, 0), (-3, 0), (0, 3), (0, -3),
+            (3, 3), (-3, -3), (3, -3), (-3, 3),
+        ].map {
+            AgentPosition(
+                x: workshop.x + $0.0,
+                y: workshop.y,
+                z: workshop.z + $0.1
+            )
+        }
+    }
+
+    private func transferContractBlocker01Asset(
+        assetID: AgentMaterialAssetID,
+        actorID: AgentID,
+        destinationHolder: AgentMaterialPhysicalHolder,
+        source: PebbleAgentMaterialCustodyEndpoint,
+        destination: PebbleAgentMaterialCustodyEndpoint,
+        operationID: String,
+        session: inout AgentSimulationSession
+    ) throws {
+        guard let record = session.materialRightsSnapshot().records.first(where: {
+            $0.asset.assetID == assetID
+        }) else {
+            throw ControllerError.contractBoundary(
+                "Blocker 01 rights asset unavailable"
+            )
+        }
+        let material = AgentMaterialStackSnapshot(
+            identity: record.lastVerifiedHolder.materialIdentity,
+            count: record.lastVerifiedHolder.quantity
+        )
+        let decision = session.evaluateMaterialUse(AgentMaterialUseRequest(
+            requestID: "\(operationID):authorize",
+            assetID: assetID, actorID: actorID,
+            use: .transferCustody,
+            verifiedHolder: record.lastVerifiedHolder
+        ))
+        let sourceAuthority = try materialCustodyGateway.acquireAssetAuthority(
+            material, at: source
+        )
+        let destinationBefore = try materialCustodyGateway.fingerprint(destination)
+        guard decision.verdict == .allowed, sourceAuthority.isExact else {
+            throw ControllerError.contractBoundary(
+                "Blocker 01 exact current authority refused"
+            )
+        }
+        let transfer = materialCustodyGateway.transfer(
+            PebbleAgentMaterialTransactionRequest(
+                transactionID: operationID,
+                material: material,
+                expectedSourceFingerprint:
+                    sourceAuthority.currentCustodyFingerprint,
+                expectedDestinationFingerprint: destinationBefore
+            ), from: source, to: destination
+        )
+        guard transfer.succeeded,
+              let sourceAfter = transfer.sourceFingerprint,
+              let destinationAfter = transfer.destinationFingerprint else {
+            throw ControllerError.contractBoundary(
+                "Blocker 01 physical transfer \(transfer.status.rawValue)"
+            )
+        }
+        let outcome = AgentMaterialPhysicalTransferOutcome(
+            operationID: operationID, decision: decision,
+            disposition: .authorized, status: .succeeded,
+            destinationObservation: AgentMaterialHolderObservation(
+                holder: destinationHolder,
+                materialIdentity: material.identity,
+                quantity: material.count,
+                custodyFingerprint: destinationAfter,
+                physicalReceiptID: operationID,
+                observedAtTick: session.tick
+            ), physicalReceiptID: operationID
+        )
+        do {
+            _ = try session.applyMaterialRightsOperation(.physicalTransfer(outcome))
+        } catch {
+            let rollback = materialCustodyGateway.transfer(
+                PebbleAgentMaterialTransactionRequest(
+                    transactionID: "\(operationID):rollback",
+                    material: material,
+                    expectedSourceFingerprint: destinationAfter,
+                    expectedDestinationFingerprint: sourceAfter
+                ), from: destination, to: source
+            )
+            guard rollback.succeeded else {
+                throw ControllerError.contractPostMutationBoundary(
+                    "Blocker 01 rights publication rollback failed"
+                )
+            }
+            throw error
+        }
+    }
+
+    private func moveContractBlocker01Performance(
+        returning: Bool,
+        world: World
+    ) -> PebbleAgentCommandResult {
+        guard environment["PEBBLELAB_GATE_E_BLOCKER_01"] == "1",
+              environment["PEBBLELAB_DISPOSABLE_WORLD_PROOF"] == "1",
+              isPaused, !movementEnabled,
+              let candidate = session, activeWorld === world,
+              let obligation = candidate.contractSnapshot().obligations.first(where: {
+                $0.status == .outstanding || $0.status == .overdue
+              }),
+              let record = candidate.materialRightsSnapshot().records.first(where: {
+                $0.asset.assetID.rawValue
+                    == "contract-blocker-01-bread-p3:\(obligation.promisorID.rawValue)"
+              }),
+              let promisorProbe = probesByAgentId[obligation.promisorID.rawValue],
+              promisorProbe.world === world, !promisorProbe.dead,
+              let keeperState = candidate.snapshot().agents.first(where: {
+                $0.id != obligation.promisorID.rawValue
+                    && $0.id != obligation.promiseeID.rawValue
+              }), let keeperID = AgentID(rawValue: keeperState.id),
+              let keeperProbe = probesByAgentId[keeperID.rawValue],
+              keeperProbe.world === world, !keeperProbe.dead else {
+            return failure(
+                "Blocker 01 displacement requires paused disposable open debt."
+            )
+        }
+        let promisor = PebbleAgentEmbodiment(probe: promisorProbe)
+        let agentEndpoint = PebbleAgentMaterialCustodyEndpoint.liveAgent(
+            promisor, in: world
+        )
+        let keeperEndpoint = PebbleAgentMaterialCustodyEndpoint.liveAgent(
+            keeperProbe, in: world
+        )
+        guard record.lastVerifiedHolder.holder == .agent(obligation.promisorID),
+              record.recognizedOwnership?.ownerID == obligation.promisorID else {
+            return failure("Blocker 01 displacement holder is not current.")
+        }
+        do {
+            let durableBefore = try candidate.durableStateBytes()
+            let material = AgentMaterialStackSnapshot(
+                identity: record.asset.materialIdentity,
+                count: record.asset.quantity
+            )
+            let source = returning ? keeperEndpoint : agentEndpoint
+            let destination = returning ? agentEndpoint : keeperEndpoint
+            let authority = try materialCustodyGateway.acquireAssetAuthority(
+                material, at: source
+            )
+            let destinationFingerprint = try materialCustodyGateway.fingerprint(
+                destination
+            )
+            guard authority.isExact else {
+                throw ControllerError.contractBoundary(
+                    "Blocker 01 adversarial source is not exact"
+                )
+            }
+            let operationID = returning
+                ? "gate-e-blocker-01:return:\(obligation.obligationID.rawValue)"
+                : "gate-e-blocker-01:displace:\(obligation.obligationID.rawValue)"
+            let transfer = materialCustodyGateway.transfer(
+                PebbleAgentMaterialTransactionRequest(
+                    transactionID: operationID,
+                    material: material,
+                    expectedSourceFingerprint:
+                        authority.currentCustodyFingerprint,
+                    expectedDestinationFingerprint: destinationFingerprint
+                ), from: source, to: destination
+            )
+            guard transfer.succeeded,
+                  try candidate.durableStateBytes() == durableBefore else {
+                throw ControllerError.contractPostMutationBoundary(
+                    "Blocker 01 adversarial transfer or session isolation failed"
+                )
+            }
+            let action = returning ? "returned" : "displaced"
+            let holder = returning
+                ? AgentMaterialPhysicalHolder.agent(obligation.promisorID).stableText
+                : AgentMaterialPhysicalHolder.agent(keeperID).stableText
+            let message = "contract blocker-01 \(action) asset="
+                + "\(record.asset.assetID.rawValue) currentPhysicalHolder=\(holder) "
+                + "quantity=1 rightsObservationUnchanged=1 "
+                + "productionOriginUnchanged=1 syntheticReplacement=0"
+            trace(message)
+            return success(message)
+        } catch {
+            return failure("Blocker 01 \(returning ? "return" : "displacement") failed: \(error)")
+        }
+    }
+
+    private func contractBlocker01ProvenanceStatus(
+        world: World
+    ) -> PebbleAgentCommandResult {
+        guard environment["PEBBLELAB_GATE_E_BLOCKER_01"] == "1",
+              let session, activeWorld === world,
+              let record = session.materialRightsSnapshot().records.first(where: {
+                $0.asset.assetID.rawValue.contains(
+                    "contract-blocker-01-bread-p3:"
+                )
+              }), let provenance = record.productionProvenance,
+              let origin = provenance.origins.first else {
+            return failure("Blocker 01 exact provenance is unavailable.")
+        }
+        let matching = session.productionSnapshot().records.filter {
+            $0.actorID == origin.producerID
+                && $0.outputProduced == AgentMaterialStackSnapshot(
+                    identity: record.asset.materialIdentity,
+                    count: record.asset.quantity
+                )
+        }.sorted { $0.operationID < $1.operationID }
+        let attributed = provenance.operationIDs
+        let attributedQuantity = provenance.representedQuantity
+        let otherMatchingRecords = matching.filter {
+            !attributed.contains($0.operationID)
+        }.count
+        let exact = matching.count >= 3
+            && record.asset.quantity == 1
+            && provenance.origins.count == 1
+            && attributedQuantity == 1
+            && attributed == [origin.operationID]
+            && origin.outputProduced == AgentMaterialStackSnapshot(
+                identity: record.asset.materialIdentity,
+                count: record.asset.quantity
+            )
+            && origin.hasValidDigest
+            && otherMatchingRecords == matching.count - 1
+        let message = "gate-e blocker-01 provenance matchingHistorical="
+            + "\(matching.count) promisedAsset=\(record.asset.assetID.rawValue) "
+            + "promisedQuantity=\(record.asset.quantity) attributedOperations="
+            + attributed.joined(separator: ",")
+            + " attributedQuantity=\(attributedQuantity) otherMatchingRecords="
+            + "\(otherMatchingRecords) falseMatchingAttributed=0 currentHolder="
+            + "\(record.lastVerifiedHolder.holder.stableText) originProducer="
+            + "\(origin.producerID.rawValue) exactBinding="
+            + "\(exact ? "PASS" : "FAIL") observerMutationCount=0"
+        trace(message)
+        return exact ? success(message) : failure(message)
     }
 
     private func contractDistance(

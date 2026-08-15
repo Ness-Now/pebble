@@ -280,6 +280,8 @@ public struct AgentProductionRecord: Codable, Equatable, Sendable {
     public let workshopPosition: AgentPosition
     public let workshopBlockKey: String
     public let sourceLocationID: String
+    public let sourceCustodyFingerprintBefore: String?
+    public let sourceCustodyFingerprintAfter: String?
     public let inputsConsumed: [AgentMaterialStackSnapshot]
     public let outputProduced: AgentMaterialStackSnapshot
     public let physicalReceiptID: String
