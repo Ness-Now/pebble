@@ -129,16 +129,16 @@ f55b64305027bee3fb67a2e27b422578124c4e00
 ## Canonical position
 
 ```text
-CIV-00 through CIV-36: COMPLETE AND PUBLISHED
-CIV-37: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE
+CIV-00 through CIV-37: COMPLETE AND PUBLISHED
+CIV-37: COMPLETE AND PUBLISHED
 CIV-38: OPTIONAL — NOT STARTED
 Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
-active CIV phase: CIV-37
-completed and published through: CIV-36
-next eligible phase: null — CIV-37 review pending
-next authorized action: SENIOR REVIEW OF CIV-37
+active CIV phase: null
+completed and published through: CIV-37
+next eligible phase: null
+next authorized action: NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-01
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
@@ -167,7 +167,7 @@ Independent Gate D Evaluation 11: PASS — SENIOR REVIEW APPROVED — PUBLISHED 
 CIV-34: COMPLETE AND PUBLISHED
 CIV-35: COMPLETE AND PUBLISHED
 CIV-36: COMPLETE AND PUBLISHED
-CIV-37: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE
+CIV-37: COMPLETE AND PUBLISHED
 CIV-38: OPTIONAL — NOT STARTED
 V4-GATE-E-v1: PLANNED — NOT ACQUIRED
 ```
@@ -251,8 +251,8 @@ was not independently approved. Senior review approved corrected
 evidence/documentation HEAD `3494abea0211a843ca54bb0748b1a6d9bdbddd3f`
 and final review bundle SHA-256
 `7947b0ae2e1c86a551403d24f3d75769e8203baf43f8b0e5958a94d038d21951`
-with 47/47 internal checksums and passing unzip validation. CIV-37 is an
-**IMPLEMENTED_LOCAL_REVIEW_CANDIDATE** from exact baseline
+with 47/47 internal checksums and passing unzip validation. CIV-37 is
+**COMPLETE AND PUBLISHED** from exact baseline
 `9f13ffee3f312caaaa68ddd6f2c2c27e5942474e` at product/proof commit
 `e279362e1d5b71ed82d20e2f17e492fa22579c37`. Senior Review Correction 01
 starts from reviewed candidate HEAD
@@ -260,10 +260,14 @@ starts from reviewed candidate HEAD
 `21ed1b550f9c54381e54c3c763d2ff494bda7d57` adds current decisive World
 locality, normal term-aware seller rejection/acceptance, exact quantity need
 closure and a causal restored-price control. Corrected focused validation is
-31/31 and the repository gate is 35/35 with 3923 assertions. It is not
-published or approved.
-CIV-38 remains optional and not started; Gate E remains planned and not
-acquired. The next authorized action is senior review of CIV-37.
+31/31 and the repository gate is 35/35 with 3923 assertions. Correction
+documentation commit `68f878abb0408984571f802c10079001e70c9aa7` and corrected
+reviewed HEAD `7a2a2b7e21fe773ca7583e6bfcefd20f2756c5d8` are senior-review
+approved. The accepted bundle SHA-256 is
+`7a0b48bb69f67b541670bfb91f7720ee0c19cfb5a5ca922bf8ac16a4902796bd`, with
+55/55 internal checksums and passing unzip validation. CIV-38 remains optional
+and not started; Gate E remains planned and not acquired. The next authorized
+action is `NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-01`.
 
 Gate B is acquired under `V4-GATE-B-v1`, the bounded checkpoint proved by the
 published closure and subsequently hardened for normal-world bootstrap:
@@ -440,10 +444,10 @@ historical FAIL evidence; its targeted Blocker 08 correction is a
 targeted Blocker 09 correction is **fixed and published**. Evaluation 10
 remains historical FAIL evidence; its targeted Blocker 10 correction is a
 **BLOCKER_FIX_PUBLISHED**. Independent Evaluation 11 is the first accepted
-whole-Gate PASS and is **SENIOR REVIEW APPROVED**. `CIV-34` through `CIV-36`
-are **COMPLETE AND PUBLISHED**. `CIV-37` is
-**IMPLEMENTED_LOCAL_REVIEW_CANDIDATE** and awaits senior review. `CIV-38` is
-**OPTIONAL — NOT STARTED** and Gate E remains **PLANNED — NOT ACQUIRED**.
+whole-Gate PASS and is **SENIOR REVIEW APPROVED**. `CIV-34` through `CIV-37`
+are **COMPLETE AND PUBLISHED**. `CIV-38` is **OPTIONAL — NOT STARTED** and Gate
+E remains **PLANNED — NOT ACQUIRED**. The next authorized action is
+`NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-01`.
 
 | Phase | Requirement | Outcome |
 | --- | --- | --- |
@@ -780,9 +784,9 @@ No individual correction acquired Gate D. The independent composition proof is
 recorded in
 [`GATE_D_EVALUATION_11_REPORT.md`](GATE_D_EVALUATION_11_REPORT.md). Senior
 review approved it, so Gate D remains acquired and published. `CIV-34` through
-`CIV-36` are complete and published. `CIV-37` is an implemented local review
-candidate, and senior review of CIV-37 is the next authorized action. CIV-38
-is optional and not started; Gate E remains planned and not acquired.
+`CIV-37` are complete and published. CIV-38 is optional and not started; Gate E
+remains planned and not acquired. The next authorized action is
+`NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-01`.
 
 ## Wave 3 — Local material economy
 
@@ -985,19 +989,24 @@ CIV-37 does not retroactively broaden it.
 
 ### `CIV-37` — Physical Markets and Local Price Discovery V1
 
-Status: **IMPLEMENTED_LOCAL_REVIEW_CANDIDATE, required**.
+Status: **COMPLETE AND PUBLISHED, required**.
 
-Candidate identity:
+Accepted implementation, correction and review history:
 
 ```text
 exact baseline: 9f13ffee3f312caaaa68ddd6f2c2c27e5942474e
 product/proof commit: e279362e1d5b71ed82d20e2f17e492fa22579c37
 previous reviewed HEAD: f96f84a61b72e115de668966f470feef986de925
-Senior Review Correction 01 commit: 21ed1b550f9c54381e54c3c763d2ff494bda7d57
-published: NO
-senior review: PENDING
+Senior Review Correction 01 product/proof commit: 21ed1b550f9c54381e54c3c763d2ff494bda7d57
+Correction 01 documentation commit: 68f878abb0408984571f802c10079001e70c9aa7
+corrected reviewed HEAD: 7a2a2b7e21fe773ca7583e6bfcefd20f2756c5d8
+senior review: APPROVED
+review bundle SHA-256: 7a0b48bb69f67b541670bfb91f7720ee0c19cfb5a5ca922bf8ac16a4902796bd
+internal checksums: 55/55 PASS
+unzip: PASS
+publication: COMPLETE AND PUBLISHED
 Gate E: PLANNED — NOT ACQUIRED
-next action: SENIOR REVIEW OF CIV-37
+next action: NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-01
 ```
 
 Result: a physical market is one bounded World place with a real container,
@@ -1008,7 +1017,10 @@ while the seller remains owner. A listing references that exact deposited lot
 and moves no matter. Buyer proposal and distinct seller acceptance reserve the
 lot but create neither a trade nor price history.
 
-Senior Review Correction 01A makes proposal distance historical social
+Senior Review Correction 01A records that the initial candidate did not
+revalidate current seller/buyer World locality at the decisive seller-decision
+and settlement boundaries, so historical locality could potentially authorize
+remote settlement. The correction makes proposal distance historical social
 evidence only. Pebble rebuilds current World evidence for both alive
 embodiments, both relevant chunks, the market container and both distances
 before seller decision and immediately before settlement. Locality loss moves
@@ -1016,13 +1028,16 @@ zero matter and publishes no trade or price; an accepted reservation remains
 retryable only until its bounded expiry. The verified local deposit explicitly
 authorizes one exact automatic listing, so listing authority is not implicit.
 
-Correction 01B replaces unconditional seller acceptance with deterministic
-normal cognition over requested item/quantity, initial and current terms,
-current seller reason, locality and same-market history. It rejects a one-bread
-counteroffer and later accepts two bread. A three-bread seller need remains
-active after receiving two; a one-pickaxe buyer need closes after receiving
-one. Restored same-market history selects two bread against an independent
-current reason of three, while foreign-market history remains excluded.
+Correction 01B records that the initial seller decision was unconditional
+`accept=true` and a quantity-bearing seller need could be marked fulfilled
+despite receiving less than its required quantity. It replaces unconditional
+acceptance with deterministic normal cognition over requested item/quantity,
+initial and current terms, current seller reason, locality and same-market
+history. It rejects a one-bread counteroffer and later accepts two bread. A
+three-bread seller need remains active after receiving two; a one-pickaxe buyer
+need closes after receiving one. Restored same-market history selects two bread
+against an independent current reason of three, while foreign-market history
+remains excluded. Senior review approved both corrections.
 
 Settlement is one candidate-owned three-endpoint operation: market-to-buyer
 offered good plus buyer-to-seller consideration, followed by verified CIV-26
@@ -1068,8 +1083,8 @@ accounting, a credit market, interest, loans, securities, derivatives, market
 regulation, merchant guilds, taxation, courts, global markets,
 inter-settlement price transmission, general firms, an automated market maker
 or global equilibrium. CIV-38 remains optional and not started. Gate E remains
-planned and not acquired pending CIV-37 senior review, publication and a later
-independent Gate E composition evaluation.
+planned and not acquired; it requires its own independent composition
+evaluation, which this publication does not perform.
 
 ### `V4-GATE-E-v1` — Local Material Economy
 

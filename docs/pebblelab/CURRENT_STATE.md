@@ -12,10 +12,11 @@ SHA of the documentation commit that contains it.
   **ACQUIRED AND PUBLISHED** under contract `V4-GATE-C-v1`.
 - Gate D — Generational Continuity:
   **ACQUIRED AND PUBLISHED** under contract `V4-GATE-D-v1`.
-- `CIV-00` through `CIV-36`: **COMPLETE AND PUBLISHED** in their bounded
+- `CIV-00` through `CIV-37`: **COMPLETE AND PUBLISHED** in their bounded
   contracts.
 - `CIV-37 — Physical Markets and Local Price Discovery V1`:
-  **IMPLEMENTED_LOCAL_REVIEW_CANDIDATE**.
+  **COMPLETE AND PUBLISHED** after senior-review approval of the implementation
+  and Senior Review Correction 01.
 - `CIV-38 — Currency, Units of Account and Accounting V1`:
   **OPTIONAL — NOT STARTED**.
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
@@ -200,26 +201,32 @@ with 47/47 internal checksums and passing unzip validation. The initial
 candidate HEAD `4c7af994fc52974f6f919765af682b209f6b84ca` was not
 independently approved.
 
-`CIV-37 — Physical Markets and Local Price Discovery V1` is an
-**IMPLEMENTED_LOCAL_REVIEW_CANDIDATE** from exact baseline
+`CIV-37 — Physical Markets and Local Price Discovery V1` is **complete and
+published** from exact baseline
 `9f13ffee3f312caaaa68ddd6f2c2c27e5942474e` at product/proof commit
 `e279362e1d5b71ed82d20e2f17e492fa22579c37`. Senior Review Correction 01
 starts from reviewed candidate HEAD
 `f96f84a61b72e115de668966f470feef986de925` and is implemented at
-`21ed1b550f9c54381e54c3c763d2ff494bda7d57`. Correction 01A records that
-historical proposal locality could authorize a potential remote settlement
-because current seller/buyer World locality was not revalidated at seller
-decision and settlement. Correction 01B records unconditional seller
-`accept=true` and false fulfillment of a three-unit seller need after a
-two-unit receipt. One real nine-slot chest at
-`18,69,-21` anchors local discovery, verified physical deposits, listings,
-negotiation, three-endpoint settlement and physical withdrawal. The seller
-keeps ownership while deposited matter is in market custody. Exact oriented
-integer barter terms create market-local price rows only after both real legs
-and civilization publication succeed. Open custody, completed trades and
-price provenance survive schema-34 fresh-process restart; replay schema 34
-executes no World matter and Observer schema 11 is read-only. Terminal-only
-compaction preserves active authority.
+`21ed1b550f9c54381e54c3c763d2ff494bda7d57`; correction documentation is
+`68f878abb0408984571f802c10079001e70c9aa7`, and the corrected reviewed HEAD is
+`7a2a2b7e21fe773ca7583e6bfcefd20f2756c5d8`. Correction 01A records that the
+initial candidate did not revalidate current seller/buyer World locality at
+the decisive seller-decision and settlement boundaries, so historical
+locality could potentially authorize remote settlement. Correction 01B
+records that the initial seller decision was unconditional `accept=true` and
+a quantity-bearing seller need could be marked fulfilled despite receiving
+less than its required quantity. Both are corrected and senior-review
+approved. The accepted review bundle SHA-256 is
+`7a0b48bb69f67b541670bfb91f7720ee0c19cfb5a5ca922bf8ac16a4902796bd` with
+55/55 internal checksums and passing unzip validation. One real nine-slot
+chest at `18,69,-21` anchors local discovery, verified physical deposits,
+listings, negotiation, three-endpoint settlement and physical withdrawal. The
+seller keeps ownership while deposited matter is in market custody. Exact
+oriented integer barter terms create market-local price rows only after both
+real legs and civilization publication succeed. Open custody, completed
+trades and price provenance survive schema-34 fresh-process restart; replay
+schema 34 executes no World matter and Observer schema 11 is read-only.
+Terminal-only compaction preserves active authority.
 
 The corrected runtime rebuilds current market/container, alive embodiment,
 distance and chunk evidence for both participants before normal seller
@@ -240,17 +247,17 @@ oak-log withdrawal, final restart without reexecution and exact disposable-cell
 cleanup. The fixture seeds ordinary,
 physically real, rights-tracked goods; it does not claim that those goods were
 actually produced through CIV-34. Focused validation passes 31/31 and the
-canonical gate passes 35/35 with 3923/3923 assertions. CIV-37 is not published
-or senior-review approved. CIV-38 remains optional and not started. Gate E
-remains planned and not acquired.
+canonical gate passes 35/35 with 3923/3923 assertions. CIV-38 remains optional
+and not started. Gate E remains planned and not acquired; its independent
+composition evaluation is not part of this publication.
 
 ## Current program position
 
 ```text
-active CIV phase: CIV-37
-completed and published through: CIV-36
-next eligible phase: null — CIV-37 review pending
-next authorized action: SENIOR REVIEW OF CIV-37
+active CIV phase: null
+completed and published through: CIV-37
+next eligible phase: null
+next authorized action: NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-01
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -279,7 +286,7 @@ Independent Gate D Evaluation 11 status: PASS — SENIOR REVIEW APPROVED — PUB
 CIV-34 status: COMPLETE AND PUBLISHED
 CIV-35 status: COMPLETE AND PUBLISHED
 CIV-36 status: COMPLETE AND PUBLISHED
-CIV-37 status: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE
+CIV-37 status: COMPLETE AND PUBLISHED
 CIV-38 status: OPTIONAL — NOT STARTED
 V4-GATE-E-v1 status: PLANNED — NOT ACQUIRED
 roadmap generation: V4
@@ -583,7 +590,8 @@ through 10 remain **FIXED AND PUBLISHED**. Gate D is **ACQUIRED AND
 PUBLISHED**. `CIV-34 — Production, Tools and Workshops V1` is **COMPLETE AND
 PUBLISHED**. `CIV-35 — Barter and Local Exchange V1` is **COMPLETE AND
 PUBLISHED**. `CIV-36 — Debt, Promises and Durable Contracts V1` is **COMPLETE
-AND PUBLISHED**. `CIV-37` is **IMPLEMENTED_LOCAL_REVIEW_CANDIDATE** and is not
-published or approved. `CIV-38` is **OPTIONAL — NOT STARTED**. Gate E remains
-**PLANNED — NOT ACQUIRED**. The next authorized action is **SENIOR REVIEW OF
-CIV-37**.
+AND PUBLISHED**. `CIV-37 — Physical Markets and Local Price Discovery V1` is
+**COMPLETE AND PUBLISHED** after senior-review approval. `CIV-38` is
+**OPTIONAL — NOT STARTED**. Gate E remains **PLANNED — NOT ACQUIRED**. The next
+authorized action is **NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-01**; this
+publication does not evaluate or acquire Gate E.

@@ -2,9 +2,9 @@
 
 ## Verdict
 
-`CIV-37` is **IMPLEMENTED_LOCAL_REVIEW_CANDIDATE** in its bounded V1
-contract. It is not published and has not been senior-review approved. The
-exact starting baseline was:
+`CIV-37` is **COMPLETE AND PUBLISHED** in its bounded V1 contract. Senior
+review approved the implementation and Senior Review Correction 01. The exact
+starting baseline was:
 
 ```text
 9f13ffee3f312caaaa68ddd6f2c2c27e5942474e
@@ -21,32 +21,41 @@ Senior Review Correction 01:
 ```text
 previous reviewed HEAD: f96f84a61b72e115de668966f470feef986de925
 correction product/proof commit: 21ed1b550f9c54381e54c3c763d2ff494bda7d57
+correction documentation commit: 68f878abb0408984571f802c10079001e70c9aa7
+corrected reviewed HEAD: 7a2a2b7e21fe773ca7583e6bfcefd20f2756c5d8
+senior review: APPROVED
+review bundle SHA-256: 7a0b48bb69f67b541670bfb91f7720ee0c19cfb5a5ca922bf8ac16a4902796bd
+internal checksums: 55/55 PASS
+unzip: PASS
 ```
 
-Correction 01A records that current seller/buyer market locality was not
-revalidated at the decisive decision/settlement boundary, permitting
-historical locality to authorize a potential remote physical settlement.
-Correction 01B records that normal seller decision was unconditional
-`accept=true`, and a completed trade could mark a quantity-bearing seller
-need fulfilled despite receiving less than that need's quantity. The
-correction requires fresh World evidence at seller decision and immediately
-before settlement, replaces fixture-shaped acceptance with deterministic
-term-aware seller cognition, and leaves an underfilled quantity-bearing need
-active.
+Correction 01A records that the initial candidate did not revalidate current
+seller/buyer World locality at the decisive seller-decision and settlement
+boundaries, so historical locality could potentially authorize remote
+settlement. Correction 01B records that the initial seller decision was
+unconditional `accept=true` and a quantity-bearing seller need could be marked
+fulfilled despite receiving less than its required quantity. Both defects are
+corrected: fresh World evidence is required at seller decision and immediately
+before settlement, deterministic term-aware seller cognition replaces
+unconditional acceptance, and an underfilled quantity-bearing need remains
+active. Senior review approved both corrections.
 
-Canonical status after this candidate is:
+Canonical status represented by this publication record is:
 
 ```text
 CIV-36: COMPLETE AND PUBLISHED
-CIV-37: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE
+CIV-37: COMPLETE AND PUBLISHED
 Gate E: PLANNED — NOT ACQUIRED
 CIV-38: OPTIONAL — NOT STARTED
-next: SENIOR REVIEW OF CIV-37
+activePhase: null
+completedThrough: CIV-37
+nextEligiblePhase: null
+nextAuthorizedAction: NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-01
 ```
 
 ## Bounded result
 
-The candidate implements one deterministic, local, physical market system:
+The accepted phase implements one deterministic, local, physical market system:
 
 ```text
 current local observation
@@ -488,5 +497,6 @@ CIV-37 does not claim:
 - an automated market maker;
 - global equilibrium.
 
-It also does not acquire Gate E. Gate E requires CIV-37 senior review and
-publication followed by its own independent composition evaluation.
+It also does not acquire Gate E. Gate E requires its own independent
+composition evaluation; no Gate E evaluation evidence is created or claimed
+by this publication record.

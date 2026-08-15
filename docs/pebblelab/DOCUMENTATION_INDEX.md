@@ -41,14 +41,14 @@ These documents form the minimal permanent memory of the project:
 | [`ROADMAP_MANIFEST.json`](ROADMAP_MANIFEST.json) | Deterministic machine projection of the V4 roadmap and status. |
 | [`DOCUMENTATION_INDEX.md`](DOCUMENTATION_INDEX.md) | Classification and navigation for the documentation set. |
 | [`CIV_36_PHASE_SUMMARY.md`](CIV_36_PHASE_SUMMARY.md) | Published architecture, contract semantics, correction history, physical proof, validation and non-claims for CIV-36. |
-| [`CIV_37_PHASE_SUMMARY.md`](CIV_37_PHASE_SUMMARY.md) | Local review-candidate architecture, physical-market proof, price causality, validation and non-claims for CIV-37. |
+| [`CIV_37_PHASE_SUMMARY.md`](CIV_37_PHASE_SUMMARY.md) | Published architecture, correction history, physical-market proof, price causality, validation and non-claims for CIV-37. |
 
 Canonical status at the product baseline reconciled by this documentation:
 
 ```text
 Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED under V4-GATE-B-v1
-CIV-00 through CIV-36: COMPLETE AND PUBLISHED
+CIV-00 through CIV-37: COMPLETE AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
@@ -77,13 +77,13 @@ Independent Gate D Evaluation 11: PASS — SENIOR REVIEW APPROVED — PUBLISHED 
 CIV-34: COMPLETE AND PUBLISHED
 CIV-35: COMPLETE AND PUBLISHED
 CIV-36: COMPLETE AND PUBLISHED
-CIV-37: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE
+CIV-37: COMPLETE AND PUBLISHED
 CIV-38: OPTIONAL — NOT STARTED
 V4-GATE-E-v1: PLANNED — NOT ACQUIRED
-active phase: CIV-37
-completed through: CIV-36
-next eligible phase: null — CIV-37 review pending
-next authorized action: SENIOR REVIEW OF CIV-37
+active phase: null
+completed through: CIV-37
+next eligible phase: null
+next authorized action: NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-01
 ```
 
 The `CIV-33` completion is published on the canonical branch at
@@ -163,22 +163,26 @@ ordinary and explicit verified rollback/retry, normal CIV-34 production,
 exact-once fulfillment, Observer schema 10, 30/30 focused checks, 3892/3892
 repository assertions and four-process live proof are indexed in
 [`CIV_36_PHASE_SUMMARY.md`](CIV_36_PHASE_SUMMARY.md). CIV-36 is complete and
-published. CIV-37 was implemented locally from exact baseline
+published. CIV-37 is complete and published from exact baseline
 `9f13ffee3f312caaaa68ddd6f2c2c27e5942474e` at product/proof commit
 `e279362e1d5b71ed82d20e2f17e492fa22579c37`; its bounded physical market,
 schema-34 restart, exact rollback, local price history and four-process proof
 are indexed in [`CIV_37_PHASE_SUMMARY.md`](CIV_37_PHASE_SUMMARY.md). Senior
 Review Correction 01 starts from reviewed candidate HEAD
 `f96f84a61b72e115de668966f470feef986de925` and is implemented at
-`21ed1b550f9c54381e54c3c763d2ff494bda7d57`. Correction 01A adds fresh current
-World locality for seller decision and immediate settlement; Correction 01B
-replaces unconditional acceptance, preserves exact quantity need semantics and
-proves same-market price history changes later terms. The corrected evidence
-has 31/31 focused checks, 3923/3923 repository assertions and 13 inspected
-captures. Its status
-is **IMPLEMENTED_LOCAL_REVIEW_CANDIDATE**, not published or approved. CIV-38 is
-optional and not started. Gate E remains planned and not acquired. The next
-authorized action is senior review of CIV-37.
+`21ed1b550f9c54381e54c3c763d2ff494bda7d57`; correction documentation is
+`68f878abb0408984571f802c10079001e70c9aa7`, and senior review approved corrected
+HEAD `7a2a2b7e21fe773ca7583e6bfcefd20f2756c5d8`. Correction 01A records that the
+initial candidate lacked current World locality revalidation at seller decision
+and settlement; Correction 01B records its unconditional seller acceptance and
+false underfilled-need fulfillment. Both are corrected. The accepted review
+bundle SHA-256 is
+`7a0b48bb69f67b541670bfb91f7720ee0c19cfb5a5ca922bf8ac16a4902796bd`, with
+55/55 internal checksums and passing unzip validation. The accepted evidence has
+31/31 focused checks, 3923/3923 repository assertions and 13 inspected captures.
+CIV-38 is optional and not started. Gate E remains planned and not acquired.
+The next authorized action is
+`NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-01`.
 
 ## Operational
 
