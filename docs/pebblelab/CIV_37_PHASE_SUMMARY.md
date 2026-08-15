@@ -16,6 +16,24 @@ Product and proof commit:
 e279362e1d5b71ed82d20e2f17e492fa22579c37
 ```
 
+Senior Review Correction 01:
+
+```text
+previous reviewed HEAD: f96f84a61b72e115de668966f470feef986de925
+correction product/proof commit: 21ed1b550f9c54381e54c3c763d2ff494bda7d57
+```
+
+Correction 01A records that current seller/buyer market locality was not
+revalidated at the decisive decision/settlement boundary, permitting
+historical locality to authorize a potential remote physical settlement.
+Correction 01B records that normal seller decision was unconditional
+`accept=true`, and a completed trade could mark a quantity-bearing seller
+need fulfilled despite receiving less than that need's quantity. The
+correction requires fresh World evidence at seller decision and immediately
+before settlement, replaces fixture-shaped acceptance with deterministic
+term-aware seller cognition, and leaves an underfilled quantity-bearing need
+active.
+
 Canonical status after this candidate is:
 
 ```text
@@ -48,9 +66,10 @@ the good. An unsold lot returns only through a verified physical withdrawal.
 The price model has no money or floating-point authority. Every observation
 preserves explicit `baseItemKey`, `quoteItemKey`, `baseQuantity` and
 `quoteQuantity`. The decisive first listing asks for one stone pickaxe against
-three bread. The buyer explicitly rejects that ask and offers one pickaxe
-against two bread; the seller explicitly accepts. Only the completed physical
-trade creates the corresponding local price row.
+three bread. The buyer first offers one bread, which normal seller cognition
+rejects as economically insufficient, then independently offers two bread,
+which the seller accepts under the same generic evaluation seam. Only the
+completed physical trade creates the corresponding local price row.
 
 ## Reuse-first authority
 
@@ -95,6 +114,15 @@ current distance, chunk readiness and observation tick. Non-local deposit
 discovery and a non-local buyer proposal both fail atomically without durable
 mutation.
 
+Proposal distance is historical social evidence, never execution authority.
+Before seller decision and again immediately before settlement, Pebble rebuilds
+same-tick evidence from the current live World embodiment of both participants,
+the current market position and container, both relevant chunks and current
+alive state. Both current Manhattan distances must be within the market's
+interaction radius. Failure moves no matter and publishes no trade or price
+row. An accepted reservation remains retryable only until its existing bounded
+listing expiry; returning before expiry permits one coherent retry.
+
 Physical and logical capacity remain distinct:
 
 ```text
@@ -128,9 +156,13 @@ owner after deposit: agent_0
 receipt: market:deposit:deposit-2eaeb2a12c4b1fa4:physical
 ```
 
-A listing references the deposited lot and its current material reason. It
-cannot manufacture or substitute a good. Only one live listing/reservation
-chain may control the lot. Buyer consideration is another exact current asset;
+A listing references the deposited lot and its current material reason. V1
+treats the verified local deposit as the seller's prior authorization for one
+exact deterministic automatic listing; listing publication is not a later
+remote seller action. Only the exact proposal recomputed from that deposit,
+its still-current reason and same-market history may be published. It cannot
+manufacture or substitute a good. Only one live listing/reservation chain may
+control the lot. Buyer consideration is another exact current asset;
 concurrent reservation or reuse of either side fails closed.
 
 Expiry changes only listing authority and releases its reservation. The
@@ -143,8 +175,12 @@ missing, changed, unauthorized or reserved lot cannot be withdrawn.
 ## Local price discovery and causality
 
 Initial terms come from one seller's current material need. A current local
-buyer independently proposes terms from its own current need, and the named
-seller independently accepts or rejects. The disposable proof injects no
+buyer independently proposes terms from its own current need. The named seller
+then evaluates the requested item and quantity, initial and current listing
+terms, its current quantity-bearing reason, current local evidence and
+same-market price evidence. The generic deterministic seam rejects the
+one-bread counteroffer and accepts the later two-bread counteroffer; no caller
+supplies acceptance authority. The disposable proof injects no
 decisive opportunity, listing decision, buyer decision or seller decision
 after bootstrap:
 
@@ -155,6 +191,10 @@ normalMarketDiscovery=1
 normalDepositDecision=1
 normalListingDecision=1
 normalBuyerDecision=1
+sellerDecisionAuthority=normal-cognition
+sellerUnconditionalAccept=0
+normalSellerRejections=1
+normalSellerAcceptances=1
 ```
 
 Rejected terms, open proposals, accepted reservations, failed physical
@@ -165,8 +205,10 @@ two physical receipts and causal event.
 
 Later listing cognition consults only completed rows with the same market ID,
 base good and quote good. After fresh restart, agent_2's comparable stone
-pickaxe listing uses the restored one-pickaxe/two-bread observation and a
-second physical trade completes on those terms. A focused two-market test
+pickaxe seller reason independently requests three bread, while restored
+same-market history selects two bread. The differing control values prove that
+history causally changes the later terms rather than merely matching the
+reason; a second physical trade completes on those terms. A focused two-market test
 proves that this history neither appears automatically at a different market
 nor passes validation when forged into a foreign-market listing.
 
@@ -178,7 +220,12 @@ oracle survives without actual trade provenance.
 
 Before settlement, the session revalidates the accepted proposal, exact
 listing/deposit reservation, participants, current reasons, explicit terms and
-CIV-26 disposition. Pebble reacquires both exact physical assets at execution;
+CIV-26 disposition. Before any gateway acquisition or transfer, Pebble also
+rebuilds and validates current World locality for the market, seller and buyer.
+The live adversarial path moves the accepted buyer's real probe to distance 13:
+the attempted settlement reports zero physical mutations, trades and price
+rows, then an exact locality restore permits retry. Pebble reacquires both
+exact physical assets at execution;
 historical whole-inventory fingerprints are not authority. Unrelated slot
 drift is tolerated when each tracked asset still matches. Drift of either
 tracked holder, identity or quantity fails closed.
@@ -222,6 +269,12 @@ the seller. The received claims cite the completed market trade. The deposited
 lot cannot be sold again, and duplicate completion cannot append another
 receipt, rights transition or price row.
 
+Quantity-bearing motives close only after a verified receipt satisfies the
+requested item and quantity. V1 does not invent partial-need accounting: the
+seller requests three bread and physically receives two, so that need remains
+`active`. The buyer requests one stone pickaxe and receives one, so the buyer
+need becomes `fulfilled`. Underfilled receipt is advancement, not fulfillment.
+
 Participant death creates no market inheritance. Normal market activity
 requires a current active agent state, current material reason, local evidence,
 current rights and current physical custody. If a seller or buyer is no longer
@@ -262,15 +315,15 @@ The live campaign preserves three states across actual process boundaries:
 ```text
 market-open-v34
 tick: 3
-digest: 842ee59a9efeda8eb2dab4acc404a8127a6bc0d995c6287312ff1acc7d2e26c9
+digest: f94c547b7066d3e7bd9fc6f3ad9b56bcff91d843ff8899d5ada852c8454c59e4
 
 market-traded-v34
-tick: 5
-digest: 5e5a9e8ef57675b80212e4d9d1e8bfc3358fdaf218a7e13f4eaead78963d1092
+tick: 6
+digest: b13051996e88e9d482da497fbcea97126708d9b27df8d8caec9f2f55dcaa6ddf
 
 market-final-v34
-tick: 18
-digest: 3972d506230834defbdec2a5e8c466b59693fd2c0ac7beea797a5a6a9267f245
+tick: 22
+digest: 205236a985dca926d3fab118e02716dd4f8197180a23579ddf6d8f65f13314f5
 ```
 
 Every fresh load first acquires exact physical position/custody and reports
@@ -329,19 +382,29 @@ The authoritative seed-46 campaign ran with:
 scripts/verify-pebblelab-live.sh --markets
 ```
 
+Corrected retained evidence root:
+
+```text
+/var/folders/23/t4l5dv055dl3x1zqylcpl9wc0000gn/T/PebbleLab-live.pFXJvL
+```
+
 Process 1 establishes the real chest, proves full-capacity refusal, deposits
 agent_0's stone pickaxe through normal runtime, creates the initial ask and
 saves `market-open-v34`. Runtime errors: 0.
 
 Process 2 freshly restores the open listing, proves exact market custody and
-seller ownership, runs the buyer counteroffer and seller acceptance, reaches
-both real rollback seams, retries successfully, creates the first price row
-and saves `market-traded-v34`. Runtime errors: 2, both expected injected
-post-mutation failures; unexpected runtime errors: 0.
+seller ownership, exercises normal rejection and later acceptance, then moves
+the accepted buyer's real probe outside the market. The remote attempt is
+refused before mutation or publication and exact locality is restored. It then
+reaches both real rollback seams, retries successfully, creates the first
+price row and saves `market-traded-v34`. Runtime errors: 3, one expected
+locality refusal and two expected injected post-mutation failures; unexpected
+runtime errors: 0.
 
 Process 3 freshly restores the completed trade and price history without
-reexecution. Agent_2 deposits a comparable pickaxe, uses restored same-market
-history for a one-pickaxe/two-bread listing and completes the second trade. It
+reexecution. Agent_2's current reason requests three bread, but restored
+same-market history selects a one-pickaxe/two-bread listing and the second
+trade completes. It
 then deposits an oak log, lets the listing expire without movement, physically
 withdraws the unsold lot and saves `market-final-v34`. Runtime errors: 0.
 
@@ -350,13 +413,14 @@ one tick without repeating a trade, deposit or withdrawal, then restores the
 disposable market cell exactly while preserving completed economic custody.
 Runtime errors: 0.
 
-Twelve native captures were individually inspected:
+Thirteen native captures were individually inspected:
 
 ```text
 market-established.png
 market-deposited.png
 market-open-listing.png
 market-restored-open.png
+market-remote-buyer-refusal.png
 market-mid-settlement-rollback.png
 market-post-mutation-rollback.png
 market-completed-trade.png
@@ -375,10 +439,9 @@ corresponding market/custody overlays and rollback or restart state.
 Focused validation:
 
 ```bash
-swift build --product pebsmoke
-PEBBLELAB_SMOKE_ONLY=markets .build/debug/pebsmoke
+PEBBLELAB_SMOKE_ONLY=markets swift run -c debug pebsmoke
 
-20 passed, 0 failed
+31 passed, 0 failed
 ```
 
 Canonical repository gate:
@@ -386,7 +449,7 @@ Canonical repository gate:
 ```bash
 scripts/verify-pebblelab.sh
 
-3912 passed, 0 failed
+3923 passed, 0 failed
 PASS: all 35 PebbleLab verification steps succeeded.
 ```
 

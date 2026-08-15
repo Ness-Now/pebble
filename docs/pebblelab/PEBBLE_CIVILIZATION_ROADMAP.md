@@ -254,7 +254,14 @@ and final review bundle SHA-256
 with 47/47 internal checksums and passing unzip validation. CIV-37 is an
 **IMPLEMENTED_LOCAL_REVIEW_CANDIDATE** from exact baseline
 `9f13ffee3f312caaaa68ddd6f2c2c27e5942474e` at product/proof commit
-`e279362e1d5b71ed82d20e2f17e492fa22579c37`. It is not published or approved.
+`e279362e1d5b71ed82d20e2f17e492fa22579c37`. Senior Review Correction 01
+starts from reviewed candidate HEAD
+`f96f84a61b72e115de668966f470feef986de925`; correction commit
+`21ed1b550f9c54381e54c3c763d2ff494bda7d57` adds current decisive World
+locality, normal term-aware seller rejection/acceptance, exact quantity need
+closure and a causal restored-price control. Corrected focused validation is
+31/31 and the repository gate is 35/35 with 3923 assertions. It is not
+published or approved.
 CIV-38 remains optional and not started; Gate E remains planned and not
 acquired. The next authorized action is senior review of CIV-37.
 
@@ -985,6 +992,8 @@ Candidate identity:
 ```text
 exact baseline: 9f13ffee3f312caaaa68ddd6f2c2c27e5942474e
 product/proof commit: e279362e1d5b71ed82d20e2f17e492fa22579c37
+previous reviewed HEAD: f96f84a61b72e115de668966f470feef986de925
+Senior Review Correction 01 commit: 21ed1b550f9c54381e54c3c763d2ff494bda7d57
 published: NO
 senior review: PENDING
 Gate E: PLANNED — NOT ACQUIRED
@@ -998,6 +1007,22 @@ verified deposit moves one exact rights-tracked lot into container custody
 while the seller remains owner. A listing references that exact deposited lot
 and moves no matter. Buyer proposal and distinct seller acceptance reserve the
 lot but create neither a trade nor price history.
+
+Senior Review Correction 01A makes proposal distance historical social
+evidence only. Pebble rebuilds current World evidence for both alive
+embodiments, both relevant chunks, the market container and both distances
+before seller decision and immediately before settlement. Locality loss moves
+zero matter and publishes no trade or price; an accepted reservation remains
+retryable only until its bounded expiry. The verified local deposit explicitly
+authorizes one exact automatic listing, so listing authority is not implicit.
+
+Correction 01B replaces unconditional seller acceptance with deterministic
+normal cognition over requested item/quantity, initial and current terms,
+current seller reason, locality and same-market history. It rejects a one-bread
+counteroffer and later accepts two bread. A three-bread seller need remains
+active after receiving two; a one-pickaxe buyer need closes after receiving
+one. Restored same-market history selects two bread against an independent
+current reason of three, while foreign-market history remains excluded.
 
 Settlement is one candidate-owned three-endpoint operation: market-to-buyer
 offered good plus buyer-to-seller consideration, followed by verified CIV-26
@@ -1020,13 +1045,15 @@ activity after historical capacity fills.
 
 The seed-46 four-process rendered campaign uses a real nine-slot chest at
 `18,69,-21`. It proves physical capacity refusal, real deposit, open-listing
-restart, explicit ask/counter/acceptance, both rollback seams, one completed
-trade, completed-history restart, a history-informed later quote and second
+restart, normal insufficient-offer rejection and later acceptance, a real
+remote buyer after reservation with zero mutation/publication, exact return
+and retry, both rollback seams, one completed trade, completed-history restart,
+a causally history-informed later quote and second
 trade, expiry without teleportation, verified unsold withdrawal, final restart
 without reexecution and exact disposable-cell cleanup. The campaign goods are
 ordinary, physically real and rights-tracked fixture goods; the evidence does
-not claim they were actually produced through CIV-34. Focused tests pass 20/20
-and the repository gate passes 35/35 with 3912 assertions. Twelve native
+not claim they were actually produced through CIV-34. Focused tests pass 31/31
+and the repository gate passes 35/35 with 3923 assertions. Thirteen native
 captures were inspected. Full bounded evidence is
 [`CIV_37_PHASE_SUMMARY.md`](CIV_37_PHASE_SUMMARY.md).
 

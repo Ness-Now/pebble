@@ -203,7 +203,15 @@ independently approved.
 `CIV-37 — Physical Markets and Local Price Discovery V1` is an
 **IMPLEMENTED_LOCAL_REVIEW_CANDIDATE** from exact baseline
 `9f13ffee3f312caaaa68ddd6f2c2c27e5942474e` at product/proof commit
-`e279362e1d5b71ed82d20e2f17e492fa22579c37`. One real nine-slot chest at
+`e279362e1d5b71ed82d20e2f17e492fa22579c37`. Senior Review Correction 01
+starts from reviewed candidate HEAD
+`f96f84a61b72e115de668966f470feef986de925` and is implemented at
+`21ed1b550f9c54381e54c3c763d2ff494bda7d57`. Correction 01A records that
+historical proposal locality could authorize a potential remote settlement
+because current seller/buyer World locality was not revalidated at seller
+decision and settlement. Correction 01B records unconditional seller
+`accept=true` and false fulfillment of a three-unit seller need after a
+two-unit receipt. One real nine-slot chest at
 `18,69,-21` anchors local discovery, verified physical deposits, listings,
 negotiation, three-endpoint settlement and physical withdrawal. The seller
 keeps ownership while deposited matter is in market custody. Exact oriented
@@ -213,16 +221,26 @@ price provenance survive schema-34 fresh-process restart; replay schema 34
 executes no World matter and Observer schema 11 is read-only. Terminal-only
 compaction preserves active authority.
 
-The four-process rendered campaign proves one initial one-stone-pickaxe for
-three-bread ask, a buyer counteroffer and accepted completed exchange at one
-pickaxe for two bread, two exact candidate rollbacks after real settlement
-mutations, an immediate successful retry, a later same-market history-informed
-one-pickaxe/two-bread quote and second trade, expired unsold oak-log withdrawal,
-final restart without reexecution and exact disposable-cell cleanup. The
-fixture seeds ordinary,
+The corrected runtime rebuilds current market/container, alive embodiment,
+distance and chunk evidence for both participants before normal seller
+decision and immediately before settlement. A remote buyer after reservation
+moves zero matter and publishes zero trades and prices; returning before the
+bounded expiry permits coherent retry. Verified local deposit is the explicit
+V1 authority for one exact automatic listing. Generic deterministic seller
+cognition rejects the one-bread counteroffer and later accepts two bread. A
+seller needing three bread and receiving two remains active; the buyer needing
+one pickaxe and receiving one is fulfilled. Restored same-market price history
+selects two bread against a current seller reason of three, while foreign
+history remains unable to influence the decision.
+
+The four-process rendered campaign also proves both exact candidate rollbacks
+after real settlement mutations, an immediate successful retry, a later
+history-informed one-pickaxe/two-bread quote and second trade, expired unsold
+oak-log withdrawal, final restart without reexecution and exact disposable-cell
+cleanup. The fixture seeds ordinary,
 physically real, rights-tracked goods; it does not claim that those goods were
-actually produced through CIV-34. Focused validation passes 20/20 and the
-canonical gate passes 35/35 with 3912/3912 assertions. CIV-37 is not published
+actually produced through CIV-34. Focused validation passes 31/31 and the
+canonical gate passes 35/35 with 3923/3923 assertions. CIV-37 is not published
 or senior-review approved. CIV-38 remains optional and not started. Gate E
 remains planned and not acquired.
 

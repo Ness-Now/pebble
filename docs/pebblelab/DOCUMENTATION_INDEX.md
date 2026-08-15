@@ -167,7 +167,15 @@ published. CIV-37 was implemented locally from exact baseline
 `9f13ffee3f312caaaa68ddd6f2c2c27e5942474e` at product/proof commit
 `e279362e1d5b71ed82d20e2f17e492fa22579c37`; its bounded physical market,
 schema-34 restart, exact rollback, local price history and four-process proof
-are indexed in [`CIV_37_PHASE_SUMMARY.md`](CIV_37_PHASE_SUMMARY.md). Its status
+are indexed in [`CIV_37_PHASE_SUMMARY.md`](CIV_37_PHASE_SUMMARY.md). Senior
+Review Correction 01 starts from reviewed candidate HEAD
+`f96f84a61b72e115de668966f470feef986de925` and is implemented at
+`21ed1b550f9c54381e54c3c763d2ff494bda7d57`. Correction 01A adds fresh current
+World locality for seller decision and immediate settlement; Correction 01B
+replaces unconditional acceptance, preserves exact quantity need semantics and
+proves same-market price history changes later terms. The corrected evidence
+has 31/31 focused checks, 3923/3923 repository assertions and 13 inspected
+captures. Its status
 is **IMPLEMENTED_LOCAL_REVIEW_CANDIDATE**, not published or approved. CIV-38 is
 optional and not started. Gate E remains planned and not acquired. The next
 authorized action is senior review of CIV-37.
