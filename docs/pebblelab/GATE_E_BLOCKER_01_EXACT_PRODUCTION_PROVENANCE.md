@@ -1,10 +1,20 @@
 # V4-GATE-E-v1 Blocker 01 — Exact Produced-Asset Provenance
 
-Status: **IMPLEMENTED_LOCAL_REVIEW_CANDIDATE**
+Status: **FIXED AND PUBLISHED**
 
-This record describes a local product correction. It does not acquire Gate E,
-publish the correction, revise Evaluation 01, begin Evaluation 02, or begin
-CIV-38.
+This record publishes the senior-review-approved product correction. It does
+not acquire Gate E, revise Evaluation 01, begin Evaluation 02, or begin CIV-38.
+Remote publication verification is not claimed by this containing commit.
+
+## Publication record
+
+```text
+product correction commit: 9a623d48f300245b0d348da0b7b72762043b93ff
+reviewed candidate HEAD: 534fd927483a692e26de7f929a361c34e77870a7
+review bundle SHA-256: dbbdd076cf4c90a753b138e470583fd63b982f9ebe2c8f2440c08c227bc4a163
+internal checksums: 47/47 PASS
+senior review: APPROVED
+```
 
 ## Immutable Evaluation 01 result
 
@@ -217,14 +227,14 @@ Observer schema: 10
 ## Status and non-claims
 
 ```text
-V4-GATE-E-v1 Blocker 01: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE
+V4-GATE-E-v1 Blocker 01: FIXED AND PUBLISHED
 Gate E Evaluation 01: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 Gate E: PLANNED — NOT ACQUIRED
-Evaluation 02: NOT_STARTED
+Evaluation 02: NOT_STARTED — NEXT AUTHORIZED ACTION
 CIV-38: OPTIONAL — NOT STARTED
-push: NOT_ATTEMPTED
+next authorized action: NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-02
 ```
 
-This candidate is not published or senior-review approved. A completely fresh
-independent Evaluation 02 is required only after review, manual publication and
-remote verification of the blocker correction.
+The published correction does not convert Evaluation 01 into PASS. A completely
+fresh independent Evaluation 02 is required to evaluate the corrected
+composition and is not started by this publication record.

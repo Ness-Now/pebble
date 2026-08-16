@@ -138,7 +138,7 @@ post-Gate-B safe-bootstrap hardening: PUBLISHED
 active CIV phase: null
 completed and published through: CIV-37
 next eligible phase: null
-next authorized action: NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-01
+next authorized action: NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-02
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
@@ -169,6 +169,9 @@ CIV-35: COMPLETE AND PUBLISHED
 CIV-36: COMPLETE AND PUBLISHED
 CIV-37: COMPLETE AND PUBLISHED
 CIV-38: OPTIONAL — NOT STARTED
+Gate E Evaluation 01: FAIL — HISTORICAL IMMUTABLE EVIDENCE
+Gate E Blocker 01: FIXED AND PUBLISHED
+Gate E Evaluation 02: NOT_STARTED — NEXT AUTHORIZED ACTION
 V4-GATE-E-v1: PLANNED — NOT ACQUIRED
 ```
 
@@ -266,8 +269,33 @@ reviewed HEAD `7a2a2b7e21fe773ca7583e6bfcefd20f2756c5d8` are senior-review
 approved. The accepted bundle SHA-256 is
 `7a0b48bb69f67b541670bfb91f7720ee0c19cfb5a5ca922bf8ac16a4902796bd`, with
 55/55 internal checksums and passing unzip validation. CIV-38 remains optional
-and not started; Gate E remains planned and not acquired. The next authorized
-action is `NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-01`.
+and not started; Gate E remains planned and not acquired.
+
+Gate E Evaluation 01 evaluated exact published baseline
+`5bc9d3088c2550fb042fe065235cb0154a226ff0` and remains immutable historical
+FAIL evidence at `e75ab82981169baf1cdc67d9454e6d569e989167`, with review bundle
+SHA-256 `9db1a5b478f1ed0ca9efcac5612efc29928b61143a92e198123285920444fc93`.
+It found that every same-actor, same-output production operation was attributed
+to one exact rights-tracked CIV-36 performance asset: three independent
+`bread x1` records became provenance quantity 3 for one `bread x1` asset, and
+the exact validator correctly refused `3 != 1`.
+
+Gate E Blocker 01 is **FIXED AND PUBLISHED** at product correction commit
+`9a623d48f300245b0d348da0b7b72762043b93ff`. Senior review approved reviewed
+candidate HEAD `534fd927483a692e26de7f929a361c34e77870a7` and review bundle
+SHA-256 `dbbdd076cf4c90a753b138e470583fd63b982f9ebe2c8f2440c08c227bc4a163`
+with 47/47 internal checksums. Production origin is bound once to the exact
+durable `AgentMaterialAssetID`; CIV-35 and CIV-36 no longer infer origin from
+actor and output history. Current physical authority remains a separate exact
+execution precondition. The decisive proof attributes only P3 and quantity one
+from three matching records, refuses ambiguity and displaced matter, then
+fulfills once after the same asset returns. Focused checks pass 27/27, owning
+regressions 270/270 and the repository gate 35/35 with 3950/3950 assertions.
+The two-process live proof inspected nine captures with zero unexpected runtime
+errors, conservation defects or Observer mutations. Goldens were not
+regenerated. Gate E remains planned and not acquired. Evaluation 02 is not
+started and the next authorized action is
+`NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-02`.
 
 Gate B is acquired under `V4-GATE-B-v1`, the bounded checkpoint proved by the
 published closure and subsequently hardened for normal-world bootstrap:
@@ -447,7 +475,7 @@ remains historical FAIL evidence; its targeted Blocker 10 correction is a
 whole-Gate PASS and is **SENIOR REVIEW APPROVED**. `CIV-34` through `CIV-37`
 are **COMPLETE AND PUBLISHED**. `CIV-38` is **OPTIONAL — NOT STARTED** and Gate
 E remains **PLANNED — NOT ACQUIRED**. The next authorized action is
-`NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-01`.
+`NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-02`; Evaluation 02 is not started.
 
 | Phase | Requirement | Outcome |
 | --- | --- | --- |
@@ -786,7 +814,7 @@ recorded in
 review approved it, so Gate D remains acquired and published. `CIV-34` through
 `CIV-37` are complete and published. CIV-38 is optional and not started; Gate E
 remains planned and not acquired. The next authorized action is
-`NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-01`.
+`NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-02`; Evaluation 02 is not started.
 
 ## Wave 3 — Local material economy
 
@@ -1006,7 +1034,7 @@ internal checksums: 55/55 PASS
 unzip: PASS
 publication: COMPLETE AND PUBLISHED
 Gate E: PLANNED — NOT ACQUIRED
-next action: NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-01
+next action at CIV-37 publication: NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-01
 ```
 
 Result: a physical market is one bounded World place with a real container,
@@ -1083,14 +1111,42 @@ accounting, a credit market, interest, loans, securities, derivatives, market
 regulation, merchant guilds, taxation, courts, global markets,
 inter-settlement price transmission, general firms, an automated market maker
 or global equilibrium. CIV-38 remains optional and not started. Gate E remains
-planned and not acquired; it requires its own independent composition
-evaluation, which this publication does not perform.
+planned and not acquired. Gate E Evaluation 01 later failed on immutable
+historical evidence, and its exact-provenance Blocker 01 correction is fixed
+and published. A fresh Evaluation 02 is not started and is the next authorized
+composition evaluation.
 
 ### `V4-GATE-E-v1` — Local Material Economy
 
 Required phases: `CIV-34` through `CIV-37`.
 
 Optional capability: `CIV-38`.
+
+Status: **PLANNED — NOT ACQUIRED**.
+
+Accepted evaluation and correction history:
+
+```text
+Evaluation 01 baseline: 5bc9d3088c2550fb042fe065235cb0154a226ff0
+Evaluation 01 evidence HEAD: e75ab82981169baf1cdc67d9454e6d569e989167
+Evaluation 01 verdict: FAIL — HISTORICAL IMMUTABLE EVIDENCE
+Evaluation 01 bundle SHA-256: 9db1a5b478f1ed0ca9efcac5612efc29928b61143a92e198123285920444fc93
+Blocker 01 title: Exact Produced-Asset Provenance Binding
+Blocker 01 product correction: 9a623d48f300245b0d348da0b7b72762043b93ff
+Blocker 01 reviewed candidate HEAD: 534fd927483a692e26de7f929a361c34e77870a7
+Blocker 01 review bundle SHA-256: dbbdd076cf4c90a753b138e470583fd63b982f9ebe2c8f2440c08c227bc4a163
+Blocker 01 internal checksums: 47/47 PASS
+Blocker 01 senior review: APPROVED
+Blocker 01 status: FIXED AND PUBLISHED
+Evaluation 02: NOT_STARTED — NEXT AUTHORIZED ACTION
+next authorized action: NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-02
+```
+
+Blocker 01 binds exact production origin to the exact rights-tracked asset and
+preserves that origin through custody changes and restart without using it as
+current physical authority. Evaluation 01 remains FAIL; the correction itself
+does not acquire Gate E. Full correction evidence is recorded in
+[`GATE_E_BLOCKER_01_EXACT_PRODUCTION_PROVENANCE.md`](GATE_E_BLOCKER_01_EXACT_PRODUCTION_PROVENANCE.md).
 
 The gate proves production, tools, exchange, obligations, physical markets,
 conservation, logistics and multiple economic trajectories. Currency is not a
@@ -1276,7 +1332,7 @@ keeps incarnation physical and produces verifiable long-duration history.
 | `V4-GATE-B-v1` | acquired | `CIV-25`; bounded embodied autonomy contract |
 | `V4-GATE-C-v1` | acquired | `CIV-26`–`CIV-28` |
 | `V4-GATE-D-v1` | acquired and published | `CIV-29`–`CIV-33`, renewable subsistence milestone and Blockers 01–10 published; Evaluations 01–10 remain historical FAIL evidence; Evaluation 11 PASS is senior-review approved |
-| `V4-GATE-E-v1` | planned | `CIV-34`–`CIV-37`; `CIV-38` optional |
+| `V4-GATE-E-v1` | planned, not acquired | `CIV-34`–`CIV-37`; `CIV-38` optional; Evaluation 01 historical FAIL and Blocker 01 fixed/published; Evaluation 02 not started |
 | `V4-GATE-F-v1` | planned | `CIV-39`; `CIV-40` optional |
 | `V4-GATE-G-v1` | planned | `CIV-41`–`CIV-47` |
 | `V4-GATE-H-v1` | planned | `CIV-48`–`CIV-52` |

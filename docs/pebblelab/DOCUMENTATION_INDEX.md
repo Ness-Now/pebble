@@ -42,7 +42,7 @@ These documents form the minimal permanent memory of the project:
 | [`DOCUMENTATION_INDEX.md`](DOCUMENTATION_INDEX.md) | Classification and navigation for the documentation set. |
 | [`CIV_36_PHASE_SUMMARY.md`](CIV_36_PHASE_SUMMARY.md) | Published architecture, contract semantics, correction history, physical proof, validation and non-claims for CIV-36. |
 | [`CIV_37_PHASE_SUMMARY.md`](CIV_37_PHASE_SUMMARY.md) | Published architecture, correction history, physical-market proof, price causality, validation and non-claims for CIV-37. |
-| [`GATE_E_BLOCKER_01_EXACT_PRODUCTION_PROVENANCE.md`](GATE_E_BLOCKER_01_EXACT_PRODUCTION_PROVENANCE.md) | Local Blocker 01 product-correction record; preserves Evaluation 01 FAIL and documents exact asset-bound production provenance. |
+| [`GATE_E_BLOCKER_01_EXACT_PRODUCTION_PROVENANCE.md`](GATE_E_BLOCKER_01_EXACT_PRODUCTION_PROVENANCE.md) | Published Blocker 01 product-correction record; preserves Evaluation 01 FAIL and documents exact asset-bound production provenance. |
 
 Canonical status at the product baseline reconciled by this documentation:
 
@@ -84,10 +84,10 @@ V4-GATE-E-v1: PLANNED — NOT ACQUIRED
 active phase: null
 completed through: CIV-37
 next eligible phase: null
-Gate E Evaluation 01: FAIL — PRODUCT CORRECTION REQUIRED — HISTORICAL IMMUTABLE EVIDENCE
-V4-GATE-E-v1 Blocker 01: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE
-Gate E Evaluation 02: NOT_STARTED
-next authorized action: SENIOR_REVIEW_V4_GATE_E_BLOCKER_01
+Gate E Evaluation 01: FAIL — HISTORICAL IMMUTABLE EVIDENCE
+V4-GATE-E-v1 Blocker 01: FIXED AND PUBLISHED
+Gate E Evaluation 02: NOT_STARTED — NEXT AUTHORIZED ACTION
+next authorized action: NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-02
 ```
 
 The `CIV-33` completion is published on the canonical branch at
@@ -189,11 +189,15 @@ exact published baseline `5bc9d3088c2550fb042fe065235cb0154a226ff0` and
 remains `FAIL — PRODUCT CORRECTION REQUIRED` at immutable evidence HEAD
 `e75ab82981169baf1cdc67d9454e6d569e989167`. Its review bundle SHA-256 is
 `9db1a5b478f1ed0ca9efcac5612efc29928b61143a92e198123285920444fc93`.
-V4-GATE-E-v1 Blocker 01 is an implemented local review candidate from that
-exact baseline; it is not published and does not acquire Gate E. Evaluation 02
-is not started. The next authorized action is senior review and manual
-publication of the correction, followed by remote verification before any new
-independent evaluation.
+Senior review approved the V4-GATE-E-v1 Blocker 01 product correction at
+`9a623d48f300245b0d348da0b7b72762043b93ff`, reviewed candidate HEAD
+`534fd927483a692e26de7f929a361c34e77870a7` and review bundle SHA-256
+`dbbdd076cf4c90a753b138e470583fd63b982f9ebe2c8f2440c08c227bc4a163`
+with 47/47 internal checksums. Blocker 01 is fixed and published; it does not
+acquire Gate E or rewrite Evaluation 01. Evaluation 02 is not started and is
+the next authorized action under
+`NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-02`. This containing publication does
+not claim remote publication verification.
 
 ## Operational
 
