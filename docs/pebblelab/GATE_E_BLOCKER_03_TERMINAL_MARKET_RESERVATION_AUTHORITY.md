@@ -2,21 +2,35 @@
 
 ## Status
 
-`V4-GATE-E-v1 Blocker 03: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE — NOT PUBLISHED`
+`V4-GATE-E-v1 Blocker 03: FIXED AND PUBLISHED`
 
-This is a product-correction review candidate. It does not rewrite Evaluation
-03, acquire Gate E, begin Evaluation 04, begin CIV-38, or claim publication.
+This record publishes the senior-review-approved product correction. It does
+not rewrite Evaluation 03, acquire Gate E, begin Evaluation 04, or begin
+CIV-38. Remote publication verification is not claimed by this containing
+commit.
 
 - Gate E Evaluation 01: `FAIL — HISTORICAL IMMUTABLE EVIDENCE`
 - Gate E Blocker 01: `FIXED AND PUBLISHED`
 - Gate E Evaluation 02: `FAIL — HISTORICAL IMMUTABLE EVIDENCE`
 - Gate E Blocker 02: `FIXED AND PUBLISHED`
 - Gate E Evaluation 03: `FAIL — HISTORICAL IMMUTABLE EVIDENCE`
-- Gate E Blocker 03:
-  `IMPLEMENTED_LOCAL_REVIEW_CANDIDATE — NOT PUBLISHED`
+- Gate E Blocker 03: `FIXED AND PUBLISHED`
 - Gate E: `PLANNED — NOT ACQUIRED`
 - Gate E Evaluation 04: `NOT_STARTED`
 - CIV-38: `OPTIONAL — NOT STARTED`
+
+## Publication record
+
+```text
+affected published baseline: bfb721d7f49f8af567c86580cdf4c106da977a25
+product correction commit: 301dfd58aacd3aa0af653fa460ad38484df1d762
+reviewed candidate HEAD: 27e8406edd20f13817d4b7e1684a00db56e361a7
+review bundle SHA-256: 8ec57b6bb8b58cab59be3024f7541693b145ae0527221e5e523b32538a2182a4
+internal checksums: 87/87 PASS
+ZIP integrity: PASS
+senior review: APPROVED
+publication verified: NO
+```
 
 ## Evaluation 03 identity
 
@@ -169,10 +183,14 @@ three probes, and no residual live process remains.
 
 ## Non-claims
 
-- This candidate is not published.
 - Gate E is not acquired.
 - Evaluation 03 is not rewritten.
 - Evaluation 04 is not started.
 - CIV-38 remains optional and not started.
-- No push was attempted.
+- This containing commit does not claim manual push or remote publication
+  verification.
 
+After manual publication and independent remote SHA verification, the next
+authorized action is
+`NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-04`. Evaluation 04 remains completely
+unstarted by this publication record.
