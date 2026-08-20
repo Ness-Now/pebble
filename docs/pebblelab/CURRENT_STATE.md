@@ -21,15 +21,16 @@ SHA of the documentation commit that contains it.
   **OPTIONAL — NOT STARTED**.
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
 
-Gate E history and current local correction status:
+Published Gate E history:
 
 - Gate E Evaluation 01: **FAIL — HISTORICAL IMMUTABLE EVIDENCE**.
 - V4-GATE-E-v1 Blocker 01: **FIXED AND PUBLISHED** after senior-review
   approval.
 - Gate E Evaluation 02: **FAIL — HISTORICAL IMMUTABLE EVIDENCE**.
-- V4-GATE-E-v1 Blocker 02:
-  **IMPLEMENTED_LOCAL_REVIEW_CANDIDATE — NOT PUBLISHED**.
-- Gate E Evaluation 03: **NOT_STARTED**.
+- V4-GATE-E-v1 Blocker 02: **FIXED AND PUBLISHED** after senior-review
+  approval.
+- Gate E Evaluation 03: **NOT_STARTED — NEXT AUTHORIZED ACTION AFTER REMOTE
+  PUBLICATION VERIFICATION**.
 
 Blocker 01 binds exact production origin to an exact durable Material Rights
 asset. It is product correction publication evidence, not Gate E acquisition
@@ -289,13 +290,35 @@ assertions. The two-process live proof has nine inspected captures and zero
 unexpected runtime errors, physical loss, physical duplication, synthetic
 material or Observer mutation. Goldens were not regenerated.
 
+Gate E Evaluation 02 evaluated exact published baseline
+`9ede5d73229c3c9284d163ed17cc76bcf92ebe0e` and remains immutable **FAIL —
+PRODUCT CORRECTION REQUIRED** evidence at HEAD
+`2f95826f474c9f2a366f4b06df90a8643beb7a98`; its bundle SHA-256 is
+`4e10d129927af5c8443f9f8e26fec0d276f797cf82126b93792f32c26c646d57`.
+Senior review approved the evolved produced-asset identity correction at
+product commit `a67665e87774a4af8fcc7930e05c8747da1f83fc`, reviewed candidate HEAD
+`b8dbeef60865a4fd452ca5abaac4a005ded2e592` and review bundle SHA-256
+`68ab04428582cbbe96c0e8bf046f45c22818a6dd9018ad6f808c87b9aea30c31`
+with 59/59 internal checksums.
+
+The published correction preserves immutable production origin while current
+identity evolves only through the existing durable Material Rights continuity
+contract. Current holder, exact identity, quantity and custody fingerprint
+remain separate physical authority. Focused Blocker 02 checks pass 33/33,
+owning regressions pass 301/301, the dedicated Blocker 01 regression remains
+green, and the repository gate passes 35/35 with 3983/3983 assertions. The
+two-process live proof has eight inspected captures and zero physical loss,
+physical duplication, synthetic material, duplicate receipts or Observer
+mutation. Goldens were not regenerated. Remote publication verification is not
+claimed by this containing commit.
+
 ## Current program position
 
 ```text
 active CIV phase: null
 completed and published through: CIV-37
 next eligible phase: null
-next authorized action: SENIOR REVIEW OF V4-GATE-E-v1 BLOCKER 02
+next authorized action after remote publication verification: NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-03
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -329,8 +352,8 @@ CIV-38 status: OPTIONAL — NOT STARTED
 Gate E Evaluation 01 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 01 status: FIXED AND PUBLISHED
 Gate E Evaluation 02 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
-V4-GATE-E-v1 Blocker 02 status: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE — NOT PUBLISHED
-Gate E Evaluation 03 status: NOT_STARTED
+V4-GATE-E-v1 Blocker 02 status: FIXED AND PUBLISHED
+Gate E Evaluation 03 status: NOT_STARTED — NEXT AUTHORIZED ACTION AFTER REMOTE PUBLICATION VERIFICATION
 V4-GATE-E-v1 status: PLANNED — NOT ACQUIRED
 roadmap generation: V4
 ```
@@ -639,9 +662,10 @@ AND PUBLISHED**. `CIV-37 — Physical Markets and Local Price Discovery V1` is
 IMMUTABLE EVIDENCE**. V4-GATE-E-v1 Blocker 01 is **FIXED AND PUBLISHED** after
 senior-review approval. Gate E remains **PLANNED — NOT ACQUIRED**. Evaluation
 02 remains **FAIL — HISTORICAL IMMUTABLE EVIDENCE**. V4-GATE-E-v1 Blocker 02
-is an **IMPLEMENTED_LOCAL_REVIEW_CANDIDATE — NOT PUBLISHED**; it preserves
-immutable production origin while accepting only current identities permitted
-by the existing durable-asset continuity authority. The next authorized action
-is senior review of that correction candidate. Evaluation 03 is
-**NOT_STARTED**; this local candidate does not start it or claim remote
-publication verification.
+is **FIXED AND PUBLISHED** after senior-review approval; it preserves immutable
+production origin while accepting only current identities permitted by the
+existing durable-asset continuity authority. Evaluation 03 is **NOT_STARTED**.
+After manual publication and independent remote SHA verification, the next
+authorized action is **NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-03**. This
+containing commit does not claim remote publication verification or start that
+evaluation.

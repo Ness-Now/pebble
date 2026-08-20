@@ -2,18 +2,31 @@
 
 ## Status
 
-`V4-GATE-E-v1 Blocker 02: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE`
+`V4-GATE-E-v1 Blocker 02: FIXED AND PUBLISHED`
 
-This is a local product-correction candidate. It is not published and does not
-acquire Gate E.
+This record publishes the senior-review-approved product correction. It does
+not acquire Gate E, revise Evaluation 02, begin Evaluation 03, or begin
+CIV-38. Remote publication verification is not claimed by this containing
+commit.
 
 - Gate E Evaluation 01: `FAIL — HISTORICAL IMMUTABLE EVIDENCE`
 - Gate E Blocker 01: `FIXED AND PUBLISHED`
 - Gate E Evaluation 02: `FAIL — HISTORICAL IMMUTABLE EVIDENCE`
+- Gate E Blocker 02: `FIXED AND PUBLISHED`
 - Gate E: `PLANNED — NOT ACQUIRED`
 - Evaluation 03: `NOT_STARTED`
 - CIV-38: `OPTIONAL — NOT STARTED`
-- Push: `NOT_ATTEMPTED`
+
+## Publication record
+
+```text
+product correction commit: a67665e87774a4af8fcc7930e05c8747da1f83fc
+reviewed candidate HEAD: b8dbeef60865a4fd452ca5abaac4a005ded2e592
+review bundle SHA-256: 68ab04428582cbbe96c0e8bf046f45c22818a6dd9018ad6f808c87b9aea30c31
+internal checksums: 59/59 PASS
+senior review: APPROVED
+publication verified: NO
+```
 
 ## Evaluation 02 identity
 
@@ -65,7 +78,7 @@ authority.
 
 ## Product correction
 
-The local product correction and its focused/live proof infrastructure are
+The approved product correction and its focused/live proof infrastructure are
 committed at:
 
 ```text
@@ -276,4 +289,10 @@ were read-only and were not regenerated.
 - It does not make production provenance a custody or disposition authority.
 - It does not define continuity after tool destruction or item-key replacement.
 - It does not change checkpoint/replay or Observer schema.
-- It has not been pushed or remotely verified as a published correction.
+- This containing commit does not claim manual push or remote publication
+  verification.
+
+After manual publication and independent remote SHA verification, the next
+authorized action is
+`NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-03`. Evaluation 03 remains completely
+unstarted by this publication record.

@@ -43,7 +43,7 @@ These documents form the minimal permanent memory of the project:
 | [`CIV_36_PHASE_SUMMARY.md`](CIV_36_PHASE_SUMMARY.md) | Published architecture, contract semantics, correction history, physical proof, validation and non-claims for CIV-36. |
 | [`CIV_37_PHASE_SUMMARY.md`](CIV_37_PHASE_SUMMARY.md) | Published architecture, correction history, physical-market proof, price causality, validation and non-claims for CIV-37. |
 | [`GATE_E_BLOCKER_01_EXACT_PRODUCTION_PROVENANCE.md`](GATE_E_BLOCKER_01_EXACT_PRODUCTION_PROVENANCE.md) | Published Blocker 01 product-correction record; preserves Evaluation 01 FAIL and documents exact asset-bound production provenance. |
-| [`GATE_E_BLOCKER_02_EVOLVED_PRODUCTION_IDENTITY.md`](GATE_E_BLOCKER_02_EVOLVED_PRODUCTION_IDENTITY.md) | Local Blocker 02 review candidate; preserves Evaluation 02 FAIL and separates immutable production origin, durable current-identity continuity and exact current physical authority. |
+| [`GATE_E_BLOCKER_02_EVOLVED_PRODUCTION_IDENTITY.md`](GATE_E_BLOCKER_02_EVOLVED_PRODUCTION_IDENTITY.md) | Published Blocker 02 product-correction record; preserves Evaluation 02 FAIL and separates immutable production origin, durable current-identity continuity and exact current physical authority. |
 
 Canonical status at the product baseline reconciled by this documentation:
 
@@ -88,9 +88,9 @@ next eligible phase: null
 Gate E Evaluation 01: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 01: FIXED AND PUBLISHED
 Gate E Evaluation 02: FAIL — HISTORICAL IMMUTABLE EVIDENCE
-V4-GATE-E-v1 Blocker 02: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE — NOT PUBLISHED
+V4-GATE-E-v1 Blocker 02: FIXED AND PUBLISHED
 Gate E Evaluation 03: NOT_STARTED
-next authorized action: SENIOR REVIEW OF V4-GATE-E-v1 BLOCKER 02
+next authorized action after remote publication verification: NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-03
 ```
 
 The `CIV-33` completion is published on the canonical branch at
@@ -201,11 +201,16 @@ acquire Gate E or rewrite Evaluation 01. Evaluation 02 remains immutable
 `FAIL — HISTORICAL IMMUTABLE EVIDENCE` at evidence HEAD
 `2f95826f474c9f2a366f4b06df90a8643beb7a98`; its bundle SHA-256 is
 `4e10d129927af5c8443f9f8e26fec0d276f797cf82126b93792f32c26c646d57`.
-V4-GATE-E-v1 Blocker 02 is an unpublished local review candidate. It preserves
+Senior review approved V4-GATE-E-v1 Blocker 02 product correction
+`a67665e87774a4af8fcc7930e05c8747da1f83fc`, reviewed candidate HEAD
+`b8dbeef60865a4fd452ca5abaac4a005ded2e592` and review bundle SHA-256
+`68ab04428582cbbe96c0e8bf046f45c22818a6dd9018ad6f808c87b9aea30c31`
+with 59/59 internal checksums. Blocker 02 is fixed and published; it preserves
 the exact production-origin identity while the current physical identity may
-evolve only through the existing Material Rights continuity contract. The next
-authorized action is senior review of that correction candidate. Evaluation 03
-is not started, Gate E remains planned and not acquired, and this local state
+evolve only through the existing Material Rights continuity contract. Gate E
+remains planned and not acquired. Evaluation 03 is not started. After manual
+publication and independent remote SHA verification, the next authorized
+action is `NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-03`. This containing commit
 does not claim remote publication verification.
 
 ## Operational
