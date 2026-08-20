@@ -193,6 +193,7 @@ PRODUCTION_GATE=0
 BARTER_GATE=0
 CONTRACT_GATE=0
 MARKET_GATE=0
+GATE_E_BLOCKER_03=0
 AUTONOMOUS_CIVILIZATION_GATE=0
 INTEGRATED_TEACHING_PROOF=0
 PASSIVE_OBSERVER_INPUT_PROOF=0
@@ -215,6 +216,12 @@ if [ "$MODE" = "markets" ]; then
     MARKET_PHASE2_COMMANDS='/tp 14 68 -18;/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab checkpoint load market-open-v34;/lab market status;/lab market proof;/lab overlay compact|/lab step;/lab market status|/lab step;/lab market status;/lab market remote-buyer|/lab market status;/lab market proof;/lab overlay compact|/lab step;/lab market status;/lab market proof;/lab market restore-locality|/lab step;/lab market status;/lab overlay compact|/lab step;/lab market status;/lab overlay compact|/lab step;/lab market status;/lab market proof;/lab checkpoint save market-traded-v34;/lab checkpoint status;/lab causality tail 20;/lab status'
     MARKET_PHASE3_COMMANDS='/tp 14 68 -18;/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab checkpoint load market-traded-v34;/lab market status;/lab market proof;/lab overlay compact|/lab step;/lab market status|/lab step;/lab market status|/lab step;/lab market status|/lab step;/lab market status|/lab step;/lab market status;/lab overlay compact|/lab step;/lab market status|/lab step;/lab market status|/lab step;/lab market status;/lab overlay compact|/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab market status;/lab market proof;/lab checkpoint save market-final-v34;/lab checkpoint status;/lab causality tail 20;/lab status'
     MARKET_PHASE4_COMMANDS='/tp 14 68 -18;/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab checkpoint load market-final-v34;/lab market status;/lab market proof;/lab overlay compact|/lab step;/lab market status;/lab market proof;/lab market cleanup;/lab status'
+    if [ "${PEBBLELAB_GATE_E_BLOCKER_03:-0}" = "1" ]; then
+        GATE_E_BLOCKER_03=1
+        MARKET_PHASE2_COMMANDS='/tp 14 68 -18;/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab checkpoint load market-open-v34;/lab market status;/lab market proof;/lab overlay compact|/lab step;/lab market status|/lab step;/lab market status;/lab market blocker-03-status;/lab market remote-buyer|/lab market status;/lab market proof;/lab overlay compact|/lab step;/lab market status;/lab market proof;/lab market restore-locality|/lab step;/lab market status;/lab overlay compact|/lab step;/lab market status;/lab overlay compact|/lab step;/lab market status;/lab market proof;/lab market blocker-03-status;/lab checkpoint save market-traded-v34;/lab checkpoint status;/lab causality tail 20;/lab status'
+        MARKET_PHASE3_COMMANDS='/tp 14 68 -18;/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab checkpoint load market-traded-v34;/lab market status;/lab market proof;/lab overlay compact|/lab step;/lab market status|/lab step;/lab market status|/lab step;/lab market status|/lab step;/lab market status|/lab step;/lab market status;/lab overlay compact|/lab step;/lab market status|/lab step;/lab market status|/lab step;/lab market status;/lab overlay compact|/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab market status;/lab market proof;/lab market blocker-03-status;/lab checkpoint save market-final-v34;/lab checkpoint status;/lab causality tail 20;/lab status'
+        MARKET_PHASE4_COMMANDS='/tp 14 68 -18;/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab checkpoint load market-final-v34;/lab market status;/lab market proof;/lab market blocker-03-status;/lab overlay compact|/lab step;/lab market status;/lab market blocker-03-status;/lab overlay compact|/lab step;/lab market status;/lab market blocker-03-status;/lab overlay compact|/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab market status;/lab market proof;/lab market blocker-03-status;/lab checkpoint save market-blocker03-reentered-v34;/lab checkpoint status;/lab observer status;/lab overlay compact|/lab market cleanup;/lab status'
+    fi
     LAB_COMMANDS="$MARKET_PHASE1_COMMANDS"
 elif [ "$MODE" = "contracts" ]; then
     WORLD_SEED="46"
@@ -1251,6 +1258,11 @@ if [ "$MODE" = "markets" ]; then
     CAPTURE_LATER_PATH="$CAPTURE_DIR/market-history-informed-trade.png"
     CAPTURE_WITHDRAWAL_PATH="$CAPTURE_DIR/market-unsold-withdrawal.png"
     CAPTURE_FINAL_RESTORE_PATH="$CAPTURE_DIR/market-final-restored.png"
+    if [ "$GATE_E_BLOCKER_03" -eq 1 ]; then
+        CAPTURE_BLOCKER03_DEPOSIT_PATH="$CAPTURE_DIR/blocker03-ordinary-selection-and-deposit.png"
+        CAPTURE_BLOCKER03_LISTING_PATH="$CAPTURE_DIR/blocker03-ordinary-listing.png"
+        CAPTURE_BLOCKER03_CONTINUED_PATH="$CAPTURE_DIR/blocker03-continued-market-path.png"
+    fi
     SHOT_SPEC="-|$CAPTURE_BEFORE_PATH|$CAPTURE_DEPOSITED_PATH|$CAPTURE_OPEN_PATH"
 elif [ "$MODE" = "contracts" ]; then
     CAPTURE_CAPACITY_PATH="$CAPTURE_DIR/contract-capacity-refusal.png"
@@ -1382,6 +1394,7 @@ if [ "$MODE" = "markets" ]; then
             PEBBLELAB_APP_AGENTS_TRACE=1 \
             PEBBLELAB_APP_AGENTS_TRACE_EVERY=1 \
             PEBBLELAB_APP_AGENTS_INTERACT=1 \
+            PEBBLELAB_APP_AGENTS_OBSERVER="$GATE_E_BLOCKER_03" \
             PEBBLELAB_APP_AGENTS_MATERIAL=1 \
             PEBBLELAB_APP_AGENTS_PERSISTENCE=1 \
             PEBBLELAB_APP_AGENTS_PRODUCTION=1 \
@@ -1389,6 +1402,7 @@ if [ "$MODE" = "markets" ]; then
             PEBBLELAB_APP_AGENTS_AUTONOMOUS_CIVILIZATION=1 \
             PEBBLELAB_DISPOSABLE_MARKET_MID_FAULT="$mid_fault" \
             PEBBLELAB_DISPOSABLE_MARKET_POST_MUTATION_FAULT="$post_fault" \
+            PEBBLELAB_GATE_E_BLOCKER_03="$GATE_E_BLOCKER_03" \
             PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
             PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
             PEBBLE_CMD="$run_commands" \
@@ -1455,6 +1469,10 @@ if [ "$MODE" = "markets" ]; then
     require_trace 'checkpoint saved name=market-traded-v34 .*restartSafe=1 ' 'completed market checkpoint'
     require_trace 'summary .*runtimeErrors=3 .*probesRemoved=3 ' 'three expected locality/fault runtime failures and clean second termination'
     reject_trace 'CANDIDATE_PHYSICAL_HARD_FAILURE' 'market compensation hard failure'
+    if [ "$GATE_E_BLOCKER_03" -eq 1 ]; then
+        require_trace 'blocker03 market reservation authority terminalAccepted=0 liveProposed=0 liveAccepted=1 nonterminalTargetDeposits=0 targetReserved=1 terminalOnlyReleased=0 exactCurrentAuthority=1 .*readOnly=1' 'accepted live proposal retains strict current reservation authority'
+        require_trace 'blocker03 market reservation authority terminalAccepted=1 liveProposed=0 liveAccepted=0 nonterminalTargetDeposits=0 targetReserved=0 terminalOnlyReleased=1 exactCurrentAuthority=1 .*trades=1 priceRows=1 .*readOnly=1' 'first completed trade becomes history without retaining reservation authority'
+    fi
 
     TRADED_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint saved name=market-traded-v34 .* digest=\([0-9a-f]*\) storageDigest=.*/\1/p' "$PHASE2_TRACE" | /usr/bin/tail -1)
     [ -n "$TRADED_DIGEST" ] || fail "traded market digest extraction failed"
@@ -1480,6 +1498,9 @@ if [ "$MODE" = "markets" ]; then
     require_trace 'checkpoint saved name=market-final-v34 .*restartSafe=1 ' 'final market checkpoint'
     require_trace 'summary .*runtimeErrors=0 .*probesRemoved=3 ' 'clean third process termination'
     reject_trace 'CANDIDATE_PHYSICAL_HARD_FAILURE|CANDIDATE_PHYSICAL_ROLLBACK' 'unexpected third-process market rollback'
+    if [ "$GATE_E_BLOCKER_03" -eq 1 ]; then
+        require_trace 'blocker03 market reservation authority terminalAccepted=2 liveProposed=0 liveAccepted=0 nonterminalTargetDeposits=0 targetReserved=0 terminalOnlyReleased=1 exactCurrentAuthority=1 .*trades=2 priceRows=2 withdrawals=1 readOnly=1' 'two retained completed proposals release current authority while trade and price provenance remain exact'
+    fi
 
     FINAL_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint saved name=market-final-v34 .* digest=\([0-9a-f]*\) storageDigest=.*/\1/p' "$PHASE3_TRACE" | /usr/bin/tail -1)
     [ -n "$FINAL_DIGEST" ] || fail "final market digest extraction failed"
@@ -1490,18 +1511,40 @@ if [ "$MODE" = "markets" ]; then
     continuation_command_tick=$((persisted_world_tick + 100))
 
     printf '\nMarket phase 4: final fresh restore, exact-once verification, and empty-stall cleanup.\n'
-    PHASE4_SHOTS="$CAPTURE_FINAL_RESTORE_PATH|$CAPTURE_PATH"
+    if [ "$GATE_E_BLOCKER_03" -eq 1 ]; then
+        PHASE4_SHOTS="$CAPTURE_FINAL_RESTORE_PATH|$CAPTURE_BLOCKER03_DEPOSIT_PATH|$CAPTURE_BLOCKER03_LISTING_PATH|$CAPTURE_BLOCKER03_CONTINUED_PATH|$CAPTURE_PATH"
+    else
+        PHASE4_SHOTS="$CAPTURE_FINAL_RESTORE_PATH|$CAPTURE_PATH"
+    fi
     run_market_app "$SESSION_HOME" "$PHASE4_TRACE" \
         "$MARKET_PHASE4_COMMANDS" 0 "$continuation_command_tick" \
         "$PHASE4_SHOTS" 0 0
     TRACE_PATH="$PHASE4_TRACE"
     [ -s "$CAPTURE_FINAL_RESTORE_PATH" ] || fail "market final-restore capture missing"
     [ -s "$CAPTURE_PATH" ] || fail "market cleanup capture missing"
+    if [ "$GATE_E_BLOCKER_03" -eq 1 ]; then
+        [ -s "$CAPTURE_BLOCKER03_DEPOSIT_PATH" ] \
+            || fail "Blocker 03 ordinary-selection-and-deposit capture missing"
+        [ -s "$CAPTURE_BLOCKER03_LISTING_PATH" ] \
+            || fail "Blocker 03 ordinary-listing capture missing"
+        [ -s "$CAPTURE_BLOCKER03_CONTINUED_PATH" ] \
+            || fail "Blocker 03 continued-path capture missing"
+    fi
     require_trace "checkpoint loaded name=market-final-v34 .*digest=$FINAL_DIGEST .*restartSafe=1 .*custodyDuplicates=0 physicalBoundary=acquired" 'fresh process restores final price and withdrawal truth'
     require_trace_at_least 'market status .*trades=2 withdrawals=1 priceHistory=stone_pickaxe/bread=2/1@' 2 'final restart remains exact across another product tick'
     require_trace 'Restored disposable market air cell after restart; completed economic custody was preserved.' 'empty physical stall cleanup'
     require_trace 'summary .*runtimeErrors=0 .*probesRemoved=3 ' 'clean fourth process termination'
-    reject_trace 'market settlement completed|market unsold withdrawal completed|CANDIDATE_PHYSICAL_ROLLBACK|CANDIDATE_PHYSICAL_HARD_FAILURE' 'reexecuted final market outcome or rollback'
+    if [ "$GATE_E_BLOCKER_03" -eq 1 ]; then
+        require_trace 'blocker03 market reservation authority terminalAccepted=2 liveProposed=0 liveAccepted=0 nonterminalTargetDeposits=0 targetReserved=0 terminalOnlyReleased=1 exactCurrentAuthority=1 .*currentOpportunities=0 ordinarySelectedTarget=0 targetDeposits=0 targetListings=0 .*trades=2 priceRows=2 withdrawals=1 readOnly=1' 'fresh restart preserves terminal history and released exact current authority'
+        require_trace 'market deposit completed .*asset=market-asset:9-consideration-bread2 normalDepositDecision=1 depositPhysicalMutation=1 ordinaryAutonomousSelection=1 reservationAuthorityBefore=0 .*publication=verified duplicateDeposits=0' 'ordinary post-restart selection executes the released asset through the verified physical deposit path'
+        require_trace 'blocker03 market reservation authority terminalAccepted=2 liveProposed=0 liveAccepted=0 nonterminalTargetDeposits=1 targetReserved=1 terminalOnlyReleased=0 exactCurrentAuthority=1 .*targetDeposits=1 targetListings=0 liveTargetListings=0 .*readOnly=1' 'new physical deposit reacquires live reservation authority without duplication'
+        require_trace 'blocker03 market reservation authority terminalAccepted=2 liveProposed=0 liveAccepted=0 nonterminalTargetDeposits=1 targetReserved=1 terminalOnlyReleased=0 exactCurrentAuthority=1 .*targetDeposits=1 targetListings=1 liveTargetListings=1 .*readOnly=1' 'new ordinary listing remains actively reserved'
+        require_trace 'checkpoint saved name=market-blocker03-reentered-v34 .*restartSafe=1 ' 'post-reentry market checkpoint remains schema-34 restart safe'
+        require_trace 'observer status .*schema=11 .*' 'Observer schema remains read-only and available'
+        reject_trace 'market settlement completed|CANDIDATE_PHYSICAL_ROLLBACK|CANDIDATE_PHYSICAL_HARD_FAILURE' 'historical settlement replay or unexpected rollback'
+    else
+        reject_trace 'market settlement completed|market unsold withdrawal completed|CANDIDATE_PHYSICAL_ROLLBACK|CANDIDATE_PHYSICAL_HARD_FAILURE' 'reexecuted final market outcome or rollback'
+    fi
 
     world_facts=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT count(*), json_extract(json, '$.seed'), json_extract(json, '$.name'), json_extract(json, '$.dims.\"0\".dayTime'), json_extract(json, '$.dims.\"0\".raining'), json_extract(json, '$.dims.\"0\".thundering'), json_extract(json, '$.gameRules.doMobSpawning'), json_extract(json, '$.gameRules.doDaylightCycle'), json_extract(json, '$.gameRules.doWeatherCycle') FROM worlds;")
     expected_world_facts="1|$WORLD_SEED|$WORLD_NAME|1000|0|0|0|0|0"
@@ -1512,7 +1555,11 @@ if [ "$MODE" = "markets" ]; then
         || /usr/bin/pgrep -x pebsmoke >/dev/null 2>&1; then
         fail "residual PebbleLab process after market proof"
     fi
-    printf '\nPASS: physical market custody, two exact settlement rollbacks, restart, local price discovery, later quote, withdrawal, and cleanup verified.\n'
+    if [ "$GATE_E_BLOCKER_03" -eq 1 ]; then
+        printf '\nPASS: Blocker 03 active reservation, terminal-history release, ordinary post-restart re-entry, conservation, and cleanup verified.\n'
+    else
+        printf '\nPASS: physical market custody, two exact settlement rollbacks, restart, local price discovery, later quote, withdrawal, and cleanup verified.\n'
+    fi
     printf 'Phase 1 trace: %s\n' "$PHASE1_TRACE"
     printf 'Phase 2 trace: %s\n' "$PHASE2_TRACE"
     printf 'Phase 3 trace: %s\n' "$PHASE3_TRACE"

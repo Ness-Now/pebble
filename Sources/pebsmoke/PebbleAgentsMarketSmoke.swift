@@ -1097,3 +1097,476 @@ func runPebbleAgentsMarketSmoke() {
             && replayed.session.marketSnapshot().listings.count == 1
             && replayed.session.marketSnapshot().priceHistory.isEmpty)
 }
+
+func runPebbleAgentsGateEBlocker03Smoke() {
+    section("Gate E Blocker 03 terminal market reservation authority")
+
+    let configuration = try! AgentMarketConfiguration(maximumProposals: 2)
+    let fixture = marketFixture(
+        "gate-e-blocker-03", configuration: configuration
+    )
+    var session = fixture.session
+    _ = depositInitialMarketGood(fixture: fixture, session: &session)
+    let listing = createInitialMarketListing(session: &session)
+    let buyerProposal = AgentMarketBuyerProposal(
+        proposalID: AgentMarketProposalID(rawValue: "proposal:blocker03")!,
+        observation: AgentMarketBuyerObservation(
+            observationID: "buyer-observation:blocker03",
+            listingID: listing.listingID, buyerID: fixture.buyer,
+            consideration: AgentBarterLeg(
+                assetID: fixture.bread, holderID: fixture.buyer,
+                material: marketStack("bread", 2),
+                holderObservation: fixture.breadSource
+            ), buyerReason: fixture.buyerReason, distance: 1,
+            chunksReady: true, observedAtTick: session.tick
+        ), terms: AgentMarketPriceTerms(
+            baseItemKey: "stone_pickaxe", quoteItemKey: "bread",
+            baseQuantity: 1, quoteQuantity: 2
+        ), rejectedAsk: true,
+        reason: "normal two-bread counteroffer"
+    )
+    try! session.proposeMarketPurchase(
+        operationID: "market:proposal:blocker03", proposal: buyerProposal
+    )
+    check("proposed open listing reserves exact consideration",
+          session.marketSnapshot().proposals.first?.status == .proposed
+            && session.marketSnapshot().listings.first?.status == .open
+            && session.marketSnapshot().deposits.first?.status == .listed
+            && session.marketAssetIsReserved(fixture.bread))
+
+    let liveBreadOpportunity = AgentMarketDepositOpportunity(
+        opportunityID: "market-opportunity:blocker03:live-bread",
+        marketID: fixture.marketID, sellerID: fixture.buyer,
+        offered: AgentBarterLeg(
+            assetID: fixture.bread, holderID: fixture.buyer,
+            material: marketStack("bread", 2),
+            holderObservation: fixture.breadSource
+        ), quoteReason: fixture.buyerReason,
+        marketPosition: AgentPosition(x: 1, y: 64, z: 0),
+        containerLocationID: fixture.location,
+        currentContainerFingerprint: "market:pickaxe",
+        physicalSlotCapacity: 9, physicalOccupiedSlots: 1,
+        distance: 1, chunksReady: true, observedAtTick: session.tick,
+        expiresAtTick: session.tick + 2
+    )
+    try! session.recordMarketDepositOpportunities([liveBreadOpportunity])
+    check("live proposal blocks incompatible autonomous deposit selection",
+          session.nextAutonomousMarketDepositProposal() == nil)
+    let beforeLiveDeposit = try! session.durableStateBytes()
+    let liveBreadMarket = marketObservation(
+        holder: .container(fixture.location), item: "bread", count: 2,
+        fingerprint: "market:pickaxe+bread",
+        receipt: "physical:deposit:blocker03:forbidden", tick: session.tick
+    )
+    check("live proposal blocks direct verified deposit publication",
+          (try? session.applyVerifiedMarketDeposit(AgentVerifiedMarketDeposit(
+              operationID: "market:deposit:blocker03:forbidden",
+              depositID: AgentMarketDepositID(
+                  rawValue: "deposit:blocker03:forbidden"
+              )!, opportunityID: liveBreadOpportunity.opportunityID,
+              marketID: fixture.marketID, sellerID: fixture.buyer,
+              assetID: fixture.bread, material: marketStack("bread", 2),
+              sourceObservation: fixture.breadSource,
+              marketObservation: liveBreadMarket,
+              physicalReceiptID: liveBreadMarket.physicalReceiptID,
+              completedAtTick: session.tick
+          ))) == nil
+            && (try! session.durableStateBytes()) == beforeLiveDeposit)
+
+    let incompatibleProposal = AgentMarketBuyerProposal(
+        proposalID: AgentMarketProposalID(
+            rawValue: "proposal:blocker03:incompatible"
+        )!, observation: buyerProposal.observation,
+        terms: buyerProposal.terms, rejectedAsk: buyerProposal.rejectedAsk,
+        reason: "incompatible concurrent use"
+    )
+    check("live proposal blocks incompatible concurrent buyer proposal",
+          (try? session.proposeMarketPurchase(
+              operationID: "market:proposal:blocker03:incompatible",
+              proposal: incompatibleProposal
+          )) == nil
+            && (try! session.durableStateBytes()) == beforeLiveDeposit)
+
+    let decision = try! session.nextAutonomousMarketSellerDecision(
+        proposalID: buyerProposal.proposalID,
+        currentLocality: initialMarketLocality(fixture, session: session)
+    )
+    try! session.decideMarketProposal(
+        operationID: "market:decision:blocker03", decision: decision
+    )
+    check("accepted reserved triad keeps strict live reservation authority",
+          decision.accept
+            && session.marketSnapshot().proposals.first?.status == .accepted
+            && session.marketSnapshot().listings.first?.status == .reserved
+            && session.marketSnapshot().deposits.first?.status == .reserved
+            && session.marketAssetIsReserved(fixture.bread))
+
+    let acceptedCheckpoint = try! session.makeCheckpoint()
+    var restored = try! AgentSimulationSession.restoring(acceptedCheckpoint)
+    check("schema-34 restart preserves genuinely live reservation",
+          acceptedCheckpoint.schemaVersion == 34
+            && restored.marketAssetIsReserved(fixture.bread)
+            && restored.marketSnapshot().proposals.first?.status == .accepted)
+
+    let trade = initialMarketTrade(
+        fixture: fixture, listing: listing,
+        proposal: restored.marketSnapshot().proposals.first!, session: restored,
+        operationID: "market:trade:blocker03"
+    )
+    try! restored.completeVerifiedMarketTrade(trade)
+    let completed = restored.marketSnapshot()
+    check("completed triad retains history without reservation authority",
+          completed.listings.first?.status == .completed
+            && completed.deposits.first?.status == .sold
+            && completed.proposals.first?.status == .accepted
+            && !restored.marketAssetIsReserved(fixture.bread))
+    check("trade and local price provenance remain exact",
+          completed.totalTradeCount == 1
+            && completed.tradeRecords.count == 1
+            && completed.priceHistory.count == 1
+            && completed.priceHistory.first?.tradeID == trade.tradeID
+            && completed.priceHistory.first?.physicalReceiptIDs == [
+                trade.considerationLeg.physicalReceiptID,
+                trade.offeredLeg.physicalReceiptID,
+            ].sorted())
+
+    _ = try! restored.advanceTick()
+
+    let reentryNeedID = AgentProductionNeedID(
+        rawValue: "need:blocker03:seller:oak-log"
+    )!
+    try! restored.raiseProductionNeed(
+        needID: reentryNeedID, actorID: fixture.seller,
+        reason: .materialWork, desiredOutputItemKey: "oak_log",
+        quantity: 1, priority: 96
+    )
+    let completedCheckpoint = try! restored.makeCheckpoint()
+    var completedRestart = try! AgentSimulationSession.restoring(
+        completedCheckpoint
+    )
+    let breadRecord = completedRestart.materialRightsSnapshot().records.first {
+        $0.asset.assetID == fixture.bread
+    }!
+    check("completed consideration has exact current holder owner and quantity",
+          breadRecord.lastVerifiedHolder.holder == .agent(fixture.seller)
+            && breadRecord.lastVerifiedHolder.quantity == 2
+            && breadRecord.lastVerifiedHolder.materialIdentity.itemKey == "bread"
+            && breadRecord.recognizedOwnership?.ownerID == fixture.seller)
+    check("restart preserves accepted trade history but releases terminal authority",
+          completedRestart.marketSnapshot().proposals.first?.status == .accepted
+            && completedRestart.marketSnapshot().tradeRecords.count == 1
+            && completedRestart.marketSnapshot().priceHistory.count == 1
+            && !completedRestart.marketAssetIsReserved(fixture.bread))
+    check("terminal proposal history cannot reserve an unrelated current asset",
+          !completedRestart.marketAssetIsReserved(fixture.lowBread))
+
+    let reentryReason = AgentBarterValueReason(
+        need: completedRestart.productionSnapshot().needs.first {
+            $0.needID == reentryNeedID
+        }!
+    )
+    func reentryOpportunity(
+        _ id: String,
+        holder: AgentMaterialPhysicalHolder,
+        item: String = "bread",
+        quantity: Int = 2,
+        fingerprint: String = "seller:bread2"
+    ) -> AgentMarketDepositOpportunity {
+        let observation = marketObservation(
+            holder: holder, item: item, count: quantity,
+            fingerprint: fingerprint,
+            receipt: "observe:\(id)", tick: completedRestart.tick
+        )
+        return AgentMarketDepositOpportunity(
+            opportunityID: id, marketID: fixture.marketID,
+            sellerID: fixture.seller, offered: AgentBarterLeg(
+                assetID: fixture.bread, holderID: fixture.seller,
+                material: marketStack(item, quantity),
+                holderObservation: observation
+            ), quoteReason: reentryReason,
+            marketPosition: AgentPosition(x: 1, y: 64, z: 0),
+            containerLocationID: fixture.location,
+            currentContainerFingerprint: "market:empty-after-trade",
+            physicalSlotCapacity: 9, physicalOccupiedSlots: 0,
+            distance: 1, chunksReady: true,
+            observedAtTick: completedRestart.tick,
+            expiresAtTick: completedRestart.tick + 2
+        )
+    }
+
+    let beforeWrongAuthority = try! completedRestart.durableStateBytes()
+    check("wrong current holder still fails closed",
+          (try? completedRestart.recordMarketDepositOpportunities([
+              reentryOpportunity(
+                  "market-opportunity:blocker03:wrong-holder",
+                  holder: .agent(fixture.buyer)
+              ),
+          ])) == nil
+            && (try! completedRestart.durableStateBytes())
+                == beforeWrongAuthority)
+    check("wrong current quantity still fails closed",
+          (try? completedRestart.recordMarketDepositOpportunities([
+              reentryOpportunity(
+                  "market-opportunity:blocker03:wrong-quantity",
+                  holder: .agent(fixture.seller), quantity: 1
+              ),
+          ])) == nil
+            && (try! completedRestart.durableStateBytes())
+                == beforeWrongAuthority)
+    check("wrong current item still fails closed",
+          (try? completedRestart.recordMarketDepositOpportunities([
+              reentryOpportunity(
+                  "market-opportunity:blocker03:wrong-item",
+                  holder: .agent(fixture.seller), item: "wheat"
+              ),
+          ])) == nil
+            && (try! completedRestart.durableStateBytes())
+                == beforeWrongAuthority)
+
+    let validReentry = reentryOpportunity(
+        "market-opportunity:blocker03:reentry",
+        holder: .agent(fixture.seller),
+        fingerprint: breadRecord.lastVerifiedHolder.custodyFingerprint
+    )
+    var replaySource = completedRestart
+    var recorder = try! AgentReplayRecorder(
+        checkpoint: completedCheckpoint, session: replaySource
+    )
+    _ = try! recorder.apply(.recordMarketDepositOpportunities([
+        validReentry,
+    ]), to: &replaySource)
+    let journal = try! recorder.journal(
+        named: AgentCheckpointName(rawValue: "blocker03-terminal-release")!
+    )
+    let replayed = try! AgentSessionReplayer.replay(
+        checkpoint: completedCheckpoint, journal: journal
+    )
+    check("replay preserves terminal release without moving or reserving matter",
+          journal.manifest.schemaVersion == 34
+            && replayed.report.verified
+            && replayed.session.marketSnapshot().totalTradeCount == 1
+            && replayed.session.materialRightsSnapshot().records.first {
+                $0.asset.assetID == fixture.bread
+            }?.lastVerifiedHolder == breadRecord.lastVerifiedHolder
+            && !replayed.session.marketAssetIsReserved(fixture.bread))
+
+    try! completedRestart.recordMarketDepositOpportunities([validReentry])
+    let reentryProposal = completedRestart
+        .nextAutonomousMarketDepositProposal()!
+    check("ordinary post-restart selection chooses released exact asset",
+          reentryProposal.opportunityID == validReentry.opportunityID
+            && reentryProposal.sellerID == fixture.seller)
+    let beforeStale = try! completedRestart.durableStateBytes()
+    let staleSource = marketObservation(
+        holder: .agent(fixture.seller), item: "bread", count: 2,
+        fingerprint: "stale-before-current-observation",
+        receipt: "stale:blocker03", tick: completedRestart.tick
+    )
+    let reentryMarket = marketObservation(
+        holder: .container(fixture.location), item: "bread", count: 2,
+        fingerprint: "market:bread2:reentered",
+        receipt: "physical:deposit:blocker03:reentry",
+        tick: completedRestart.tick
+    )
+    let reentryOutcome = AgentVerifiedMarketDeposit(
+        operationID: "market:deposit:blocker03:reentry",
+        depositID: reentryProposal.depositID,
+        opportunityID: validReentry.opportunityID,
+        marketID: fixture.marketID, sellerID: fixture.seller,
+        assetID: fixture.bread, material: marketStack("bread", 2),
+        sourceObservation: staleSource, marketObservation: reentryMarket,
+        physicalReceiptID: reentryMarket.physicalReceiptID,
+        completedAtTick: completedRestart.tick
+    )
+    check("stale current physical authority still fails closed",
+          (try? completedRestart.applyVerifiedMarketDeposit(reentryOutcome)) == nil
+            && (try! completedRestart.durableStateBytes()) == beforeStale)
+
+    let exactReentryOutcome = AgentVerifiedMarketDeposit(
+        operationID: reentryOutcome.operationID,
+        depositID: reentryOutcome.depositID,
+        opportunityID: reentryOutcome.opportunityID,
+        marketID: reentryOutcome.marketID, sellerID: reentryOutcome.sellerID,
+        assetID: reentryOutcome.assetID, material: reentryOutcome.material,
+        sourceObservation: validReentry.offered.holderObservation,
+        marketObservation: reentryOutcome.marketObservation,
+        physicalReceiptID: reentryOutcome.physicalReceiptID,
+        completedAtTick: reentryOutcome.completedAtTick
+    )
+    try! completedRestart.applyVerifiedMarketDeposit(exactReentryOutcome)
+    let afterReentry = completedRestart.marketSnapshot()
+    check("exact current authority permits one re-entry deposit",
+          afterReentry.totalDepositCount == 2
+            && afterReentry.deposits.filter {
+                $0.assetID == fixture.bread && !$0.status.isTerminal
+            }.count == 1
+            && completedRestart.marketAssetIsReserved(fixture.bread))
+    let beforeDuplicate = completedRestart.marketSnapshot()
+    try! completedRestart.applyVerifiedMarketDeposit(exactReentryOutcome)
+    check("retry creates no duplicate deposit reservation receipt or matter",
+          completedRestart.marketSnapshot().totalDepositCount
+                == beforeDuplicate.totalDepositCount
+            && completedRestart.marketSnapshot().deposits
+                == beforeDuplicate.deposits
+            && completedRestart.marketSnapshot().totalTradeCount == 1
+            && completedRestart.marketSnapshot().priceHistory.count == 1)
+
+    let reentryListingProposal = completedRestart
+        .nextAutonomousMarketListingProposal()!
+    try! completedRestart.createMarketListing(
+        operationID: "market:list:blocker03:reentry",
+        proposal: reentryListingProposal
+    )
+    let reentryListing = completedRestart.marketSnapshot().listings.first {
+        $0.listingID == reentryListingProposal.listingID
+    }!
+    check("released asset continues through ordinary listing path",
+          reentryListing.status == .open
+            && reentryListing.currentTerms.baseItemKey == "bread"
+            && reentryListing.currentTerms.quoteItemKey == "oak_log"
+            && completedRestart.marketSnapshot().tradeRecords.count == 1
+            && completedRestart.marketSnapshot().priceHistory.count == 1)
+
+    let oakBuyer = AgentMaterialAssetID(rawValue: "asset:blocker03:oak:buyer")!
+    let oakLater = AgentMaterialAssetID(rawValue: "asset:blocker03:oak:later")!
+    let oakBuyerObservation = marketObservation(
+        holder: .agent(fixture.buyer), item: "oak_log", count: 1,
+        fingerprint: "buyer:oak1", receipt: "observe:buyer:oak1",
+        tick: completedRestart.tick
+    )
+    let oakLaterObservation = marketObservation(
+        holder: .agent(fixture.laterSeller), item: "oak_log", count: 1,
+        fingerprint: "later:oak1", receipt: "observe:later:oak1",
+        tick: completedRestart.tick
+    )
+    try! registerMarketAsset(
+        oakBuyer, owner: fixture.buyer, item: "oak_log", count: 1,
+        observation: oakBuyerObservation,
+        witnesses: [fixture.seller, fixture.buyer, fixture.laterSeller],
+        session: &completedRestart
+    )
+    try! registerMarketAsset(
+        oakLater, owner: fixture.laterSeller, item: "oak_log", count: 1,
+        observation: oakLaterObservation,
+        witnesses: [fixture.seller, fixture.buyer, fixture.laterSeller],
+        session: &completedRestart
+    )
+    let buyerBreadNeed = AgentProductionNeedID(
+        rawValue: "need:blocker03:buyer:bread"
+    )!
+    let laterBreadNeed = AgentProductionNeedID(
+        rawValue: "need:blocker03:later:bread"
+    )!
+    try! completedRestart.raiseProductionNeed(
+        needID: buyerBreadNeed, actorID: fixture.buyer,
+        reason: .physicalFoodNeed, desiredOutputItemKey: "bread",
+        quantity: 2, priority: 91
+    )
+    try! completedRestart.raiseProductionNeed(
+        needID: laterBreadNeed, actorID: fixture.laterSeller,
+        reason: .physicalFoodNeed, desiredOutputItemKey: "bread",
+        quantity: 2, priority: 90
+    )
+    func oakProposal(
+        id: String, buyer: AgentID, asset: AgentMaterialAssetID,
+        observation: AgentMaterialHolderObservation,
+        needID: AgentProductionNeedID
+    ) -> AgentMarketBuyerProposal {
+        AgentMarketBuyerProposal(
+            proposalID: AgentMarketProposalID(rawValue: id)!,
+            observation: AgentMarketBuyerObservation(
+                observationID: "observe:\(id)",
+                listingID: reentryListing.listingID, buyerID: buyer,
+                consideration: AgentBarterLeg(
+                    assetID: asset, holderID: buyer,
+                    material: marketStack("oak_log", 1),
+                    holderObservation: observation
+                ), buyerReason: AgentBarterValueReason(
+                    need: completedRestart.productionSnapshot().needs.first {
+                        $0.needID == needID
+                    }!
+                ), distance: 1, chunksReady: true,
+                observedAtTick: completedRestart.tick
+            ), terms: reentryListing.currentTerms, rejectedAsk: false,
+            reason: "current exact oak consideration"
+        )
+    }
+    let oakBuyerProposal = oakProposal(
+        id: "proposal:blocker03:oak:buyer", buyer: fixture.buyer,
+        asset: oakBuyer, observation: oakBuyerObservation,
+        needID: buyerBreadNeed
+    )
+    try! completedRestart.proposeMarketPurchase(
+        operationID: "market:proposal:blocker03:oak:buyer",
+        proposal: oakBuyerProposal
+    )
+    check("new proposal and reentry listing retain only their live authority",
+          completedRestart.marketAssetIsReserved(oakBuyer)
+            && completedRestart.marketAssetIsReserved(fixture.bread))
+
+    let oakLaterProposal = oakProposal(
+        id: "proposal:blocker03:oak:later", buyer: fixture.laterSeller,
+        asset: oakLater, observation: oakLaterObservation,
+        needID: laterBreadNeed
+    )
+    try! completedRestart.proposeMarketPurchase(
+        operationID: "market:proposal:blocker03:oak:later",
+        proposal: oakLaterProposal
+    )
+    check("terminal compaction removes no live reservation authority",
+          completedRestart.marketSnapshot().proposals.count == 2
+            && completedRestart.marketSnapshot().proposals.allSatisfy {
+                $0.status == .proposed
+            }
+            && completedRestart.marketAssetIsReserved(oakBuyer)
+            && completedRestart.marketAssetIsReserved(oakLater)
+            && completedRestart.marketSnapshot().tradeRecords.first?
+                .proposal.status == .accepted
+            && completedRestart.marketSnapshot().priceHistory.count == 1)
+
+    let oakDecision = try! completedRestart.nextAutonomousMarketSellerDecision(
+        proposalID: oakBuyerProposal.proposalID,
+        currentLocality: marketLocalityEvidence(
+            marketID: fixture.marketID,
+            marketPosition: AgentPosition(x: 1, y: 64, z: 0),
+            sellerID: fixture.seller,
+            sellerPosition: AgentPosition(x: 0, y: 64, z: 0),
+            buyerID: fixture.buyer,
+            buyerPosition: AgentPosition(x: 2, y: 64, z: 0),
+            tick: completedRestart.tick
+        )
+    )
+    try! completedRestart.decideMarketProposal(
+        operationID: "market:decision:blocker03:oak:buyer",
+        decision: oakDecision
+    )
+    check("accepted live proposal remains reserved and sibling proposal releases",
+          completedRestart.marketAssetIsReserved(oakBuyer)
+            && !completedRestart.marketAssetIsReserved(oakLater)
+            && completedRestart.marketSnapshot().proposals.first {
+                $0.proposalID == oakLaterProposal.proposalID
+            }?.status == .stale)
+
+    let activeCheckpoint = try! completedRestart.makeCheckpoint()
+    let activeRestored = try! AgentSimulationSession.restoring(activeCheckpoint)
+    check("restart and compaction preserve live accepted authority only",
+          activeCheckpoint.schemaVersion == 34
+            && activeRestored.marketAssetIsReserved(oakBuyer)
+            && !activeRestored.marketAssetIsReserved(oakLater)
+            && activeRestored.marketAssetIsReserved(fixture.bread)
+            && activeRestored.marketSnapshot().tradeRecords.count == 1
+            && activeRestored.marketSnapshot().priceHistory.count == 1)
+
+    let world = try! AgentObserverWorldBinding(
+        worldID: "gate-e-blocker-03-world",
+        storageIdentity: "memory:gate-e-blocker-03",
+        seed: 303, dimension: 0, observedWorldTick: activeRestored.tick
+    )
+    let observerBefore = try! activeRestored.durableStateBytes()
+    let observer = activeRestored.observerSnapshot(worldBinding: world)
+    check("Observer schema 11 remains read-only across mixed history and authority",
+          observer.header.schemaVersion == 11
+            && observer.markets?.totalTradeCount == 1
+            && observer.markets?.priceHistory.count == 1
+            && (try! activeRestored.durableStateBytes()) == observerBefore)
+}

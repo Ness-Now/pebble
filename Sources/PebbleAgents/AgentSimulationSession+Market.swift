@@ -180,6 +180,13 @@ extension AgentSimulationSession {
         }
     }
 
+    /// Current market reservation authority is derived from the complete live
+    /// operation, never from proposal history alone.
+    public func marketAssetIsReserved(_ assetID: AgentMaterialAssetID) -> Bool {
+        guard let state = marketState else { return false }
+        return assetID.isReservedInMarket(state)
+    }
+
     public mutating func applyVerifiedMarketDeposit(
         _ outcome: AgentVerifiedMarketDeposit
     ) throws {
@@ -205,6 +212,7 @@ extension AgentSimulationSession {
                     == outcome.sourceObservation.quantity,
                   outcome.marketObservation.physicalReceiptID
                     == outcome.physicalReceiptID,
+                  !outcome.assetID.isReservedInMarket(state),
                   !state.deposits.contains(where: {
                       $0.depositID == outcome.depositID || $0.assetID == outcome.assetID
                   }) else {
@@ -416,6 +424,7 @@ extension AgentSimulationSession {
                   proposal.rejectedAsk
                     == (proposal.terms
                         != state.listings[listingIndex].currentTerms),
+                  !observation.consideration.assetID.isReservedInMarket(state),
                   !state.proposals.contains(where: {
                       $0.proposalID == proposal.proposalID
                   }) else {
@@ -503,6 +512,15 @@ extension AgentSimulationSession {
             state.proposals[proposalIndex].decisionEventID = event.eventID
             state.proposals[proposalIndex].decisionReason = decision.reason
             if decision.accept {
+                for index in state.proposals.indices where
+                    index != proposalIndex
+                        && state.proposals[index].listingID
+                            == state.proposals[proposalIndex].listingID
+                        && state.proposals[index].status == .proposed {
+                    state.proposals[index].status = .stale
+                    state.proposals[index].decisionEventID = event.eventID
+                    state.proposals[index].decisionReason = "listing-reserved"
+                }
                 state.listings[listingIndex].status = .reserved
                 state.listings[listingIndex].currentTerms =
                     state.proposals[proposalIndex].proposedTerms
@@ -797,6 +815,30 @@ extension AgentSimulationSession {
             }.count == 1
         }) else {
             throw AgentSessionError.market(.invalidState("reservation"))
+        }
+        for proposal in state.proposals {
+            guard let listing = state.listings.first(where: {
+                $0.listingID == proposal.listingID
+            }), let deposit = state.deposits.first(where: {
+                $0.depositID == listing.depositID
+            }) else {
+                throw AgentSessionError.market(.invalidState("proposal lifecycle"))
+            }
+            // Schema-34 checkpoints from the published product can retain a
+            // proposed sibling after another proposal reserved or completed
+            // the listing. That historical row is valid evidence, but the
+            // reservation predicate below deliberately gives it no authority.
+            if proposal.status == .accepted {
+                let live = listing.status == .reserved
+                    && deposit.status == .reserved
+                let historical = listing.status == .completed
+                    && deposit.status == .sold
+                guard live || historical else {
+                    throw AgentSessionError.market(.invalidState(
+                        "accepted reservation lifecycle"
+                    ))
+                }
+            }
         }
         for price in state.priceHistory {
             guard let record = state.tradeRecords.first(where: {
@@ -1182,8 +1224,22 @@ extension AgentSimulationSession {
 private extension AgentMaterialAssetID {
     func isReservedInMarket(_ state: AgentMarketState) -> Bool {
         state.deposits.contains { $0.assetID == self && !$0.status.isTerminal }
-            || state.proposals.contains {
-                $0.consideration.assetID == self && $0.status.isPending
+            || state.proposals.contains { proposal in
+                guard proposal.consideration.assetID == self,
+                      let listing = state.listings.first(where: {
+                          $0.listingID == proposal.listingID
+                      }), let deposit = state.deposits.first(where: {
+                          $0.depositID == listing.depositID
+                      }) else { return false }
+                switch proposal.status {
+                case .proposed:
+                    return listing.status == .open && deposit.status == .listed
+                case .accepted:
+                    return listing.status == .reserved
+                        && deposit.status == .reserved
+                case .rejected, .stale:
+                    return false
+                }
             }
     }
 }

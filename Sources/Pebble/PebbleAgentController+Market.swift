@@ -18,7 +18,7 @@ extension PebbleAgentController {
         world: World,
         player: Player
     ) -> PebbleAgentCommandResult {
-        let usage = "Usage: /lab market <setup|status|proof|remote-buyer|restore-locality|cleanup>"
+        let usage = "Usage: /lab market <setup|status|proof|blocker-03-status|remote-buyer|restore-locality|cleanup>"
         guard arguments.count == 1 else { return failure(usage) }
         guard marketFeatureEnabled else {
             return failure(
@@ -29,6 +29,7 @@ extension PebbleAgentController {
         case "setup": return setupMarketProof(world: world, player: player)
         case "status": return marketStatus(world: world)
         case "proof": return marketProofStatus(world: world)
+        case "blocker-03-status": return marketBlocker03Status(world: world)
         case "remote-buyer": return stageRemoteMarketBuyer(world: world)
         case "restore-locality": return restoreRemoteMarketBuyer(world: world)
         case "cleanup": return cleanupMarketProof(world: world)
@@ -463,6 +464,106 @@ extension PebbleAgentController {
         return success(message)
     }
 
+    /// Evaluation-derived, double-gated, read-only live diagnostic. It does
+    /// not create opportunities or choose an action; it reports whether the
+    /// normal runtime's current opportunity and selection agree with complete
+    /// market lifecycle authority for the exact Evaluation 03 asset.
+    private func marketBlocker03Status(
+        world: World
+    ) -> PebbleAgentCommandResult {
+        guard environment["PEBBLELAB_GATE_E_BLOCKER_03"] == "1",
+              environment["PEBBLELAB_DISPOSABLE_WORLD_PROOF"] == "1",
+              let session, session.marketEnabled,
+              let assetID = AgentMaterialAssetID(
+                  rawValue: "market-asset:9-consideration-bread2"
+              ), let rights = session.materialRightsSnapshot().records
+                .first(where: { $0.asset.assetID == assetID }) else {
+            return failure(
+                "Blocker 03 status requires its disposable live campaign and exact asset."
+            )
+        }
+        let stateBefore = session.marketSnapshot()
+        let rightsBefore = session.materialRightsSnapshot()
+        let targetProposals = stateBefore.proposals.filter {
+            $0.consideration.assetID == assetID
+        }
+        let terminalAccepted = targetProposals.filter { proposal in
+            proposal.status == .accepted
+                && stateBefore.listings.first(where: {
+                    $0.listingID == proposal.listingID
+                })?.status.isTerminal == true
+        }.count
+        let liveProposed = targetProposals.filter { proposal in
+            guard proposal.status == .proposed,
+                  let listing = stateBefore.listings.first(where: {
+                      $0.listingID == proposal.listingID
+                  }), let deposit = stateBefore.deposits.first(where: {
+                      $0.depositID == listing.depositID
+                  }) else { return false }
+            return listing.status == .open && deposit.status == .listed
+        }.count
+        let liveAccepted = targetProposals.filter { proposal in
+            guard proposal.status == .accepted,
+                  let listing = stateBefore.listings.first(where: {
+                      $0.listingID == proposal.listingID
+                  }), let deposit = stateBefore.deposits.first(where: {
+                      $0.depositID == listing.depositID
+                  }) else { return false }
+            return listing.status == .reserved && deposit.status == .reserved
+        }.count
+        let targetDeposits = stateBefore.deposits.filter {
+            $0.assetID == assetID
+        }
+        let nonterminalDeposits = targetDeposits.filter {
+            !$0.status.isTerminal
+        }.count
+        let targetListings = stateBefore.listings.filter { listing in
+            targetDeposits.contains { $0.depositID == listing.depositID }
+        }
+        let currentOpportunities = stateBefore.depositOpportunities.filter {
+            $0.offered.assetID == assetID
+                && $0.observedAtTick == session.tick
+                && $0.expiresAtTick >= session.tick
+        }
+        let selection = session.nextAutonomousMarketDepositProposal()
+        let ordinarySelectedTarget = selection.map { selected in
+            currentOpportunities.contains {
+                $0.opportunityID == selected.opportunityID
+            }
+        } == true
+        let reserved = session.marketAssetIsReserved(assetID)
+
+        let expected = AgentMaterialStackSnapshot(
+            identity: rights.lastVerifiedHolder.materialIdentity,
+            count: rights.lastVerifiedHolder.quantity
+        )
+        let endpoint: PebbleAgentMaterialCustodyEndpoint?
+        switch rights.lastVerifiedHolder.holder {
+        case let .agent(holder):
+            endpoint = probesByAgentId[holder.rawValue].map {
+                .liveAgent($0, in: world)
+            }
+        case let .container(locationID):
+            endpoint = stateBefore.markets.first(where: {
+                $0.containerLocationID == locationID
+            }).flatMap {
+                marketContainer($0.marketID, world: world, session: session)
+            }.map { .container($0, in: world) }
+        }
+        let authority = endpoint.flatMap {
+            try? materialCustodyGateway.acquireAssetAuthority(expected, at: $0)
+        }
+        let exactCurrentAuthority = authority?.isExact == true
+        let readOnly = stateBefore == session.marketSnapshot()
+            && rightsBefore == session.materialRightsSnapshot()
+        let terminalOnlyReleased = terminalAccepted > 0
+            && liveProposed == 0 && liveAccepted == 0
+            && nonterminalDeposits == 0 && !reserved
+        let message = "blocker03 market reservation authority terminalAccepted=\(terminalAccepted) liveProposed=\(liveProposed) liveAccepted=\(liveAccepted) nonterminalTargetDeposits=\(nonterminalDeposits) targetReserved=\(reserved ? 1 : 0) terminalOnlyReleased=\(terminalOnlyReleased ? 1 : 0) exactCurrentAuthority=\(exactCurrentAuthority ? 1 : 0) currentHolder=\(rights.lastVerifiedHolder.holder.stableText) currentQuantity=\(rights.lastVerifiedHolder.quantity) currentOpportunities=\(currentOpportunities.count) ordinarySelectedTarget=\(ordinarySelectedTarget ? 1 : 0) targetDeposits=\(targetDeposits.count) targetListings=\(targetListings.count) liveTargetListings=\(targetListings.filter { $0.status.isPending }.count) trades=\(stateBefore.totalTradeCount) priceRows=\(stateBefore.priceHistory.count) withdrawals=\(stateBefore.totalWithdrawalCount) readOnly=\(readOnly ? 1 : 0)"
+        trace(message)
+        return success(message)
+    }
+
     func cleanupMarketProof(world: World) -> PebbleAgentCommandResult {
         if let fixture = marketDisposableWorldFixture {
             _ = world.setBlock(
@@ -761,6 +862,7 @@ extension PebbleAgentController {
                     && $0.sellerID.rawValue == actor.agentID
             }), let depositID = AgentMarketDepositID(rawValue:
                 "deposit-" + AgentAutonomousActivityDigest.make(reference)),
+              !session.marketAssetIsReserved(opportunity.offered.assetID),
               let container = marketContainer(
                 opportunity.marketID, world: world, session: session
               ) else {
@@ -819,7 +921,7 @@ extension PebbleAgentController {
         ) == nil {
             try session.applyVerifiedMarketDeposit(outcome)
         }
-        trace("market deposit completed seller=\(opportunity.sellerID.rawValue) deposit=\(depositID.rawValue) normalDepositDecision=1 depositPhysicalMutation=1 holder=container:\(opportunity.containerLocationID) owner=\(opportunity.sellerID.rawValue) receipt=\(receipt) publication=verified duplicateDeposits=0")
+        trace("market deposit completed seller=\(opportunity.sellerID.rawValue) deposit=\(depositID.rawValue) asset=\(opportunity.offered.assetID.rawValue) normalDepositDecision=1 depositPhysicalMutation=1 ordinaryAutonomousSelection=1 reservationAuthorityBefore=0 holder=container:\(opportunity.containerLocationID) owner=\(opportunity.sellerID.rawValue) receipt=\(receipt) publication=verified duplicateDeposits=0")
         return receipt
     }
 
@@ -1231,6 +1333,7 @@ extension PebbleAgentController {
                 guard case let .agent(buyer) = record.lastVerifiedHolder.holder,
                       buyer != listing.sellerID,
                       record.recognizedOwnership?.ownerID == buyer,
+                      !session.marketAssetIsReserved(record.asset.assetID),
                       record.asset.materialIdentity.itemKey
                         == listing.currentTerms.quoteItemKey,
                       let buyerNeed = needs.filter({
