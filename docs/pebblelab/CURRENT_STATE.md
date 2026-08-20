@@ -21,12 +21,15 @@ SHA of the documentation commit that contains it.
   **OPTIONAL — NOT STARTED**.
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
 
-Published Gate E history:
+Gate E history and current local correction status:
 
 - Gate E Evaluation 01: **FAIL — HISTORICAL IMMUTABLE EVIDENCE**.
 - V4-GATE-E-v1 Blocker 01: **FIXED AND PUBLISHED** after senior-review
   approval.
-- Gate E Evaluation 02: **NOT_STARTED — NEXT AUTHORIZED ACTION**.
+- Gate E Evaluation 02: **FAIL — HISTORICAL IMMUTABLE EVIDENCE**.
+- V4-GATE-E-v1 Blocker 02:
+  **IMPLEMENTED_LOCAL_REVIEW_CANDIDATE — NOT PUBLISHED**.
+- Gate E Evaluation 03: **NOT_STARTED**.
 
 Blocker 01 binds exact production origin to an exact durable Material Rights
 asset. It is product correction publication evidence, not Gate E acquisition
@@ -292,7 +295,7 @@ material or Observer mutation. Goldens were not regenerated.
 active CIV phase: null
 completed and published through: CIV-37
 next eligible phase: null
-next authorized action: NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-02
+next authorized action: SENIOR REVIEW OF V4-GATE-E-v1 BLOCKER 02
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -325,7 +328,9 @@ CIV-37 status: COMPLETE AND PUBLISHED
 CIV-38 status: OPTIONAL — NOT STARTED
 Gate E Evaluation 01 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 01 status: FIXED AND PUBLISHED
-Gate E Evaluation 02 status: NOT_STARTED — NEXT AUTHORIZED ACTION
+Gate E Evaluation 02 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
+V4-GATE-E-v1 Blocker 02 status: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE — NOT PUBLISHED
+Gate E Evaluation 03 status: NOT_STARTED
 V4-GATE-E-v1 status: PLANNED — NOT ACQUIRED
 roadmap generation: V4
 ```
@@ -633,6 +638,10 @@ AND PUBLISHED**. `CIV-37 — Physical Markets and Local Price Discovery V1` is
 **OPTIONAL — NOT STARTED**. Gate E Evaluation 01 remains **FAIL — HISTORICAL
 IMMUTABLE EVIDENCE**. V4-GATE-E-v1 Blocker 01 is **FIXED AND PUBLISHED** after
 senior-review approval. Gate E remains **PLANNED — NOT ACQUIRED**. Evaluation
-02 is **NOT_STARTED — NEXT AUTHORIZED ACTION**. The next authorized action is
-**NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-02**; this publication does not start
-that evaluation or claim remote publication verification.
+02 remains **FAIL — HISTORICAL IMMUTABLE EVIDENCE**. V4-GATE-E-v1 Blocker 02
+is an **IMPLEMENTED_LOCAL_REVIEW_CANDIDATE — NOT PUBLISHED**; it preserves
+immutable production origin while accepting only current identities permitted
+by the existing durable-asset continuity authority. The next authorized action
+is senior review of that correction candidate. Evaluation 03 is
+**NOT_STARTED**; this local candidate does not start it or claim remote
+publication verification.
