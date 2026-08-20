@@ -842,7 +842,7 @@ extension AgentSimulationSession {
         return operationIDs == provenance.operationIDs
             && provenance.representedQuantity == material.count
             && record.asset.quantity == material.count
-            && record.asset.materialIdentity == material.identity
+            && record.asset.permitsCurrentIdentity(material.identity)
             && (try? validateMaterialProductionProvenance(
                 provenance, for: record.asset
             )) != nil

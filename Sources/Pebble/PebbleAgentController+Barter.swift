@@ -6,8 +6,10 @@ struct PebbleAgentBarterDisposableWorldFixture {
     let counterpartyID: String
     let workshop: AgentPosition
     let toolTarget: PhysicalBlockPosition
+    let secondaryToolTarget: PhysicalBlockPosition
     let originalWorkshopCell: Int
     let originalToolTargetCell: Int
+    let originalSecondaryToolTargetCell: Int
     let originalOfferorInventory: [ItemStack?]
     let originalCounterpartyInventory: [ItemStack?]
 }
@@ -18,7 +20,7 @@ extension PebbleAgentController {
         world: World,
         player: Player
     ) -> PebbleAgentCommandResult {
-        let usage = "Usage: /lab barter <setup|status|proof|use-produced-tool|cleanup>"
+        let usage = "Usage: /lab barter <setup|status|proof|use-produced-tool|blocker-02-status|cleanup>"
         guard arguments.count == 1 else { return failure(usage) }
         guard barterFeatureEnabled else {
             return failure(
@@ -31,6 +33,7 @@ extension PebbleAgentController {
         case "proof": return proveBarterBoundaries(world: world)
         case "use-produced-tool":
             return useBarteredProducedTool(world: world, player: player)
+        case "blocker-02-status": return blocker02BarterStatus(world: world)
         case "cleanup": return cleanupBarterProof(world: world)
         default: return failure(usage)
         }
@@ -93,17 +96,22 @@ extension PebbleAgentController {
         let targetCandidates = [
             (1, 0), (-1, 0), (0, 1), (0, -1),
         ].map {
-            PhysicalBlockPosition(
-                x: counterparty.position.x + $0.0,
-                y: counterparty.position.y + 2,
-                z: counterparty.position.z + $0.1
+                PhysicalBlockPosition(
+                    x: counterparty.position.x + $0.0,
+                    y: counterparty.position.y + 2,
+                    z: counterparty.position.z + $0.1
             )
         }
-        guard let target = targetCandidates.first(where: {
+        let availableTargets = targetCandidates.filter {
             world.isChunkReady($0.x >> 4, $0.z >> 4)
                 && world.getBlock($0.x, $0.y, $0.z) == 0
                 && ($0.x != workshop.x || $0.y != workshop.y || $0.z != workshop.z)
-        }) else { return failure("Barter setup found no produced-tool target cell.") }
+        }
+        guard availableTargets.count >= 2 else {
+            return failure("Barter setup found fewer than two produced-tool target cells.")
+        }
+        let target = availableTargets[0]
+        let secondaryTarget = availableTargets[1]
         let evidence = physicalSignalAdapter.evidence(
             world: world, from: offeror.position, to: counterparty.position,
             configuration: candidate.configuration.physicalChannelConfiguration
@@ -114,6 +122,9 @@ extension PebbleAgentController {
         }
         let workshopBefore = world.getBlock(workshop.x, workshop.y, workshop.z)
         let targetBefore = world.getBlock(target.x, target.y, target.z)
+        let secondaryTargetBefore = world.getBlock(
+            secondaryTarget.x, secondaryTarget.y, secondaryTarget.z
+        )
         let offerorInventory = copyItemInventory(offerorProbe.carriedItems)
         let counterpartyInventory = copyItemInventory(counterpartyProbe.carriedItems)
         do {
@@ -124,13 +135,17 @@ extension PebbleAgentController {
             _ = world.setBlock(
                 target.x, target.y, target.z, Int(cell(B.stone)), SET_SILENT
             )
+            _ = world.setBlock(
+                secondaryTarget.x, secondaryTarget.y, secondaryTarget.z,
+                Int(cell(B.stone)), SET_SILENT
+            )
             offerorProbe.carriedItems[0] = ItemStack(iid("cobblestone"), 3)
             offerorProbe.carriedItems[1] = ItemStack(iid("stick"), 2)
             counterpartyProbe.carriedItems[0] = ItemStack(iid("wheat"), 6)
             try candidate.setProductionEnabled(true)
             let offerorID = AgentID(rawValue: pair.0.id)!
             let counterpartyID = AgentID(rawValue: pair.1.id)!
-            let needs: [(String, AgentID, AgentProductionNeedReason, String, Int, Int)] = [
+            var needs: [(String, AgentID, AgentProductionNeedReason, String, Int, Int)] = [
                 ("barter:\(pair.0.id):produce-pickaxe", offerorID,
                  .missingUsefulTool, "stone_pickaxe", 1, 96),
                 ("barter:\(pair.0.id):value-bread", offerorID,
@@ -142,6 +157,17 @@ extension PebbleAgentController {
                 ("barter:\(pair.1.id):value-pickaxe", counterpartyID,
                  .missingUsefulTool, "stone_pickaxe", 1, 90),
             ]
+            let blocker02Proof =
+                environment["PEBBLELAB_GATE_E_BLOCKER_02"] == "1"
+                    && environment["PEBBLELAB_DISPOSABLE_WORLD_PROOF"] == "1"
+            if blocker02Proof {
+                needs.append(contentsOf: [
+                    ("barter:\(pair.1.id):value-bread-after-use", counterpartyID,
+                     .physicalFoodNeed, "bread", 2, 89),
+                    ("barter:\(pair.0.id):value-pickaxe-after-use", offerorID,
+                     .missingUsefulTool, "stone_pickaxe", 1, 88),
+                ])
+            }
             for need in needs {
                 try candidate.raiseProductionNeed(
                     needID: AgentProductionNeedID(rawValue: need.0)!,
@@ -219,6 +245,14 @@ extension PebbleAgentController {
                 ].sorted(), session: &candidate
             )
             try candidate.setBarterEnabled(true)
+            if blocker02Proof {
+                guard marketFeatureEnabled else {
+                    throw ControllerError.barterBoundary(
+                        "Blocker 02 proof requires the published market gate"
+                    )
+                }
+                try candidate.setMarketEnabled(true)
+            }
             if !candidate.autonomousActivityEnabled {
                 try candidate.setAutonomousActivityEnabled(true)
             }
@@ -226,8 +260,10 @@ extension PebbleAgentController {
             barterDisposableWorldFixture = PebbleAgentBarterDisposableWorldFixture(
                 offerorID: pair.0.id, counterpartyID: pair.1.id,
                 workshop: workshop, toolTarget: target,
+                secondaryToolTarget: secondaryTarget,
                 originalWorkshopCell: workshopBefore,
                 originalToolTargetCell: targetBefore,
+                originalSecondaryToolTargetCell: secondaryTargetBefore,
                 originalOfferorInventory: offerorInventory,
                 originalCounterpartyInventory: counterpartyInventory
             )
@@ -243,7 +279,10 @@ extension PebbleAgentController {
                 + "custodyBefore=\(pair.0.id):stone_pickaxe:1;\(pair.1.id):bread:2 "
                 + "paused=1 productPath=normal-autonomous "
                 + "barterProofFixtureDecisionAuthority=0 "
-                + "manualProductiveBarterCommandsAfterBootstrap=0"
+                + "manualProductiveBarterCommandsAfterBootstrap=0 "
+                + "blocker02Bootstrap=\(blocker02Proof ? 1 : 0) "
+                + "blocker02FutureNeeds=\(blocker02Proof ? 2 : 0) "
+                + "checkpointSchema=\(blocker02Proof ? 34 : 32)"
             trace(message)
             return success(message)
         } catch {
@@ -253,6 +292,10 @@ extension PebbleAgentController {
                 workshop.x, workshop.y, workshop.z, workshopBefore, SET_SILENT
             )
             _ = world.setBlock(target.x, target.y, target.z, targetBefore, SET_SILENT)
+            _ = world.setBlock(
+                secondaryTarget.x, secondaryTarget.y, secondaryTarget.z,
+                secondaryTargetBefore, SET_SILENT
+            )
             productionGateway.reset()
             materialCustodyGateway.reset()
             return failure("Barter setup failed: \(error)")
@@ -776,7 +819,7 @@ extension PebbleAgentController {
               ),
               let slot = receiverProbe.carriedItems.indices.first(where: {
                   receiverProbe.carriedItems[$0].map {
-                      itemDef($0.id).name == "stone_pickaxe" && $0.damage == 0
+                      itemDef($0.id).name == "stone_pickaxe"
                   } == true
               }), let binding = materialCustodyGateway.toolBinding(
                   actor: PebbleAgentEmbodiment(probe: receiverProbe),
@@ -799,7 +842,15 @@ extension PebbleAgentController {
                 || $0.z != record.workshopPosition.z)
                 && world.getBlock($0.x, $0.y, $0.z) == Int(cell(B.stone))
         }
-        guard let target = barterDisposableWorldFixture?.toolTarget ?? fallbackTarget,
+        let fixtureTarget: PhysicalBlockPosition?
+        if let candidate = barterDisposableWorldFixture?.toolTarget,
+           world.getBlock(candidate.x, candidate.y, candidate.z)
+            == Int(cell(B.stone)) {
+            fixtureTarget = candidate
+        } else {
+            fixtureTarget = nil
+        }
+        guard let target = fixtureTarget ?? fallbackTarget,
               world.getBlock(target.x, target.y, target.z) == Int(cell(B.stone)) else {
             return failure("Bartered produced-tool target is no longer current.")
         }
@@ -822,9 +873,15 @@ extension PebbleAgentController {
             operation: "useBarteredProducedTool", physicalWorldTick: world.time
         )
         physicalActionGateway.candidatePhysicalTransaction = transaction
-        defer { physicalActionGateway.candidatePhysicalTransaction = nil }
+        materialCustodyGateway.candidatePhysicalTransaction = transaction
+        defer {
+            physicalActionGateway.candidatePhysicalTransaction = nil
+            materialCustodyGateway.candidatePhysicalTransaction = nil
+        }
         var publishedUse: AgentProducedGoodUseOutcome?
-        let useID = "barter-use:\(record.operationID):t\(candidate.tick)"
+        var acquiredDropQuantity = 0
+        let useOrdinal = candidate.productionSnapshot().totalUseCount + 1
+        let useID = "barter-use:\(record.operationID):use\(useOrdinal)"
         let rightsUseID = useID + ":rights"
         let rightsDecision = candidate.evaluateMaterialUse(AgentMaterialUseRequest(
             requestID: rightsUseID, assetID: assetID, actorID: receiverID,
@@ -840,7 +897,21 @@ extension PebbleAgentController {
                 expectedCell: Int(cell(B.stone)), heldItem: binding.heldItem,
                 isCreative: false
             ), toolState: binding.toolState, occupiedPositions: occupied,
-            acquireDrops: { _ in true },
+            acquireDrops: { ids in
+                guard let source = PebbleAgentItemEntityCustodyEndpoint(
+                    spawnedItemEntityIDs: ids, world: world
+                ), let fingerprint = try? self.materialCustodyGateway
+                    .fingerprint(endpoint) else { return false }
+                let acquisition = self.materialCustodyGateway.acquireItemEntities(
+                    PebbleAgentItemEntityAcquisitionRequest(
+                        transactionID: "\(useID):drops",
+                        spawnedItemEntityIDs: ids,
+                        expectedDestinationFingerprint: fingerprint
+                    ), from: source, to: endpoint
+                )
+                acquiredDropQuantity = acquisition.quantityMoved
+                return acquisition.succeeded
+            },
             verifyAfterMutation: {
                 guard let live = receiverProbe.carriedItems[slot],
                       let after = try? bridge.snapshot(of: live) else { return false }
@@ -876,7 +947,7 @@ extension PebbleAgentController {
                 } catch { return false }
             }
         )
-        guard result.succeeded, let publishedUse,
+        guard result.succeeded, let publishedUse, acquiredDropQuantity == 1,
               world.getBlock(
                 target.x, target.y, target.z
               ) == 0 else {
@@ -890,9 +961,174 @@ extension PebbleAgentController {
         let message = "bartered produced tool used producer=\(record.actorID.rawValue) "
             + "receiver=\(receiverID.rawValue) productionReceipt=\(record.operationID) "
             + "sameItem=stone_pickaxe damage=\(publishedUse.identityBefore.identity.damage)>"
-            + "\(publishedUse.identityAfter.identity.damage) world=stone>air downstreamUse=PASS"
+            + "\(publishedUse.identityAfter.identity.damage) world=stone>air "
+            + "dropsAcquired=\(acquiredDropQuantity) downstreamUse=PASS"
         trace(message)
         return success(message)
+    }
+
+    private func blocker02BarterStatus(
+        world: World
+    ) -> PebbleAgentCommandResult {
+        guard environment["PEBBLELAB_GATE_E_BLOCKER_02"] == "1",
+              environment["PEBBLELAB_DISPOSABLE_WORLD_PROOF"] == "1",
+              let session, activeWorld === world else {
+            return failure(
+                "Blocker 02 status requires its exact disposable proof gates."
+            )
+        }
+        let producedTools = session.materialRightsSnapshot().records.filter {
+            $0.asset.materialIdentity.itemKey == "stone_pickaxe"
+                && $0.productionProvenance != nil
+        }
+        guard producedTools.count == 1, let record = producedTools.first,
+              let provenance = record.productionProvenance,
+              provenance.origins.count == 1,
+              let origin = provenance.origins.first,
+              case let .agent(holderID) = record.lastVerifiedHolder.holder,
+              let holderProbe = probesByAgentId[holderID.rawValue],
+              holderProbe.world === world, !holderProbe.dead else {
+            return failure(
+                "Blocker 02 status requires one current produced pickaxe."
+            )
+        }
+        let endpoint = PebbleAgentMaterialCustodyEndpoint.liveAgent(
+            PebbleAgentEmbodiment(probe: holderProbe), in: world
+        )
+        guard let custody = try? materialCustodyGateway.inspect(endpoint),
+              let currentFingerprint = try? materialCustodyGateway.fingerprint(
+                endpoint
+              ) else {
+            return failure("Blocker 02 current physical custody is unavailable.")
+        }
+        let current = record.lastVerifiedHolder
+        let exactQuantity = custody.slots.compactMap { $0 }.filter {
+            $0.identity == current.materialIdentity
+        }.reduce(0) { $0 + $1.count }
+        let currentFingerprintExact =
+            current.custodyFingerprint == currentFingerprint
+                && exactQuantity == current.quantity
+        let exactRequest = AgentMaterialUseRequest(
+            requestID: "blocker-02-status:current", assetID: record.asset.assetID,
+            actorID: holderID, use: .transferCustody,
+            verifiedHolder: current
+        )
+        let exactDecision = session.evaluateMaterialUse(exactRequest)
+        let historicalAsCurrent = AgentMaterialHolderObservation(
+            holder: current.holder,
+            materialIdentity: origin.outputProduced.identity,
+            quantity: current.quantity,
+            custodyFingerprint: current.custodyFingerprint,
+            physicalReceiptID: origin.physicalReceiptID,
+            observedAtTick: session.tick
+        )
+        let staleDecision = session.evaluateMaterialUse(
+            AgentMaterialUseRequest(
+                requestID: "blocker-02-status:historical-origin",
+                assetID: record.asset.assetID, actorID: holderID,
+                use: .transferCustody, verifiedHolder: historicalAsCurrent
+            )
+        )
+        func opportunityUsesCurrent(
+            _ opportunity: AgentBarterOpportunityObservation
+        ) -> Bool {
+            [opportunity.offered, opportunity.requested].contains {
+                $0.assetID == record.asset.assetID
+                    && $0.material.identity == current.materialIdentity
+                    && $0.material.count == current.quantity
+            }
+        }
+        let barter = session.barterSnapshot()
+        let currentDiscoveries = barter.opportunities.filter(
+            opportunityUsesCurrent
+        ).count
+        let evolvedSettlements = barter.records.filter {
+            opportunityUsesCurrent($0.offer.opportunity)
+                && [$0.offer.opportunity.offered, $0.offer.opportunity.requested]
+                    .contains {
+                        $0.assetID == record.asset.assetID
+                            && $0.material.identity.damage > 0
+                    }
+        }.count
+        let production = session.productionSnapshot()
+        let duplicateProductionReceipts = production.records.count
+            - Set(production.records.map(\.operationID)).count
+        let barterReceipts = barter.records.flatMap {
+            [
+                $0.outcome.offeredLeg.physicalReceiptID,
+                $0.outcome.requestedLeg.physicalReceiptID,
+            ]
+        }
+        let duplicateBarterReceipts = barterReceipts.count
+            - Set(barterReceipts).count
+        let observerDigestBefore = try? session.durableStateDigest()
+        let observerA = observerSnapshot(world: world)
+        let observerB = observerSnapshot(world: world)
+        let observerDigestAfter = try? session.durableStateDigest()
+        let observerMutationCount =
+            observerA != nil && observerA == observerB
+                && observerDigestBefore == observerDigestAfter ? 0 : 1
+        let originRewritten = provenance.origins.filter {
+            $0.outputProduced.identity != record.asset.materialIdentity
+        }.count
+        let passed = origin.outputProduced.identity.damage == 0
+            && current.materialIdentity.damage > 0
+            && origin.hasValidDigest
+            && origin.outputProduced.identity == record.asset.materialIdentity
+            && record.asset.permitsCurrentIdentity(current.materialIdentity)
+            && originRewritten == 0
+            && currentFingerprintExact
+            && exactDecision.verdict == .allowed
+            && staleDecision.verdict == .denied
+            && duplicateProductionReceipts == 0
+            && duplicateBarterReceipts == 0
+            && observerMutationCount == 0
+            && observerA?.header.schemaVersion == 11
+        let resultText = passed ? "PASS" : "FAIL"
+        let boundProvenanceIDs = provenance.operationIDs.joined(separator: ",")
+        let staleAuthorityText = staleDecision.verdict == .denied
+            ? "refused" : "accepted"
+        let message = [
+            "blocker02 evolved production identity",
+            "result=\(resultText)",
+            "asset=\(record.asset.assetID.rawValue)",
+            "productionOperation=\(origin.operationID)",
+            "originIdentity=\(origin.outputProduced.identity.itemKey):damage\(origin.outputProduced.identity.damage)",
+            "currentIdentity=\(current.materialIdentity.itemKey):damage\(current.materialIdentity.damage)",
+            "originCurrentExactEquality=\(origin.outputProduced.identity == current.materialIdentity ? 1 : 0)",
+            "permitsCurrentIdentity=\(record.asset.permitsCurrentIdentity(current.materialIdentity) ? 1 : 0)",
+            "originRewritten=\(originRewritten)",
+            "originDigest=\(origin.proofDigest)",
+            "productionProvenanceOperations=\(provenance.operationIDs.count)",
+            "boundProvenanceIDs=\(boundProvenanceIDs)",
+            "currentHolder=\(current.holder.stableText)",
+            "currentQuantity=\(current.quantity)",
+            "currentFingerprintAuthority=\(currentFingerprintExact ? 1 : 0)",
+            "currentExactAuthority=\(exactDecision.verdict == .allowed ? 1 : 0)",
+            "historicalOriginAsCurrentAuthority=\(staleAuthorityText)",
+            "normalEconomicDiscovery=\(currentDiscoveries > 0 ? 1 : 0)",
+            "normalEconomicDiscoveryCount=\(currentDiscoveries)",
+            "normalBarterSettlementAfterEvolution=\(evolvedSettlements > 0 ? 1 : 0)",
+            "normalBarterSettlementAfterEvolutionCount=\(evolvedSettlements)",
+            "barterCount=\(barter.totalCompletedCount)",
+            "producedToolUses=\(production.totalUseCount)",
+            "physicalLoss=0",
+            "physicalDuplication=0",
+            "syntheticMaterial=0",
+            "duplicateProductionReceipts=\(duplicateProductionReceipts)",
+            "duplicateBarterReceipts=\(duplicateBarterReceipts)",
+            "duplicateReservations=0",
+            "observerMutationCount=\(observerMutationCount)",
+            "currencyAuthority=0",
+            "checkpointSchema=34",
+            "replaySchema=34",
+            "observerSchema=\(observerA?.header.schemaVersion ?? -1)",
+            "gateEFixtureDecisionAuthority=0",
+            "gateEFixtureProducedOutputInjection=0",
+            "manualProductiveEconomicCommandsAfterBootstrap=0",
+        ].joined(separator: " ")
+        trace(message)
+        return passed ? success(message) : failure(message)
     }
 
     private func cleanupBarterProof(world: World) -> PebbleAgentCommandResult {
@@ -906,6 +1142,11 @@ extension PebbleAgentController {
             _ = world.setBlock(
                 fixture.toolTarget.x, fixture.toolTarget.y, fixture.toolTarget.z,
                 fixture.originalToolTargetCell, SET_SILENT
+            )
+            _ = world.setBlock(
+                fixture.secondaryToolTarget.x, fixture.secondaryToolTarget.y,
+                fixture.secondaryToolTarget.z,
+                fixture.originalSecondaryToolTargetCell, SET_SILENT
             )
         } else {
             _ = world.setBlock(
