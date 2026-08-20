@@ -44,6 +44,7 @@ These documents form the minimal permanent memory of the project:
 | [`CIV_37_PHASE_SUMMARY.md`](CIV_37_PHASE_SUMMARY.md) | Published architecture, correction history, physical-market proof, price causality, validation and non-claims for CIV-37. |
 | [`GATE_E_BLOCKER_01_EXACT_PRODUCTION_PROVENANCE.md`](GATE_E_BLOCKER_01_EXACT_PRODUCTION_PROVENANCE.md) | Published Blocker 01 product-correction record; preserves Evaluation 01 FAIL and documents exact asset-bound production provenance. |
 | [`GATE_E_BLOCKER_02_EVOLVED_PRODUCTION_IDENTITY.md`](GATE_E_BLOCKER_02_EVOLVED_PRODUCTION_IDENTITY.md) | Published Blocker 02 product-correction record; preserves Evaluation 02 FAIL and separates immutable production origin, durable current-identity continuity and exact current physical authority. |
+| [`GATE_E_BLOCKER_03_TERMINAL_MARKET_RESERVATION_AUTHORITY.md`](GATE_E_BLOCKER_03_TERMINAL_MARKET_RESERVATION_AUTHORITY.md) | Local Blocker 03 product-correction review record; preserves Evaluation 03 FAIL and separates terminal market history from coherent live reservation authority. |
 
 Canonical status at the product baseline reconciled by this documentation:
 
@@ -89,8 +90,10 @@ Gate E Evaluation 01: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 01: FIXED AND PUBLISHED
 Gate E Evaluation 02: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 02: FIXED AND PUBLISHED
-Gate E Evaluation 03: NOT_STARTED
-next authorized action after remote publication verification: NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-03
+Gate E Evaluation 03: FAIL — HISTORICAL IMMUTABLE EVIDENCE
+V4-GATE-E-v1 Blocker 03: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE — NOT PUBLISHED
+Gate E Evaluation 04: NOT_STARTED
+next authorized action: SENIOR_REVIEW_V4_GATE_E_BLOCKER_03
 ```
 
 The `CIV-33` completion is published on the canonical branch at
@@ -208,10 +211,17 @@ Senior review approved V4-GATE-E-v1 Blocker 02 product correction
 with 59/59 internal checksums. Blocker 02 is fixed and published; it preserves
 the exact production-origin identity while the current physical identity may
 evolve only through the existing Material Rights continuity contract. Gate E
-remains planned and not acquired. Evaluation 03 is not started. After manual
-publication and independent remote SHA verification, the next authorized
-action is `NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-03`. This containing commit
-does not claim remote publication verification.
+remains planned and not acquired. Evaluation 03 remains immutable `FAIL —
+HISTORICAL IMMUTABLE EVIDENCE` for exact baseline
+`bfb721d7f49f8af567c86580cdf4c106da977a25`, evidence HEAD
+`56af9648da0155cfba25588320d2070d211a1cd7` and review-bundle SHA-256
+`c3e203e507ff8fd28781b9a067317493fd348e839e6e0b8386d95d18251af883`.
+V4-GATE-E-v1 Blocker 03 is an implemented local review candidate at product
+commit `301dfd58aacd3aa0af653fa460ad38484df1d762`; it derives reservation from
+the coherent live proposal/listing/deposit triad so terminal accepted history
+cannot reserve current matter. It is not published, Gate E is not acquired,
+Evaluation 04 is not started and CIV-38 remains optional and not started. The
+next authorized action is senior review of the Blocker 03 candidate.
 
 ## Operational
 

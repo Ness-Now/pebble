@@ -21,7 +21,7 @@ SHA of the documentation commit that contains it.
   **OPTIONAL — NOT STARTED**.
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
 
-Published Gate E history:
+Gate E history and current local correction status:
 
 - Gate E Evaluation 01: **FAIL — HISTORICAL IMMUTABLE EVIDENCE**.
 - V4-GATE-E-v1 Blocker 01: **FIXED AND PUBLISHED** after senior-review
@@ -29,8 +29,10 @@ Published Gate E history:
 - Gate E Evaluation 02: **FAIL — HISTORICAL IMMUTABLE EVIDENCE**.
 - V4-GATE-E-v1 Blocker 02: **FIXED AND PUBLISHED** after senior-review
   approval.
-- Gate E Evaluation 03: **NOT_STARTED — NEXT AUTHORIZED ACTION AFTER REMOTE
-  PUBLICATION VERIFICATION**.
+- Gate E Evaluation 03: **FAIL — HISTORICAL IMMUTABLE EVIDENCE**.
+- V4-GATE-E-v1 Blocker 03: **IMPLEMENTED_LOCAL_REVIEW_CANDIDATE — NOT
+  PUBLISHED**.
+- Gate E Evaluation 04: **NOT_STARTED**.
 
 Blocker 01 binds exact production origin to an exact durable Material Rights
 asset. It is product correction publication evidence, not Gate E acquisition
@@ -312,13 +314,36 @@ physical duplication, synthetic material, duplicate receipts or Observer
 mutation. Goldens were not regenerated. Remote publication verification is not
 claimed by this containing commit.
 
+Gate E Evaluation 03 evaluated exact published baseline
+`bfb721d7f49f8af567c86580cdf4c106da977a25` and remains immutable **FAIL —
+PRODUCT CORRECTION REQUIRED** evidence at HEAD
+`56af9648da0155cfba25588320d2070d211a1cd7`; its bundle SHA-256 is
+`c3e203e507ff8fd28781b9a067317493fd348e839e6e0b8386d95d18251af883`.
+The historical result is permanently recorded as **FAIL — HISTORICAL
+IMMUTABLE EVIDENCE** and is not in the correction ancestry.
+
+The local Blocker 03 correction derives current market reservation authority
+from coherent live proposal, listing and deposit state. Proposed/open/listed
+and accepted/reserved/reserved triads reserve strictly; an accepted proposal
+retained with completed/sold terminal history does not. Current physical
+holder, ownership/custody, exact identity, quantity, fingerprint and locality
+remain separate mutation authority. Focused Blocker 03 checks pass 25/25,
+owning regressions pass 301/301, Blocker 01 and 02 focused checks pass 27/27
+and 33/33, and the repository gate passes 35/35 with 3983/3983 assertions.
+The four-process rendered campaign has 16 inspected captures, schema-34
+restart and schema-11 Observer evidence, and zero physical loss, physical
+duplication, synthetic material, duplicate deposits, duplicate reservations,
+duplicate receipts or settlements, Observer mutation or unexpected runtime
+errors. Goldens were not regenerated. This is only an implemented local review
+candidate; publication is not claimed.
+
 ## Current program position
 
 ```text
 active CIV phase: null
 completed and published through: CIV-37
 next eligible phase: null
-next authorized action after remote publication verification: NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-03
+next authorized action: SENIOR_REVIEW_V4_GATE_E_BLOCKER_03
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -353,7 +378,9 @@ Gate E Evaluation 01 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 01 status: FIXED AND PUBLISHED
 Gate E Evaluation 02 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 02 status: FIXED AND PUBLISHED
-Gate E Evaluation 03 status: NOT_STARTED — NEXT AUTHORIZED ACTION AFTER REMOTE PUBLICATION VERIFICATION
+Gate E Evaluation 03 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
+V4-GATE-E-v1 Blocker 03 status: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE — NOT PUBLISHED
+Gate E Evaluation 04 status: NOT_STARTED
 V4-GATE-E-v1 status: PLANNED — NOT ACQUIRED
 roadmap generation: V4
 ```
@@ -664,8 +691,12 @@ senior-review approval. Gate E remains **PLANNED — NOT ACQUIRED**. Evaluation
 02 remains **FAIL — HISTORICAL IMMUTABLE EVIDENCE**. V4-GATE-E-v1 Blocker 02
 is **FIXED AND PUBLISHED** after senior-review approval; it preserves immutable
 production origin while accepting only current identities permitted by the
-existing durable-asset continuity authority. Evaluation 03 is **NOT_STARTED**.
-After manual publication and independent remote SHA verification, the next
-authorized action is **NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-03**. This
-containing commit does not claim remote publication verification or start that
-evaluation.
+existing durable-asset continuity authority. Evaluation 03 remains **FAIL —
+HISTORICAL IMMUTABLE EVIDENCE**. V4-GATE-E-v1 Blocker 03 is an
+**IMPLEMENTED_LOCAL_REVIEW_CANDIDATE — NOT PUBLISHED**; it makes reservation
+authority depend on the complete live proposal/listing/deposit triad and
+preserves terminal proposal, trade and price history without allowing that
+history to reserve current matter. Gate E remains **PLANNED — NOT ACQUIRED**,
+Evaluation 04 is **NOT_STARTED**, and the next authorized action is senior
+review of the Blocker 03 candidate. This containing commit does not claim
+publication or start Evaluation 04.
