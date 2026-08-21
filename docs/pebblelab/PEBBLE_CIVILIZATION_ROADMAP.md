@@ -170,17 +170,19 @@ CIV-36: COMPLETE AND PUBLISHED
 CIV-37: COMPLETE AND PUBLISHED
 CIV-38: OPTIONAL — NOT STARTED
 Gate E Evaluation 01: FAIL — HISTORICAL IMMUTABLE EVIDENCE
-Gate E Blocker 01: FIXED AND PUBLISHED
+Gate E Blocker 01: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 02: FAIL — HISTORICAL IMMUTABLE EVIDENCE
-Gate E Blocker 02: FIXED AND PUBLISHED
+Gate E Blocker 02: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 03: FAIL — HISTORICAL IMMUTABLE EVIDENCE
-Gate E Blocker 03: FIXED AND PUBLISHED
+Gate E Blocker 03: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 04: FAIL — HISTORICAL IMMUTABLE EVIDENCE
-Gate E Blocker 04: FIXED AND PUBLISHED
-Gate E Evaluation 05: PASS — SENIOR REVIEW APPROVED
-V4-GATE-E-v1 local status: ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH
-V4-GATE-E-v1 after manual push and independent remote SHA verification: ACQUIRED AND PUBLISHED
+Gate E Blocker 04: FIXED + PUBLISHED + REMOTE VERIFIED
+Gate E Evaluation 05: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
+V4-GATE-E-v1: ACQUIRED AND PUBLISHED
+V4-GATE-E-v1 acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f76744f83
 CIV-39: NOT_STARTED — NEXT ELIGIBLE REQUIRED PHASE
+V4-GATE-F-v1: PLANNED — NOT ACQUIRED
+CIV-40: OPTIONAL TOOLING — NOT STARTED
 ```
 
 The `CIV-33` completion is published on the canonical branch at
@@ -509,12 +511,13 @@ remains historical FAIL evidence; its targeted Blocker 10 correction is a
 **BLOCKER_FIX_PUBLISHED**. Independent Evaluation 11 is the first accepted
 whole-Gate PASS and is **SENIOR REVIEW APPROVED**. `CIV-34` through `CIV-37`
 are **COMPLETE AND PUBLISHED**. `CIV-38` is **OPTIONAL — NOT STARTED** and Gate
-E is locally **ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH**.
+E is **ACQUIRED AND PUBLISHED** at independently remote-verified canonical
+HEAD `076a616a97a229e921a5c36eebdfd12f76744f83`.
 Evaluations 01 through 04 remain historical immutable FAIL evidence and
 Blockers 01 through 04 are fixed and published. Evaluation 05 is **PASS —
-SENIOR REVIEW APPROVED**. After manual push and independent remote SHA
-verification Gate E becomes **ACQUIRED AND PUBLISHED**. `CIV-39` is the next
-eligible required phase but is not started.
+SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE**. `CIV-39` is the next eligible
+required phase but is not started. Gate F remains planned and not acquired;
+`CIV-40` remains optional tooling and not started.
 
 | Phase | Requirement | Outcome |
 | --- | --- | --- |
@@ -852,11 +855,12 @@ recorded in
 [`GATE_D_EVALUATION_11_REPORT.md`](GATE_D_EVALUATION_11_REPORT.md). Senior
 review approved it, so Gate D remains acquired and published. `CIV-34` through
 `CIV-37` are complete and published. CIV-38 is optional and not started; Gate E
-is locally an acquisition publication candidate awaiting user push.
+is acquired and published.
 Evaluations 01 through 04 remain historical immutable FAIL evidence and
 Blockers 01 through 04 are fixed and published. Evaluation 05 is senior-review-
-approved PASS evidence. `CIV-39` is the next eligible required phase and is not
-started.
+approved published PASS evidence. `CIV-39` is the next eligible required phase
+and is not started. Gate F remains planned and CIV-40 remains optional tooling
+and not started.
 
 ## Wave 3 — Local material economy
 
@@ -1161,10 +1165,11 @@ Evaluation 03 remains immutable historical FAIL evidence; its terminal-market-
 reservation-authority Blocker 03 correction is fixed and published. Evaluation
 04 remains immutable historical FAIL evidence; its composed-asset-commitment-
 authority Blocker 04 correction is fixed and published after senior-review
-approval. Evaluation 05 is **PASS — SENIOR REVIEW APPROVED**, making Gate E
-locally **ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH**. Gate E becomes
-**ACQUIRED AND PUBLISHED** only after manual push and independent remote SHA
-verification. Currency remains outside the Gate E dependency.
+approval. Evaluation 05 is
+**PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE**, and Gate E is
+**ACQUIRED AND PUBLISHED** at independently remote-verified canonical HEAD
+`076a616a97a229e921a5c36eebdfd12f76744f83`. Currency remains outside the
+Gate E dependency.
 
 ### `V4-GATE-E-v1` — Local Material Economy
 
@@ -1172,10 +1177,10 @@ Required phases: `CIV-34` through `CIV-37`.
 
 Optional capability: `CIV-38`.
 
-Local status: **ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH**.
+Status: **ACQUIRED AND PUBLISHED**.
 
-Status after manual push and independent remote SHA verification:
-**ACQUIRED AND PUBLISHED**.
+Acquisition published canonical HEAD:
+`076a616a97a229e921a5c36eebdfd12f76744f83`.
 
 Accepted evaluation and correction history:
 
@@ -1190,7 +1195,7 @@ Blocker 01 reviewed candidate HEAD: 534fd927483a692e26de7f929a361c34e77870a7
 Blocker 01 review bundle SHA-256: dbbdd076cf4c90a753b138e470583fd63b982f9ebe2c8f2440c08c227bc4a163
 Blocker 01 internal checksums: 47/47 PASS
 Blocker 01 senior review: APPROVED
-Blocker 01 status: FIXED AND PUBLISHED
+Blocker 01 status: FIXED + PUBLISHED + REMOTE VERIFIED
 Evaluation 02 baseline: 9ede5d73229c3c9284d163ed17cc76bcf92ebe0e
 Evaluation 02 evidence HEAD: 2f95826f474c9f2a366f4b06df90a8643beb7a98
 Evaluation 02 verdict: FAIL — HISTORICAL IMMUTABLE EVIDENCE
@@ -1201,7 +1206,7 @@ Blocker 02 reviewed candidate HEAD: b8dbeef60865a4fd452ca5abaac4a005ded2e592
 Blocker 02 review bundle SHA-256: 68ab04428582cbbe96c0e8bf046f45c22818a6dd9018ad6f808c87b9aea30c31
 Blocker 02 internal checksums: 59/59 PASS
 Blocker 02 senior review: APPROVED
-Blocker 02 status: FIXED AND PUBLISHED
+Blocker 02 status: FIXED + PUBLISHED + REMOTE VERIFIED
 Evaluation 03 baseline: bfb721d7f49f8af567c86580cdf4c106da977a25
 Evaluation 03 evidence HEAD: 56af9648da0155cfba25588320d2070d211a1cd7
 Evaluation 03 verdict: FAIL — HISTORICAL IMMUTABLE EVIDENCE
@@ -1213,7 +1218,7 @@ Blocker 03 review bundle SHA-256: 8ec57b6bb8b58cab59be3024f7541693b145ae0527221e
 Blocker 03 internal checksums: 87/87 PASS
 Blocker 03 ZIP integrity: PASS
 Blocker 03 senior review: APPROVED
-Blocker 03 status: FIXED AND PUBLISHED
+Blocker 03 status: FIXED + PUBLISHED + REMOTE VERIFIED
 Evaluation 04 baseline: e8bc2fc8add491c324f15478fcd1b82d77566d57
 Evaluation 04 evidence HEAD: 07ded1e583b62137b5e8b6cc32d8a61ead73cc53
 Evaluation 04 verdict: FAIL — HISTORICAL IMMUTABLE EVIDENCE
@@ -1237,7 +1242,7 @@ Blocker 04 conservation and duplicate counters: all zero
 Blocker 04 cleanup: exact
 Blocker 04 goldens regenerated: NO
 Blocker 04 senior review: APPROVED
-Blocker 04 status: FIXED AND PUBLISHED
+Blocker 04 status: FIXED + PUBLISHED + REMOTE VERIFIED
 Evaluation 05 baseline: 9d841cc28dd4a43f70aff6265ead2e25fa6f160c
 Evaluation 05 evidence commit 1: cccd531dbe2a640a80844482b8943f7cf2f32563
 Evaluation 05 evidence commit 2: 91b60d230f4ff314f44582e773d36d3366ebd927
@@ -1259,10 +1264,12 @@ Evaluation 05 conservation, duplicate, mutation and unexpected-error counters: a
 Evaluation 05 cleanup: exact PASS
 Evaluation 05 goldens regenerated: NO
 Evaluation 05 product correction: NO
-Evaluation 05 verdict: PASS — SENIOR REVIEW APPROVED
-Gate E local status: ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH
-Gate E status after manual push and independent remote SHA verification: ACQUIRED AND PUBLISHED
+Evaluation 05 verdict: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
+Gate E status: ACQUIRED AND PUBLISHED
+Gate E acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f76744f83
 next eligible required phase/action: CIV-39 — NOT_STARTED
+Gate F status: PLANNED — NOT ACQUIRED
+CIV-40 status: OPTIONAL TOOLING — NOT STARTED
 ```
 
 Blocker 01 binds exact production origin to the exact rights-tracked asset and
@@ -1493,8 +1500,8 @@ keeps incarnation physical and produces verifiable long-duration history.
 | `V4-GATE-B-v1` | acquired | `CIV-25`; bounded embodied autonomy contract |
 | `V4-GATE-C-v1` | acquired | `CIV-26`–`CIV-28` |
 | `V4-GATE-D-v1` | acquired and published | `CIV-29`–`CIV-33`, renewable subsistence milestone and Blockers 01–10 published; Evaluations 01–10 remain historical FAIL evidence; Evaluation 11 PASS is senior-review approved |
-| `V4-GATE-E-v1` | acquired publication candidate, awaiting user push | `CIV-34`–`CIV-37`; `CIV-38` optional and currency not required; Evaluations 01–04 historical FAIL; Blockers 01–04 fixed/published; Evaluation 05 PASS senior-review approved; becomes acquired and published after manual push and independent remote SHA verification |
-| `V4-GATE-F-v1` | planned | `CIV-39`; `CIV-40` optional |
+| `V4-GATE-E-v1` | acquired and published | `CIV-34`–`CIV-37`; `CIV-38` optional and currency not required; Evaluations 01–04 historical FAIL; Blockers 01–04 fixed/published/remote-verified; Evaluation 05 PASS senior-review-approved published evidence |
+| `V4-GATE-F-v1` | planned, not acquired | `CIV-39` not started and next eligible; `CIV-40` optional tooling and not started |
 | `V4-GATE-G-v1` | planned | `CIV-41`–`CIV-47` |
 | `V4-GATE-H-v1` | planned | `CIV-48`–`CIV-52` |
 | `V4-GATE-I-v1` | planned | `CIV-53`–`CIV-56` |

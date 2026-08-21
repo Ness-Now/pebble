@@ -2,12 +2,11 @@
 
 ## Verdict
 
-`PASS — SENIOR REVIEW APPROVED`
+`PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE`
 
-Gate E is locally `ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH`.
-After this containing acquisition commit is manually pushed and independently
-remote SHA verified, Gate E becomes `ACQUIRED AND PUBLISHED`. This commit does
-not claim that publication has already occurred.
+Gate E is `ACQUIRED AND PUBLISHED`. Its acquisition commit was manually pushed
+and independently remote verified at canonical HEAD
+`076a616a97a229e921a5c36eebdfd12f76744f83`.
 
 Evaluation 05 records fresh, independent evidence for
 `V4-GATE-E-v1 — Local Material Economy` at the exact published baseline
@@ -30,15 +29,18 @@ archive integrity: PASS
 internal checksums: 205/205 PASS
 Evaluation 05 result: PASS
 senior review: APPROVED
-publication: pending manual user push and independent remote SHA verification
+Gate E acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f76744f83
+publication: PUBLISHED — INDEPENDENT REMOTE SHA VERIFICATION PASS
 ```
 
 ## Repository and historical authority
 
 - Repository: `Ness-Now/pebble`
 - Canonical branch: `lab/pebblelab-v1`
-- Canonical remote SHA verified after `git fetch origin`:
+- Evaluated product canonical remote SHA verified after `git fetch origin`:
   `9d841cc28dd4a43f70aff6265ead2e25fa6f160c`
+- Gate E acquisition published canonical HEAD:
+  `076a616a97a229e921a5c36eebdfd12f76744f83`
 - Evaluation branch: `codex/gate-e-evaluation-05`
 - Evaluation branch root: the exact canonical SHA above
 - Initial worktree: clean
@@ -48,9 +50,9 @@ publication: pending manual user push and independent remote SHA verification
 - Evaluation 04 evidence ancestor: NO
 
 Evaluations 01–04 retain `FAIL — HISTORICAL IMMUTABLE EVIDENCE`.
-Blockers 01–04 remain `FIXED + PUBLISHED + REMOTE VERIFIED`. Gate E remains
-locally `ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH`. CIV-38 remains
-`OPTIONAL — NOT STARTED`, and currency is not a Gate E dependency.
+Blockers 01–04 remain `FIXED + PUBLISHED + REMOTE VERIFIED`. Gate E is
+`ACQUIRED AND PUBLISHED`. CIV-38 remains `OPTIONAL — NOT STARTED`, and currency
+is not a Gate E dependency.
 
 ## Evaluation design
 
@@ -215,12 +217,13 @@ errors and were followed by verified rollback and clean retry. Every decisive
 and auxiliary campaign demonstrated its required exact cleanup; all process
 roots were isolated.
 
-## Acquisition publication boundary
+## Published acquisition boundary
 
 Senior review approved Evaluation 05 as the successful independent complete
-Gate E proof. Locally Gate E is
-`ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH`. Once this acquisition
-commit is manually pushed and independently remote SHA verified, it represents
-`V4-GATE-E-v1: ACQUIRED AND PUBLISHED`. `CIV-39` is the next eligible required
-phase but remains not started. `CIV-38` remains optional and not started;
-currency remains outside the Gate E dependency. Codex did not push.
+Gate E proof. The acquisition commit is published and independently remote SHA
+verified at canonical HEAD `076a616a97a229e921a5c36eebdfd12f76744f83`, so
+`V4-GATE-E-v1` is `ACQUIRED AND PUBLISHED`. `CIV-39` is the next eligible
+required phase but remains not started; Gate F remains planned and not
+acquired. `CIV-38` remains optional and not started, `CIV-40` remains optional
+tooling and not started, and currency remains outside the Gate E dependency.
+Codex did not push during this reconciliation.

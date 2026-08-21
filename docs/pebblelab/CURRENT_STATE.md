@@ -13,9 +13,9 @@ SHA of the documentation commit that contains it.
 - Gate D — Generational Continuity:
   **ACQUIRED AND PUBLISHED** under contract `V4-GATE-D-v1`.
 - Gate E — Local Material Economy:
-  **ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH** under contract
-  `V4-GATE-E-v1`. After manual push and independent remote SHA verification,
-  its status becomes **ACQUIRED AND PUBLISHED**.
+  **ACQUIRED AND PUBLISHED** under contract `V4-GATE-E-v1`, independently
+  remote verified at canonical HEAD
+  `076a616a97a229e921a5c36eebdfd12f76744f83`.
 - `CIV-00` through `CIV-37`: **COMPLETE AND PUBLISHED** in their bounded
   contracts.
 - `CIV-37 — Physical Markets and Local Price Discovery V1`:
@@ -23,23 +23,24 @@ SHA of the documentation commit that contains it.
   and Senior Review Correction 01.
 - `CIV-38 — Currency, Units of Account and Accounting V1`:
   **OPTIONAL — NOT STARTED**.
+- `CIV-39 — Multi-Settlement, Population Scaling and Fidelity Tiers V1`:
+  **NOT_STARTED — NEXT ELIGIBLE REQUIRED PHASE**.
+- `CIV-40 — Training and Evaluation Bridge V1`:
+  **OPTIONAL TOOLING — NOT STARTED**.
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
 
-Published Gate E history and local acquisition candidate:
+Published Gate E history:
 
 - Gate E Evaluation 01: **FAIL — HISTORICAL IMMUTABLE EVIDENCE**.
-- V4-GATE-E-v1 Blocker 01: **FIXED AND PUBLISHED** after senior-review
-  approval.
+- V4-GATE-E-v1 Blocker 01: **FIXED + PUBLISHED + REMOTE VERIFIED**.
 - Gate E Evaluation 02: **FAIL — HISTORICAL IMMUTABLE EVIDENCE**.
-- V4-GATE-E-v1 Blocker 02: **FIXED AND PUBLISHED** after senior-review
-  approval.
+- V4-GATE-E-v1 Blocker 02: **FIXED + PUBLISHED + REMOTE VERIFIED**.
 - Gate E Evaluation 03: **FAIL — HISTORICAL IMMUTABLE EVIDENCE**.
-- V4-GATE-E-v1 Blocker 03: **FIXED AND PUBLISHED** after senior-review
-  approval.
+- V4-GATE-E-v1 Blocker 03: **FIXED + PUBLISHED + REMOTE VERIFIED**.
 - Gate E Evaluation 04: **FAIL — HISTORICAL IMMUTABLE EVIDENCE**.
-- V4-GATE-E-v1 Blocker 04: **FIXED AND PUBLISHED** after senior-review
-  approval.
-- Gate E Evaluation 05: **PASS — SENIOR REVIEW APPROVED**.
+- V4-GATE-E-v1 Blocker 04: **FIXED + PUBLISHED + REMOTE VERIFIED**.
+- Gate E Evaluation 05:
+  **PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE**.
 
 Evaluation 05 evaluated published product baseline
 `9d841cc28dd4a43f70aff6265ead2e25fa6f160c`. Accepted evidence commits are:
@@ -55,6 +56,9 @@ The accepted final evidence HEAD is
 `6332656566e507464e5322742dc0675d91067a57`; the senior-review archive SHA-256
 is `9960f586cf7d2efca2ae235e2e878e5e2e289f0a095ae3161cb2aa5f61ebb5f4`
 with archive integrity PASS and 205/205 internal checksums PASS.
+
+The Gate E acquisition commit is published and independently remote verified
+at canonical HEAD `076a616a97a229e921a5c36eebdfd12f76744f83`.
 
 Blocker 01 binds exact production origin to an exact durable Material Rights
 asset. It is product correction publication evidence, not Gate E acquisition
@@ -334,8 +338,8 @@ owning regressions pass 301/301, the dedicated Blocker 01 regression remains
 green, and the repository gate passes 35/35 with 3983/3983 assertions. The
 two-process live proof has eight inspected captures and zero physical loss,
 physical duplication, synthetic material, duplicate receipts or Observer
-mutation. Goldens were not regenerated. Remote publication verification is not
-claimed by this containing commit.
+mutation. Goldens were not regenerated. At that Blocker 02 publication
+boundary, its containing commit did not claim future remote verification.
 
 Gate E Evaluation 03 evaluated exact published baseline
 `bfb721d7f49f8af567c86580cdf4c106da977a25` and remains immutable **FAIL —
@@ -363,8 +367,8 @@ The four-process rendered campaign has 16 inspected captures, schema-34
 restart and schema-11 Observer evidence, and zero physical loss, physical
 duplication, synthetic material, duplicate deposits, duplicate reservations,
 duplicate receipts or settlements, Observer mutation or unexpected runtime
-errors. Goldens were not regenerated. Remote publication verification is not
-claimed by this containing commit.
+errors. Goldens were not regenerated. At that Blocker 03 publication boundary,
+its containing commit did not claim future remote verification.
 
 Gate E Evaluation 04 evaluated exact published baseline
 `e8bc2fc8add491c324f15478fcd1b82d77566d57` and remains immutable **FAIL —
@@ -401,7 +405,8 @@ physical loss, physical duplication, synthetic material, duplicate live
 commitments, deposits, reservations, receipts, settlements, Observer mutations
 or unexpected runtime errors are preserved. Goldens were not regenerated.
 Currency remains outside the Gate E dependency and CIV-38 remains optional.
-Remote publication verification is not claimed by this containing commit.
+The earlier Blocker 04 containing commit did not itself claim future remote
+publication verification; that historical boundary is preserved.
 
 Independent Gate E Evaluation 05 is the first accepted complete Gate E PASS.
 Senior review approved its 21/21 focused assertions, 305/305 owning assertions,
@@ -413,7 +418,8 @@ synthetic material, duplicate live commitments, deposits, reservations,
 receipts, settlements, Observer mutations and unexpected runtime errors are
 all zero; cleanup is exact. No product correction or golden regeneration was
 performed. Evaluations 01–04 remain immutable historical FAIL evidence and
-Blockers 01–04 remain fixed and published.
+Blockers 01–04 remain fixed, published and remote verified. Evaluation 05 and
+the Gate E acquisition are now published and independently remote verified.
 
 ## Current program position
 
@@ -453,17 +459,19 @@ CIV-36 status: COMPLETE AND PUBLISHED
 CIV-37 status: COMPLETE AND PUBLISHED
 CIV-38 status: OPTIONAL — NOT STARTED
 Gate E Evaluation 01 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
-V4-GATE-E-v1 Blocker 01 status: FIXED AND PUBLISHED
+V4-GATE-E-v1 Blocker 01 status: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 02 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
-V4-GATE-E-v1 Blocker 02 status: FIXED AND PUBLISHED
+V4-GATE-E-v1 Blocker 02 status: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 03 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
-V4-GATE-E-v1 Blocker 03 status: FIXED AND PUBLISHED
+V4-GATE-E-v1 Blocker 03 status: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 04 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
-V4-GATE-E-v1 Blocker 04 status: FIXED AND PUBLISHED
-Gate E Evaluation 05 status: PASS — SENIOR REVIEW APPROVED
-V4-GATE-E-v1 local status: ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH
-V4-GATE-E-v1 status after manual push and independent remote SHA verification: ACQUIRED AND PUBLISHED
+V4-GATE-E-v1 Blocker 04 status: FIXED + PUBLISHED + REMOTE VERIFIED
+Gate E Evaluation 05 status: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
+V4-GATE-E-v1 status: ACQUIRED AND PUBLISHED
+V4-GATE-E-v1 acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f76744f83
 CIV-39 status: NOT_STARTED — NEXT ELIGIBLE REQUIRED PHASE
+V4-GATE-F-v1 status: PLANNED — NOT ACQUIRED
+CIV-40 status: OPTIONAL TOOLING — NOT STARTED
 roadmap generation: V4
 ```
 
@@ -759,14 +767,15 @@ golden regeneration: NOT ATTEMPTED
 
 ## Next authorized action
 
-Gate E Evaluation 05 is **PASS — SENIOR REVIEW APPROVED**. Evaluations 01–04
+Gate E Evaluation 05 is
+**PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE**. Evaluations 01–04
 remain **FAIL — HISTORICAL IMMUTABLE EVIDENCE**, and Blockers 01–04 remain
-**FIXED AND PUBLISHED**. Gate E is locally
-**ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH**. After this acquisition
-commit is manually pushed and independently remote SHA verified, Gate E becomes
-**ACQUIRED AND PUBLISHED**. `CIV-39 — Multi-Settlement, Population Scaling and
-Fidelity Tiers V1` is **NOT_STARTED — NEXT ELIGIBLE REQUIRED PHASE**; the next
-authorized action is `CIV-39`, but this commit does not start it. `CIV-38`
-remains **OPTIONAL — NOT STARTED** and is not a prerequisite. Currency remains
-outside the Gate E dependency. This containing commit does not claim remote
-publication verification.
+**FIXED + PUBLISHED + REMOTE VERIFIED**. Gate E is **ACQUIRED AND PUBLISHED**
+at independently remote-verified canonical HEAD
+`076a616a97a229e921a5c36eebdfd12f76744f83`.
+`CIV-39 — Multi-Settlement, Population Scaling and Fidelity Tiers V1` is
+**NOT_STARTED — NEXT ELIGIBLE REQUIRED PHASE**; the next authorized action is
+`CIV-39`, but this commit does not start it. Gate F remains **PLANNED — NOT
+ACQUIRED**. `CIV-38` remains **OPTIONAL — NOT STARTED** and is not a
+prerequisite. `CIV-40` remains **OPTIONAL TOOLING — NOT STARTED**. Currency
+remains outside the Gate E dependency.

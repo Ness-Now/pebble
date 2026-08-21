@@ -46,7 +46,7 @@ These documents form the minimal permanent memory of the project:
 | [`GATE_E_BLOCKER_02_EVOLVED_PRODUCTION_IDENTITY.md`](GATE_E_BLOCKER_02_EVOLVED_PRODUCTION_IDENTITY.md) | Published Blocker 02 product-correction record; preserves Evaluation 02 FAIL and separates immutable production origin, durable current-identity continuity and exact current physical authority. |
 | [`GATE_E_BLOCKER_03_TERMINAL_MARKET_RESERVATION_AUTHORITY.md`](GATE_E_BLOCKER_03_TERMINAL_MARKET_RESERVATION_AUTHORITY.md) | Published Blocker 03 product-correction record; preserves Evaluation 03 FAIL and separates terminal market history from coherent live reservation authority. |
 | [`GATE_E_BLOCKER_04_COMPOSED_ASSET_COMMITMENT_AUTHORITY.md`](GATE_E_BLOCKER_04_COMPOSED_ASSET_COMMITMENT_AUTHORITY.md) | Published Blocker 04 product-correction record; preserves Evaluation 04 FAIL and composes exact-asset commitment authority across barter, contracts and markets. |
-| [`GATE_E_EVALUATION_05_REPORT.md`](GATE_E_EVALUATION_05_REPORT.md) | Senior-review-approved complete Gate E evaluation and local acquisition-publication-candidate record. |
+| [`GATE_E_EVALUATION_05_REPORT.md`](GATE_E_EVALUATION_05_REPORT.md) | Senior-review-approved published Gate E evaluation and acquisition record. |
 | [`GATE_E_EVALUATION_05_REPORT.json`](GATE_E_EVALUATION_05_REPORT.json) | Machine-readable Evaluation 05 identity, validation, counters and publication state. |
 
 Canonical status at the product baseline reconciled by this documentation:
@@ -85,22 +85,24 @@ CIV-35: COMPLETE AND PUBLISHED
 CIV-36: COMPLETE AND PUBLISHED
 CIV-37: COMPLETE AND PUBLISHED
 CIV-38: OPTIONAL — NOT STARTED
-V4-GATE-E-v1 local status: ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH
-V4-GATE-E-v1 after manual push and independent remote SHA verification: ACQUIRED AND PUBLISHED
+V4-GATE-E-v1: ACQUIRED AND PUBLISHED
+V4-GATE-E-v1 acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f76744f83
 active phase: null
 completed through: CIV-37
 next eligible phase: CIV-39
 Gate E Evaluation 01: FAIL — HISTORICAL IMMUTABLE EVIDENCE
-V4-GATE-E-v1 Blocker 01: FIXED AND PUBLISHED
+V4-GATE-E-v1 Blocker 01: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 02: FAIL — HISTORICAL IMMUTABLE EVIDENCE
-V4-GATE-E-v1 Blocker 02: FIXED AND PUBLISHED
+V4-GATE-E-v1 Blocker 02: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 03: FAIL — HISTORICAL IMMUTABLE EVIDENCE
-V4-GATE-E-v1 Blocker 03: FIXED AND PUBLISHED
+V4-GATE-E-v1 Blocker 03: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 04: FAIL — HISTORICAL IMMUTABLE EVIDENCE
-V4-GATE-E-v1 Blocker 04: FIXED AND PUBLISHED
-Gate E Evaluation 05: PASS — SENIOR REVIEW APPROVED
+V4-GATE-E-v1 Blocker 04: FIXED + PUBLISHED + REMOTE VERIFIED
+Gate E Evaluation 05: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 next authorized action: CIV-39
 CIV-39: NOT_STARTED — NEXT ELIGIBLE REQUIRED PHASE
+V4-GATE-F-v1: PLANNED — NOT ACQUIRED
+CIV-40: OPTIONAL TOOLING — NOT STARTED
 ```
 
 The `CIV-33` completion is published on the canonical branch at
@@ -217,8 +219,9 @@ Senior review approved V4-GATE-E-v1 Blocker 02 product correction
 `68ab04428582cbbe96c0e8bf046f45c22818a6dd9018ad6f808c87b9aea30c31`
 with 59/59 internal checksums. Blocker 02 is fixed and published; it preserves
 the exact production-origin identity while the current physical identity may
-evolve only through the existing Material Rights continuity contract. Gate E
-remains planned and not acquired. Evaluation 03 remains immutable `FAIL —
+evolve only through the existing Material Rights continuity contract. At that
+Blocker 02 publication boundary, Gate E remained planned and not acquired.
+Evaluation 03 remains immutable `FAIL —
 HISTORICAL IMMUTABLE EVIDENCE` for exact baseline
 `bfb721d7f49f8af567c86580cdf4c106da977a25`, evidence HEAD
 `56af9648da0155cfba25588320d2070d211a1cd7` and review-bundle SHA-256
@@ -230,8 +233,9 @@ Senior review approved V4-GATE-E-v1 Blocker 03 product correction
 with 87/87 internal checksums and passing ZIP integrity. Blocker 03 is fixed
 and published; it derives reservation from the coherent live
 proposal/listing/deposit triad so terminal accepted history cannot reserve
-current matter. This containing commit does not claim remote publication
-verification. Independent Evaluation 04 remains immutable `FAIL — HISTORICAL
+current matter. At that Blocker 03 publication boundary, its containing commit
+did not claim future remote verification. Independent Evaluation 04 remains
+immutable `FAIL — HISTORICAL
 IMMUTABLE EVIDENCE` for exact baseline
 `e8bc2fc8add491c324f15478fcd1b82d77566d57`, falsifier commit
 `54bb38c174d5f3241763926a7bda6b900d7dbc8a` and evidence HEAD
@@ -256,14 +260,14 @@ commits `cccd531dbe2a640a80844482b8943f7cf2f32563`,
 SHA-256 is
 `9960f586cf7d2efca2ae235e2e878e5e2e289f0a095ae3161cb2aa5f61ebb5f4`,
 with archive integrity PASS and 205/205 internal checksums PASS. Evaluation 05
-is **PASS — SENIOR REVIEW APPROVED**. Gate E is locally
-**ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH** and becomes
-**ACQUIRED AND PUBLISHED** only after manual push and independent remote SHA
-verification. Evaluations 01–04 remain immutable historical FAIL evidence;
-Blockers 01–04 remain fixed and published. `CIV-39` is the next eligible
-required phase but is not started. `CIV-38` remains optional and not started;
-currency remains outside the Gate E dependency. This containing commit does
-not claim remote publication verification.
+is **PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE**. Gate E is
+**ACQUIRED AND PUBLISHED** at independently remote-verified canonical HEAD
+`076a616a97a229e921a5c36eebdfd12f76744f83`. Evaluations 01–04 remain
+immutable historical FAIL evidence; Blockers 01–04 remain fixed, published and
+remote verified. `CIV-39` is the next eligible required phase but is not
+started. Gate F remains planned and not acquired. `CIV-38` remains optional and
+not started; `CIV-40` remains optional tooling and not started. Currency
+remains outside the Gate E dependency.
 
 ## Operational
 

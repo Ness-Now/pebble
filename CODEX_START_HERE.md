@@ -39,19 +39,19 @@ does not replace mandatory working rules.
 Read [`CURRENT_STATE.md`](docs/pebblelab/CURRENT_STATE.md), not old gate reports,
 for the compact status. In particular:
 
-- Gate R and Gate B are acquired and published.
-- `CIV-00` through `CIV-30` are complete in their bounded contracts.
+- Gates R, B, C, D and E are acquired and published.
+- `CIV-00` through `CIV-37` are complete and published in their bounded
+  contracts.
 - post-Gate-B safe-bootstrap hardening is published.
-- `V4-GATE-C-v1` is acquired and published.
-- `CIV-31` is not started and is the next eligible phase.
+- `CIV-38` is optional and not started.
+- `CIV-39` is the next eligible required phase and is not started.
 
 Historical Gate B `FAIL` reports and the closure-candidate report are preserved
 as evidence of their own evaluations. They do not reopen Gate B.
 
-The `CIV-29` closure is published on the canonical branch at
-`c1eda66dfacdd16911207b6fc8fd58df8581b99f`. The `CIV-30` closure remains a
-local review candidate until senior review, manual push and remote
-verification. Use Git to distinguish it from the currently published branch.
+Gate E acquisition is published and independently remote verified at canonical
+HEAD `076a616a97a229e921a5c36eebdfd12f76744f83`. Use Git to verify the current
+published branch before every mission.
 
 ## Read by mission type
 

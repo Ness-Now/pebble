@@ -1,8 +1,9 @@
 {
   "task": "V4-GATE-E-v1 — Local Material Economy",
   "evaluation": "Gate E Evaluation 05",
-  "verdict": "PASS — SENIOR REVIEW APPROVED",
+  "verdict": "PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE",
   "seniorReview": "APPROVED",
+  "publicationStatus": "PUBLISHED — INDEPENDENT REMOTE SHA VERIFICATION PASS",
   "repository": "Ness-Now/pebble",
   "canonicalBranch": "lab/pebblelab-v1",
   "evaluatedBaseline": "9d841cc28dd4a43f70aff6265ead2e25fa6f160c",
@@ -16,6 +17,7 @@
     "6332656566e507464e5322742dc0675d91067a57"
   ],
   "finalEvidenceHead": "6332656566e507464e5322742dc0675d91067a57",
+  "gateEAcquisitionPublishedCanonicalHead": "076a616a97a229e921a5c36eebdfd12f76744f83",
   "reviewArchiveSHA256": "9960f586cf7d2efca2ae235e2e878e5e2e289f0a095ae3161cb2aa5f61ebb5f4",
   "archiveIntegrity": "PASS",
   "internalChecksums": "205/205 PASS",
@@ -32,11 +34,13 @@
     "blocker04": "FIXED + PUBLISHED + REMOTE VERIFIED"
   },
   "programState": {
-    "gateE": "ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH",
-    "gateEAfterManualPushAndIndependentRemoteSHAVerification": "ACQUIRED AND PUBLISHED",
+    "gateE": "ACQUIRED AND PUBLISHED",
+    "gateEPublicationVerified": true,
     "nextEligiblePhase": "CIV-39",
-    "nextEligiblePhaseStatus": "NOT_STARTED",
+    "nextEligiblePhaseStatus": "NOT_STARTED — NEXT ELIGIBLE REQUIRED PHASE",
     "civ38": "OPTIONAL — NOT STARTED",
+    "gateF": "PLANNED — NOT ACQUIRED",
+    "civ40": "OPTIONAL TOOLING — NOT STARTED",
     "currencyDependency": false
   },
   "productCorrectionMade": false,
