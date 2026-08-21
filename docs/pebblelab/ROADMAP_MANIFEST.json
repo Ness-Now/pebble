@@ -100,7 +100,11 @@
     "gateEEvaluation05FinalEvidenceHead": "6332656566e507464e5322742dc0675d91067a57",
     "gateEEvaluation05ReviewArchiveSHA256": "9960f586cf7d2efca2ae235e2e878e5e2e289f0a095ae3161cb2aa5f61ebb5f4",
     "gateEAcquisitionPublishedCanonicalHead": "076a616a97a229e921a5c36eebdfd12f76744f83",
-    "meaning": "Canonical product history is complete through CIV-37; Gate E Evaluation 05 is the first accepted complete Gate E PASS and is senior-review-approved published evidence; Gate E is acquired and published at independently remote-verified canonical HEAD 076a616a97a229e921a5c36eebdfd12f76744f83; Gate E Evaluations 01 through 04 remain immutable historical FAIL evidence and Blockers 01 through 04 remain fixed, published and remote verified; CIV-38 is optional and not started and currency is outside the Gate E dependency; CIV-39 is the next eligible required phase and is not started; Gate F remains planned and CIV-40 remains optional tooling and not started.",
+    "civ39ExactPublishedBaseline": "e567f9a5b283a71e42b5f8139c47f80f6562a5dc",
+    "civ39LocalImplementationProofCommit": "3052dca3959ef1131081b6839f84b0860f531144",
+    "civ39CheckedTickIntegrationCorrectionCommit": "c06bcda12f2c56ab4cefea7cca200bb2d547f379",
+    "civ39PublicationStatus": "awaitingSeniorReviewAndPublication",
+    "meaning": "Canonical published product history is complete through CIV-37; Gate E Evaluation 05 is the first accepted complete Gate E PASS and is senior-review-approved published evidence; Gate E is acquired and published at independently remote-verified canonical HEAD 076a616a97a229e921a5c36eebdfd12f76744f83; Gate E Evaluations 01 through 04 remain immutable historical FAIL evidence and Blockers 01 through 04 remain fixed, published and remote verified; CIV-38 is optional and not started and currency is outside the Gate E dependency; CIV-39 is implemented locally from exact published baseline e567f9a5b283a71e42b5f8139c47f80f6562a5dc and awaits senior review and publication; Gate F remains planned and not acquired or evaluated; CIV-40 remains optional tooling and not started.",
     "safeBootstrapHardeningPublished": true
   },
   "documents": {
@@ -122,6 +126,7 @@
     "civ35PhaseEvidence": "docs/pebblelab/CIV_35_PHASE_SUMMARY.md",
     "civ36PhaseEvidence": "docs/pebblelab/CIV_36_PHASE_SUMMARY.md",
     "civ37PhaseEvidence": "docs/pebblelab/CIV_37_PHASE_SUMMARY.md",
+    "civ39PhaseCandidateEvidence": "docs/pebblelab/CIV_39_PHASE_SUMMARY.md",
     "gateEBlocker01ExactProductionProvenance": "docs/pebblelab/GATE_E_BLOCKER_01_EXACT_PRODUCTION_PROVENANCE.md",
     "gateEBlocker02EvolvedProductionIdentity": "docs/pebblelab/GATE_E_BLOCKER_02_EVOLVED_PRODUCTION_IDENTITY.md",
     "gateEBlocker03TerminalMarketReservationAuthority": "docs/pebblelab/GATE_E_BLOCKER_03_TERMINAL_MARKET_RESERVATION_AUTHORITY.md",
@@ -152,10 +157,10 @@
     "historicalPlans": "nonDirective"
   },
   "currentState": {
-    "activePhase": null,
+    "activePhase": "CIV-39",
     "completedThrough": "CIV-37",
-    "nextEligiblePhase": "CIV-39",
-    "nextAuthorizedAction": "CIV-39",
+    "nextEligiblePhase": null,
+    "nextAuthorizedAction": "SENIOR-REVIEW-CIV-39",
     "civ27Status": "completed",
     "civ28Status": "completed",
     "gateCStatus": "acquired",
@@ -215,8 +220,10 @@
     "gateEEvaluation04Status": "evaluatedFailNotAcquired",
     "gateEBlocker04Status": "fixedPublished",
     "gateEEvaluation05Status": "passedPublished",
-    "civ39Status": "notStartedNextEligibleRequiredPhase",
+    "civ39Status": "implementedAwaitingSeniorReviewAndPublication",
+    "civ39Published": false,
     "gateFStatus": "plannedNotAcquired",
+    "gateFEvaluationPerformed": false,
     "civ40Status": "optionalNotStarted",
     "renewableSubsistenceMilestoneStatus": "completedPublished",
     "v4CanonicalDocumentSet": true
@@ -2091,6 +2098,7 @@
       "status": "planned",
       "acquired": false,
       "published": false,
+      "evaluationPerformed": false,
       "requiredPhases": [
         "CIV-39"
       ],
@@ -2519,11 +2527,14 @@
     {
       "id": "CIV-39",
       "title": "Multi-Settlement, Population Scaling and Fidelity Tiers V1",
-      "status": "notStarted",
+      "status": "implementedAwaitingSeniorReviewAndPublication",
       "wave": "wave-4-scale-settlements",
       "requiredForCanonicalProgression": true,
       "dependsOn": [
         "V4-GATE-E-v1"
+      ],
+      "evidence": [
+        "docs/pebblelab/CIV_39_PHASE_SUMMARY.md"
       ]
     },
     {

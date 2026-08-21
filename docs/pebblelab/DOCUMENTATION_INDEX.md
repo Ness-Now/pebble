@@ -42,6 +42,7 @@ These documents form the minimal permanent memory of the project:
 | [`DOCUMENTATION_INDEX.md`](DOCUMENTATION_INDEX.md) | Classification and navigation for the documentation set. |
 | [`CIV_36_PHASE_SUMMARY.md`](CIV_36_PHASE_SUMMARY.md) | Published architecture, contract semantics, correction history, physical proof, validation and non-claims for CIV-36. |
 | [`CIV_37_PHASE_SUMMARY.md`](CIV_37_PHASE_SUMMARY.md) | Published architecture, correction history, physical-market proof, price causality, validation and non-claims for CIV-37. |
+| [`CIV_39_PHASE_SUMMARY.md`](CIV_39_PHASE_SUMMARY.md) | Local candidate architecture, multi-settlement/fidelity contract, scale measurements, live proof, validation and non-claims for CIV-39; awaiting senior review/publication. |
 | [`GATE_E_BLOCKER_01_EXACT_PRODUCTION_PROVENANCE.md`](GATE_E_BLOCKER_01_EXACT_PRODUCTION_PROVENANCE.md) | Published Blocker 01 product-correction record; preserves Evaluation 01 FAIL and documents exact asset-bound production provenance. |
 | [`GATE_E_BLOCKER_02_EVOLVED_PRODUCTION_IDENTITY.md`](GATE_E_BLOCKER_02_EVOLVED_PRODUCTION_IDENTITY.md) | Published Blocker 02 product-correction record; preserves Evaluation 02 FAIL and separates immutable production origin, durable current-identity continuity and exact current physical authority. |
 | [`GATE_E_BLOCKER_03_TERMINAL_MARKET_RESERVATION_AUTHORITY.md`](GATE_E_BLOCKER_03_TERMINAL_MARKET_RESERVATION_AUTHORITY.md) | Published Blocker 03 product-correction record; preserves Evaluation 03 FAIL and separates terminal market history from coherent live reservation authority. |
@@ -87,9 +88,9 @@ CIV-37: COMPLETE AND PUBLISHED
 CIV-38: OPTIONAL — NOT STARTED
 V4-GATE-E-v1: ACQUIRED AND PUBLISHED
 V4-GATE-E-v1 acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f76744f83
-active phase: null
+active phase: CIV-39 — LOCAL CANDIDATE AWAITING SENIOR REVIEW/PUBLICATION
 completed through: CIV-37
-next eligible phase: CIV-39
+next eligible phase: null while CIV-39 candidate awaits disposition
 Gate E Evaluation 01: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 01: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 02: FAIL — HISTORICAL IMMUTABLE EVIDENCE
@@ -99,8 +100,8 @@ V4-GATE-E-v1 Blocker 03: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 04: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 04: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 05: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
-next authorized action: CIV-39
-CIV-39: NOT_STARTED — NEXT ELIGIBLE REQUIRED PHASE
+next authorized action: SENIOR-REVIEW-CIV-39
+CIV-39: IMPLEMENTED LOCALLY — AWAITING SENIOR REVIEW AND PUBLICATION
 V4-GATE-F-v1: PLANNED — NOT ACQUIRED
 CIV-40: OPTIONAL TOOLING — NOT STARTED
 ```
@@ -264,10 +265,11 @@ is **PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE**. Gate E is
 **ACQUIRED AND PUBLISHED** at independently remote-verified canonical HEAD
 `076a616a97a229e921a5c36eebdfd12f76744f83`. Evaluations 01–04 remain
 immutable historical FAIL evidence; Blockers 01–04 remain fixed, published and
-remote verified. `CIV-39` is the next eligible required phase but is not
-started. Gate F remains planned and not acquired. `CIV-38` remains optional and
-not started; `CIV-40` remains optional tooling and not started. Currency
-remains outside the Gate E dependency.
+remote verified. `CIV-39` is implemented locally from exact published baseline
+`e567f9a5b283a71e42b5f8139c47f80f6562a5dc` and awaits senior review and
+publication. Gate F remains planned and not acquired or evaluated. `CIV-38`
+remains optional and not started; `CIV-40` remains optional tooling and not
+started. Currency remains outside the Gate E dependency.
 
 ## Operational
 

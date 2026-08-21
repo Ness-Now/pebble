@@ -24,7 +24,8 @@ SHA of the documentation commit that contains it.
 - `CIV-38 — Currency, Units of Account and Accounting V1`:
   **OPTIONAL — NOT STARTED**.
 - `CIV-39 — Multi-Settlement, Population Scaling and Fidelity Tiers V1`:
-  **NOT_STARTED — NEXT ELIGIBLE REQUIRED PHASE**.
+  **IMPLEMENTED LOCALLY — AWAITING SENIOR REVIEW AND PUBLICATION** from exact
+  published baseline `e567f9a5b283a71e42b5f8139c47f80f6562a5dc`.
 - `CIV-40 — Training and Evaluation Bridge V1`:
   **OPTIONAL TOOLING — NOT STARTED**.
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
@@ -424,10 +425,10 @@ the Gate E acquisition are now published and independently remote verified.
 ## Current program position
 
 ```text
-active CIV phase: null
+active CIV phase: CIV-39 — LOCAL CANDIDATE AWAITING SENIOR REVIEW/PUBLICATION
 completed and published through: CIV-37
-next eligible phase: CIV-39
-next authorized action: CIV-39
+next eligible phase: null while CIV-39 candidate awaits disposition
+next authorized action: SENIOR-REVIEW-CIV-39
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -469,7 +470,7 @@ V4-GATE-E-v1 Blocker 04 status: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 05 status: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 V4-GATE-E-v1 status: ACQUIRED AND PUBLISHED
 V4-GATE-E-v1 acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f76744f83
-CIV-39 status: NOT_STARTED — NEXT ELIGIBLE REQUIRED PHASE
+CIV-39 status: IMPLEMENTED LOCALLY — AWAITING SENIOR REVIEW AND PUBLICATION
 V4-GATE-F-v1 status: PLANNED — NOT ACQUIRED
 CIV-40 status: OPTIONAL TOOLING — NOT STARTED
 roadmap generation: V4
@@ -774,8 +775,11 @@ remain **FAIL — HISTORICAL IMMUTABLE EVIDENCE**, and Blockers 01–04 remain
 at independently remote-verified canonical HEAD
 `076a616a97a229e921a5c36eebdfd12f76744f83`.
 `CIV-39 — Multi-Settlement, Population Scaling and Fidelity Tiers V1` is
-**NOT_STARTED — NEXT ELIGIBLE REQUIRED PHASE**; the next authorized action is
-`CIV-39`, but this commit does not start it. Gate F remains **PLANNED — NOT
-ACQUIRED**. `CIV-38` remains **OPTIONAL — NOT STARTED** and is not a
-prerequisite. `CIV-40` remains **OPTIONAL TOOLING — NOT STARTED**. Currency
-remains outside the Gate E dependency.
+**IMPLEMENTED LOCALLY — AWAITING SENIOR REVIEW AND PUBLICATION** from exact
+published baseline `e567f9a5b283a71e42b5f8139c47f80f6562a5dc`; its durable
+candidate record is
+[`CIV_39_PHASE_SUMMARY.md`](CIV_39_PHASE_SUMMARY.md). The next authorized
+action is senior review of CIV-39, not a later product phase. Gate F remains
+**PLANNED — NOT ACQUIRED** and was not evaluated. `CIV-38` remains **OPTIONAL
+— NOT STARTED** and is not a prerequisite. `CIV-40` remains **OPTIONAL TOOLING
+— NOT STARTED**. Currency remains outside the Gate E dependency.

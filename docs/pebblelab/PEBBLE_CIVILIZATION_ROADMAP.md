@@ -135,10 +135,10 @@ CIV-38: OPTIONAL — NOT STARTED
 Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
-active CIV phase: null
+active CIV phase: CIV-39 — LOCAL CANDIDATE AWAITING SENIOR REVIEW/PUBLICATION
 completed and published through: CIV-37
-next eligible phase: CIV-39
-next authorized action: CIV-39
+next eligible phase: null while CIV-39 candidate awaits disposition
+next authorized action: SENIOR-REVIEW-CIV-39
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
@@ -180,7 +180,7 @@ Gate E Blocker 04: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 05: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 V4-GATE-E-v1: ACQUIRED AND PUBLISHED
 V4-GATE-E-v1 acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f76744f83
-CIV-39: NOT_STARTED — NEXT ELIGIBLE REQUIRED PHASE
+CIV-39: IMPLEMENTED LOCALLY — AWAITING SENIOR REVIEW AND PUBLICATION
 V4-GATE-F-v1: PLANNED — NOT ACQUIRED
 CIV-40: OPTIONAL TOOLING — NOT STARTED
 ```
@@ -515,9 +515,10 @@ E is **ACQUIRED AND PUBLISHED** at independently remote-verified canonical
 HEAD `076a616a97a229e921a5c36eebdfd12f76744f83`.
 Evaluations 01 through 04 remain historical immutable FAIL evidence and
 Blockers 01 through 04 are fixed and published. Evaluation 05 is **PASS —
-SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE**. `CIV-39` is the next eligible
-required phase but is not started. Gate F remains planned and not acquired;
-`CIV-40` remains optional tooling and not started.
+SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE**. `CIV-39` is **IMPLEMENTED
+LOCALLY — AWAITING SENIOR REVIEW AND PUBLICATION** from exact published
+baseline `e567f9a5b283a71e42b5f8139c47f80f6562a5dc`. Gate F remains planned
+and not acquired; `CIV-40` remains optional tooling and not started.
 
 | Phase | Requirement | Outcome |
 | --- | --- | --- |
@@ -858,9 +859,9 @@ review approved it, so Gate D remains acquired and published. `CIV-34` through
 is acquired and published.
 Evaluations 01 through 04 remain historical immutable FAIL evidence and
 Blockers 01 through 04 are fixed and published. Evaluation 05 is senior-review-
-approved published PASS evidence. `CIV-39` is the next eligible required phase
-and is not started. Gate F remains planned and CIV-40 remains optional tooling
-and not started.
+approved published PASS evidence. `CIV-39` is implemented locally and awaits
+senior review/publication. Gate F remains planned and CIV-40 remains optional
+tooling and not started.
 
 ## Wave 3 — Local material economy
 
@@ -1267,7 +1268,8 @@ Evaluation 05 product correction: NO
 Evaluation 05 verdict: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 Gate E status: ACQUIRED AND PUBLISHED
 Gate E acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f76744f83
-next eligible required phase/action: CIV-39 — NOT_STARTED
+next authorized action: SENIOR-REVIEW-CIV-39
+CIV-39 status: IMPLEMENTED LOCALLY — AWAITING SENIOR REVIEW AND PUBLICATION
 Gate F status: PLANNED — NOT ACQUIRED
 CIV-40 status: OPTIONAL TOOLING — NOT STARTED
 ```
@@ -1327,10 +1329,13 @@ gate dependency.
 | `CIV-39` | required | Multi-Settlement, Population Scaling and Fidelity Tiers V1 |
 | `CIV-40` | **optional tooling** | Training and Evaluation Bridge V1 |
 
-`CIV-39` introduces measured population growth and `LIVE`/`NEAR`/`DORMANT`
-fidelity while preserving identity, matter and obligations. `CIV-40` may
-compare policies or export trajectories, but no external policy becomes
-runtime authority.
+`CIV-39` is **IMPLEMENTED LOCALLY — AWAITING SENIOR REVIEW AND PUBLICATION**.
+Its bounded candidate introduces measured population growth and
+`LIVE`/`NEAR`/`DORMANT` fidelity while preserving identity, matter and
+obligations. Architecture, measurements, validation and non-claims are recorded
+in [`CIV_39_PHASE_SUMMARY.md`](CIV_39_PHASE_SUMMARY.md). `CIV-40` may compare
+policies or export trajectories, but no external policy becomes runtime
+authority; it is not started by the CIV-39 candidate.
 
 Observable slice: two persistent settlements can be inspected while agents
 move between fidelity tiers without duplication or identity loss.
@@ -1501,7 +1506,7 @@ keeps incarnation physical and produces verifiable long-duration history.
 | `V4-GATE-C-v1` | acquired | `CIV-26`–`CIV-28` |
 | `V4-GATE-D-v1` | acquired and published | `CIV-29`–`CIV-33`, renewable subsistence milestone and Blockers 01–10 published; Evaluations 01–10 remain historical FAIL evidence; Evaluation 11 PASS is senior-review approved |
 | `V4-GATE-E-v1` | acquired and published | `CIV-34`–`CIV-37`; `CIV-38` optional and currency not required; Evaluations 01–04 historical FAIL; Blockers 01–04 fixed/published/remote-verified; Evaluation 05 PASS senior-review-approved published evidence |
-| `V4-GATE-F-v1` | planned, not acquired | `CIV-39` not started and next eligible; `CIV-40` optional tooling and not started |
+| `V4-GATE-F-v1` | planned, not acquired | `CIV-39` local candidate awaits senior review/publication; no Gate F evaluation performed; `CIV-40` optional tooling and not started |
 | `V4-GATE-G-v1` | planned | `CIV-41`–`CIV-47` |
 | `V4-GATE-H-v1` | planned | `CIV-48`–`CIV-52` |
 | `V4-GATE-I-v1` | planned | `CIV-53`–`CIV-56` |
