@@ -21,7 +21,7 @@ SHA of the documentation commit that contains it.
   **OPTIONAL — NOT STARTED**.
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
 
-Gate E history and current local correction status:
+Published Gate E history:
 
 - Gate E Evaluation 01: **FAIL — HISTORICAL IMMUTABLE EVIDENCE**.
 - V4-GATE-E-v1 Blocker 01: **FIXED AND PUBLISHED** after senior-review
@@ -33,8 +33,8 @@ Gate E history and current local correction status:
 - V4-GATE-E-v1 Blocker 03: **FIXED AND PUBLISHED** after senior-review
   approval.
 - Gate E Evaluation 04: **FAIL — HISTORICAL IMMUTABLE EVIDENCE**.
-- V4-GATE-E-v1 Blocker 04: **IMPLEMENTED_LOCAL_REVIEW_CANDIDATE — NOT
-  PUBLISHED**.
+- V4-GATE-E-v1 Blocker 04: **FIXED AND PUBLISHED** after senior-review
+  approval.
 - Gate E Evaluation 05: **NOT_STARTED**.
 
 Blocker 01 binds exact production origin to an exact durable Material Rights
@@ -349,14 +349,16 @@ claimed by this containing commit.
 Gate E Evaluation 04 evaluated exact published baseline
 `e8bc2fc8add491c324f15478fcd1b82d77566d57` and remains immutable **FAIL —
 PRODUCT CORRECTION REQUIRED** evidence at HEAD
-`07ded1e583b62137b5e8b6cc32d8a61ead73cc53`. Its decisive counterexample made
+`07ded1e583b62137b5e8b6cc32d8a61ead73cc53`; its review archive SHA-256 is
+`d51df031d8cf930316ad0a24f1c21daa2f773cdec576599d3549139cfce7559b`.
+Its decisive counterexample made
 one exact durable pickaxe simultaneous accepted contract and market
 consideration, retained both commitments across restart, then let market
 settlement move exact current authority while the contract retained stale
 custody evidence. The historical result is permanently **FAIL — HISTORICAL
 IMMUTABLE EVIDENCE** and is not in the correction ancestry.
 
-The local Blocker 04 correction adds one deterministic, derived exact-asset
+The published Blocker 04 correction adds one deterministic, derived exact-asset
 commitment authority to the existing `AgentSimulationSession`. It composes live
 barter, contract and market state, allows only the same logical operation to
 continue its commitment, and releases terminal state without erasing history.
@@ -365,14 +367,21 @@ mandatory. Verified economic receipts fulfill the exact motivating production
 need once. No durable projection was added: checkpoint/replay remains schema
 34 and Observer remains schema 11 and read-only.
 
-Focused Blocker 04 checks pass 28/28, owning regressions pass 305/305, Blocker
-01 through 03 focused checks pass 27/27, 33/33 and 25/25, and the repository
-gate passes 35/35 steps with 4015/4015 assertions. The fresh four-process live
-campaign has 13 inspected captures and proves contract and barter exclusion,
-same-operation continuation, terminal release, ordinary post-restart market
-reuse, conservation and exact cleanup. Fresh inherited Blocker 01 through 03
-live regressions also pass. Goldens were not regenerated. This is an
-implemented local review candidate only; publication is not claimed.
+Senior review approved implementation commit
+`0318133fe95949c441974871f2581f38c43c6128`, reviewed candidate HEAD
+`54009009e436c913276e50c162cd30203d8931c3` and review archive SHA-256
+`f36ba77cc2c58e75b70748892043f72c4703668df1da4291c36f4e828a723b9f`.
+Archive integrity and all 118/118 internal checksums pass. Focused Blocker 04
+checks pass 28/28, owning regressions pass 305/305, Blocker 01 through 03
+focused checks pass 27/27, 33/33 and 25/25, and the repository gate passes
+35/35 steps with 4015/4015 assertions. The fresh four-process live campaign
+has 13 inspected captures; auxiliary live regressions add eight processes and
+33 captures. Checkpoint schema 34, Observer schema 11, exact cleanup and zero
+physical loss, physical duplication, synthetic material, duplicate live
+commitments, deposits, reservations, receipts, settlements, Observer mutations
+or unexpected runtime errors are preserved. Goldens were not regenerated.
+Currency remains outside the Gate E dependency and CIV-38 remains optional.
+Remote publication verification is not claimed by this containing commit.
 
 ## Current program position
 
@@ -380,7 +389,7 @@ implemented local review candidate only; publication is not claimed.
 active CIV phase: null
 completed and published through: CIV-37
 next eligible phase: null
-next authorized action: SENIOR_REVIEW_V4_GATE_E_BLOCKER_04
+next authorized action after manual publication and independent remote SHA verification: NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-05
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -418,7 +427,7 @@ V4-GATE-E-v1 Blocker 02 status: FIXED AND PUBLISHED
 Gate E Evaluation 03 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 03 status: FIXED AND PUBLISHED
 Gate E Evaluation 04 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
-V4-GATE-E-v1 Blocker 04 status: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE — NOT PUBLISHED
+V4-GATE-E-v1 Blocker 04 status: FIXED AND PUBLISHED
 Gate E Evaluation 05 status: NOT_STARTED
 V4-GATE-E-v1 status: PLANNED — NOT ACQUIRED
 roadmap generation: V4
@@ -736,9 +745,11 @@ PUBLISHED** after senior-review approval; it makes reservation authority depend
 on the complete live proposal/listing/deposit triad and preserves terminal
 proposal, trade and price history without allowing that history to reserve
 current matter. Evaluation 04 remains **FAIL — HISTORICAL IMMUTABLE EVIDENCE**.
-V4-GATE-E-v1 Blocker 04 is an **IMPLEMENTED_LOCAL_REVIEW_CANDIDATE — NOT
-PUBLISHED**; it composes exact-asset commitments across barter, contracts and
-markets without replacing their canonical states or physical gateways. Gate E
-remains **PLANNED — NOT ACQUIRED**, Evaluation 05 is **NOT_STARTED**, and the
-next authorized action is senior review of the Blocker 04 candidate. This
-containing commit does not claim publication or start Evaluation 05.
+V4-GATE-E-v1 Blocker 04 is **FIXED AND PUBLISHED** after senior-review approval;
+it composes exact-asset commitments across barter, contracts and markets
+without replacing their canonical states or physical gateways. Currency
+remains outside the Gate E dependency. Gate E remains **PLANNED — NOT
+ACQUIRED** and Evaluation 05 is **NOT_STARTED**. Only after manual publication
+and independent remote SHA verification, the next authorized action is
+**NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-05**. This containing documentation
+commit does not claim remote publication verification or start Evaluation 05.

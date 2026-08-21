@@ -45,7 +45,7 @@ These documents form the minimal permanent memory of the project:
 | [`GATE_E_BLOCKER_01_EXACT_PRODUCTION_PROVENANCE.md`](GATE_E_BLOCKER_01_EXACT_PRODUCTION_PROVENANCE.md) | Published Blocker 01 product-correction record; preserves Evaluation 01 FAIL and documents exact asset-bound production provenance. |
 | [`GATE_E_BLOCKER_02_EVOLVED_PRODUCTION_IDENTITY.md`](GATE_E_BLOCKER_02_EVOLVED_PRODUCTION_IDENTITY.md) | Published Blocker 02 product-correction record; preserves Evaluation 02 FAIL and separates immutable production origin, durable current-identity continuity and exact current physical authority. |
 | [`GATE_E_BLOCKER_03_TERMINAL_MARKET_RESERVATION_AUTHORITY.md`](GATE_E_BLOCKER_03_TERMINAL_MARKET_RESERVATION_AUTHORITY.md) | Published Blocker 03 product-correction record; preserves Evaluation 03 FAIL and separates terminal market history from coherent live reservation authority. |
-| [`GATE_E_BLOCKER_04_COMPOSED_ASSET_COMMITMENT_AUTHORITY.md`](GATE_E_BLOCKER_04_COMPOSED_ASSET_COMMITMENT_AUTHORITY.md) | Local Blocker 04 product-correction review record; preserves Evaluation 04 FAIL and composes exact-asset commitment authority across barter, contracts and markets. |
+| [`GATE_E_BLOCKER_04_COMPOSED_ASSET_COMMITMENT_AUTHORITY.md`](GATE_E_BLOCKER_04_COMPOSED_ASSET_COMMITMENT_AUTHORITY.md) | Published Blocker 04 product-correction record; preserves Evaluation 04 FAIL and composes exact-asset commitment authority across barter, contracts and markets. |
 
 Canonical status at the product baseline reconciled by this documentation:
 
@@ -94,9 +94,9 @@ V4-GATE-E-v1 Blocker 02: FIXED AND PUBLISHED
 Gate E Evaluation 03: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 03: FIXED AND PUBLISHED
 Gate E Evaluation 04: FAIL — HISTORICAL IMMUTABLE EVIDENCE
-V4-GATE-E-v1 Blocker 04: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE — NOT PUBLISHED
+V4-GATE-E-v1 Blocker 04: FIXED AND PUBLISHED
 Gate E Evaluation 05: NOT_STARTED
-next authorized action: SENIOR_REVIEW_V4_GATE_E_BLOCKER_04
+next authorized action after manual publication and independent remote SHA verification: NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-05
 ```
 
 The `CIV-33` completion is published on the canonical branch at
@@ -231,14 +231,22 @@ verification. Independent Evaluation 04 remains immutable `FAIL — HISTORICAL
 IMMUTABLE EVIDENCE` for exact baseline
 `e8bc2fc8add491c324f15478fcd1b82d77566d57`, falsifier commit
 `54bb38c174d5f3241763926a7bda6b900d7dbc8a` and evidence HEAD
-`07ded1e583b62137b5e8b6cc32d8a61ead73cc53`. V4-GATE-E-v1 Blocker 04 is an
-implemented local review candidate at product commit
-`0318133fe95949c441974871f2581f38c43c6128`. It derives one exact-asset
-commitment projection from canonical barter, contract and market state while
-retaining their physical gateways and same-operation continuations. It is not
-published, Gate E is not acquired, Evaluation 05 is not started and CIV-38
-remains optional and not started. The next authorized action is senior review
-of the Blocker 04 candidate.
+`07ded1e583b62137b5e8b6cc32d8a61ead73cc53`; the Evaluation 04 review archive
+SHA-256 is
+`d51df031d8cf930316ad0a24f1c21daa2f773cdec576599d3549139cfce7559b`.
+Senior review approved V4-GATE-E-v1 Blocker 04 implementation commit
+`0318133fe95949c441974871f2581f38c43c6128`, reviewed candidate HEAD
+`54009009e436c913276e50c162cd30203d8931c3` and review archive SHA-256
+`f36ba77cc2c58e75b70748892043f72c4703668df1da4291c36f4e828a723b9f`
+with passing archive integrity and 118/118 internal checksums. Blocker 04 is
+fixed and published; it derives one exact-asset commitment projection from
+canonical barter, contract and market state while retaining their physical
+gateways and same-operation continuations. Gate E is not acquired, Evaluation
+05 is not started, CIV-38 remains optional and currency remains outside the
+Gate E dependency. Only after manual publication and independent remote SHA
+verification, the next authorized action is
+`NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-05`. This containing documentation
+commit does not claim remote publication verification.
 
 ## Operational
 

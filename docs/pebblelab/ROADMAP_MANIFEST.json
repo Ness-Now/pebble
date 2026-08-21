@@ -84,7 +84,13 @@
     "gateEBlocker03ProductCorrectionCommit": "301dfd58aacd3aa0af653fa460ad38484df1d762",
     "gateEBlocker03ReviewedCandidateHead": "27e8406edd20f13817d4b7e1684a00db56e361a7",
     "gateEBlocker03ReviewBundleSHA256": "8ec57b6bb8b58cab59be3024f7541693b145ae0527221e5e523b32538a2182a4",
-    "meaning": "Canonical published history is complete through senior-review-approved CIV-37 and the senior-review-approved Gate E Blocker 03 correction; Gate D Evaluation 11 remains the first accepted Gate D PASS; Gate D Evaluations 01 through 10 and Gate E Evaluations 01 through 03 remain immutable historical FAIL evidence; their published blockers do not rewrite those verdicts; CIV-38 is optional and not started; Gate E remains planned and not acquired; Gate E Evaluation 04 is not started and becomes the next authorized action only after manual publication and independent remote SHA verification.",
+    "gateEEvaluation04EvaluatedProductHead": "e8bc2fc8add491c324f15478fcd1b82d77566d57",
+    "gateEEvaluation04EvidenceHead": "07ded1e583b62137b5e8b6cc32d8a61ead73cc53",
+    "gateEEvaluation04ReviewBundleSHA256": "d51df031d8cf930316ad0a24f1c21daa2f773cdec576599d3549139cfce7559b",
+    "gateEBlocker04ProductCorrectionCommit": "0318133fe95949c441974871f2581f38c43c6128",
+    "gateEBlocker04ReviewedCandidateHead": "54009009e436c913276e50c162cd30203d8931c3",
+    "gateEBlocker04ReviewBundleSHA256": "f36ba77cc2c58e75b70748892043f72c4703668df1da4291c36f4e828a723b9f",
+    "meaning": "Canonical published history is complete through senior-review-approved CIV-37 and Gate E Blocker 04; Gate D Evaluation 11 remains the first accepted Gate D PASS; Gate D Evaluations 01 through 10 and Gate E Evaluations 01 through 04 remain immutable historical FAIL evidence; their published blockers do not rewrite those verdicts; CIV-38 is optional and not started and currency is outside the Gate E dependency; Gate E remains planned and not acquired; Gate E Evaluation 05 is not started and becomes the next authorized action only after manual publication and independent remote SHA verification.",
     "safeBootstrapHardeningPublished": true
   },
   "documents": {
@@ -109,6 +115,7 @@
     "gateEBlocker01ExactProductionProvenance": "docs/pebblelab/GATE_E_BLOCKER_01_EXACT_PRODUCTION_PROVENANCE.md",
     "gateEBlocker02EvolvedProductionIdentity": "docs/pebblelab/GATE_E_BLOCKER_02_EVOLVED_PRODUCTION_IDENTITY.md",
     "gateEBlocker03TerminalMarketReservationAuthority": "docs/pebblelab/GATE_E_BLOCKER_03_TERMINAL_MARKET_RESERVATION_AUTHORITY.md",
+    "gateEBlocker04ComposedAssetCommitmentAuthority": "docs/pebblelab/GATE_E_BLOCKER_04_COMPOSED_ASSET_COMMITMENT_AUTHORITY.md",
     "renewableSubsistenceMilestoneEvidence": "docs/pebblelab/RENEWABLE_SUBSISTENCE_MILESTONE_SUMMARY.md",
     "gateDBlocker01PositionRestoreFix": "docs/pebblelab/GATE_D_BLOCKER_01_POSITION_RESTORE_FIX.md",
     "gateDBlocker02EcologicalObserverHistoryFix": "docs/pebblelab/GATE_D_BLOCKER_02_ECOLOGICAL_OBSERVER_HISTORY_FIX.md",
@@ -136,7 +143,8 @@
     "activePhase": null,
     "completedThrough": "CIV-37",
     "nextEligiblePhase": null,
-    "nextAuthorizedAction": "NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-04",
+    "nextAuthorizedAction": "NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-05",
+    "nextAuthorizedActionRequiresManualPublicationAndIndependentRemoteSHAVerification": true,
     "civ27Status": "completed",
     "civ28Status": "completed",
     "gateCStatus": "acquired",
@@ -188,7 +196,9 @@
     "gateEBlocker02Status": "fixedPublished",
     "gateEEvaluation03Status": "evaluatedFailNotAcquired",
     "gateEBlocker03Status": "fixedPublished",
-    "gateEEvaluation04Status": "notStarted",
+    "gateEEvaluation04Status": "evaluatedFailNotAcquired",
+    "gateEBlocker04Status": "fixedPublished",
+    "gateEEvaluation05Status": "notStarted",
     "renewableSubsistenceMilestoneStatus": "completedPublished",
     "v4CanonicalDocumentSet": true
   },
@@ -1574,6 +1584,72 @@
     "evaluation04Status": "notStarted",
     "nextAuthorizedActionAfterRemotePublicationVerification": "NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-04"
   },
+  "gateEBlocker04Validation": {
+    "title": "Composed Asset Commitment Authority",
+    "status": "fixedPublished",
+    "published": true,
+    "publicationVerified": false,
+    "seniorReview": "approved",
+    "affectedPublishedBaseline": "e8bc2fc8add491c324f15478fcd1b82d77566d57",
+    "evaluation04EvidenceHead": "07ded1e583b62137b5e8b6cc32d8a61ead73cc53",
+    "evaluation04Verdict": "failProductCorrectionRequired",
+    "evaluation04HistoricalEvidenceImmutable": true,
+    "evaluation04ReviewBundleSHA256": "d51df031d8cf930316ad0a24f1c21daa2f773cdec576599d3549139cfce7559b",
+    "productCorrectionCommit": "0318133fe95949c441974871f2581f38c43c6128",
+    "reviewedCandidateHead": "54009009e436c913276e50c162cd30203d8931c3",
+    "reviewBundleSHA256": "f36ba77cc2c58e75b70748892043f72c4703668df1da4291c36f4e828a723b9f",
+    "archiveIntegrity": "PASS",
+    "internalChecksums": "118/118 PASS",
+    "evidence": "docs/pebblelab/GATE_E_BLOCKER_04_COMPOSED_ASSET_COMMITMENT_AUTHORITY.md",
+    "correction": "oneDerivedExactAssetCommitmentProjectionComposesCanonicalLiveBarterContractAndMarketState",
+    "sameLogicalOperationContinuation": "passed",
+    "incompatibleCrossSystemReuse": "failClosedBeforePhysicalMutation",
+    "terminalStateReleasesCurrentCommitmentAuthority": "passed",
+    "physicalAuthorityRemainsIndependent": true,
+    "currencyRequiredForGateE": false,
+    "focusedBlocker04Passed": 28,
+    "focusedBlocker04Failed": 0,
+    "owningRegressionsPassed": 305,
+    "owningRegressionsFailed": 0,
+    "priorFocusedRegressions": {
+      "blocker01": "27/27 PASS",
+      "blocker02": "33/33 PASS",
+      "blocker03": "25/25 PASS"
+    },
+    "repositoryStepsPassed": 35,
+    "repositoryStepsTotal": 35,
+    "repositoryChecksPassed": 4015,
+    "repositoryChecksFailed": 0,
+    "freshRuntimeProof": {
+      "status": "passed",
+      "freshProcesses": 4,
+      "capturesInspected": 13
+    },
+    "auxiliaryRuntimeProofs": {
+      "status": "passed",
+      "freshProcesses": 8,
+      "captures": 33
+    },
+    "checkpointSchema": 34,
+    "replaySchema": 34,
+    "observerSchema": 11,
+    "physicalLoss": 0,
+    "physicalDuplication": 0,
+    "syntheticMaterial": 0,
+    "duplicateLiveCommitments": 0,
+    "duplicateDeposits": 0,
+    "duplicateReservations": 0,
+    "duplicateReceipts": 0,
+    "duplicateSettlements": 0,
+    "observerMutationCount": 0,
+    "unexpectedRuntimeErrors": 0,
+    "cleanup": "exact",
+    "goldenRegenerationAttempted": false,
+    "gateEStatus": "plannedNotAcquired",
+    "civ38Status": "optionalNotStarted",
+    "evaluation05Status": "notStarted",
+    "nextAuthorizedActionAfterManualPublicationAndIndependentRemoteSHAVerification": "NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-05"
+  },
   "publishedPostGateHardening": [
     {
       "id": "POST-GATE-B-SAFE-BOOTSTRAP",
@@ -1873,9 +1949,29 @@
         "gateAcquired": false
       },
       "evaluation04": {
+        "status": "evaluatedFailNotAcquired",
+        "evaluatedProductBaseline": "e8bc2fc8add491c324f15478fcd1b82d77566d57",
+        "evidenceHead": "07ded1e583b62137b5e8b6cc32d8a61ead73cc53",
+        "verdict": "failProductCorrectionRequired",
+        "historicalEvidenceImmutable": true,
+        "reviewBundleSHA256": "d51df031d8cf930316ad0a24f1c21daa2f773cdec576599d3549139cfce7559b"
+      },
+      "blocker04ComposedAssetCommitmentAuthority": {
+        "status": "fixedPublished",
+        "productCorrectionCommit": "0318133fe95949c441974871f2581f38c43c6128",
+        "reviewedCandidateHead": "54009009e436c913276e50c162cd30203d8931c3",
+        "seniorReview": "approved",
+        "reviewBundleSHA256": "f36ba77cc2c58e75b70748892043f72c4703668df1da4291c36f4e828a723b9f",
+        "archiveIntegrity": "PASS",
+        "internalChecksums": "118/118 PASS",
+        "evidence": "docs/pebblelab/GATE_E_BLOCKER_04_COMPOSED_ASSET_COMMITMENT_AUTHORITY.md",
+        "publicationVerified": false,
+        "gateAcquired": false
+      },
+      "evaluation05": {
         "status": "notStarted",
         "nextAuthorizedAction": true,
-        "requiresBlocker03RemotePublicationVerification": true
+        "requiresBlocker04ManualPublicationAndIndependentRemoteSHAVerification": true
       }
     },
     "F": {

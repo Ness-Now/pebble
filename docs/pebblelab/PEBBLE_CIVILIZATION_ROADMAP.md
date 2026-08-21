@@ -138,7 +138,7 @@ post-Gate-B safe-bootstrap hardening: PUBLISHED
 active CIV phase: null
 completed and published through: CIV-37
 next eligible phase: null
-next authorized action after remote publication verification: NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-04
+next authorized action after manual publication and independent remote SHA verification: NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-05
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
@@ -175,7 +175,9 @@ Gate E Evaluation 02: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 Gate E Blocker 02: FIXED AND PUBLISHED
 Gate E Evaluation 03: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 Gate E Blocker 03: FIXED AND PUBLISHED
-Gate E Evaluation 04: NOT_STARTED — NEXT AUTHORIZED ACTION AFTER REMOTE PUBLICATION VERIFICATION
+Gate E Evaluation 04: FAIL — HISTORICAL IMMUTABLE EVIDENCE
+Gate E Blocker 04: FIXED AND PUBLISHED
+Gate E Evaluation 05: NOT_STARTED
 V4-GATE-E-v1: PLANNED — NOT ACQUIRED
 ```
 
@@ -504,11 +506,11 @@ remains historical FAIL evidence; its targeted Blocker 10 correction is a
 **BLOCKER_FIX_PUBLISHED**. Independent Evaluation 11 is the first accepted
 whole-Gate PASS and is **SENIOR REVIEW APPROVED**. `CIV-34` through `CIV-37`
 are **COMPLETE AND PUBLISHED**. `CIV-38` is **OPTIONAL — NOT STARTED** and Gate
-E remains **PLANNED — NOT ACQUIRED**. Evaluations 01 through 03 remain
-historical immutable FAIL evidence and Blockers 01 through 03 are fixed and
-published. Evaluation 04 remains not started. After Blocker 03 manual
+E remains **PLANNED — NOT ACQUIRED**. Evaluations 01 through 04 remain
+historical immutable FAIL evidence and Blockers 01 through 04 are fixed and
+published. Evaluation 05 remains not started. Only after Blocker 04 manual
 publication and independent remote SHA verification, the next authorized
-action is `NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-04`.
+action is `NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-05`.
 
 | Phase | Requirement | Outcome |
 | --- | --- | --- |
@@ -846,11 +848,11 @@ recorded in
 [`GATE_D_EVALUATION_11_REPORT.md`](GATE_D_EVALUATION_11_REPORT.md). Senior
 review approved it, so Gate D remains acquired and published. `CIV-34` through
 `CIV-37` are complete and published. CIV-38 is optional and not started; Gate E
-remains planned and not acquired. Evaluations 01 through 03 remain historical
-immutable FAIL evidence and Blockers 01 through 03 are fixed and published.
-Evaluation 04 remains not started. After Blocker 03 manual publication and
+remains planned and not acquired. Evaluations 01 through 04 remain historical
+immutable FAIL evidence and Blockers 01 through 04 are fixed and published.
+Evaluation 05 remains not started. Only after Blocker 04 manual publication and
 independent remote SHA verification, the next authorized action is
-`NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-04`.
+`NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-05`.
 
 ## Wave 3 — Local material economy
 
@@ -1153,8 +1155,11 @@ and published. Evaluation 02 also remains immutable historical FAIL evidence;
 its evolved-production-identity Blocker 02 correction is fixed and published.
 Evaluation 03 remains immutable historical FAIL evidence; its terminal-market-
 reservation-authority Blocker 03 correction is fixed and published. Evaluation
-04 remains not started and becomes the next authorized composition evaluation
-only after manual publication and independent remote SHA verification.
+04 remains immutable historical FAIL evidence; its composed-asset-commitment-
+authority Blocker 04 correction is fixed and published after senior-review
+approval. Evaluation 05 remains not started and becomes the next authorized
+composition evaluation only after manual publication and independent remote
+SHA verification. Currency remains outside the Gate E dependency.
 
 ### `V4-GATE-E-v1` — Local Material Economy
 
@@ -1201,8 +1206,32 @@ Blocker 03 internal checksums: 87/87 PASS
 Blocker 03 ZIP integrity: PASS
 Blocker 03 senior review: APPROVED
 Blocker 03 status: FIXED AND PUBLISHED
-Evaluation 04: NOT_STARTED
-next authorized action after remote publication verification: NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-04
+Evaluation 04 baseline: e8bc2fc8add491c324f15478fcd1b82d77566d57
+Evaluation 04 evidence HEAD: 07ded1e583b62137b5e8b6cc32d8a61ead73cc53
+Evaluation 04 verdict: FAIL — HISTORICAL IMMUTABLE EVIDENCE
+Evaluation 04 bundle SHA-256: d51df031d8cf930316ad0a24f1c21daa2f773cdec576599d3549139cfce7559b
+Blocker 04 title: Composed Asset Commitment Authority
+Blocker 04 affected baseline: e8bc2fc8add491c324f15478fcd1b82d77566d57
+Blocker 04 product correction: 0318133fe95949c441974871f2581f38c43c6128
+Blocker 04 reviewed candidate HEAD: 54009009e436c913276e50c162cd30203d8931c3
+Blocker 04 review bundle SHA-256: f36ba77cc2c58e75b70748892043f72c4703668df1da4291c36f4e828a723b9f
+Blocker 04 archive integrity: PASS
+Blocker 04 internal checksums: 118/118 PASS
+Blocker 04 focused verification: 28/28 PASS
+Blocker 04 owning regressions: 305/305 PASS
+Blocker 04 prior focused regressions: 27/27, 33/33, 25/25 PASS
+Blocker 04 repository verification: 35/35 steps, 4015/4015 assertions
+Blocker 04 fresh runtime proof: 4 processes, 13 inspected captures
+Blocker 04 auxiliary runtime proofs: 8 processes, 33 captures
+Blocker 04 checkpoint schema: 34
+Blocker 04 Observer schema: 11
+Blocker 04 conservation and duplicate counters: all zero
+Blocker 04 cleanup: exact
+Blocker 04 goldens regenerated: NO
+Blocker 04 senior review: APPROVED
+Blocker 04 status: FIXED AND PUBLISHED
+Evaluation 05: NOT_STARTED
+next authorized action after manual publication and independent remote SHA verification: NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-05
 ```
 
 Blocker 01 binds exact production origin to the exact rights-tracked asset and
@@ -1229,6 +1258,15 @@ longer blocks legitimate ordinary reuse. Checkpoint/replay schema 34 and
 Observer schema 11 are unchanged. Evaluation 03 remains FAIL and the correction
 does not acquire Gate E. Full correction evidence is recorded in
 [`GATE_E_BLOCKER_03_TERMINAL_MARKET_RESERVATION_AUTHORITY.md`](GATE_E_BLOCKER_03_TERMINAL_MARKET_RESERVATION_AUTHORITY.md).
+
+Blocker 04 derives a single deterministic exact-asset commitment projection
+from canonical barter, contract and market live state. Same-operation
+continuation remains valid, incompatible cross-system reuse fails before
+physical mutation, and terminal state releases current authority without
+erasing history. Exact current Material Rights and Pebble physical gateways
+remain independently mandatory. Evaluation 04 remains FAIL and this correction
+does not acquire Gate E. Full correction evidence is recorded in
+[`GATE_E_BLOCKER_04_COMPOSED_ASSET_COMMITMENT_AUTHORITY.md`](GATE_E_BLOCKER_04_COMPOSED_ASSET_COMMITMENT_AUTHORITY.md).
 
 The gate proves production, tools, exchange, obligations, physical markets,
 conservation, logistics and multiple economic trajectories. Currency is not a
@@ -1414,7 +1452,7 @@ keeps incarnation physical and produces verifiable long-duration history.
 | `V4-GATE-B-v1` | acquired | `CIV-25`; bounded embodied autonomy contract |
 | `V4-GATE-C-v1` | acquired | `CIV-26`–`CIV-28` |
 | `V4-GATE-D-v1` | acquired and published | `CIV-29`–`CIV-33`, renewable subsistence milestone and Blockers 01–10 published; Evaluations 01–10 remain historical FAIL evidence; Evaluation 11 PASS is senior-review approved |
-| `V4-GATE-E-v1` | planned, not acquired | `CIV-34`–`CIV-37`; `CIV-38` optional; Evaluations 01–03 historical FAIL; Blockers 01–03 fixed/published; Evaluation 04 not started |
+| `V4-GATE-E-v1` | planned, not acquired | `CIV-34`–`CIV-37`; `CIV-38` optional and currency not required; Evaluations 01–04 historical FAIL; Blockers 01–04 fixed/published; Evaluation 05 not started |
 | `V4-GATE-F-v1` | planned | `CIV-39`; `CIV-40` optional |
 | `V4-GATE-G-v1` | planned | `CIV-41`–`CIV-47` |
 | `V4-GATE-H-v1` | planned | `CIV-48`–`CIV-52` |

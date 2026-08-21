@@ -2,25 +2,29 @@
 
 ## Status
 
-`V4-GATE-E-v1 Blocker 04: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE — NOT PUBLISHED`
+`V4-GATE-E-v1 Blocker 04: FIXED AND PUBLISHED`
 
-This record documents the local product-correction candidate for the decisive
-failure found by independent Gate E Evaluation 04. It does not rewrite that
-evaluation, acquire Gate E, begin Evaluation 05, or begin CIV-38.
+This record publishes the senior-review-approved product correction for the
+decisive failure found by independent Gate E Evaluation 04. It does not rewrite
+that evaluation, acquire Gate E, begin Evaluation 05, or begin CIV-38. Remote
+publication verification is not claimed by this containing commit.
 
 - Gate E Evaluations 01 through 04: `FAIL — HISTORICAL IMMUTABLE EVIDENCE`
-- Gate E Blockers 01 through 03: `FIXED AND PUBLISHED`
-- Gate E Blocker 04: `IMPLEMENTED_LOCAL_REVIEW_CANDIDATE — NOT PUBLISHED`
+- Gate E Blockers 01 through 04: `FIXED AND PUBLISHED`
 - Gate E: `PLANNED — NOT ACQUIRED`
 - Gate E Evaluation 05: `NOT_STARTED`
 - CIV-38: `OPTIONAL — NOT STARTED`
 
-## Candidate identity
+## Publication record
 
 ```text
 affected published baseline: e8bc2fc8add491c324f15478fcd1b82d77566d57
 product correction commit: 0318133fe95949c441974871f2581f38c43c6128
-reviewed candidate HEAD: supplied by the external review archive
+reviewed candidate HEAD: 54009009e436c913276e50c162cd30203d8931c3
+review bundle SHA-256: f36ba77cc2c58e75b70748892043f72c4703668df1da4291c36f4e828a723b9f
+archive integrity: PASS
+internal checksums: 118/118 PASS
+senior review: APPROVED
 publication verified: NO
 ```
 
@@ -30,6 +34,7 @@ publication verified: NO
 evaluated baseline: e8bc2fc8add491c324f15478fcd1b82d77566d57
 falsifier commit: 54bb38c174d5f3241763926a7bda6b900d7dbc8a
 evidence HEAD: 07ded1e583b62137b5e8b6cc32d8a61ead73cc53
+review bundle SHA-256: d51df031d8cf930316ad0a24f1c21daa2f773cdec576599d3549139cfce7559b
 verdict: FAIL — PRODUCT CORRECTION REQUIRED
 historical status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 ```
@@ -100,6 +105,9 @@ social outcome.
 No durable shape changed. Checkpoint/replay remains schema `34`; Observer
 remains schema `11` and read-only.
 
+Currency remains outside the Gate E dependency. `CIV-38` is an optional
+capability, not a prerequisite for this correction or a future evaluation.
+
 ## Focused and regression validation
 
 The dedicated `gate-e-blocker-04` suite passes `28/28`. It proves:
@@ -122,6 +130,9 @@ checkpoint-replay 49, persistence-reconciliation 19, Observer 20 and
 autonomous-civilization 36. Published Blocker 01, 02 and 03 focused checks pass
 `27/27`, `33/33` and `25/25`. The canonical repository gate passes all `35/35`
 steps with `4015/4015` assertions. Goldens were not regenerated.
+
+Senior review accepted the complete archive with `118/118` internal checksums
+and passing archive integrity.
 
 ## Fresh four-process live proof
 
@@ -181,8 +192,9 @@ all three probes, and no residual live process remains.
 - Evaluation 04 is not rewritten.
 - Evaluation 05 is not started.
 - CIV-38 remains optional and not started.
-- This candidate does not claim senior-review approval, push, publication or
-  remote publication verification.
+- This containing documentation commit does not claim push, remote publication
+  or remote publication verification.
 
-The next authorized action is senior review of this Blocker 04 correction
-candidate.
+Only after manual publication and independent remote SHA verification, the
+next authorized action is
+`NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-05`. Evaluation 05 remains unstarted.
