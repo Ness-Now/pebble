@@ -1,0 +1,114 @@
+{
+  "task": "V4-GATE-E-v1 — Local Material Economy",
+  "evaluation": "Gate E Evaluation 05",
+  "verdict": "LOCAL PASS CANDIDATE — SENIOR REVIEW REQUIRED",
+  "repository": "Ness-Now/pebble",
+  "canonicalBranch": "lab/pebblelab-v1",
+  "evaluatedBaseline": "9d841cc28dd4a43f70aff6265ead2e25fa6f160c",
+  "canonicalRemoteShaVerified": "9d841cc28dd4a43f70aff6265ead2e25fa6f160c",
+  "evaluationBranch": "codex/gate-e-evaluation-05",
+  "finalEvidenceHead": null,
+  "finalEvidenceHeadResolution": "Recorded dynamically in GIT_STATE.txt and REPORT.json in the review archive because a commit cannot contain its own SHA.",
+  "historicalEvaluations": {
+    "evaluation01": {
+      "evidenceHead": "e75ab82981169baf1cdc67d9454e6d569e989167",
+      "ancestor": false,
+      "status": "FAIL — HISTORICAL IMMUTABLE EVIDENCE"
+    },
+    "evaluation02": {
+      "evidenceHead": "2f95826f474c9f2a366f4b06df90a8643beb7a98",
+      "ancestor": false,
+      "status": "FAIL — HISTORICAL IMMUTABLE EVIDENCE"
+    },
+    "evaluation03": {
+      "evidenceHead": "56af9648da0155cfba25588320d2070d211a1cd7",
+      "ancestor": false,
+      "status": "FAIL — HISTORICAL IMMUTABLE EVIDENCE"
+    },
+    "evaluation04": {
+      "evidenceHead": "07ded1e583b62137b5e8b6cc32d8a61ead73cc53",
+      "ancestor": false,
+      "status": "FAIL — HISTORICAL IMMUTABLE EVIDENCE"
+    }
+  },
+  "blockers": {
+    "blocker01": "FIXED + PUBLISHED + REMOTE VERIFIED",
+    "blocker02": "FIXED + PUBLISHED + REMOTE VERIFIED",
+    "blocker03": "FIXED + PUBLISHED + REMOTE VERIFIED",
+    "blocker04": "FIXED + PUBLISHED + REMOTE VERIFIED"
+  },
+  "programState": {
+    "gateE": "PLANNED — NOT ACQUIRED",
+    "civ38": "OPTIONAL — NOT STARTED",
+    "currencyDependency": false
+  },
+  "productCorrectionMade": false,
+  "goldensRegenerated": false,
+  "push": "NOT_ATTEMPTED",
+  "schemas": {
+    "checkpoint": 34,
+    "replay": 34,
+    "observer": 11
+  },
+  "tests": {
+    "evaluation05Focused": {"passed": 21, "failed": 0},
+    "owning": {
+      "production": {"passed": 36, "failed": 0},
+      "barter": {"passed": 56, "failed": 0},
+      "contracts": {"passed": 32, "failed": 0},
+      "markets": {"passed": 31, "failed": 0},
+      "materialRights": {"passed": 23, "failed": 0},
+      "candidatePhysicalAtomicity": {"passed": 3, "failed": 0},
+      "checkpointReplay": {"passed": 49, "failed": 0},
+      "persistenceReconciliation": {"passed": 19, "failed": 0},
+      "observer": {"passed": 20, "failed": 0},
+      "autonomousCivilization": {"passed": 36, "failed": 0},
+      "total": {"passed": 305, "failed": 0}
+    },
+    "blocker01Focused": {"passed": 27, "failed": 0},
+    "blocker02Focused": {"passed": 33, "failed": 0},
+    "blocker03Focused": {"passed": 25, "failed": 0},
+    "blocker04Focused": {"passed": 28, "failed": 0},
+    "allEvaluationFocused": {"passed": 439, "failed": 0},
+    "repositoryVerification": {
+      "stepsPassed": 35,
+      "stepsFailed": 0,
+      "assertionsPassed": 4015,
+      "assertionsFailed": 0
+    }
+  },
+  "live": {
+    "evaluation05DecisiveProcesses": 14,
+    "evaluation05DecisiveCaptures": 43,
+    "auxiliaryProcesses": 9,
+    "auxiliaryCaptures": 38,
+    "auxiliaryPassingBlockerProcesses": 8,
+    "auxiliaryPassingBlockerCaptures": 33,
+    "excludedFailClosedDiagnosticProcesses": 1,
+    "excludedFailClosedDiagnosticCaptures": 5,
+    "allCapturesInspected": 81,
+    "blocker01": {"focused": "27/27", "live": "PASS", "processes": 2, "captures": 9},
+    "blocker02": {"focused": "33/33", "live": "PASS", "processes": 2, "captures": 8},
+    "blocker03": {"focused": "25/25", "live": "PASS", "processes": 4, "captures": 16},
+    "blocker04": {"focused": "28/28", "live": "PASS", "processes": 4, "captures": 13}
+  },
+  "counters": {
+    "physicalLoss": 0,
+    "physicalDuplication": 0,
+    "syntheticMaterial": 0,
+    "duplicateLiveCommitments": 0,
+    "duplicateDeposits": 0,
+    "duplicateReservations": 0,
+    "duplicateReceipts": 0,
+    "duplicateSettlements": 0,
+    "observerMutations": 0,
+    "unexpectedRuntimeErrors": 0
+  },
+  "cleanup": "Exact in all decisive and dedicated passing campaigns; ordinary market retained a legitimate post-terminal reentry deposit, with exact supported withdrawal and cleanup proved by the dedicated Blocker 03 campaign.",
+  "wrapperDiagnostics": {
+    "barter": "Literal output-text drift; raw trace proves exact produced tool use and clean restart.",
+    "contracts": "Literal protected-policy prefix drift; raw trace proves rollback, retry and verified consideration.",
+    "markets": "Terminal-empty fixture expectation was invalidated by legitimate ordinary post-terminal reentry.",
+    "staleCheckpointExtension": "Excluded diagnostic correctly refused a stale checkpoint whose checkpoint-bound escrow was absent; no state was published."
+  }
+}

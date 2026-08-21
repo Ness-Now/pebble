@@ -1,7 +1,7 @@
 import Foundation
 import PebbleAgents
 
-private func b04Agent(_ id: String, x: Int) -> AgentSessionAgentState {
+func b04Agent(_ id: String, x: Int) -> AgentSessionAgentState {
     let position = AgentPosition(x: x, y: 64, z: 0)
     return AgentSessionAgentState(
         id: id, state: "idle", position: position,
@@ -20,19 +20,19 @@ private func b04Agent(_ id: String, x: Int) -> AgentSessionAgentState {
     )
 }
 
-private func b04Identity(_ item: String) -> AgentMaterialIdentitySnapshot {
+func b04Identity(_ item: String) -> AgentMaterialIdentitySnapshot {
     AgentMaterialIdentitySnapshot(
         itemKey: item, damage: 0, enchantments: [], label: nil,
         canonicalDataJSON: "{}"
     )
 }
 
-private func b04Stack(_ item: String, _ count: Int)
+func b04Stack(_ item: String, _ count: Int)
     -> AgentMaterialStackSnapshot {
     AgentMaterialStackSnapshot(identity: b04Identity(item), count: count)
 }
 
-private func b04Observation(
+func b04Observation(
     holder: AgentMaterialPhysicalHolder,
     stack: AgentMaterialStackSnapshot,
     fingerprint: String,
@@ -46,7 +46,7 @@ private func b04Observation(
     )
 }
 
-private func b04Register(
+func b04Register(
     assetID: AgentMaterialAssetID,
     owner: AgentID,
     stack: AgentMaterialStackSnapshot,
@@ -76,7 +76,7 @@ private func b04Register(
     ))
 }
 
-private struct B04Fixture {
+struct B04Fixture {
     var session: AgentSimulationSession
     let seller: AgentID
     let buyer: AgentID
@@ -103,7 +103,7 @@ private struct B04Fixture {
     let merchantBread3Reason: AgentBarterValueReason
 }
 
-private func b04Fixture(_ simulationID: String) -> B04Fixture {
+func b04Fixture(_ simulationID: String) -> B04Fixture {
     let seller = AgentID(rawValue: "seller")!
     let buyer = AgentID(rawValue: "buyer")!
     let merchant = AgentID(rawValue: "merchant")!
@@ -215,7 +215,7 @@ private func b04Fixture(_ simulationID: String) -> B04Fixture {
     )
 }
 
-private func b04ContractOpportunity(
+func b04ContractOpportunity(
     _ id: String,
     consideration: AgentBarterLeg,
     promisor: AgentID,
@@ -237,7 +237,7 @@ private func b04ContractOpportunity(
     )
 }
 
-private func b04CreateContract(
+func b04CreateContract(
     _ opportunity: AgentContractOpportunityObservation,
     proposalID: AgentPromiseProposalID,
     session: inout AgentSimulationSession
@@ -249,7 +249,7 @@ private func b04CreateContract(
     )
 }
 
-private func b04BarterOpportunity(
+func b04BarterOpportunity(
     _ id: String,
     offered: AgentBarterLeg,
     requested: AgentBarterLeg,
@@ -270,7 +270,7 @@ private func b04BarterOpportunity(
     )
 }
 
-private func b04CreateBarter(
+func b04CreateBarter(
     _ opportunity: AgentBarterOpportunityObservation,
     offerID: AgentBarterOfferID,
     session: inout AgentSimulationSession
@@ -282,7 +282,7 @@ private func b04CreateBarter(
     )
 }
 
-private func b04MarketOpportunity(
+func b04MarketOpportunity(
     _ id: String,
     fixture: B04Fixture,
     seller: AgentID,
@@ -307,7 +307,7 @@ private func b04MarketOpportunity(
     )
 }
 
-private func b04ApplyDeposit(
+func b04ApplyDeposit(
     opportunity: AgentMarketDepositOpportunity,
     depositID: AgentMarketDepositID,
     fixture: B04Fixture,
@@ -332,7 +332,7 @@ private func b04ApplyDeposit(
     ))
 }
 
-private func b04DepositAndListLog(
+func b04DepositAndListLog(
     fixture: B04Fixture,
     session: inout AgentSimulationSession
 ) -> AgentMarketListing {
@@ -357,7 +357,7 @@ private func b04DepositAndListLog(
     }!
 }
 
-private func b04BuyerProposal(
+func b04BuyerProposal(
     _ id: String,
     listing: AgentMarketListing,
     buyer: AgentID,
@@ -386,7 +386,7 @@ private func b04BuyerProposal(
     )
 }
 
-private func b04Locality(
+func b04Locality(
     fixture: B04Fixture,
     proposal: AgentMarketBuyerProposal,
     session: AgentSimulationSession
@@ -413,7 +413,7 @@ private func b04Locality(
     )
 }
 
-private func b04SuccessfulBarter(
+func b04SuccessfulBarter(
     offerID: AgentBarterOfferID,
     opportunity: AgentBarterOpportunityObservation,
     session: AgentSimulationSession
