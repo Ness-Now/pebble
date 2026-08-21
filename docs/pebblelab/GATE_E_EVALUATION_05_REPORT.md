@@ -4,12 +4,12 @@
 
 `LOCAL PASS CANDIDATE — SENIOR REVIEW REQUIRED`
 
-This evaluation does not acquire Gate E. It records a fresh, independent local
-evaluation of `V4-GATE-E-v1 — Local Material Economy` at the exact published
+This evaluation does not acquire Gate E. It records fresh, independent local
+evidence for `V4-GATE-E-v1 — Local Material Economy` at the exact published
 baseline `9d841cc28dd4a43f70aff6265ead2e25fa6f160c`.
 
-No product correction was made, CIV-38 was not started, currency was not made a
-dependency, goldens were not regenerated, and no push was attempted.
+No product correction was made. CIV-38 was not started, currency was not made
+a dependency, goldens were not regenerated, and no push was attempted.
 
 ## Repository and historical authority
 
@@ -25,92 +25,98 @@ dependency, goldens were not regenerated, and no push was attempted.
 - Evaluation 03 evidence ancestor: NO
 - Evaluation 04 evidence ancestor: NO
 
-The four earlier evaluations retain their immutable historical result:
-`FAIL — HISTORICAL IMMUTABLE EVIDENCE`. Blockers 01 through 04 remain
-`FIXED + PUBLISHED + REMOTE VERIFIED`. Gate E remains
+Evaluations 01–04 retain `FAIL — HISTORICAL IMMUTABLE EVIDENCE`.
+Blockers 01–04 remain `FIXED + PUBLISHED + REMOTE VERIFIED`. Gate E remains
 `PLANNED — NOT ACQUIRED`. CIV-38 remains `OPTIONAL — NOT STARTED`, and currency
-remains outside the Gate E dependency set.
+is not a Gate E dependency.
 
 ## Evaluation design
 
-Evaluation 05 was selected from implementation inspection rather than from a
-mechanical replay of Blocker 04. A new same-session selector follows one exact
+Evaluation 05 was selected from implementation inspection rather than a
+mechanical replay of Blocker 04. Its same-session selector follows one exact
 durable pickaxe through production, barter, physical tool evolution, contract
 consideration, return to a former owner, market custody, settlement, and a
 second return to a former holder. It composes this path with exact
 quantity-bearing needs, future material production, participant availability,
-local price history, terminal histories, schema-34 restart and schema-11
+local price history, terminal histories, schema-34 restart, and schema-11
 read-only observation.
 
-The focused composed trajectory checks that:
+The 21/21 focused assertions distinguish immutable production origin, durable
+asset identity, evolved material identity, live commitment, Material Rights,
+and current physical authority. They also prove live exact-asset exclusion,
+same-operation continuation, terminal release, future-type contract behavior,
+verified consideration and fulfillment, precise need accounting, participant
+availability, price-history scope, restart/replay, bounded retained state,
+conservation, and Observer immutability.
 
-1. immutable production origin, durable asset identity, evolved current
-   material identity, current economic commitment, current Material Rights and
-   current physical authority remain separate;
-2. live barter commits both exact legs under one operation, verified exchange
-   moves ownership, and terminal barter history releases current authority;
-3. an accepted contract commits its concrete consideration asset but does not
-   pre-reserve an arbitrary exact asset for a promised future material type;
-4. an unrelated market operation cannot use contract-bound consideration, the
-   owning contract can continue after restart, and terminal contract history
-   does not block later reuse;
-5. concrete consideration and fulfillment require current exact custody and
-   eligibility, and duplicate fulfillment cannot duplicate state;
-6. unavailable participants block market decisions or settlement without
-   converting old records into current authority;
-7. verified receipts fulfill only matching quantity-bearing needs, including
-   an insufficient market receipt that leaves the remaining need active;
-8. price history is created only after verified settlement, remains scoped to
-   the local oriented commodity pair, and supplies no ownership, custody,
-   locality or settlement authority;
-9. schema-34 restart derives the same live commitment projection, preserves
-   terminal release and retained economic evidence, creates no new physical
-   effect, and keeps bounded state within configured limits; and
-10. Observer schema 11 leaves tick, causal sequence and digest unchanged.
+## Corrected live verification boundary
 
-The composed selector passed 21/21 assertions.
+The evaluation-only live verifier now checks current semantic evidence instead
+of obsolete output phrases. Barter requires the same exact produced stone
+pickaxe, `damage=0>1`, a real downstream block mutation,
+`dropsAcquired>=1`, and `downstreamUse=PASS`. Contracts require the current
+protected post-mutation policy fields, `escapeCandidate=1`,
+`autonomousBlocked=0`, candidate physical rollback, unchanged published
+session, clean retry, and verified physical publication.
 
-## Fresh runtime campaigns
+The ordinary market proof now treats legitimate post-terminal re-entry as a
+normal lifecycle. After terminal authority releases, ordinary cognition
+deposits and lists a new exact asset. The campaign saves that live escrow with
+its schema-34 checkpoint, loads it in a fresh process, verifies exact custody,
+then reaches the supported expiry/withdrawal path and exact cleanup. No stale
+checkpoint lacking its required physical escrow is used as passing evidence.
 
-Five new isolated primary session roots supplied 14 decisive fresh processes
-and 43 manually inspected captures:
+Every final live harness claimed below exited zero and explicitly reported
+`PASS`. No decisive command ended with a missing proof, missing trace, cleanup
+failure, or harness error.
 
-- production: 2 processes, 6 captures, checkpoint schema 31;
-- barter: 2 processes, 6 captures, checkpoint schema 32;
-- contracts: 2 processes, 5 captures, checkpoint schema 33;
-- markets: 4 processes, 13 decisive captures, checkpoint schema 34; and
-- Blocker 04 whole-system commitment composition: 4 processes, 13 captures,
-  checkpoint schema 34 and Observer schema 11.
+## Fresh decisive live campaigns
 
-Fresh auxiliary Blocker 01 through 03 campaigns supplied another 8 passing
-processes and 33 inspected captures. Blocker 04 is already included in the
-primary count. One additional excluded diagnostic process produced 5 inspected
-captures while attempting to load a stale checkpoint after a later unsaved
-market deposit. The load refused because checkpoint-bound escrow was absent,
-physical markets did not initialize, and no economic or physical mutation was
-published. This is retained as correct fail-closed diagnostic evidence, not
-counted as a decisive passing campaign and not used to inflate the verdict.
+Five new isolated roots supplied 17 decisive processes and 54 inspected
+captures:
 
-Three inherited live wrappers contain assertions whose literal text predates
-the published runtime output:
+| Campaign | Harness | Processes | Captures | Result |
+|---|---|---:|---:|---|
+| production | live production | 2 | 6 | PASS |
+| barter | live barter | 2 | 6 | PASS |
+| contracts | live contracts | 4 | 12 | PASS |
+| markets | live markets | 5 | 17 | PASS — exact cleanup |
+| Blocker 04 whole-system composition | live markets Blocker 04 | 4 | 13 | PASS |
+| **Total** |  | **17** | **54** | **PASS** |
 
-- barter expected an older tool-use phrase, while the trace recorded the exact
-  produced tool, `damage=0>1`, `dropsAcquired=1`, and `downstreamUse=PASS`;
-- contracts expected an older post-mutation prefix, while the trace recorded
-  the protected policy, verified rollback, clean retry and verified
-  consideration; and
-- the ordinary market wrapper assumed the terminal stall remained empty, while
-  normal cognition legitimately deposited a new distinct asset after terminal
-  history release.
+Production proves canonical production, adversarial rollback, exact custody
+restart, produced-tool use, and cleanup. Barter proves current local discovery,
+consent, sustainable offers, atomic rollback/retry, exact produced-tool use
+after restart, and cleanup. Contracts prove capacity prevalidation, current
+asset authority, both rollback boundaries, restart durability, exact-once
+fulfillment, and cleanup. Markets prove deposit, listing, buyer proposal,
+seller decision, settlement rollback/retry, price discovery, terminal release,
+ordinary re-entry, live-listing restart, withdrawal, and exact cleanup.
+Blocker 04 proves composed exclusion, same-operation continuation, terminal
+release, restart, conservation, and cleanup.
 
-These are harness-text/fixture-expectation mismatches, not accepted silent
-failures. The underlying raw traces were inspected, the dedicated current
-Blocker 01 through 04 live regressions all passed, and no verifier or product
-source was changed to conceal the mismatches. The dedicated Blocker 03 campaign
-saved the post-reentry state before restart and then proved exact withdrawal
-and cleanup.
+## Auxiliary and excluded evidence
 
-## Validation results
+Fresh successful Blocker 01–03 campaigns supplied 8 auxiliary processes and 33
+inspected captures:
+
+| Campaign | Processes | Captures | Result |
+|---|---:|---:|---|
+| Blocker 01 live | 2 | 9 | PASS |
+| Blocker 02 live | 2 | 8 | PASS |
+| Blocker 03 live | 4 | 16 | PASS |
+| **Total** | **8** | **33** | **PASS** |
+
+The prior stale-checkpoint experiment was not rerun or retained in the
+corrected archive: excluded diagnostic processes 0, captures 0. It is not
+counted as decisive, auxiliary, or passing evidence. The corrected campaign
+only restarts checkpoints saved with their required physical escrow.
+
+All 87 final captures (54 decisive plus 33 auxiliary) were inspected. Red
+runtime fault text appears only in intentional fault-injection captures whose
+corresponding traces prove rollback and clean retry.
+
+## Regression verification
 
 Fresh Evaluation 05 focused selector:
 
@@ -132,7 +138,7 @@ Owning Gate E selectors:
 | autonomous-civilization | 36 | 0 |
 | **Total** | **305** | **0** |
 
-Dedicated Blocker focused/live results:
+Dedicated Blocker results:
 
 | Blocker | Focused | Live |
 |---|---:|---|
@@ -141,56 +147,35 @@ Dedicated Blocker focused/live results:
 | 03 | 25/25 | PASS — 4 processes, 16 captures |
 | 04 | 28/28 | PASS — 4 processes, 13 captures |
 
-The Evaluation 05 selector, owning selectors and Blocker selectors total
+The Evaluation 05 selector, owning selectors, and Blocker selectors total
 439/439 focused assertions. `scripts/verify-pebblelab.sh` separately passed all
-35 repository verification steps and 4015/4015 assertions. Its golden policy
-remained read-only and refused `PEBBLE_REGOLD`.
+35 verification steps and 4015/4015 assertions. Its golden policy remained
+read-only and refused `PEBBLE_REGOLD`.
 
 ## Strongest evidence
 
-The strongest result is the agreement between the 21-assertion composed
-same-session trajectory and the four-process Blocker 04 live campaign. The
-former carries an exact produced and evolved asset through every economic role
-while independently checking origin, identity, rights, ownership, needs,
-commitment projection, participant status, price scope, restart and Observer
-immutability. The latter demonstrates the decisive physical boundary: an exact
-asset committed to one live operation cannot be acquired by an incompatible
-operation, the owning operation can continue after restart, terminal history
-releases authority, and ordinary reuse subsequently succeeds with exact
-conservation and cleanup.
+The strongest evidence is the agreement among the 21-assertion composed
+trajectory, the four-process Blocker 04 campaign, and the corrected five-
+process ordinary market lifecycle. One exact produced and evolved asset can
+move through legitimate economic roles while current physical custody and live
+commitment remain authoritative. An incompatible operation cannot acquire a
+currently committed exact asset; the owning operation can continue after
+restart; terminal history releases authority; and ordinary reuse can then
+deposit, list, survive restart, withdraw, and clean up without matter or record
+duplication.
 
-The ordinary production, barter, contract and market campaigns plus the fresh
-Blocker 01 through 03 campaigns exercise the surrounding live transaction,
-rollback, retry, physical custody, checkpoint and reconciliation paths. Their
-combined evidence shows no matter loss, duplication, synthetic material,
-duplicate live commitment, deposit, reservation, receipt or settlement,
-Observer mutation, or unexpected runtime error.
+## Architecture and final counters
 
-## Architecture finding
-
-The evaluated behavior preserves the permanent architecture:
-
-- PebbleCore remains physical World truth and persistence;
-- Pebble remains the live sensor, executor, verifier, reconciler and rollback
-  owner;
-- PebbleAgents remains deterministic cognition and bounded civilization state;
-- `AgentSimulationSession` remains the unique civilization aggregate;
-- Material Rights describes identity, provenance and claims but does not
-  replace current physical verification;
-- Observer remains read-only; and
-- historical economic records explain past events but grant no current
-  physical or economic authority.
-
-No second kernel, parallel physical economy or product behavior change was
-introduced by this evaluation. The only source changes are an evaluation-only
-`pebsmoke` selector and access widening of existing `pebsmoke` fixture helpers
-so the new selector can reuse the published test model.
-
-## Final counters and schemas
+PebbleCore remains physical World truth and persistence; Pebble remains the
+live sensor, executor, verifier, reconciler, and rollback owner; PebbleAgents
+remains deterministic cognition and bounded civilization state; and
+`AgentSimulationSession` remains the unique civilization aggregate. Material
+Rights does not replace physical verification, Observer remains read-only, and
+historical economic records grant no current authority.
 
 | Measure | Result |
 |---|---:|
-| checkpoint schema | 34 (whole-Gate current schema) |
+| checkpoint/replay schema | 34 |
 | Observer schema | 11 |
 | physical loss | 0 |
 | physical duplication | 0 |
@@ -203,16 +188,14 @@ so the new selector can reuse the published test model.
 | Observer mutations | 0 |
 | unexpected runtime errors | 0 |
 
-Expected injected transaction faults are retained separately from unexpected
-runtime errors. Each decisive campaign conserved physical state. Exact fixture
-cleanup was demonstrated by the passing production, barter, contract and
-dedicated Blocker campaigns; the ordinary market campaign retained its
-legitimate post-terminal reentry asset, and the dedicated Blocker 03 campaign
-demonstrated its exact supported withdrawal-and-cleanup path.
+Expected injected transaction faults are separate from unexpected runtime
+errors and were followed by verified rollback and clean retry. Every decisive
+and auxiliary campaign demonstrated its required exact cleanup; all process
+roots were isolated.
 
 ## Senior-review boundary
 
-This is local evaluation evidence only. Gate E acquisition requires separate
-senior review, evidence publication and explicit program-state canonization.
-Evaluation 05 therefore returns `LOCAL PASS CANDIDATE — SENIOR REVIEW REQUIRED`
-and makes no claim that Gate E is acquired.
+This is evaluation evidence only. Gate E acquisition requires separate senior
+review, publication, and explicit program-state canonization. Evaluation 05
+therefore returns `LOCAL PASS CANDIDATE — SENIOR REVIEW REQUIRED` and does not
+claim Gate E acquired.

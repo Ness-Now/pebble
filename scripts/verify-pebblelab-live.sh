@@ -216,7 +216,8 @@ if [ "$MODE" = "markets" ]; then
     MARKET_PHASE1_COMMANDS='/gamerule randomTickSpeed 0;/gamerule doMobSpawning false;/gamerule doDaylightCycle false;/gamerule doWeatherCycle false;/time set 1000;/weather clear;/tp 14 68 -18|/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab market setup;/lab market status;/lab overlay compact|/lab step;/lab market status|/lab step;/lab market status;/lab overlay compact|/lab step;/lab market status;/lab market proof;/lab checkpoint save market-open-v34;/lab checkpoint status;/lab causality tail 20;/lab status'
     MARKET_PHASE2_COMMANDS='/tp 14 68 -18;/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab checkpoint load market-open-v34;/lab market status;/lab market proof;/lab overlay compact|/lab step;/lab market status|/lab step;/lab market status;/lab market remote-buyer|/lab market status;/lab market proof;/lab overlay compact|/lab step;/lab market status;/lab market proof;/lab market restore-locality|/lab step;/lab market status;/lab overlay compact|/lab step;/lab market status;/lab overlay compact|/lab step;/lab market status;/lab market proof;/lab checkpoint save market-traded-v34;/lab checkpoint status;/lab causality tail 20;/lab status'
     MARKET_PHASE3_COMMANDS='/tp 14 68 -18;/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab checkpoint load market-traded-v34;/lab market status;/lab market proof;/lab overlay compact|/lab step;/lab market status|/lab step;/lab market status|/lab step;/lab market status|/lab step;/lab market status|/lab step;/lab market status;/lab overlay compact|/lab step;/lab market status|/lab step;/lab market status|/lab step;/lab market status;/lab overlay compact|/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab market status;/lab market proof;/lab checkpoint save market-final-v34;/lab checkpoint status;/lab causality tail 20;/lab status'
-    MARKET_PHASE4_COMMANDS='/tp 14 68 -18;/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab checkpoint load market-final-v34;/lab market status;/lab market proof;/lab overlay compact|/lab step;/lab market status;/lab market proof;/lab market cleanup;/lab status'
+    MARKET_PHASE4_COMMANDS='/tp 14 68 -18;/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab checkpoint load market-final-v34;/lab market status;/lab market proof;/lab overlay compact|/lab step;/lab market status;/lab market proof;/lab overlay compact|/lab step;/lab market status;/lab market proof;/lab checkpoint save market-reentered-open-v34;/lab checkpoint status;/lab overlay compact'
+    MARKET_PHASE5_COMMANDS='/tp 14 68 -18;/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab checkpoint load market-reentered-open-v34;/lab market status;/lab market proof;/lab overlay compact|/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab market status;/lab market proof;/lab checkpoint save market-reentered-final-v34;/lab checkpoint status;/lab overlay compact|/lab market cleanup;/lab status'
     if [ "${PEBBLELAB_GATE_E_BLOCKER_03:-0}" = "1" ]; then
         GATE_E_BLOCKER_03=1
         MARKET_PHASE2_COMMANDS='/tp 14 68 -18;/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab checkpoint load market-open-v34;/lab market status;/lab market proof;/lab overlay compact|/lab step;/lab market status|/lab step;/lab market status;/lab market blocker-03-status;/lab market remote-buyer|/lab market status;/lab market proof;/lab overlay compact|/lab step;/lab market status;/lab market proof;/lab market restore-locality|/lab step;/lab market status;/lab overlay compact|/lab step;/lab market status;/lab overlay compact|/lab step;/lab market status;/lab market proof;/lab market blocker-03-status;/lab checkpoint save market-traded-v34;/lab checkpoint status;/lab causality tail 20;/lab status'
@@ -1000,6 +1001,10 @@ print_plan() {
         printf '  Restart 2 PEBBLE_CMD=%s\n' "$MARKET_PHASE2_COMMANDS"
         printf '  Restart 3 PEBBLE_CMD=%s\n' "$MARKET_PHASE3_COMMANDS"
         printf '  Restart 4 PEBBLE_CMD=%s\n' "$MARKET_PHASE4_COMMANDS"
+        if [ "$GATE_E_BLOCKER_03" -eq 0 ] \
+            && [ "$GATE_E_BLOCKER_04" -eq 0 ]; then
+            printf '  Restart 5 PEBBLE_CMD=%s\n' "$MARKET_PHASE5_COMMANDS"
+        fi
     elif [ "$MODE" = "contracts" ]; then
         printf '  Capacity proof PEBBLE_CMD=%s\n' "$CONTRACT_CAPACITY_COMMANDS"
         printf '  PEBBLE_SHOT=-|%s/contract-before-promise.png|%s/contract-proposal.png|%s/contract-consideration-publication-rollback.png|%s/contract-open-debt.png\n' \
@@ -1080,7 +1085,7 @@ print_plan() {
         printf '  3. Confirm normal seller rejection/acceptance, then a real remote buyer refusal with zero mutation/publication and exact locality restore.\n'
         printf '  4. Confirm both exact rollback faults, immediate retry, and one completed local price row.\n'
         printf '  5. Confirm restored history causally changes a later quote, the second trade completes, and the unsold lot is physically withdrawn.\n'
-        printf '  6. Confirm a final fresh restore does not repeat settlement or withdrawal, then restores the empty stall cell.\n'
+        printf '  6. Confirm terminal history releases authority, ordinary cognition re-enters once, the live listing survives restart, then expires, withdraws, and cleans up exactly.\n'
     elif [ "$MODE" = "contracts" ]; then
         printf '  2. Confirm saturated production-need capacity refuses before consideration mutation.\n'
         printf '  3. Confirm ordinary consideration publication failure rolls back before the retry opens debt.\n'
@@ -1301,6 +1306,11 @@ if [ "$MODE" = "markets" ]; then
         CAPTURE_BLOCKER03_DEPOSIT_PATH="$CAPTURE_DIR/blocker03-ordinary-selection-and-deposit.png"
         CAPTURE_BLOCKER03_LISTING_PATH="$CAPTURE_DIR/blocker03-ordinary-listing.png"
         CAPTURE_BLOCKER03_CONTINUED_PATH="$CAPTURE_DIR/blocker03-continued-market-path.png"
+    else
+        CAPTURE_REENTRY_DEPOSIT_PATH="$CAPTURE_DIR/market-reentry-deposited.png"
+        CAPTURE_REENTRY_LISTING_PATH="$CAPTURE_DIR/market-reentry-listed.png"
+        CAPTURE_REENTRY_RESTORED_PATH="$CAPTURE_DIR/market-reentry-restored.png"
+        CAPTURE_REENTRY_WITHDRAWAL_PATH="$CAPTURE_DIR/market-reentry-withdrawn.png"
     fi
     SHOT_SPEC="-|$CAPTURE_BEFORE_PATH|$CAPTURE_DEPOSITED_PATH|$CAPTURE_OPEN_PATH"
     fi
@@ -1406,6 +1416,7 @@ if [ "$MODE" = "markets" ]; then
     PHASE2_TRACE="$SESSION_ROOT/market-phase2.log"
     PHASE3_TRACE="$SESSION_ROOT/market-phase3.log"
     PHASE4_TRACE="$SESSION_ROOT/market-phase4.log"
+    PHASE5_TRACE="$SESSION_ROOT/market-phase5.log"
 
     run_market_app() {
         run_home=$1
@@ -1687,31 +1698,36 @@ if [ "$MODE" = "markets" ]; then
     persisted_world_tick=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT json_extract(json, '$.dims.\"0\".time') FROM worlds;")
     continuation_command_tick=$((persisted_world_tick + 100))
 
-    printf '\nMarket phase 4: final fresh restore, exact-once verification, and empty-stall cleanup.\n'
+    printf '\nMarket phase 4: final fresh restore and ordinary post-terminal re-entry.\n'
     if [ "$GATE_E_BLOCKER_03" -eq 1 ]; then
         PHASE4_SHOTS="$CAPTURE_FINAL_RESTORE_PATH|$CAPTURE_BLOCKER03_DEPOSIT_PATH|$CAPTURE_BLOCKER03_LISTING_PATH|$CAPTURE_BLOCKER03_CONTINUED_PATH|$CAPTURE_PATH"
     else
-        PHASE4_SHOTS="$CAPTURE_FINAL_RESTORE_PATH|$CAPTURE_PATH"
+        PHASE4_SHOTS="$CAPTURE_FINAL_RESTORE_PATH|$CAPTURE_REENTRY_DEPOSIT_PATH|$CAPTURE_REENTRY_LISTING_PATH"
     fi
     run_market_app "$SESSION_HOME" "$PHASE4_TRACE" \
         "$MARKET_PHASE4_COMMANDS" 0 "$continuation_command_tick" \
         "$PHASE4_SHOTS" 0 0
     TRACE_PATH="$PHASE4_TRACE"
     [ -s "$CAPTURE_FINAL_RESTORE_PATH" ] || fail "market final-restore capture missing"
-    [ -s "$CAPTURE_PATH" ] || fail "market cleanup capture missing"
     if [ "$GATE_E_BLOCKER_03" -eq 1 ]; then
+        [ -s "$CAPTURE_PATH" ] || fail "market cleanup capture missing"
         [ -s "$CAPTURE_BLOCKER03_DEPOSIT_PATH" ] \
             || fail "Blocker 03 ordinary-selection-and-deposit capture missing"
         [ -s "$CAPTURE_BLOCKER03_LISTING_PATH" ] \
             || fail "Blocker 03 ordinary-listing capture missing"
         [ -s "$CAPTURE_BLOCKER03_CONTINUED_PATH" ] \
             || fail "Blocker 03 continued-path capture missing"
+    else
+        [ -s "$CAPTURE_REENTRY_DEPOSIT_PATH" ] \
+            || fail "ordinary market re-entry deposit capture missing"
+        [ -s "$CAPTURE_REENTRY_LISTING_PATH" ] \
+            || fail "ordinary market re-entry listing capture missing"
     fi
     require_trace "checkpoint loaded name=market-final-v34 .*digest=$FINAL_DIGEST .*restartSafe=1 .*custodyDuplicates=0 physicalBoundary=acquired" 'fresh process restores final price and withdrawal truth'
     require_trace_at_least 'market status .*trades=2 withdrawals=1 priceHistory=stone_pickaxe/bread=2/1@' 2 'final restart remains exact across another product tick'
-    require_trace 'Restored disposable market air cell after restart; completed economic custody was preserved.' 'empty physical stall cleanup'
     require_trace 'summary .*runtimeErrors=0 .*probesRemoved=3 ' 'clean fourth process termination'
     if [ "$GATE_E_BLOCKER_03" -eq 1 ]; then
+        require_trace 'Restored disposable market air cell after restart; completed economic custody was preserved.' 'empty physical stall cleanup'
         require_trace 'blocker03 market reservation authority terminalAccepted=2 liveProposed=0 liveAccepted=0 nonterminalTargetDeposits=0 targetReserved=0 terminalOnlyReleased=1 exactCurrentAuthority=1 .*currentOpportunities=0 ordinarySelectedTarget=0 targetDeposits=0 targetListings=0 .*trades=2 priceRows=2 withdrawals=1 readOnly=1' 'fresh restart preserves terminal history and released exact current authority'
         require_trace 'market deposit completed .*asset=market-asset:9-consideration-bread2 normalDepositDecision=1 depositPhysicalMutation=1 ordinaryAutonomousSelection=1 reservationAuthorityBefore=0 .*publication=verified duplicateDeposits=0' 'ordinary post-restart selection executes the released asset through the verified physical deposit path'
         require_trace 'blocker03 market reservation authority terminalAccepted=2 liveProposed=0 liveAccepted=0 nonterminalTargetDeposits=1 targetReserved=1 terminalOnlyReleased=0 exactCurrentAuthority=1 .*targetDeposits=1 targetListings=0 liveTargetListings=0 .*readOnly=1' 'new physical deposit reacquires live reservation authority without duplication'
@@ -1720,7 +1736,42 @@ if [ "$MODE" = "markets" ]; then
         require_trace 'observer status .*schema=11 .*' 'Observer schema remains read-only and available'
         reject_trace 'market settlement completed|CANDIDATE_PHYSICAL_ROLLBACK|CANDIDATE_PHYSICAL_HARD_FAILURE' 'historical settlement replay or unexpected rollback'
     else
-        reject_trace 'market settlement completed|market unsold withdrawal completed|CANDIDATE_PHYSICAL_ROLLBACK|CANDIDATE_PHYSICAL_HARD_FAILURE' 'reexecuted final market outcome or rollback'
+        require_trace_count 'market deposit completed .*asset=market-asset:9-consideration-bread2 normalDepositDecision=1 depositPhysicalMutation=1 ordinaryAutonomousSelection=1 reservationAuthorityBefore=0 .*publication=verified duplicateDeposits=0' 1 'terminal release permits one ordinary exact re-entry deposit'
+        require_trace_count 'market normal listing decision .*normalListingDecision=1 listingAuthority=verified-local-deposit automaticPosting=1 .*historyUsed=false .*physicalMutation=0 marketProofFixtureDecisionAuthority=0' 1 'verified re-entry deposit receives one ordinary listing'
+        require_trace 'market status .*deposits=4 open=1 reserved=0 trades=2 withdrawals=1 .*physical=market:central:\[item-id-[0-9]+:2\]' 'live re-entry custody and listing are coherent before checkpoint'
+        require_trace 'market proof schema=34 observerSchema=11 .*priceRows=2 trades=2 withdrawals=1 physicalLoss=0 physicalDuplication=0 syntheticTradeMaterial=0 duplicateReservations=0 duplicateDeposits=0 observerMutationCount=0 ' 're-entry preserves conservation and consistency counters'
+        require_trace 'checkpoint saved name=market-reentered-open-v34 .*manifestIntegrity=v2:.*restartSafe=1 .*protectedCustodyStacks=[1-9][0-9]* ' 'live deposit and listing are saved with their physical custody boundary'
+        reject_trace 'market settlement completed|market listing expired|market unsold withdrawal completed|CANDIDATE_PHYSICAL_ROLLBACK|CANDIDATE_PHYSICAL_HARD_FAILURE|^\[lab-live\] error ' 'premature terminal outcome, rollback, or error before re-entry restart'
+
+        REENTRY_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint saved name=market-reentered-open-v34 .* digest=\([0-9a-f]*\) storageDigest=.*/\1/p' "$PHASE4_TRACE" | /usr/bin/tail -1)
+        [ -n "$REENTRY_DIGEST" ] || fail "re-entered open market digest extraction failed"
+        REENTRY_SESSION=$(/usr/bin/find "$PERSISTENCE_ROOT" -type f -path '*/checkpoints/market-reentered-open-v34/session.json' -print -quit)
+        [ -n "$REENTRY_SESSION" ] && /usr/bin/grep -q '"schemaVersion":34' "$REENTRY_SESSION" \
+            || fail "re-entered open market checkpoint is not schema 34"
+        persisted_world_tick=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT json_extract(json, '$.dims.\"0\".time') FROM worlds;")
+        continuation_command_tick=$((persisted_world_tick + 100))
+
+        printf '\nMarket phase 5: restore live re-entry, ordinary expiry and withdrawal, then exact cleanup.\n'
+        PHASE5_SHOTS="$CAPTURE_REENTRY_RESTORED_PATH|$CAPTURE_REENTRY_WITHDRAWAL_PATH|$CAPTURE_PATH"
+        run_market_app "$SESSION_HOME" "$PHASE5_TRACE" \
+            "$MARKET_PHASE5_COMMANDS" 0 "$continuation_command_tick" \
+            "$PHASE5_SHOTS" 0 0
+        TRACE_PATH="$PHASE5_TRACE"
+        [ -s "$CAPTURE_REENTRY_RESTORED_PATH" ] \
+            || fail "market re-entry restart capture missing"
+        [ -s "$CAPTURE_REENTRY_WITHDRAWAL_PATH" ] \
+            || fail "market re-entry withdrawal capture missing"
+        [ -s "$CAPTURE_PATH" ] || fail "market exact-cleanup capture missing"
+        require_trace "checkpoint loaded name=market-reentered-open-v34 .*digest=$REENTRY_DIGEST .*restartSafe=1 .*custodyDuplicates=0 physicalBoundary=acquired" 'fresh process restores the live re-entry deposit and listing with exact escrow'
+        require_trace 'market status .*deposits=4 open=1 reserved=0 trades=2 withdrawals=1 .*physical=market:central:\[item-id-[0-9]+:2\]' 'restored re-entry remains live before ordinary continuation'
+        require_trace_count 'market listing expired .*reservationReleased=1 physicalMutation=0' 1 'ordinary re-entry listing reaches its terminal expiry once'
+        require_trace_count 'market unsold withdrawal completed .*publication=verified' 1 'expired re-entry deposit follows the verified physical withdrawal path once'
+        require_trace 'market status .*deposits=4 open=0 reserved=0 trades=2 withdrawals=2 .*physical=market:central:\[\]' 'terminal re-entry leaves the physical market empty'
+        require_trace 'market proof schema=34 observerSchema=11 .*priceRows=2 trades=2 withdrawals=2 physicalLoss=0 physicalDuplication=0 syntheticTradeMaterial=0 duplicateReservations=0 duplicateDeposits=0 observerMutationCount=0 ' 'terminal re-entry preserves exact conservation and consistency counters'
+        require_trace 'checkpoint saved name=market-reentered-final-v34 .*restartSafe=1 ' 'terminal re-entry history remains schema-34 restart safe'
+        require_trace 'Restored disposable market air cell after restart; completed economic custody was preserved.' 'exact empty-stall cleanup after supported re-entry lifecycle'
+        require_trace 'summary .*runtimeErrors=0 .*probesRemoved=3 ' 'clean fifth process termination'
+        reject_trace 'market settlement completed|market deposit completed|market normal listing decision|CANDIDATE_PHYSICAL_ROLLBACK|CANDIDATE_PHYSICAL_HARD_FAILURE|^\[lab-live\] error ' 'replayed acquisition, unexpected settlement, rollback, or cleanup error after restart'
     fi
 
     world_facts=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT count(*), json_extract(json, '$.seed'), json_extract(json, '$.name'), json_extract(json, '$.dims.\"0\".dayTime'), json_extract(json, '$.dims.\"0\".raining'), json_extract(json, '$.dims.\"0\".thundering'), json_extract(json, '$.gameRules.doMobSpawning'), json_extract(json, '$.gameRules.doDaylightCycle'), json_extract(json, '$.gameRules.doWeatherCycle') FROM worlds;")
@@ -1735,12 +1786,15 @@ if [ "$MODE" = "markets" ]; then
     if [ "$GATE_E_BLOCKER_03" -eq 1 ]; then
         printf '\nPASS: Blocker 03 active reservation, terminal-history release, ordinary post-restart re-entry, conservation, and cleanup verified.\n'
     else
-        printf '\nPASS: physical market custody, two exact settlement rollbacks, restart, local price discovery, later quote, withdrawal, and cleanup verified.\n'
+        printf '\nPASS: physical market custody, two exact settlement rollbacks, price discovery, ordinary post-terminal re-entry, live-listing restart, withdrawal, and exact cleanup verified.\n'
     fi
     printf 'Phase 1 trace: %s\n' "$PHASE1_TRACE"
     printf 'Phase 2 trace: %s\n' "$PHASE2_TRACE"
     printf 'Phase 3 trace: %s\n' "$PHASE3_TRACE"
     printf 'Phase 4 trace: %s\n' "$PHASE4_TRACE"
+    if [ "$GATE_E_BLOCKER_03" -eq 0 ]; then
+        printf 'Phase 5 trace: %s\n' "$PHASE5_TRACE"
+    fi
     printf 'Checkpoint schema: 34\n'
     printf 'Observer schema: 11\n'
     printf 'Retained isolated session: %s\n' "$SESSION_ROOT"
@@ -1859,7 +1913,7 @@ if [ "$MODE" = "contracts" ]; then
     require_trace 'contract unrelated inventory drift leg=consideration .*currentAuthorityBefore=exact currentAuthorityAfter=exact fullFingerprintChanged=1 trackedIdentityChanged=0 trackedQuantityChanged=0' 'consideration unrelated-slot drift positive control'
     require_trace_at_least 'contract current asset authority obligation=obligation-[0-9a-f]+ action=consideration status=exact .*historicalFullFingerprintCurrent=0 currentFingerprintImmediatePrecondition=1' 2 'current consideration fingerprint used for fault and retry'
     require_trace_at_least 'contract post-transfer mutation obligation=obligation-[0-9a-f]+ action=consideration .*candidatePhysicalMutation=1 publication=0' 2 'ordinary consideration failure and retry reach real transfer'
-    require_trace 'contract post-mutation error policy action=consideration candidateCompensationDelta=1 escapeCandidate=1 autonomousBlocked=0 error=.*ordinary_consideration_publication_rejected_after_transfer' 'ordinary consideration publication error escapes blocked path'
+    require_trace 'protected post-mutation error policy domain=contract action=consideration candidateCompensationDelta=1 escapeCandidate=1 autonomousBlocked=0 error=.*ordinary_consideration_publication_rejected_after_transfer' 'ordinary consideration publication error is protected and escapes blocked handling'
     require_trace 'CANDIDATE_PHYSICAL_ROLLBACK operation=advanceOneTick .*contractBoundary.*ordinary consideration publication rejected after transfer.*registered=material-transfer:contract:obligation-[0-9a-f]+:consideration:[0-9]+ .*completed=material-transfer:contract:obligation-[0-9a-f]+:consideration:[0-9]+ .*publishedSession=unchanged .*publishedRecorder=unchanged' 'exact ordinary consideration publication rollback'
     require_trace_count 'contract physical publication obligation=obligation-[0-9a-f]+ action=consideration ' 1 'one successful consideration publication after rollback'
     require_trace 'contracts enabled=1 .*active=1 debts=1 fulfilled=0 .*checkpointReady=1 .*proofFixtureDecisionAuthority=0 .*manualProductiveContractCommandsAfterBootstrap=0 .*physicalLoss=0 physicalDuplication=0 syntheticMaterial=0 duplicateFulfillmentReceipts=0 duplicateReservations=0 observerMutationCount=0' 'open debt has bounded truthful status'
@@ -1898,7 +1952,7 @@ if [ "$MODE" = "contracts" ]; then
     require_trace 'contract unrelated inventory drift leg=fulfillment .*currentAuthorityBefore=exact currentAuthorityAfter=exact fullFingerprintChanged=1 trackedIdentityChanged=0 trackedQuantityChanged=0' 'fulfillment unrelated-slot drift positive control'
     require_trace_at_least 'contract current asset authority obligation=obligation-[0-9a-f]+ action=fulfillment status=exact .*historicalFullFingerprintCurrent=0 currentFingerprintImmediatePrecondition=1' 3 'current fulfillment fingerprint used for both faults and retry'
     require_trace_at_least 'contract post-transfer mutation obligation=obligation-[0-9a-f]+ action=fulfillment receipt=contract:obligation-[0-9a-f]+:fulfillment quantity=1 candidatePhysicalMutation=1 publication=0' 3 'explicit fault, ordinary publication fault, and retry all reach real mutation'
-    require_trace_at_least 'contract post-mutation error policy action=fulfillment candidateCompensationDelta=1 escapeCandidate=1 autonomousBlocked=0 ' 2 'all fulfillment post-mutation errors escape blocked path'
+    require_trace_at_least 'protected post-mutation error policy domain=contract action=fulfillment candidateCompensationDelta=1 escapeCandidate=1 autonomousBlocked=0 ' 2 'all fulfillment post-mutation errors are protected and escape blocked handling'
     require_trace 'CANDIDATE_PHYSICAL_ROLLBACK operation=advanceOneTick .*contractPostMutationBoundary.*registered=material-transfer:contract:obligation-[0-9a-f]+:fulfillment:[0-9]+ .*completed=material-transfer:contract:obligation-[0-9a-f]+:fulfillment:[0-9]+ .*publishedSession=unchanged .*publishedRecorder=unchanged' 'exact post-fulfillment compensation with open published debt'
     require_trace 'CANDIDATE_PHYSICAL_ROLLBACK operation=advanceOneTick .*contractBoundary.*ordinary fulfillment publication rejected after transfer.*registered=material-transfer:contract:obligation-[0-9a-f]+:fulfillment:[0-9]+ .*completed=material-transfer:contract:obligation-[0-9a-f]+:fulfillment:[0-9]+ .*publishedSession=unchanged .*publishedRecorder=unchanged' 'exact ordinary fulfillment publication rollback'
     require_trace_count 'contract physical publication obligation=obligation-[0-9a-f]+ action=fulfillment ' 1 'one successful physical fulfillment publication'
@@ -2077,7 +2131,7 @@ if [ "$MODE" = "barter" ]; then
     [ -s "$CAPTURE_PATH" ] || fail "barter final capture missing"
     require_trace "checkpoint loaded name=barter-v32 .*digest=$PHASE1_DIGEST .*restartSafe=1 .*custodyDuplicates=0 physicalBoundary=acquired" 'fresh-process physical custody restore'
     require_trace 'barter enabled=1 .*barter-[0-9a-f]+:completed .*completed=1 .*physicalLoss=0 physicalDuplication=0 syntheticMaterial=0 duplicateExchangeReceipts=0 duplicateReservations=0 .*barterProofFixtureDecisionAuthority=0 .*manualProductiveBarterCommandsAfterBootstrap=0' 'one durable normal exchange without replayed transfer'
-    require_trace 'bartered produced tool used producer=agent_[0-9]+ receiver=agent_[0-9]+ .*sameItem=stone_pickaxe damage=0>1 world=stone>air downstreamUse=PASS' 'receiver uses exact produced tool after restart'
+    require_trace 'bartered produced tool used producer=agent_[0-9]+ receiver=agent_[0-9]+ .*sameItem=stone_pickaxe damage=0>1 world=stone>air dropsAcquired=[1-9][0-9]* downstreamUse=PASS' 'receiver uses exact produced tool after restart with a real acquired drop'
     require_trace 'checkpoint saved name=barter-final-v32 .*restartSafe=1 ' 'final v32 checkpoint'
     require_trace 'Barter disposable fixture cleanup cells=exact exchangedCustody=retained' 'fixture cleanup retains exchanged goods'
     require_trace 'summary .*runtimeErrors=0 .*probesRemoved=3 ' 'fresh continuation clean shutdown'

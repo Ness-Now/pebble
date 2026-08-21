@@ -11,15 +11,15 @@ EVALUATION_02_HEAD=2f95826f474c9f2a366f4b06df90a8643beb7a98
 EVALUATION_03_HEAD=56af9648da0155cfba25588320d2070d211a1cd7
 EVALUATION_04_HEAD=07ded1e583b62137b5e8b6cc32d8a61ead73cc53
 
-EVIDENCE_DIR=${PEBBLELAB_E05_EVIDENCE_DIR:-/tmp/pebblelab-gate-e-evaluation-05-evidence.FUjYxf}
-PRODUCTION_DIR=${PEBBLELAB_E05_PRODUCTION_DIR:-/var/folders/23/t4l5dv055dl3x1zqylcpl9wc0000gn/T/PebbleLab-live.FoJRhz}
-BARTER_DIR=${PEBBLELAB_E05_BARTER_DIR:-/var/folders/23/t4l5dv055dl3x1zqylcpl9wc0000gn/T/PebbleLab-live.7a00ba}
-CONTRACTS_DIR=${PEBBLELAB_E05_CONTRACTS_DIR:-/var/folders/23/t4l5dv055dl3x1zqylcpl9wc0000gn/T/PebbleLab-live.vczzBU}
-MARKETS_DIR=${PEBBLELAB_E05_MARKETS_DIR:-/var/folders/23/t4l5dv055dl3x1zqylcpl9wc0000gn/T/PebbleLab-live.pZY5zi}
-BLOCKER04_DIR=${PEBBLELAB_E05_BLOCKER04_DIR:-/var/folders/23/t4l5dv055dl3x1zqylcpl9wc0000gn/T/PebbleLab-live.OdV8dk}
-BLOCKER01_DIR=${PEBBLELAB_E05_BLOCKER01_DIR:-/tmp/pebblelab-gate-e-blocker-01.OSoNVC}
-BLOCKER02_DIR=${PEBBLELAB_E05_BLOCKER02_DIR:-/tmp/pebblelab-gate-e-blocker-02.KIiUwY}
-BLOCKER03_DIR=${PEBBLELAB_E05_BLOCKER03_DIR:-/var/folders/23/t4l5dv055dl3x1zqylcpl9wc0000gn/T/PebbleLab-live.qJCeIt}
+EVIDENCE_DIR=${PEBBLELAB_E05_EVIDENCE_DIR:-/tmp/pebblelab-gate-e-evaluation-05-correction.lMNnE8}
+PRODUCTION_DIR=${PEBBLELAB_E05_PRODUCTION_DIR:-/var/folders/23/t4l5dv055dl3x1zqylcpl9wc0000gn/T/PebbleLab-live.Gl7quv}
+BARTER_DIR=${PEBBLELAB_E05_BARTER_DIR:-/var/folders/23/t4l5dv055dl3x1zqylcpl9wc0000gn/T/PebbleLab-live.wZnLrG}
+CONTRACTS_DIR=${PEBBLELAB_E05_CONTRACTS_DIR:-/var/folders/23/t4l5dv055dl3x1zqylcpl9wc0000gn/T/PebbleLab-live.bdw9me}
+MARKETS_DIR=${PEBBLELAB_E05_MARKETS_DIR:-/var/folders/23/t4l5dv055dl3x1zqylcpl9wc0000gn/T/PebbleLab-live.EpmPos}
+BLOCKER04_DIR=${PEBBLELAB_E05_BLOCKER04_DIR:-/var/folders/23/t4l5dv055dl3x1zqylcpl9wc0000gn/T/PebbleLab-live.DQ3H9X}
+BLOCKER01_DIR=${PEBBLELAB_E05_BLOCKER01_DIR:-/tmp/pebblelab-gate-e-blocker-01.uqvmNc}
+BLOCKER02_DIR=${PEBBLELAB_E05_BLOCKER02_DIR:-/tmp/pebblelab-gate-e-blocker-02.FX0ofy}
+BLOCKER03_DIR=${PEBBLELAB_E05_BLOCKER03_DIR:-/var/folders/23/t4l5dv055dl3x1zqylcpl9wc0000gn/T/PebbleLab-live.KqJbyH}
 OUTPUT_PARENT=${PEBBLELAB_E05_REVIEW_PARENT:-$ROOT_DIR/..}
 
 fail() {
@@ -92,8 +92,8 @@ cd "$ROOT_DIR"
     || fail 'canonical remote no longer matches the required baseline'
 [ "$(git merge-base HEAD "$BASELINE")" = "$BASELINE" ] \
     || fail 'evaluation branch is not rooted at the required baseline'
-[ "$(git rev-list --count "$BASELINE"..HEAD)" = 2 ] \
-    || fail 'Evaluation 05 must contain its two evaluation-only evidence commits'
+[ "$(git rev-list --count "$BASELINE"..HEAD)" = 3 ] \
+    || fail 'Evaluation 05 must contain its three evaluation-only evidence commits'
 [ -z "$(git status --short)" ] || fail 'worktree must be clean'
 
 for evidence_head in \
@@ -105,7 +105,7 @@ for evidence_head in \
 done
 
 unexpected_paths=$(git diff --name-only "$BASELINE"..HEAD | /usr/bin/grep -Ev \
-    '^(Sources/pebsmoke/PebbleAgentsComposedAssetCommitmentSmoke.swift|Sources/pebsmoke/PebbleAgentsGateEEvaluation05Smoke.swift|Sources/pebsmoke/main.swift|docs/pebblelab/GATE_E_EVALUATION_05_REPORT.md|docs/pebblelab/GATE_E_EVALUATION_05_REPORT.json|scripts/build-pebblelab-gate-e-evaluation-05-review.sh)$' || true)
+    '^(Sources/pebsmoke/PebbleAgentsComposedAssetCommitmentSmoke.swift|Sources/pebsmoke/PebbleAgentsGateEEvaluation05Smoke.swift|Sources/pebsmoke/main.swift|docs/pebblelab/GATE_E_EVALUATION_05_REPORT.md|docs/pebblelab/GATE_E_EVALUATION_05_REPORT.json|scripts/build-pebblelab-gate-e-evaluation-05-review.sh|scripts/verify-pebblelab-live.sh)$' || true)
 [ -z "$unexpected_paths" ] || fail "non-evaluation path changed: $unexpected_paths"
 
 VALIDATION_DIR="$EVIDENCE_DIR/validation"
@@ -136,20 +136,20 @@ require_text 'Goldens: read-only; PEBBLE_REGOLD is refused.' \
 
 require_text 'PASS: canonical production, adversarial rollback, exact custody restart, produced-tool use, and cleanup verified.' \
     "$LIVE_DRIVER_DIR/e05-production-driver.log"
-require_text 'ERROR: live trace missing: receiver uses exact produced tool after restart' \
+require_text 'PASS: CIV-35 normal discovery, local consent, sustainable offers, atomic rollback/retry, restart, downstream use, and cleanup verified.' \
     "$LIVE_DRIVER_DIR/e05-barter-driver.log"
-require_text 'ERROR: live trace missing: ordinary consideration publication error escapes blocked path' \
+require_text 'PASS: CIV-36 capacity prevalidation, current asset authority, ordinary and explicit exact rollback/retry, three-process durability, exact-once fulfillment, and cleanup verified.' \
     "$LIVE_DRIVER_DIR/e05-contracts-driver.log"
-require_text 'ERROR: live trace missing: empty physical stall cleanup' \
+require_text 'PASS: physical market custody, two exact settlement rollbacks, price discovery, ordinary post-terminal re-entry, live-listing restart, withdrawal, and exact cleanup verified.' \
     "$LIVE_DRIVER_DIR/e05-markets-driver.log"
 require_text 'PASS: Blocker 04 composed exclusion, same-operation continuation, terminal release, restart, conservation, and cleanup verified.' \
     "$LIVE_DRIVER_DIR/e05-blocker04-driver.log"
 require_text 'PASS: Gate E Blocker 01 exact produced-asset provenance live proof.' \
-    "$LIVE_DRIVER_DIR/aux-blocker01-driver.log"
+    "$LIVE_DRIVER_DIR/e05-blocker01-driver.log"
 require_text 'PASS: Gate E Blocker 02 evolved current identity live proof.' \
-    "$LIVE_DRIVER_DIR/aux-blocker02-driver.log"
+    "$LIVE_DRIVER_DIR/e05-blocker02-driver.log"
 require_text 'PASS: Blocker 03 active reservation, terminal-history release, ordinary post-restart re-entry, conservation, and cleanup verified.' \
-    "$LIVE_DRIVER_DIR/aux-blocker03-driver.log"
+    "$LIVE_DRIVER_DIR/e05-blocker03-driver.log"
 
 require_text 'dropsAcquired=1 downstreamUse=PASS' "$BARTER_DIR/barter-phase2.log"
 require_text 'physicalLoss=0 physicalDuplication=0 syntheticMaterial=0 duplicateExchangeReceipts=0 duplicateReservations=0' \
@@ -165,10 +165,17 @@ require_text 'sellerNeedRequestedQuantity=3 sellerPhysicalQuantityReceived=2 sel
 require_text 'priceHistoryAppended=1 localPriceHistoryCreated=1 duplicateMarketTradeReceipts=0' \
     "$MARKETS_DIR/market-phase2.log"
 require_text 'market deposit completed seller=agent_2' "$MARKETS_DIR/market-phase4.log"
-require_text 'persisted physical custody spill conflicts: checkpoint-bound escrow is absent' \
-    "$MARKETS_DIR/market-phase5-cleanup.log"
-require_text 'Physical markets are not initialized.' "$MARKETS_DIR/market-phase5-cleanup.log"
-require_text 'runtimeErrors=0' "$MARKETS_DIR/market-phase5-cleanup.log"
+require_text 'market normal listing decision seller=agent_2' "$MARKETS_DIR/market-phase4.log"
+require_text 'checkpoint saved name=market-reentered-open-v34' "$MARKETS_DIR/market-phase4.log"
+require_text 'checkpoint loaded name=market-reentered-open-v34' "$MARKETS_DIR/market-phase5.log"
+require_text 'custodyDuplicates=0 physicalBoundary=acquired' "$MARKETS_DIR/market-phase5.log"
+require_text 'market unsold withdrawal completed seller=agent_2' "$MARKETS_DIR/market-phase5.log"
+require_text 'physical=market:central:[]' "$MARKETS_DIR/market-phase5.log"
+require_text 'physicalLoss=0 physicalDuplication=0 syntheticTradeMaterial=0 duplicateReservations=0 duplicateDeposits=0 observerMutationCount=0' \
+    "$MARKETS_DIR/market-phase5.log"
+require_text 'checkpoint saved name=market-reentered-final-v34' "$MARKETS_DIR/market-phase5.log"
+require_text 'runtimeErrors=0' "$MARKETS_DIR/market-phase5.log"
+require_text 'probesRemoved=3' "$MARKETS_DIR/market-phase5.log"
 require_text 'crossSystemDuplicateLiveCommitments=0' "$BLOCKER04_DIR/market-phase4.log"
 require_text 'physicalLoss=0 physicalDuplication=0 syntheticMaterial=0 duplicateDeposits=0 duplicateReservations=0 duplicateReceipts=0 duplicateSettlements=0 observerMutationCount=0 unexpectedRuntimeErrors=0 readOnly=1' \
     "$BLOCKER04_DIR/market-phase4.log"
@@ -198,13 +205,15 @@ copy_required docs/pebblelab/GATE_E_EVALUATION_05_REPORT.json \
     "$BUNDLE_DIR/evaluation/GATE_E_EVALUATION_05_REPORT.repository.json"
 copy_required scripts/build-pebblelab-gate-e-evaluation-05-review.sh \
     "$BUNDLE_DIR/evaluation/build-review-archive.sh"
+copy_required scripts/verify-pebblelab-live.sh \
+    "$BUNDLE_DIR/evaluation/verify-pebblelab-live.sh"
 
 copy_log_set "$VALIDATION_DIR" "$BUNDLE_DIR/raw/validation" 16
 copy_log_set "$DRY_RUN_DIR" "$BUNDLE_DIR/raw/dry-runs" 8
 copy_log_set "$LIVE_DRIVER_DIR" "$BUNDLE_DIR/raw/live/drivers" 8
 copy_log_set "$PRODUCTION_DIR" "$BUNDLE_DIR/raw/live/sessions/e05-production" 2
 copy_log_set "$BARTER_DIR" "$BUNDLE_DIR/raw/live/sessions/e05-barter" 2
-copy_log_set "$CONTRACTS_DIR" "$BUNDLE_DIR/raw/live/sessions/e05-contracts" 2
+copy_log_set "$CONTRACTS_DIR" "$BUNDLE_DIR/raw/live/sessions/e05-contracts" 4
 copy_log_set "$MARKETS_DIR" "$BUNDLE_DIR/raw/live/sessions/e05-markets" 5
 copy_log_set "$BLOCKER04_DIR" "$BUNDLE_DIR/raw/live/sessions/e05-blocker04" 4
 copy_log_set "$BLOCKER01_DIR" "$BUNDLE_DIR/raw/live/sessions/aux-blocker01" 2
@@ -213,8 +222,8 @@ copy_log_set "$BLOCKER03_DIR" "$BUNDLE_DIR/raw/live/sessions/aux-blocker03" 4
 
 copy_captures "$PRODUCTION_DIR/captures" "$BUNDLE_DIR/captures/e05-production" 6
 copy_captures "$BARTER_DIR/captures" "$BUNDLE_DIR/captures/e05-barter" 6
-copy_captures "$CONTRACTS_DIR/captures" "$BUNDLE_DIR/captures/e05-contracts" 5
-copy_captures "$MARKETS_DIR/captures" "$BUNDLE_DIR/captures/e05-markets" 18
+copy_captures "$CONTRACTS_DIR/captures" "$BUNDLE_DIR/captures/e05-contracts" 12
+copy_captures "$MARKETS_DIR/captures" "$BUNDLE_DIR/captures/e05-markets" 17
 copy_captures "$BLOCKER04_DIR/captures" "$BUNDLE_DIR/captures/e05-blocker04" 13
 copy_captures "$BLOCKER01_DIR/captures" "$BUNDLE_DIR/captures/aux-blocker01" 9
 copy_captures "$BLOCKER02_DIR/captures" "$BUNDLE_DIR/captures/aux-blocker02" 8
@@ -226,8 +235,11 @@ done
 for checkpoint in barter-v32 barter-final-v32; do
     copy_checkpoint "$BARTER_DIR" "$checkpoint" "$BUNDLE_DIR/checkpoints/e05-barter"
 done
-copy_checkpoint "$CONTRACTS_DIR" contract-open-v33 "$BUNDLE_DIR/checkpoints/e05-contracts"
-for checkpoint in market-open-v34 market-traded-v34 market-final-v34; do
+for checkpoint in contract-open-v33 contract-fulfilled-v33 contract-final-v33; do
+    copy_checkpoint "$CONTRACTS_DIR" "$checkpoint" "$BUNDLE_DIR/checkpoints/e05-contracts"
+done
+for checkpoint in market-open-v34 market-traded-v34 market-final-v34 \
+    market-reentered-open-v34 market-reentered-final-v34; do
     copy_checkpoint "$MARKETS_DIR" "$checkpoint" "$BUNDLE_DIR/checkpoints/e05-markets"
 done
 for checkpoint in gate-e-blocker04-live-contract-v34 \
@@ -286,12 +298,12 @@ This archive is evaluation-only. It does not claim Gate E acquisition, does
 not start CIV-38, does not add currency as a dependency, contains no product
 correction, and records no push. Start with the durable report, REPORT.json,
 GIT_STATE.txt, and ANCESTRY.txt, then inspect the focused/regression logs,
-raw live traces, checkpoints and 81 inspected captures.
+raw live traces, checkpoints and 87 inspected captures.
 
-The 81 captures comprise 43 decisive Evaluation 05 captures, 33 passing
-auxiliary Blocker captures, and 5 excluded fail-closed stale-checkpoint
-diagnostic captures. The invalid diagnostic checkpoint itself is deliberately
-not included; its refusal trace and captures are included.
+The 87 captures comprise 54 decisive Evaluation 05 captures and 33 successful
+auxiliary Blocker captures. The earlier stale-checkpoint experiment was not
+rerun, retained, or counted; the corrected market proof restarts only a live
+checkpoint saved together with its required physical escrow.
 EOF
 
 /usr/bin/python3 - "$HEAD_COMMIT" \
@@ -320,16 +332,16 @@ PY
 
 {
     printf '# Capture inspection\n\n'
-    printf 'All 81 captures were manually inspected before packaging.\n\n'
+    printf 'All 87 captures were manually inspected before packaging.\n\n'
     printf '| Group | Captures | Classification |\n'
     printf '|---|---:|---|\n'
     printf '| E05 production | 6 | decisive |\n'
     printf '| E05 barter | 6 | decisive |\n'
-    printf '| E05 contracts | 5 | decisive |\n'
-    printf '| E05 markets | 13 | decisive |\n'
+    printf '| E05 contracts | 12 | decisive |\n'
+    printf '| E05 markets | 17 | decisive |\n'
     printf '| E05 Blocker 04 composition | 13 | decisive |\n'
     printf '| Auxiliary Blockers 01–03 | 33 | passing support |\n'
-    printf '| Stale-checkpoint extension | 5 | excluded fail-closed diagnostic |\n\n'
+    printf '| Excluded diagnostics | 0 | not retained or counted |\n\n'
     printf 'PNG inventory:\n\n```text\n'
     /usr/bin/find "$BUNDLE_DIR/captures" -type f -name '*.png' -print \
         | LC_ALL=C sort | while IFS= read -r capture; do /usr/bin/file "$capture"; done
@@ -340,10 +352,10 @@ PY
     printf '# Cleanup evidence\n\n'
     printf 'Decisive and dedicated passing campaigns conserved state and removed all three probes per process. '
     printf 'Production, barter, contracts and Blockers 01–04 record exact fixture cleanup. '
-    printf 'The ordinary market process legitimately reentered with a new exact asset after terminal release; '
-    printf 'the dedicated Blocker 03 campaign proves save, restart, withdrawal and exact cleanup for that supported path.\n\n'
-    printf 'The excluded extension attempted to restore an older checkpoint after the later unsaved deposit. '
-    printf 'It failed closed on absent checkpoint-bound escrow and published no market mutation.\n'
+    printf 'The ordinary market campaign legitimately reentered with a new exact asset after terminal release, '
+    printf 'saved the new escrow with its live checkpoint, restarted, withdrew, and recorded exact cleanup.\n\n'
+    printf 'Excluded diagnostics: 0 processes and 0 captures. The earlier stale-checkpoint experiment was not '
+    printf 'rerun, retained, or used as passing evidence.\n'
 } > "$BUNDLE_DIR/CLEANUP_EVIDENCE.md"
 
 /usr/bin/python3 -m json.tool "$BUNDLE_DIR/REPORT.json" >/dev/null \
