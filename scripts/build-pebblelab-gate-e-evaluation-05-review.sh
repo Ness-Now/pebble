@@ -92,8 +92,8 @@ cd "$ROOT_DIR"
     || fail 'canonical remote no longer matches the required baseline'
 [ "$(git merge-base HEAD "$BASELINE")" = "$BASELINE" ] \
     || fail 'evaluation branch is not rooted at the required baseline'
-[ "$(git rev-parse HEAD^)" = "$BASELINE" ] \
-    || fail 'Evaluation 05 must be one evidence commit rooted at the baseline'
+[ "$(git rev-list --count "$BASELINE"..HEAD)" = 2 ] \
+    || fail 'Evaluation 05 must contain its two evaluation-only evidence commits'
 [ -z "$(git status --short)" ] || fail 'worktree must be clean'
 
 for evidence_head in \
@@ -278,14 +278,14 @@ git diff --check "$BASELINE"..HEAD > "$BUNDLE_DIR/git/DIFF_CHECK.txt"
 
 Verdict: **LOCAL PASS CANDIDATE — SENIOR REVIEW REQUIRED**
 
-Evaluated baseline: `$BASELINE`
+Evaluated baseline: $BASELINE
 
-Final evidence HEAD: `$HEAD_COMMIT`
+Final evidence HEAD: $HEAD_COMMIT
 
 This archive is evaluation-only. It does not claim Gate E acquisition, does
 not start CIV-38, does not add currency as a dependency, contains no product
-correction, and records no push. Start with the durable report, `REPORT.json`,
-`GIT_STATE.txt`, and `ANCESTRY.txt`, then inspect the focused/regression logs,
+correction, and records no push. Start with the durable report, REPORT.json,
+GIT_STATE.txt, and ANCESTRY.txt, then inspect the focused/regression logs,
 raw live traces, checkpoints and 81 inspected captures.
 
 The 81 captures comprise 43 decisive Evaluation 05 captures, 33 passing
