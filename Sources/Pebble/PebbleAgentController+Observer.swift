@@ -200,6 +200,8 @@ extension PebbleAgentController {
         }.joined(separator: ",") ?? "none"
         let latestEstate = snapshot.estateAuthority?.estates.last
         let renewable = snapshot.renewableSubsistence?.last
+        let populationContext = selected.populationContext
+        let populationScale = snapshot.populationScale
         let message = [
             "observer status",
             "open=\(observerUIState.isOpen ? 1 : 0)",
@@ -266,6 +268,13 @@ extension PebbleAgentController {
             "renewableSecondOutput=\(renewable?.secondOutputQuantity ?? 0)",
             "renewableStatus=\(renewable?.status.rawValue ?? "none")",
             "renewableBlock=\(renewable?.blockReason ?? "none")",
+            "settlement=\(populationContext?.settlementID.rawValue ?? "none")",
+            "fidelity=\(populationContext?.fidelity.rawValue ?? "none")",
+            "population=\(populationScale?.fidelityRecords.count ?? 0)",
+            "settlements=\(populationScale?.settlements.count ?? 0)",
+            "live=\(populationScale?.liveCount ?? 0)",
+            "near=\(populationScale?.nearCount ?? 0)",
+            "dormant=\(populationScale?.dormantCount ?? 0)",
             "deaths=\(snapshot.recentDeaths.count)",
             "truncated=\(snapshot.truncation.isTruncated ? 1 : 0)",
             "mutation=none",

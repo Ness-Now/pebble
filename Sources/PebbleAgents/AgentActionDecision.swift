@@ -173,12 +173,14 @@ public enum AgentActionDecider {
             }
             return AgentAction(name: "rest", reason: "goal rest", tick: input.tick)
         case .migrateToSettlement:
-            if input.position == input.homePosition {
+            let reception = input.navigationProgress.route?.target
+                ?? input.homePosition
+            if input.position == reception {
                 return AgentAction(
                     name: "wait",
                     reason: "goal migrateToSettlement: reception reached",
                     tick: input.tick,
-                    target: input.homePosition
+                    target: reception
                 )
             }
             if let next = input.navigationProgress.nextStep {
@@ -193,7 +195,7 @@ public enum AgentActionDecider {
                         dx: dx,
                         dy: dy,
                         dz: dz,
-                        target: input.homePosition
+                        target: reception
                     )
                 }
             }
@@ -201,7 +203,7 @@ public enum AgentActionDecider {
                 name: "approach_settlement",
                 reason: "goal migrateToSettlement: awaiting bounded route",
                 tick: input.tick,
-                target: input.homePosition
+                target: reception
             )
         case .provideDependentCare:
             guard let target = input.careTarget else {

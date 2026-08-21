@@ -56,6 +56,17 @@ public enum AgentCognitiveTransitions {
                 startedAtTick: input.tick,
                 urgency: 100
             )
+        } else if input.isMigrating {
+            // A migration already owns a durable, verified route and current
+            // transit membership. Ordinary fear/safety goal selection may not
+            // discard that active transition or strand its authority. Critical
+            // survival and physiological incapacity remain higher priority.
+            nextGoal = AgentGoal(
+                kind: .migrateToSettlement,
+                reason: "active migration retains causal transition ownership",
+                startedAtTick: input.tick,
+                urgency: 95
+            )
         } else if input.fear >= 70 {
             nextGoal = AgentGoal(
                 kind: .seekSafety,
@@ -84,13 +95,6 @@ public enum AgentCognitiveTransitions {
                 reason: restCommitted ? "fatigue recovery committed" : "fatigue threshold reached",
                 startedAtTick: input.tick,
                 urgency: 81
-            )
-        } else if input.isMigrating {
-            nextGoal = AgentGoal(
-                kind: .migrateToSettlement,
-                reason: "admitted migrant must reach settlement reception",
-                startedAtTick: input.tick,
-                urgency: 79
             )
         } else if input.hasAutonomousActivity {
             nextGoal = AgentGoal(

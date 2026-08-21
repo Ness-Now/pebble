@@ -521,6 +521,15 @@ public struct AgentObserverChronicleEvent: Codable, Equatable, Sendable {
     public let summary: String
 }
 
+/// Read-only locality and execution-fidelity facts for one durable person.
+/// The referenced inhabitant remains the authoritative session record.
+public struct AgentObserverPopulationContext: Codable, Equatable, Sendable {
+    public let settlementID: AgentSettlementID
+    public let fidelity: AgentSimulationFidelity
+    public let activeMigrationID: AgentSettlementMigrationID?
+    public let activeMigrationStatus: AgentSettlementMigrationStatus?
+}
+
 public struct AgentObserverIndividual: Codable, Equatable, Sendable {
     public let agentID: AgentID
     public let lifeState: String
@@ -541,6 +550,7 @@ public struct AgentObserverIndividual: Codable, Equatable, Sendable {
     public let genetics: AgentObserverGenetics?
     public let childhood: AgentObserverChildhood?
     public let family: AgentObserverFamilyIndividual?
+    public let populationContext: AgentObserverPopulationContext?
 }
 
 public struct AgentObserverSnapshot: Codable, Equatable, Sendable {
@@ -562,6 +572,9 @@ public struct AgentObserverSnapshot: Codable, Equatable, Sendable {
     /// Read-only places, custody-backed listings, completed trades and their
     /// pair-specific local history. This projection grants no market authority.
     public let markets: AgentMarketSnapshot?
+    /// Read-only CIV-39 settlements, tier assignments, bounded transition
+    /// evidence, and non-authoritative work counters.
+    public let populationScale: AgentPopulationScaleSnapshot?
     public let truncation: AgentObserverTruncation
 }
 
@@ -666,6 +679,8 @@ extension AgentSimulationSession {
         let barter = barterSnapshot()
         let contracts = contractSnapshot()
         let markets = marketSnapshot()
+        let population = populationSnapshot()
+        let populationScale = populationScaleSnapshot()
         let textLimit = configuration.maximumPresentationTextLength
 
         let materialTransitionByEventID = Dictionary(
@@ -797,7 +812,12 @@ extension AgentSimulationSession {
                 childhood: observerChildhood(
                     agentID, care: care, childhood: childhood
                 ),
-                family: observerFamilyIndividual(agentID, snapshot: family)
+                family: observerFamilyIndividual(agentID, snapshot: family),
+                populationContext: populationScale.enabled
+                    ? observerPopulationContext(
+                        agentID, population: population,
+                        scale: populationScale
+                    ) : nil
             )
         }
         let retainedDeaths = Array(
@@ -864,6 +884,9 @@ extension AgentSimulationSession {
             ? "markets:\(markets.totalDepositCount):"
                 + "\(markets.totalTradeCount):\(marketPriceDigest)"
             : "markets:none"
+        let populationScaleGeneration = populationScale.enabled
+            ? "population-scale:" + populationScale.digest
+            : "population-scale:none"
         let generationSource = [
             "observer-v1", simulationID.rawValue, worldBinding.worldID,
             worldBinding.storageIdentity, String(tick),
@@ -886,6 +909,7 @@ extension AgentSimulationSession {
                 : "barter:none",
             contractGeneration,
             marketGeneration,
+            populationScaleGeneration,
         ].joined(separator: "|")
         let familyAuthority = observerFamilyAuthority(family)
         let estateAuthority = observerEstateAuthority(
@@ -908,7 +932,8 @@ extension AgentSimulationSession {
         )
         return AgentObserverSnapshot(
             header: AgentObserverSnapshotHeader(
-                schemaVersion: markets.enabled ? 11 : contracts.enabled ? 10
+                schemaVersion: populationScale.enabled ? 12
+                    : markets.enabled ? 11 : contracts.enabled ? 10
                     : barter.enabled ? 9 : production.enabled ? 8
                     : renewableSubsistence.isEmpty ? (estates.enabled ? 6
                     : (childhood.enabled
@@ -933,12 +958,40 @@ extension AgentSimulationSession {
             barter: barter.enabled ? barter : nil,
             contracts: contracts.enabled ? contracts : nil,
             markets: markets.enabled ? markets : nil,
+            populationScale: populationScale.enabled ? populationScale : nil,
             truncation: truncation
         )
     }
 }
 
 private extension AgentSimulationSession {
+    func observerPopulationContext(
+        _ agentID: AgentID,
+        population: AgentPopulationSnapshot,
+        scale: AgentPopulationScaleSnapshot
+    ) -> AgentObserverPopulationContext? {
+        guard let member = population.members.first(where: {
+            $0.agentID == agentID
+        }), let fidelity = scale.fidelityRecords.first(where: {
+            $0.agentID == agentID
+        })?.fidelity else {
+            return nil
+        }
+        var migration: AgentSettlementMigrationRecord?
+        for candidate in scale.settlementMigrations.reversed()
+        where candidate.agentID == agentID
+            && candidate.status == AgentSettlementMigrationStatus.inTransit {
+            migration = candidate
+            break
+        }
+        return AgentObserverPopulationContext(
+            settlementID: member.settlementID,
+            fidelity: fidelity,
+            activeMigrationID: migration?.migrationID,
+            activeMigrationStatus: migration?.status
+        )
+    }
+
     func observerFamilyIndividual(
         _ agentID: AgentID,
         snapshot: AgentFamilySnapshot

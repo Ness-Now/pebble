@@ -148,6 +148,12 @@ if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
     exit(failed > 0 ? 1 : 0)
 }
 
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "civ-39" {
+    runPebbleAgentsPopulationScaleSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
 if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "observer" {
     runPebbleAgentsObserverSmoke()
     print("\n\(passed) passed, \(failed) failed")
@@ -2467,6 +2473,7 @@ runPebbleAgentsPhysicalChannelSmoke()
 runPebbleAgentsCooperationSmoke()
 runPebbleAgentsPersistenceReplaySmoke()
 runPebbleAgentsPopulationMigrationSmoke()
+runPebbleAgentsPopulationScaleSmoke()
 runPebbleAgentsSettlementMetricsSmoke()
 runPebbleAgentsLocalEcologySmoke()
 runPebbleAgentsMortalityPopulationExitSmoke()

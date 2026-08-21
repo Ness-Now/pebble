@@ -162,10 +162,13 @@ extension AgentSimulationSession {
             throw AgentSessionError.lifecycle(.populationRequired)
         }
         let activeIDs = statesById.values.map(\.agentID).sorted()
+        let settlementMemberIDs = registry.settlements.flatMap {
+            $0.residentIDs + $0.inTransitIDs
+        }
         guard activeIDs == registry.members.map(\.agentID).sorted(),
               registry.settlement.capacity == registry.configuration.maximumActivePopulation,
-              Set(registry.settlement.residentIDs + registry.settlement.inTransitIDs)
-                == Set(activeIDs) else {
+              Set(settlementMemberIDs) == Set(activeIDs),
+              Set(settlementMemberIDs).count == settlementMemberIDs.count else {
             throw AgentSessionError.lifecycle(.settlementRequired)
         }
         try prevalidateCausalAppend(count: activeIDs.count + 1)
@@ -201,7 +204,7 @@ extension AgentSimulationSession {
             members.append(AgentLifecycleMember(
                 agentID: populationMember.agentID,
                 ordinal: populationMember.ordinal,
-                settlementID: registry.settlement.settlementID,
+                settlementID: populationMember.settlementID,
                 origin: origin,
                 lifecycleRegisteredTick: tick,
                 initialAgeTicks: configuration.maturityAgeTicks,
@@ -893,7 +896,9 @@ extension AgentSimulationSession {
                 : (age < lifecycle.configuration.maturityAgeTicks ? .juvenile : .mature)
             guard member.currentStage == expected,
                   population.members.contains(where: {
-                      $0.agentID == member.agentID && $0.ordinal == member.ordinal
+                      $0.agentID == member.agentID
+                        && $0.ordinal == member.ordinal
+                        && $0.settlementID == member.settlementID
                   }),
                   member.progenitorIDs == member.progenitorIDs.sorted(),
                   Set(member.progenitorIDs).count == member.progenitorIDs.count,

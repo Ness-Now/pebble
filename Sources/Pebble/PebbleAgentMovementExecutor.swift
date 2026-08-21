@@ -218,11 +218,29 @@ struct PebbleAgentMovementExecutor {
                     -(Double(next.x) + 0.5 - original.x),
                     Double(next.z) + 0.5 - original.z
                 )
-                embodiment.probe.move(
-                    Double(next.x) + 0.5 - original.x,
-                    Double(next.y) - original.y,
-                    Double(next.z) + 0.5 - original.z
-                )
+                let requestedX = Double(next.x) + 0.5 - original.x
+                let requestedY = Double(next.y) - original.y
+                let requestedZ = Double(next.z) + 0.5 - original.z
+                if requestedY < 0 {
+                    // Entity.move resolves Y before X/Z. A legal Core path
+                    // descent therefore has to leave the higher support first
+                    // and settle vertically second. Both mutations remain in
+                    // this one Pebble-owned transaction and are published only
+                    // after the exact final cell is verified; any partial move
+                    // is restored below.
+                    embodiment.probe.move(requestedX, 0, requestedZ)
+                    let horizontalReached = Int(
+                        embodiment.probe.x.rounded(.down)
+                    ) == next.x
+                        && Int(embodiment.probe.y.rounded(.down))
+                            == Int(original.y.rounded(.down))
+                        && Int(embodiment.probe.z.rounded(.down)) == next.z
+                    if horizontalReached {
+                        embodiment.probe.move(0, requestedY, 0)
+                    }
+                } else {
+                    embodiment.probe.move(requestedX, requestedY, requestedZ)
+                }
 
                 guard embodiment.position == next else {
                     try rollback(

@@ -347,16 +347,22 @@ public struct AgentSimulationSession {
                 .pendingMaterialExit(pending.agentID.rawValue)
             )
         }
+        let execution = fidelityExecutionCounts(at: tick + 1)
+        let liveIDSet = Set(execution.live.map(\.rawValue))
         try prevalidateCausalAppend(
-            count: sortedIds.count * (physicalEnabled ? 30 : (socialEnabled ? 20 : 3)) + 1
+            count: execution.live.count
+                * (physicalEnabled ? 30 : (socialEnabled ? 20 : 3)) + 1
                 + (mortalityState?.configuration.maximumDeathsPerTick ?? 0) * 7
                 + (dependentCareState?.configuration.maximumCareTransitionsPerTick ?? 0) * 3
+                + (populationRegistry?.scaleState?.fidelityRecords.count ?? 0)
         )
         var perceptionsById: [String: AgentPerceptionInput] = [:]
         var resourceObservationsById: [String: [AgentResourceObservation]] = [:]
         var socialResourceObservationsById: [String: [AgentResourceObservation]] = [:]
         for perception in perceptions {
-            guard statesById[perception.agentId] != nil else {
+            guard statesById[perception.agentId] != nil,
+                  populationRegistry?.scaleState == nil
+                    || liveIDSet.contains(perception.agentId) else {
                 throw AgentSessionError.unknownAgentId(perception.agentId)
             }
             guard perceptionsById[perception.agentId] == nil else {
@@ -417,7 +423,8 @@ public struct AgentSimulationSession {
         try applyDependentCareTickBoundary(at: nextTick)
         try applyEstateTickBoundary(at: nextTick)
         try expireActiveMigrationIfNeeded(at: nextTick)
-        let ids = sortedIds
+        let ids = populationRegistry?.scaleState == nil
+            ? sortedIds : execution.live.map(\.rawValue).sorted()
         refreshConstructionProjectStatus()
         reservationsByTarget = reservationsByTarget.filter { !$0.value.isExpired(at: nextTick) }
         for id in ids {
@@ -929,9 +936,11 @@ public struct AgentSimulationSession {
             }
         }
         try applyCooperationTickPlan(cooperationPlan, results: results)
-        let activePhysicalObservations = mortalityWasEnabled
-            ? physicalObservations.filter { statesById[$0.observerID.rawValue] != nil }
-            : physicalObservations
+        let activePhysicalObservations = physicalObservations.filter {
+            statesById[$0.observerID.rawValue] != nil
+                && (populationRegistry?.scaleState == nil
+                    || liveIDSet.contains($0.observerID.rawValue))
+        }
         try applyPhysicalObservations(activePhysicalObservations)
         try applySocialTickPlan(socialPlan, results: results)
         try evaluateReproductionPlanIfDue(at: tick)
@@ -942,6 +951,12 @@ public struct AgentSimulationSession {
             payload: .lifecycle(status: "tickCompleted", agentCount: results.count),
             summary: "tick \(tick) completed agents=\(results.count)"
         )
+        recordFidelityWork(
+            liveCount: execution.live.count,
+            nearMaintenanceCount: execution.nearMaintenance,
+            dormantMaintenanceCount: execution.dormantMaintenance
+        )
+        try rotateFidelityIfDue(at: tick)
         try validateHouseholdCrossDomainIfEnabled()
         try validateDependentCareCrossDomainIfEnabled()
         return AgentSessionTickResult(tick: tick, agents: results)

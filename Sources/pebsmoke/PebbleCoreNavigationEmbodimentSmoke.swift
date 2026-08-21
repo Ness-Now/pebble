@@ -105,6 +105,22 @@ func runPebbleCoreNavigationEmbodimentSmoke() {
           Int(stepProbe.x.rounded(.down)) == 1
               && Int(stepProbe.y.rounded(.down)) == 65)
 
+    let descent = civ19NavigationWorld()
+    descent.setBlock(0, 64, 0, Int(cell(B.stone)), SET_SILENT)
+    let descentProbe = LabCoreAgentEntity(
+        world: descent,
+        labAgentId: "civ39_descent_probe",
+        physicalId: "civ39_descent_probe"
+    )
+    descentProbe.setPos(0.5, 65, 0.5) // fixture spawn only
+    descent.addEntity(descentProbe)
+    descentProbe.move(1, 0, 0)
+    descentProbe.move(0, -1, 0)
+    check("CIV-39 Core descent sequence leaves support before settling",
+          Int(descentProbe.x.rounded(.down)) == 1
+              && Int(descentProbe.y.rounded(.down)) == 64
+              && Int(descentProbe.z.rounded(.down)) == 0)
+
     let gap = civ19NavigationWorld()
     gap.setBlock(1, 63, 0, 0, SET_SILENT)
     let gapRoute = findPath(gap, 0.5, 64, 0.5, 2.5, 64, 0.5, 600, true)

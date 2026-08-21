@@ -48,6 +48,7 @@ final class PebbleAgentController {
     var successfulCognitiveTicks = 0
     var blockedMovementOutcomeCount = 0
     var runtimeErrorCount = 0
+    var civ39CheckpointRestoreCount = 0
     var droppedCatchUpSteps = 0
     var maxObservedMemoryCount = 0
     var maxObservedDistanceFromHome = 0
@@ -168,6 +169,9 @@ final class PebbleAgentController {
     }
     var populationFeatureEnabled: Bool {
         environment["PEBBLELAB_APP_AGENTS_POPULATION"] == "1"
+    }
+    var populationScaleFeatureEnabled: Bool {
+        environment["PEBBLELAB_APP_AGENTS_SCALE"] == "1"
     }
     var multiscaleFeatureEnabled: Bool {
         environment["PEBBLELAB_APP_AGENTS_MULTISCALE"] == "1"

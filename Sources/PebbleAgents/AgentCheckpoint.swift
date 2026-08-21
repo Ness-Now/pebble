@@ -36,6 +36,7 @@ public enum AgentCheckpointSchema {
     public static let barterVersion = 32
     public static let contractVersion = 33
     public static let marketVersion = 34
+    public static let populationScaleVersion = 35
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -58,6 +59,7 @@ public enum AgentCheckpointSchema {
             || version == barterVersion
             || version == contractVersion
             || version == marketVersion
+            || version == populationScaleVersion
     }
 }
 
@@ -261,7 +263,9 @@ public struct AgentSessionDurableState: Codable {
     public let marketState: AgentMarketState?
 
     init(session: AgentSimulationSession) {
-        if session.marketState != nil {
+        if session.populationRegistry?.scaleState != nil {
+            schemaVersion = AgentCheckpointSchema.populationScaleVersion
+        } else if session.marketState != nil {
             schemaVersion = AgentCheckpointSchema.marketVersion
         } else if session.contractState != nil {
             schemaVersion = AgentCheckpointSchema.contractVersion
@@ -1285,8 +1289,11 @@ extension AgentSimulationSession {
             == AgentCheckpointSchema.contractVersion
         let marketSchema = state.schemaVersion
             == AgentCheckpointSchema.marketVersion
+        let populationScaleSchema = state.schemaVersion
+            == AgentCheckpointSchema.populationScaleVersion
         let latestSchema = renewableSchema || independentReceiptSchema
             || productionSchema || barterSchema || contractSchema || marketSchema
+            || populationScaleSchema
         let estateSchema =
             state.schemaVersion == AgentCheckpointSchema.legacyEstateVersion
             || state.schemaVersion == AgentCheckpointSchema.estateVersion
@@ -1594,7 +1601,9 @@ extension AgentSimulationSession {
                 || (marketSchema
                     && state.productionState != nil
                     && state.materialRightsState != nil
-                    && state.marketState != nil) else {
+                    && state.marketState != nil)
+                || (populationScaleSchema
+                    && state.populationRegistry?.scaleState != nil) else {
                 throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
             }
         }

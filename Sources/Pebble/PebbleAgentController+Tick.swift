@@ -171,7 +171,13 @@ extension PebbleAgentController {
                 snapshot: preCognitive,
                 session: session
             )
-            let perceptions = try preCognitive.agents.map { agent in
+            let fullFidelityIDs = Set(
+                session.fullFidelityAgentIDs().map(\.rawValue)
+            )
+            let cognitiveAgents = session.populationScalingEnabled
+                ? preCognitive.agents.filter { fullFidelityIDs.contains($0.id) }
+                : preCognitive.agents
+            let perceptions = try cognitiveAgents.map { agent in
                 var combinedResourceObservations: [AgentResourceObservation] = []
                 let socialObservations = try socialResourceObservations(
                     world: world,
@@ -1694,6 +1700,7 @@ extension PebbleAgentController {
         explorationDistanceBoundary: Int = AgentFeedbackLoopConfiguration.live
             .maxExploreDistanceFromHome
     ) throws {
+        let cognitiveAgentIDs = Set(result.agents.map(\.agentId))
         var positions = Set<String>()
         for agent in snapshot.agents {
             let uniquePosition = positions.insert(positionText(agent.position)).inserted
@@ -1706,10 +1713,7 @@ extension PebbleAgentController {
             }
             let probeMatches = probe?.labAgentId == agent.id
                 && probePosition == agent.position
-            guard agent.lastWorldObservation != nil,
-                  agent.lastWorldPerceptionEffect != nil,
-                  agent.observationCount >= agent.ticksAlive,
-                  uniquePosition, probeMatches else {
+            guard uniquePosition, probeMatches else {
                 trace(
                     "movement boundary detail actor=\(agent.id) "
                         + "observation=\(agent.lastWorldObservation == nil ? 0 : 1) "
@@ -1720,6 +1724,14 @@ extension PebbleAgentController {
                         + "probeMatches=\(probeMatches ? 1 : 0)"
                 )
                 throw ControllerError.movementBoundary(agent.id)
+            }
+            // NEAR and DORMANT retain one durable person record, but do not
+            // acquire exact live sensing/decision authority for this tick.
+            guard cognitiveAgentIDs.contains(agent.id) else { continue }
+            guard agent.lastWorldObservation != nil,
+                  agent.lastWorldPerceptionEffect != nil,
+                  agent.observationCount >= agent.ticksAlive else {
+                throw ControllerError.feedbackBoundary(agent.id)
             }
             guard agent.memoryCount <= 128,
                   agent.memoryRetrievalCount >= agent.memoryInfluencedDecisionCount else {

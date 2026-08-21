@@ -173,7 +173,7 @@ public struct AgentLifecycleConfiguration: Codable, Equatable, Sendable {
 public struct AgentLifecycleMember: Codable, Equatable, Sendable {
     public let agentID: AgentID
     public let ordinal: AgentPopulationOrdinal
-    public let settlementID: AgentSettlementID
+    public internal(set) var settlementID: AgentSettlementID
     public let origin: AgentLifecycleOrigin
     public let lifecycleRegisteredTick: Int
     public let initialAgeTicks: Int

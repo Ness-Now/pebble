@@ -35,12 +35,17 @@ extension PebbleAgentController {
                 ) else {
                     return failure("Population enable refused: no safe local reception position.")
                 }
+                let populationConfiguration = populationScaleFeatureEnabled
+                    ? try AgentPopulationConfiguration(
+                        maximumActivePopulation: 24
+                    )
+                    : .live
                 var recorder = replayRecorder
                 let operation = AgentReplayOperation.setPopulationEnabled(
                     true,
                     settlementAnchor: anchor,
                     receptionPosition: reception,
-                    configuration: .live
+                    configuration: populationConfiguration
                 )
                 if try applyRecordedOperationIfActive(
                     operation,
@@ -50,7 +55,8 @@ extension PebbleAgentController {
                     try candidate.setPopulationEnabled(
                         true,
                         settlementAnchor: anchor,
-                        receptionPosition: reception
+                        receptionPosition: reception,
+                        configuration: populationConfiguration
                     )
                 }
                 session = candidate

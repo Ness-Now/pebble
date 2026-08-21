@@ -1329,8 +1329,10 @@ extension PebbleAgentController {
             for cell in project.blueprint.cells { positions.insert(project.worldPosition(for: cell)) }
         }
         if let population = state.populationRegistry {
-            positions.insert(population.settlement.anchor)
-            positions.insert(population.settlement.receptionPosition)
+            for settlement in population.settlements {
+                positions.insert(settlement.anchor)
+                positions.insert(settlement.receptionPosition)
+            }
             for member in population.members {
                 positions.insert(member.receptionPosition)
                 if let entry = member.entryPosition { positions.insert(entry) }
@@ -1338,6 +1340,9 @@ extension PebbleAgentController {
             for migration in population.migrations {
                 positions.insert(migration.entryPosition)
                 positions.insert(migration.receptionPosition)
+                positions.formUnion(migration.route)
+            }
+            for migration in population.scaleState?.settlementMigrations ?? [] {
                 positions.formUnion(migration.route)
             }
         }
@@ -1407,6 +1412,11 @@ extension PebbleAgentController {
         if candidate.settlementMetricsEnabled && !multiscaleFeatureEnabled {
             return failure(
                 "Checkpoint load refused: settlement metrics gate is disabled."
+            )
+        }
+        if candidate.populationScalingEnabled && !populationScaleFeatureEnabled {
+            return failure(
+                "Checkpoint load refused: CIV-39 population scale gate is disabled."
             )
         }
         if candidate.localEcologyEnabled && !ecologyFeatureEnabled {
@@ -2353,7 +2363,10 @@ extension PebbleAgentController {
         } else {
             worldMutation = "none"
         }
-        let message = "checkpoint loaded name=\(name.rawValue) id=\(stored.checkpoint.checkpointID.rawValue) tick=\(candidate.tick) simulation=\(candidate.simulationID.rawValue) digest=\(checkpointDigest.rawValue) reconciledDigest=\(reconciledDigest.rawValue) causalSequence=\(causal.latestSequence) causalDigest=\(causal.digest) restartSafe=1 manifestIntegrity=verified:v\(stored.manifest.manifestIntegrityVersion ?? 0) probes=\(probesByAgentId.count) paused=1 focus=\(focusedAgentId ?? "none") lifecycleEvent=none probeReconciliation=\(probeReconciliation) probeReusedExact=\(probePlan.exactAgentIDs.count) probeRestoredMissing=\(probePlan.missingAgentIDs.count) probeRepositionedVerified=\(probePlan.repositionedAgentIDs.count) probeRetiredVerified=\(retiredBootstrapAgentIDs.count) probePositionRefused=0 probeRetired=\(retiredEvidence) probeRestored=\(restoredEvidence) custodyReconciliation=\(custodyReconciliation) custodyRestoredAgents=\(custodyRestoreAgentIDs.count) custodyRestoredStacks=\(custodyRestoredStacks) custodyRestoredQuantity=\(custodyRestoredQuantity) custodyAdoptedSpills=\(persistedCustodySpillItems.count) custodyDuplicates=0 physicalBoundary=acquired reconciliationPhase=postPhysicalBoundary reconciliationRuns=\(candidate.persistenceReconciliationSnapshot().recentRuns.count) physicalReconciliation=\(reconciliationSummary) reconciliationRunsBefore=\(reconciliationRunCountBeforeLoad) committedCurrentReconciliationThisLoad=\(committedCurrentReconciliationThisLoad) worldMutation=\(worldMutation)"
+        if candidate.populationScalingEnabled {
+            civ39CheckpointRestoreCount += 1
+        }
+        let message = "checkpoint loaded name=\(name.rawValue) id=\(stored.checkpoint.checkpointID.rawValue) tick=\(candidate.tick) simulation=\(candidate.simulationID.rawValue) digest=\(checkpointDigest.rawValue) reconciledDigest=\(reconciledDigest.rawValue) causalSequence=\(causal.latestSequence) causalDigest=\(causal.digest) restartSafe=1 manifestIntegrity=verified:v\(stored.manifest.manifestIntegrityVersion ?? 0) probes=\(probesByAgentId.count) paused=1 focus=\(focusedAgentId ?? "none") lifecycleEvent=none probeReconciliation=\(probeReconciliation) probeReusedExact=\(probePlan.exactAgentIDs.count) probeRestoredMissing=\(probePlan.missingAgentIDs.count) probeRepositionedVerified=\(probePlan.repositionedAgentIDs.count) probeRetiredVerified=\(retiredBootstrapAgentIDs.count) probePositionRefused=0 probeRetired=\(retiredEvidence) probeRestored=\(restoredEvidence) custodyReconciliation=\(custodyReconciliation) custodyRestoredAgents=\(custodyRestoreAgentIDs.count) custodyRestoredStacks=\(custodyRestoredStacks) custodyRestoredQuantity=\(custodyRestoredQuantity) custodyAdoptedSpills=\(persistedCustodySpillItems.count) custodyDuplicates=0 physicalBoundary=acquired reconciliationPhase=postPhysicalBoundary reconciliationRuns=\(candidate.persistenceReconciliationSnapshot().recentRuns.count) physicalReconciliation=\(reconciliationSummary) reconciliationRunsBefore=\(reconciliationRunCountBeforeLoad) committedCurrentReconciliationThisLoad=\(committedCurrentReconciliationThisLoad) worldMutation=\(worldMutation) civ39RestoreCount=\(civ39CheckpointRestoreCount)"
         trace(message)
         return success(message)
     }

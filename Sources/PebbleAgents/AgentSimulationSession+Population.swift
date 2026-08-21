@@ -8,6 +8,7 @@ extension AgentSimulationSession {
             return AgentPopulationSnapshot(
                 enabled: false,
                 settlement: nil,
+                additionalSettlements: [],
                 members: [],
                 migrations: [],
                 nextPopulationOrdinal: nil,
@@ -19,13 +20,14 @@ extension AgentSimulationSession {
         let members = registry.members.sorted { $0.agentID < $1.agentID }
         let migrations = registry.migrations.sorted { $0.migrationID < $1.migrationID }
         let eventCount = causalLedger.events.filter { $0.kind.isPopulation }.count
+        let settlementRows = registry.settlements.map {
+            "settlement=\($0.settlementID.rawValue),anchor=\(positionText($0.anchor)),"
+                + "reception=\(positionText($0.receptionPosition)),capacity=\($0.capacity),"
+                + "residents=\($0.residentIDs.map(\.rawValue).joined(separator: ",")),"
+                + "transit=\($0.inTransitIDs.map(\.rawValue).joined(separator: ","))"
+        }.joined(separator: ";")
         let canonical = [
-            "settlement=\(registry.settlement.settlementID.rawValue)",
-            "anchor=\(positionText(registry.settlement.anchor))",
-            "reception=\(positionText(registry.settlement.receptionPosition))",
-            "capacity=\(registry.settlement.capacity)",
-            "residents=\(registry.settlement.residentIDs.map(\.rawValue).joined(separator: ","))",
-            "transit=\(registry.settlement.inTransitIDs.map(\.rawValue).joined(separator: ","))",
+            settlementRows,
             members.map {
                 "m|\($0.agentID.rawValue)|\($0.ordinal.rawValue)|\($0.status.rawValue)|\($0.founder ? 1 : 0)|\($0.registeredTick)|\($0.arrivalTick.map(String.init) ?? "none")|\($0.migrationID?.rawValue ?? "none")|\($0.registrationEventID.rawValue)|\($0.arrivalEventID?.rawValue ?? "none")"
             }.joined(separator: ";"),
@@ -40,6 +42,7 @@ extension AgentSimulationSession {
         return AgentPopulationSnapshot(
             enabled: true,
             settlement: registry.settlement,
+            additionalSettlements: registry.additionalSettlements ?? [],
             members: members,
             migrations: migrations,
             nextPopulationOrdinal: registry.nextPopulationOrdinal.rawValue,
@@ -98,6 +101,7 @@ extension AgentSimulationSession {
             return AgentPopulationSnapshot(
                 enabled: populationRegistry != nil,
                 settlement: nil,
+                additionalSettlements: [],
                 members: [],
                 migrations: [],
                 nextPopulationOrdinal: nil,
@@ -112,6 +116,7 @@ extension AgentSimulationSession {
         return AgentPopulationSnapshot(
             enabled: true,
             settlement: nil,
+            additionalSettlements: [],
             members: [member],
             migrations: migration.map { [$0] } ?? [],
             nextPopulationOrdinal: nil,
@@ -693,32 +698,54 @@ extension AgentSimulationSession {
         departedAgentIDs: Set<AgentID> = []
     ) throws {
         let agentIDs = Set(agents.map(\.agentID))
+        let settlements = registry.settlements
+        let settlementIDs = Set(settlements.map(\.settlementID))
+        let residentOccurrences = settlements.flatMap(\.residentIDs)
+        let transitOccurrences = settlements.flatMap(\.inTransitIDs)
         guard registry.configuration.maximumActivePopulation >= 3,
               registry.settlement.settlementID == .main,
-              registry.settlement.capacity == registry.configuration.maximumActivePopulation,
+              registry.scaleState != nil
+                || registry.settlement.capacity
+                    == registry.configuration.maximumActivePopulation,
               registry.members.count == agentIDs.count,
-              registry.members.count <= registry.settlement.capacity,
+              registry.members.count
+                <= registry.configuration.maximumActivePopulation,
               Set(registry.members.map(\.agentID)) == agentIDs,
               Set(registry.members.map(\.ordinal)).count == registry.members.count,
               registry.nextPopulationOrdinal.rawValue
                 > (registry.members.map(\.ordinal.rawValue).max() ?? -1),
               registry.migrations.count <= registry.configuration.maximumMigrationRecords,
               registry.evictionCounts.terminalMigrations >= 0,
-              registry.evictionCounts.diagnostics >= 0 else {
+              registry.evictionCounts.diagnostics >= 0,
+              !settlements.isEmpty,
+              settlementIDs.count == settlements.count,
+              settlements.allSatisfy({ $0.capacity > 0 }),
+              Set(residentOccurrences).count == residentOccurrences.count,
+              Set(transitOccurrences).count == transitOccurrences.count,
+              Set(residentOccurrences).isDisjoint(with: Set(transitOccurrences)),
+              Set(residentOccurrences + transitOccurrences) == agentIDs else {
             throw AgentCheckpointError.invalidBound("population registry")
         }
         let active = registry.migrations.filter {
             $0.status == .admitted || $0.status == .inTransit
         }
         guard active.count <= registry.configuration.maximumConcurrentMigrations,
-              registry.settlement.residentIDs == registry.settlement.residentIDs.sorted(),
-              registry.settlement.inTransitIDs == registry.settlement.inTransitIDs.sorted(),
-              Set(registry.settlement.residentIDs).isSubset(of: agentIDs),
-              Set(registry.settlement.inTransitIDs).isSubset(of: agentIDs) else {
+              settlements.allSatisfy({ settlement in
+                  settlement.residentIDs == settlement.residentIDs.sorted()
+                      && settlement.inTransitIDs
+                        == settlement.inTransitIDs.sorted()
+                      && settlement.residentIDs.count <= settlement.capacity
+              }) else {
             throw AgentCheckpointError.invalidBound("population settlement")
         }
         for member in registry.members {
-            guard member.settlementID == registry.settlement.settlementID,
+            let resident = settlements.first {
+                $0.settlementID == member.settlementID
+            }
+            guard resident != nil,
+                  (member.status == .migrating
+                    ? resident!.inTransitIDs.contains(member.agentID)
+                    : resident!.residentIDs.contains(member.agentID)),
                   member.registeredTick <= clock.tick.rawValue,
                   member.arrivalTick.map({ $0 <= clock.tick.rawValue }) ?? true,
                   member.registrationEventID.simulationID == clock.simulationID,
@@ -745,6 +772,13 @@ extension AgentSimulationSession {
                 throw AgentCheckpointError.invalidReference(migration.migrationID.rawValue)
             }
         }
+        if let scale = registry.scaleState {
+            try validatePopulationScaleState(
+                scale, registry: registry, clock: clock
+            )
+        } else if !(registry.additionalSettlements ?? []).isEmpty {
+            throw AgentCheckpointError.invalidBound("settlements without scale state")
+        }
     }
 
     private func migrationPayload(
@@ -768,7 +802,7 @@ extension AgentSimulationSession {
         )
     }
 
-    private mutating func requiredPopulationEvent(
+    mutating func requiredPopulationEvent(
         kind: AgentCausalEventKind,
         actorID: AgentID? = nil,
         subjectID: AgentID? = nil,
@@ -806,7 +840,10 @@ extension AgentCausalEventKind {
         case .populationRegistryInitialized, .populationMemberRegistered,
              .migrationProposed, .migrationAdmitted, .migrationStarted,
              .migrationArrived, .migrationRejected, .migrationCancelled,
-             .migrationFailed, .populationMemberExited, .populationStateCleared:
+             .migrationFailed, .populationMemberExited, .populationStateCleared,
+             .populationScalingInitialized, .settlementRegistered,
+             .settlementMigrationStarted, .settlementMigrationArrived,
+             .fidelityTransitioned:
             return true
         case .populationMemberBorn:
             return true

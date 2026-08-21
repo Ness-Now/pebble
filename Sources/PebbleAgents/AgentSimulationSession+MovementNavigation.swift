@@ -67,9 +67,13 @@ extension AgentSimulationSession {
                     && !currentHouseholdIDs.contains($0.migrantID)
             } == true ? 2 : 0)
         let settlementPulseCapacity = settlementMetricsState?.nextPulseTick == tick ? 1 : 0
+        let settlementMigrationArrivalCapacity = populationRegistry?.scaleState?
+            .settlementMigrations.contains { $0.status == .inTransit } == true
+            ? 1 : 0
         try prevalidateCausalAppend(
             count: outcomes.count + populationArrivalEventCapacity
                 + householdArrivalEventCapacity + settlementPulseCapacity
+                + settlementMigrationArrivalCapacity
         )
         let ids = sortedIds
         guard outcomes.count == ids.count else {
@@ -329,6 +333,7 @@ extension AgentSimulationSession {
             }
         }
         try updatePopulationAfterMovementEvents()
+        try updateSettlementMigrationsAfterMovementEvents()
         _ = try applySettlementMetricsPulseIfDue()
     }
 
@@ -389,7 +394,10 @@ extension AgentSimulationSession {
         let goalMode: AgentNavigationGoalMode
         switch state.currentGoal.kind {
         case .migrateToSettlement:
-            guard let migration = migrationRecord(for: state.id) else {
+            let receptionPosition = migrationRecord(for: state.id)?
+                .receptionPosition
+                ?? activeSettlementMigration(for: state.id)?.route.last
+            guard let receptionPosition else {
                 state.navigationProgress = AgentNavigationProgress(
                     status: .failed,
                     lastInvalidation: .targetMissing,
@@ -399,10 +407,10 @@ extension AgentSimulationSession {
             }
             releaseReservation(for: state)
             purpose = .migrationArrival
-            targetPosition = migration.receptionPosition
+            targetPosition = receptionPosition
             targetResource = nil
             goalMode = .exact
-            if state.position == migration.receptionPosition {
+            if state.position == receptionPosition {
                 state.navigationProgress = AgentNavigationProgress(
                     status: .arrived,
                     route: state.navigationProgress.route,

@@ -103,6 +103,15 @@ extension PebbleAgentController {
             "profession=\(individual.profession.primaryDomain ?? individual.profession.status)"
                 + " commitments=\(individual.profession.activeCommitmentCount)",
         ]
+        if let population = individual.populationContext {
+            lines += [
+                "[LOCALITY / EXECUTION FIDELITY — READ ONLY]",
+                "settlement=\(population.settlementID.rawValue)"
+                    + " fidelity=\(population.fidelity.rawValue)",
+                "migration=\(population.activeMigrationID?.rawValue ?? "none")"
+                    + " status=\(population.activeMigrationStatus?.rawValue ?? "none")",
+            ]
+        }
         if individual.materialAssets.isEmpty {
             lines.append("[SOCIAL CLAIM / PERMISSION] assets=none")
         } else {
@@ -309,6 +318,15 @@ extension PebbleAgentController {
                 + " more=\(page.hasMore ? "yes" : "no")",
             "selection: /lab observer select <agent> | /lab observer reason",
         ]
+        if let scale = snapshot.populationScale {
+            lines += [
+                "[POPULATION SCALE — READ ONLY] settlements=\(scale.settlements.count)"
+                    + " population=\(scale.fidelityRecords.count)",
+                "LIVE=\(scale.liveCount) NEAR=\(scale.nearCount)"
+                    + " DORMANT=\(scale.dormantCount)"
+                    + " migrations=\(scale.settlementMigrations.count)",
+            ]
+        }
         if let death = snapshot.recentDeaths.first {
             lines.append(
                 "[MORTALITY] latest=\(death.agentID.rawValue)"

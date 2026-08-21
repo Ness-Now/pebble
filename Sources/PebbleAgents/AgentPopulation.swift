@@ -141,7 +141,7 @@ public struct AgentPopulationConfiguration: Codable, Equatable, Sendable {
         maximumMigrationReplans: Int = 3,
         arrivalDistance: Int = 0
     ) throws {
-        guard (3...8).contains(maximumActivePopulation) else {
+        guard (3...512).contains(maximumActivePopulation) else {
             throw AgentPopulationError.invalidConfiguration("active population")
         }
         guard (1...64).contains(maximumMigrationRecords) else {
@@ -200,7 +200,7 @@ public struct AgentPopulationSettlement: Codable, Equatable, Sendable {
 public struct AgentPopulationMemberRecord: Codable, Equatable, Sendable {
     public let agentID: AgentID
     public let ordinal: AgentPopulationOrdinal
-    public let settlementID: AgentSettlementID
+    public internal(set) var settlementID: AgentSettlementID
     public internal(set) var status: AgentPopulationMembershipStatus
     public let founder: Bool
     public let registeredTick: Int
@@ -376,8 +376,16 @@ public struct AgentPopulationEvictionCounts: Codable, Equatable, Sendable {
 public struct AgentPopulationRegistry: Codable, Equatable, Sendable {
     public let configuration: AgentPopulationConfiguration
     public internal(set) var settlement: AgentPopulationSettlement
+    /// CIV-39 settlements other than the legacy/main settlement. The main
+    /// settlement remains stored exactly once in `settlement`; this array is
+    /// not a second projection of it. Optional storage preserves byte and
+    /// decode compatibility for pre-CIV-39 checkpoints.
+    public internal(set) var additionalSettlements: [AgentPopulationSettlement]?
     public internal(set) var members: [AgentPopulationMemberRecord]
     public internal(set) var migrations: [AgentMigrationRecord]
+    /// CIV-39 execution-fidelity and inter-settlement transition authority.
+    /// Agent state itself remains exclusively in AgentSimulationSession.
+    public internal(set) var scaleState: AgentPopulationScaleState?
     public internal(set) var nextPopulationOrdinal: AgentPopulationOrdinal
     public internal(set) var evictionCounts: AgentPopulationEvictionCounts
     public let initializedEventID: AgentCausalEventID
@@ -386,8 +394,10 @@ public struct AgentPopulationRegistry: Codable, Equatable, Sendable {
     public init(
         configuration: AgentPopulationConfiguration,
         settlement: AgentPopulationSettlement,
+        additionalSettlements: [AgentPopulationSettlement]? = nil,
         members: [AgentPopulationMemberRecord],
         migrations: [AgentMigrationRecord],
+        scaleState: AgentPopulationScaleState? = nil,
         nextPopulationOrdinal: AgentPopulationOrdinal,
         evictionCounts: AgentPopulationEvictionCounts,
         initializedEventID: AgentCausalEventID,
@@ -395,8 +405,12 @@ public struct AgentPopulationRegistry: Codable, Equatable, Sendable {
     ) {
         self.configuration = configuration
         self.settlement = settlement
+        self.additionalSettlements = additionalSettlements?.sorted {
+            $0.settlementID < $1.settlementID
+        }
         self.members = members.sorted { $0.agentID < $1.agentID }
         self.migrations = migrations.sorted { $0.migrationID < $1.migrationID }
+        self.scaleState = scaleState
         self.nextPopulationOrdinal = nextPopulationOrdinal
         self.evictionCounts = evictionCounts
         self.initializedEventID = initializedEventID
@@ -407,12 +421,43 @@ public struct AgentPopulationRegistry: Codable, Equatable, Sendable {
 public struct AgentPopulationSnapshot: Codable, Equatable, Sendable {
     public let enabled: Bool
     public let settlement: AgentPopulationSettlement?
+    public let additionalSettlements: [AgentPopulationSettlement]
     public let members: [AgentPopulationMemberRecord]
     public let migrations: [AgentMigrationRecord]
     public let nextPopulationOrdinal: Int?
     public let evictionCounts: AgentPopulationEvictionCounts
     public let populationCausalEventCount: Int
     public let digest: String
+
+    public init(
+        enabled: Bool,
+        settlement: AgentPopulationSettlement?,
+        additionalSettlements: [AgentPopulationSettlement] = [],
+        members: [AgentPopulationMemberRecord],
+        migrations: [AgentMigrationRecord],
+        nextPopulationOrdinal: Int?,
+        evictionCounts: AgentPopulationEvictionCounts,
+        populationCausalEventCount: Int,
+        digest: String
+    ) {
+        self.enabled = enabled
+        self.settlement = settlement
+        self.additionalSettlements = additionalSettlements.sorted {
+            $0.settlementID < $1.settlementID
+        }
+        self.members = members
+        self.migrations = migrations
+        self.nextPopulationOrdinal = nextPopulationOrdinal
+        self.evictionCounts = evictionCounts
+        self.populationCausalEventCount = populationCausalEventCount
+        self.digest = digest
+    }
+
+    public var settlements: [AgentPopulationSettlement] {
+        ([settlement].compactMap { $0 } + additionalSettlements).sorted {
+            $0.settlementID < $1.settlementID
+        }
+    }
 }
 
 public struct AgentPopulationSummary: Codable, Equatable, Sendable {
@@ -461,5 +506,47 @@ public enum AgentPopulationDigest {
         }
         let digits = String(value, radix: 16, uppercase: false)
         return String(repeating: "0", count: 16 - digits.count) + digits
+    }
+}
+
+extension AgentPopulationRegistry {
+    public var settlements: [AgentPopulationSettlement] {
+        ([settlement] + (additionalSettlements ?? [])).sorted {
+            $0.settlementID < $1.settlementID
+        }
+    }
+
+    func settlement(withID id: AgentSettlementID) -> AgentPopulationSettlement? {
+        if settlement.settlementID == id { return settlement }
+        return additionalSettlements?.first { $0.settlementID == id }
+    }
+
+    mutating func updateSettlement(
+        withID id: AgentSettlementID,
+        _ update: (inout AgentPopulationSettlement) -> Void
+    ) -> Bool {
+        if settlement.settlementID == id {
+            update(&settlement)
+            return true
+        }
+        guard let index = additionalSettlements?.firstIndex(where: {
+            $0.settlementID == id
+        }) else { return false }
+        update(&additionalSettlements![index])
+        additionalSettlements!.sort { $0.settlementID < $1.settlementID }
+        return true
+    }
+
+    mutating func removeMemberFromEverySettlement(_ agentID: AgentID) {
+        _ = updateSettlement(withID: settlement.settlementID) {
+            $0.residentIDs.removeAll { $0 == agentID }
+            $0.inTransitIDs.removeAll { $0 == agentID }
+        }
+        for id in (additionalSettlements ?? []).map(\.settlementID) {
+            _ = updateSettlement(withID: id) {
+                $0.residentIDs.removeAll { $0 == agentID }
+                $0.inTransitIDs.removeAll { $0 == agentID }
+            }
+        }
     }
 }

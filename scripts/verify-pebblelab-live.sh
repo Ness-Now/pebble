@@ -10,7 +10,7 @@ WORLD_SEED="12345"
 
 usage() {
     cat <<EOF
-Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--harvest|--construction|--embodiment|--build|--social|--physical|--material|--rights|--production|--barter|--contracts|--markets|--cooperation|--persistence|--population|--multiscale|--ecology|--mortality|--reproduction|--kinship|--households|--care|--skills|--teaching|--integrated-teaching|--ecological-observation|--agriculture|--wild-subsistence|--physical-food-survival|--livestock|--work-professions|--work-demand-refresh|--gate-b-passive]
+Usage: scripts/verify-pebblelab-live.sh [--dry-run] [--survival|--economy|--h2|--natural|--harvest|--construction|--embodiment|--build|--social|--physical|--material|--rights|--production|--barter|--contracts|--markets|--cooperation|--persistence|--population|--multiscale|--civ39|--ecology|--mortality|--reproduction|--kinship|--households|--care|--skills|--teaching|--integrated-teaching|--ecological-observation|--agriculture|--wild-subsistence|--physical-food-survival|--livestock|--work-professions|--work-demand-refresh|--gate-b-passive]
        scripts/verify-pebblelab-live.sh --help
 
 Launches Pebble for a reproducible, operator-verified Phase J live check. The app is
@@ -47,6 +47,7 @@ Options:
   --persistence Run checkpoint, real process restart, causal replay, and uninterrupted control.
   --population Run bounded migrant admission, mid-route restart, arrival, and uninterrupted control.
   --multiscale Run bounded settlement pulses, v3 restart, uninterrupted, and metrics-off controls.
+  --civ39 Run CIV-39 two-settlement, fidelity rotation, migration, v35 restart, and Observer proof.
   --ecology Run local forage scarcity, v4 restart, regeneration, and uninterrupted control.
   --mortality Run starvation mortality, v5 pre/post restart, probe exit, and replacement migration.
   --reproduction Run deterministic age, bounded local birth, v6 pre/post restart, and maturity.
@@ -143,6 +144,7 @@ for option in "$@"; do
         --persistence) MODE="persistence"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --population) MODE="population"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --multiscale) MODE="multiscale"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
+        --civ39) MODE="civ39"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --ecology) MODE="ecology"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --mortality) MODE="mortality"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
         --reproduction) MODE="reproduction"; MODE_OPTIONS=$((MODE_OPTIONS + 1)) ;;
@@ -176,6 +178,7 @@ COOPERATION_GATE=0
 PERSISTENCE_GATE=0
 POPULATION_GATE=0
 MULTISCALE_GATE=0
+CIV39_SCALE_GATE=0
 ECOLOGY_GATE=0
 MORTALITY_GATE=0
 LIFECYCLE_GATE=0
@@ -645,6 +648,26 @@ elif [ "$MODE" = "ecology" ]; then
     done
     ECOLOGY_PHASE1_COMMANDS="$ECOLOGY_PHASE1_COMMANDS;/lab ecology status;/lab forage status;/lab survival status;/lab checkpoint save ecology-shortage;/lab checkpoint status;/lab causality status;/lab status"
     LAB_COMMANDS="$ECOLOGY_PHASE1_COMMANDS"
+elif [ "$MODE" = "civ39" ]; then
+    WORLD_SEED="46"
+    PERSISTENCE_GATE=1
+    POPULATION_GATE=1
+    CIV39_SCALE_GATE=1
+    WORLD_NAME="PebbleLab-Disposable-CIV39-46"
+    CAPTURE_NAME="civ39-cleanup.png"
+    POPULATION_ANCHOR_X=${PEBBLELAB_POPULATION_ANCHOR_X:-14}
+    POPULATION_ANCHOR_Z=${PEBBLELAB_POPULATION_ANCHOR_Z:--18}
+    POPULATION_ANCHOR_Y=${PEBBLELAB_POPULATION_ANCHOR_Y:-68}
+    POPULATION_PLAYER_Y=$((POPULATION_ANCHOR_Y + 3))
+    POPULATION_WORLD_READY="/gamerule randomTickSpeed 0;/gamerule doMobSpawning false;/gamerule doDaylightCycle false;/gamerule doWeatherCycle false;/time set 1000;/weather clear;/tp $POPULATION_ANCHOR_X $POPULATION_ANCHOR_Y $POPULATION_ANCHOR_Z"
+    CIV39_PHASE1_COMMANDS="$POPULATION_WORLD_READY|/lab start;/tp $POPULATION_ANCHOR_X $POPULATION_PLAYER_Y $POPULATION_ANCHOR_Z;/lab pause;/lab population on;/lab civ39 setup;/lab observer open;/lab observer select agent_0;/lab observer individual;/lab observer status;/lab overlay full|/lab civ39 migrate"
+    civ39_step=0
+    while [ "$civ39_step" -lt 8 ]; do
+        CIV39_PHASE1_COMMANDS="$CIV39_PHASE1_COMMANDS;/lab step"
+        civ39_step=$((civ39_step + 1))
+    done
+    CIV39_PHASE1_COMMANDS="$CIV39_PHASE1_COMMANDS;/lab civ39 status;/lab observer select agent_0;/lab observer status;/lab overlay full|/lab checkpoint save civ39-arrived-v35;/lab checkpoint status;/lab causality tail 20;/lab civ39 status"
+    LAB_COMMANDS="$CIV39_PHASE1_COMMANDS"
 elif [ "$MODE" = "multiscale" ]; then
     WORLD_SEED="46"
     PERSISTENCE_GATE=1
@@ -966,6 +989,7 @@ print_plan() {
     printf '  PEBBLELAB_APP_AGENTS_PERSISTENCE=%s\n' "$PERSISTENCE_GATE"
     printf '  PEBBLELAB_APP_AGENTS_POPULATION=%s\n' "$POPULATION_GATE"
     printf '  PEBBLELAB_APP_AGENTS_MULTISCALE=%s\n' "$MULTISCALE_GATE"
+    printf '  PEBBLELAB_APP_AGENTS_SCALE=%s\n' "$CIV39_SCALE_GATE"
     printf '  PEBBLELAB_APP_AGENTS_ECOLOGY=%s\n' "$ECOLOGY_GATE"
     printf '  PEBBLELAB_APP_AGENTS_MORTALITY=%s\n' "$MORTALITY_GATE"
     printf '  PEBBLELAB_APP_AGENTS_LIFECYCLE=%s\n' "$LIFECYCLE_GATE"
@@ -997,7 +1021,15 @@ print_plan() {
     printf '  PEBBLELAB_GATE_B3_HORIZON=%s\n' "$GATE_B3_HORIZON"
     printf '  PEBBLELAB_DISPOSABLE_WORLD_PROOF=1\n'
     printf '  PEBBLE_CMD=%s\n' "$LAB_COMMANDS"
-    if [ "$MODE" = "markets" ]; then
+    if [ "$MODE" = "civ39" ]; then
+        printf '  PEBBLE_SHOT=-|%s/civ39-setup.png|%s/civ39-transition.png|%s/civ39-pre-restart.png\n' \
+            "$(dirname "$capture_path")" "$(dirname "$capture_path")" \
+            "$(dirname "$capture_path")"
+        printf '  Restart PEBBLE_CMD=<load civ39-arrived-v35; Observer; proof; exact cleanup>\n'
+        printf '  Restart PEBBLE_SHOT=-|%s/civ39-restored.png|%s/civ39-proof.png|%s\n' \
+            "$(dirname "$capture_path")" "$(dirname "$capture_path")" \
+            "$capture_path"
+    elif [ "$MODE" = "markets" ]; then
         printf '  Restart 2 PEBBLE_CMD=%s\n' "$MARKET_PHASE2_COMMANDS"
         printf '  Restart 3 PEBBLE_CMD=%s\n' "$MARKET_PHASE3_COMMANDS"
         printf '  Restart 4 PEBBLE_CMD=%s\n' "$MARKET_PHASE4_COMMANDS"
@@ -1074,7 +1106,11 @@ print_plan() {
     IFS=$old_ifs
     printf '\nOperator checks:\n'
     printf '  1. Wait for automatic disposable-world creation, commands, capture, and normal termination.\n'
-    if [ "$MODE" = "markets" ] && [ "$GATE_E_BLOCKER_04" -eq 1 ]; then
+    if [ "$MODE" = "civ39" ]; then
+        printf '  2. Confirm twelve distinct rendered inhabitants and two locality projections coexist.\n'
+        printf '  3. Confirm agent_0 travels through Core movement, arrives once, and later rotates out of LIVE.\n'
+        printf '  4. Confirm the fresh process restores schema 35, Observer schema 12, all identities, and exact cleanup.\n'
+    elif [ "$MODE" = "markets" ] && [ "$GATE_E_BLOCKER_04" -eq 1 ]; then
         printf '  2. Confirm ordinary contract cognition commits the exact pickaxe while ordinary market discovery observes but cannot select it.\n'
         printf '  3. Confirm fresh restore preserves the exclusion, same-contract continuation transfers consideration, and terminal progress releases the commitment.\n'
         printf '  4. Confirm ordinary barter reuses the released pickaxe, remains the sole live commitment while the bounded stall admits no new lot, and completes both real physical legs exactly once.\n'
@@ -1314,6 +1350,13 @@ if [ "$MODE" = "markets" ]; then
     fi
     SHOT_SPEC="-|$CAPTURE_BEFORE_PATH|$CAPTURE_DEPOSITED_PATH|$CAPTURE_OPEN_PATH"
     fi
+elif [ "$MODE" = "civ39" ]; then
+    CAPTURE_SETUP_PATH="$CAPTURE_DIR/civ39-setup.png"
+    CAPTURE_TRANSITION_PATH="$CAPTURE_DIR/civ39-transition.png"
+    CAPTURE_PRE_RESTART_PATH="$CAPTURE_DIR/civ39-pre-restart.png"
+    CAPTURE_RESTORED_PATH="$CAPTURE_DIR/civ39-restored.png"
+    CAPTURE_PROOF_PATH="$CAPTURE_DIR/civ39-proof.png"
+    SHOT_SPEC="-|$CAPTURE_SETUP_PATH|$CAPTURE_TRANSITION_PATH|$CAPTURE_PRE_RESTART_PATH"
 elif [ "$MODE" = "contracts" ]; then
     CAPTURE_CAPACITY_PATH="$CAPTURE_DIR/contract-capacity-refusal.png"
     CAPTURE_BEFORE_PATH="$CAPTURE_DIR/contract-before-promise.png"
@@ -1403,6 +1446,157 @@ printf '\nLaunching Pebble now. Personal Pebble data is hidden by CFFIXED_USER_H
 
 if /usr/bin/pgrep -x Pebble >/dev/null 2>&1; then
     fail "a Pebble process is already running; refusing an ambiguous live baseline"
+fi
+
+if [ "$MODE" = "civ39" ]; then
+    cd "$ROOT_DIR"
+    swift build -c release --product Pebble
+    PEBBLE_BINARY="$ROOT_DIR/.build/release/Pebble"
+    [ -x "$PEBBLE_BINARY" ] || fail "Release Pebble binary missing: $PEBBLE_BINARY"
+
+    PHASE1_TRACE="$SESSION_ROOT/civ39-phase1.log"
+    PHASE2_TRACE="$SESSION_ROOT/civ39-phase2.log"
+
+    run_civ39_app() {
+        run_trace=$1
+        run_commands=$2
+        create_world=$3
+        command_world_tick=$4
+        run_shots=$5
+        if [ "$create_world" -eq 1 ]; then
+            CFFIXED_USER_HOME="$SESSION_HOME" \
+            PEBBLE_AUTOLOAD=1 \
+            PEBBLE_NEWWORLD="$WORLD_SEED" \
+            PEBBLE_NEWWORLD_NAME="$WORLD_NAME" \
+            PEBBLELAB_APP_AGENTS=1 \
+            PEBBLELAB_APP_AGENTS_MOVE=1 \
+            PEBBLELAB_APP_PROBES=1 \
+            PEBBLELAB_DEBUG_ENTITIES=1 \
+            PEBBLELAB_APP_AGENTS_OVERLAY=1 \
+            PEBBLELAB_APP_AGENTS_OBSERVER=1 \
+            PEBBLELAB_APP_AGENTS_TRACE=1 \
+            PEBBLELAB_APP_AGENTS_TRACE_EVERY=1 \
+            PEBBLELAB_APP_AGENTS_INTERACT=1 \
+            PEBBLELAB_APP_AGENTS_NATURAL=0 \
+            PEBBLELAB_APP_AGENTS_BUILD=0 \
+            PEBBLELAB_APP_AGENTS_SOCIAL=0 \
+            PEBBLELAB_APP_AGENTS_PHYSICAL=0 \
+            PEBBLELAB_APP_AGENTS_MATERIAL=0 \
+            PEBBLELAB_APP_AGENTS_COOPERATION=0 \
+            PEBBLELAB_APP_AGENTS_PERSISTENCE=1 \
+            PEBBLELAB_APP_AGENTS_POPULATION=1 \
+            PEBBLELAB_APP_AGENTS_SCALE=1 \
+            PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
+            PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
+            PEBBLE_CMD="$run_commands" \
+            PEBBLE_SHOT="$run_shots" \
+            "$PEBBLE_BINARY" 2>&1 | /usr/bin/tee "$run_trace"
+        else
+            CFFIXED_USER_HOME="$SESSION_HOME" \
+            PEBBLE_AUTOLOAD=1 \
+            PEBBLELAB_APP_AGENTS=1 \
+            PEBBLELAB_APP_AGENTS_MOVE=1 \
+            PEBBLELAB_APP_PROBES=1 \
+            PEBBLELAB_DEBUG_ENTITIES=1 \
+            PEBBLELAB_APP_AGENTS_OVERLAY=1 \
+            PEBBLELAB_APP_AGENTS_OBSERVER=1 \
+            PEBBLELAB_APP_AGENTS_TRACE=1 \
+            PEBBLELAB_APP_AGENTS_TRACE_EVERY=1 \
+            PEBBLELAB_APP_AGENTS_INTERACT=1 \
+            PEBBLELAB_APP_AGENTS_NATURAL=0 \
+            PEBBLELAB_APP_AGENTS_BUILD=0 \
+            PEBBLELAB_APP_AGENTS_SOCIAL=0 \
+            PEBBLELAB_APP_AGENTS_PHYSICAL=0 \
+            PEBBLELAB_APP_AGENTS_MATERIAL=0 \
+            PEBBLELAB_APP_AGENTS_COOPERATION=0 \
+            PEBBLELAB_APP_AGENTS_PERSISTENCE=1 \
+            PEBBLELAB_APP_AGENTS_POPULATION=1 \
+            PEBBLELAB_APP_AGENTS_SCALE=1 \
+            PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
+            PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
+            PEBBLE_CMD="$run_commands" \
+            PEBBLE_SHOT="$run_shots" \
+            "$PEBBLE_BINARY" 2>&1 | /usr/bin/tee "$run_trace"
+        fi
+        if /usr/bin/pgrep -x Pebble >/dev/null 2>&1; then
+            fail "Pebble process remained after CIV-39 phase: $run_trace"
+        fi
+    }
+
+    printf '\nCIV-39 phase 1: two settlements, twelve inhabitants, tier rotation, and physical migration.\n'
+    run_civ39_app \
+        "$PHASE1_TRACE" "$CIV39_PHASE1_COMMANDS" 1 100 "$SHOT_SPEC"
+    TRACE_PATH="$PHASE1_TRACE"
+    require_trace 'CIV39_SETUP_PASS settlements=2 population=12 live=4 near=4 dormant=4 probes=12 .*authority=verified' 'transactional twelve-inhabitant setup'
+    require_trace 'observer status .*selected=agent_0 schema=12 .*settlement=settlement-main fidelity=LIVE population=12 settlements=2 live=4 near=4 dormant=4 .*mutation=none .*digestStable=1' 'Observer reads initial LIVE identity without mutation'
+    require_trace 'CIV39_MIGRATION_STARTED .*agent=agent_0 identityStable=1 .*origin=settlement-main destination=settlement-east .*physicalAuthority=observed_and_planned publication=causal' 'causal bounded settlement migration'
+    require_trace 'CIV39_STATUS enabled=1 settlements=2 population=12 live=4 near=4 dormant=4 tick=8 .*settlement-east:residents=5:transit=0.*settlement-main:residents=7:transit=0 .*settlement-migration-00000001:agent_0:arrived' 'physical arrival and singular current residency'
+    require_trace 'observer status .*selected=agent_0 schema=12 .*settlement=settlement-east fidelity=NEAR population=12 settlements=2 live=4 near=4 dormant=4 .*mutation=none .*digestStable=1' 'stable agent rotates from LIVE to NEAR after arrival'
+    require_trace 'checkpoint saved name=civ39-arrived-v35 .*tick=8 .*restartSafe=1 ' 'restart-safe CIV-39 checkpoint'
+    require_trace 'summary .*ticks=8 .*agents=12 .*runtimeErrors=0 .*probesRemoved=12 ' 'phase-one exact probe cleanup'
+    reject_trace 'CIV-39 command failed|CIV39_LIVE_PROOF_FAIL|runtimeErrors=[1-9]|rollback failed|rollbackFailure' 'CIV-39 phase-one failure'
+
+    CIV39_ROOT="$SESSION_HOME/Library/Application Support/Pebble/PebbleLabAgents"
+    CIV39_MANIFEST=$(/usr/bin/find "$CIV39_ROOT" -type f -path '*/checkpoints/civ39-arrived-v35/manifest.json' -print -quit)
+    CIV39_SESSION=$(/usr/bin/find "$CIV39_ROOT" -type f -path '*/checkpoints/civ39-arrived-v35/session.json' -print -quit)
+    [ -n "$CIV39_MANIFEST" ] && [ -n "$CIV39_SESSION" ] \
+        || fail "CIV-39 v35 checkpoint bundle missing"
+    /usr/bin/grep -q '"schemaVersion":35' "$CIV39_MANIFEST" \
+        || fail "CIV-39 checkpoint manifest is not schema 35"
+    /usr/bin/grep -q '"schemaVersion":35' "$CIV39_SESSION" \
+        || fail "CIV-39 checkpoint session is not schema 35"
+    /usr/bin/grep -q '"restartSafe":true' "$CIV39_MANIFEST" \
+        || fail "CIV-39 checkpoint is not restart-safe"
+    /usr/bin/grep -q '"settlementID":"settlement-east"' "$CIV39_SESSION" \
+        || fail "CIV-39 checkpoint omitted the second settlement"
+    /usr/bin/grep -q '"fidelity":"NEAR"' "$CIV39_SESSION" \
+        || fail "CIV-39 checkpoint omitted NEAR fidelity"
+    /usr/bin/grep -q '"fidelity":"DORMANT"' "$CIV39_SESSION" \
+        || fail "CIV-39 checkpoint omitted DORMANT fidelity"
+
+    persisted_world_tick=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT json_extract(json, '$.dims.\"0\".time') FROM worlds;")
+    case "$persisted_world_tick" in
+        ''|*[!0-9]*) fail "invalid persisted World tick after CIV-39 phase 1: $persisted_world_tick" ;;
+    esac
+    continuation_command_tick=$((persisted_world_tick + 100))
+    CIV39_PHASE2_COMMANDS="$POPULATION_WORLD_READY|/lab start;/tp $POPULATION_ANCHOR_X $POPULATION_PLAYER_Y $POPULATION_ANCHOR_Z;/lab pause;/lab checkpoint load civ39-arrived-v35;/lab observer open;/lab observer select agent_0;/lab observer individual;/lab observer status;/lab civ39 status;/lab overlay full|/lab civ39 proof;/lab observer global;/lab observer status;/lab causality tail 20;/lab overlay full|/lab stop;/lab status"
+    PHASE2_SHOTS="-|$CAPTURE_RESTORED_PATH|$CAPTURE_PROOF_PATH|$CAPTURE_PATH"
+
+    printf '\nCIV-39 phase 2: fresh process restore, read-only Observer proof, and exact cleanup.\n'
+    run_civ39_app \
+        "$PHASE2_TRACE" "$CIV39_PHASE2_COMMANDS" 0 \
+        "$continuation_command_tick" "$PHASE2_SHOTS"
+    TRACE_PATH="$PHASE2_TRACE"
+    require_trace 'checkpoint loaded name=civ39-arrived-v35 .*tick=8 .*restartSafe=1 .*probes=12 .*probeRestoredMissing=9 .*probeRepositionedVerified=2 .*custodyDuplicates=0 .*worldMutation=verified_probe_position_restore civ39RestoreCount=1' 'fresh-process twelve-probe restore'
+    require_trace 'observer status .*selected=agent_0 schema=12 .*settlement=settlement-east fidelity=NEAR population=12 settlements=2 live=4 near=4 dormant=4 .*mutation=none .*digestStable=1' 'post-restart Observer continuity'
+    require_trace 'CIV39_LIVE_PROOF_PASS settlements=2 population=12 live=4 near=4 dormant=4 migration=arrived identity=agent_0 identityStable=1 checkpointSchema=35 observerSchema=12 observerMutations=0 restartCount=1 restartDuplicateEffects=0 duplicateInhabitants=0 duplicateDurableIdentities=0 duplicateEconomicCommitments=0 duplicateReceipts=0 physicalLoss=0 physicalDuplication=0 syntheticMaterial=0 unexpectedRuntimeErrors=0 probes=12' 'complete CIV-39 live proof'
+    require_trace 'summary reason=stop .*ticks=0 .*agents=12 .*runtimeErrors=0 .*probesRemoved=12 .*causalTick=8 ' 'fresh-process exact twelve-probe cleanup'
+    require_trace 'stop probesRemoved=12 reason=stop .*taggedCustodySpills=0' 'fresh-process physical cleanup'
+    require_trace 'status inactive gate=enabled' 'post-cleanup inactive session'
+    reject_trace 'CIV-39 command failed|CIV39_LIVE_PROOF_FAIL|runtimeErrors=[1-9]|rollback failed|rollbackFailure|duplicateInhabitants=[1-9]|physicalDuplication=[1-9]' 'CIV-39 restore or cleanup failure'
+
+    for capture in \
+        "$CAPTURE_SETUP_PATH" "$CAPTURE_TRANSITION_PATH" \
+        "$CAPTURE_PRE_RESTART_PATH" "$CAPTURE_RESTORED_PATH" \
+        "$CAPTURE_PROOF_PATH" "$CAPTURE_PATH"; do
+        [ -s "$capture" ] || fail "CIV-39 capture missing: $capture"
+    done
+    world_facts=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT count(*), json_extract(json, '$.seed'), json_extract(json, '$.name'), json_extract(json, '$.dims.\"0\".dayTime'), json_extract(json, '$.dims.\"0\".raining'), json_extract(json, '$.dims.\"0\".thundering'), json_extract(json, '$.gameRules.doMobSpawning'), json_extract(json, '$.gameRules.doDaylightCycle'), json_extract(json, '$.gameRules.doWeatherCycle') FROM worlds;")
+    [ "$world_facts" = "1|$WORLD_SEED|$WORLD_NAME|1000|0|0|0|0|0" ] \
+        || fail "unexpected CIV-39 disposable world facts: $world_facts"
+    if /usr/bin/pgrep -x Pebble >/dev/null 2>&1 \
+        || /usr/bin/pgrep -x swift-run >/dev/null 2>&1 \
+        || /usr/bin/pgrep -x pebsmoke >/dev/null 2>&1; then
+        fail "residual PebbleLab process after CIV-39 proof"
+    fi
+    printf '\nPASS: CIV-39 two settlements, twelve inhabitants, LIVE/NEAR/DORMANT rotation, embodied migration, v35 restart, Observer v12, and exact cleanup verified.\n'
+    printf 'Phase 1 trace: %s\n' "$PHASE1_TRACE"
+    printf 'Phase 2 trace: %s\n' "$PHASE2_TRACE"
+    printf 'Capture directory: %s\n' "$CAPTURE_DIR"
+    printf 'Decisive processes: 2\n'
+    printf 'Decisive captures: 6\n'
+    printf 'Retained isolated session: %s\n' "$SESSION_ROOT"
+    exit 0
 fi
 
 if [ "$MODE" = "markets" ]; then
@@ -4384,6 +4578,7 @@ PEBBLELAB_APP_AGENTS_COOPERATION="$COOPERATION_GATE" \
 PEBBLELAB_APP_AGENTS_PERSISTENCE="$PERSISTENCE_GATE" \
 PEBBLELAB_APP_AGENTS_POPULATION="$POPULATION_GATE" \
 PEBBLELAB_APP_AGENTS_MULTISCALE="$MULTISCALE_GATE" \
+PEBBLELAB_APP_AGENTS_SCALE="$CIV39_SCALE_GATE" \
 PEBBLELAB_APP_AGENTS_ECOLOGY="$ECOLOGY_GATE" \
 PEBBLELAB_APP_AGENTS_MORTALITY="$MORTALITY_GATE" \
 PEBBLELAB_APP_AGENTS_LIFECYCLE="$LIFECYCLE_GATE" \
