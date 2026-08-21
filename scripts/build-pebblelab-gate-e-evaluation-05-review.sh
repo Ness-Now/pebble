@@ -92,8 +92,8 @@ cd "$ROOT_DIR"
     || fail 'canonical remote no longer matches the required baseline'
 [ "$(git merge-base HEAD "$BASELINE")" = "$BASELINE" ] \
     || fail 'evaluation branch is not rooted at the required baseline'
-[ "$(git rev-list --count "$BASELINE"..HEAD)" = 3 ] \
-    || fail 'Evaluation 05 must contain its three evaluation-only evidence commits'
+[ "$(git rev-list --count "$BASELINE"..HEAD)" = 4 ] \
+    || fail 'Evaluation 05 must contain its four evaluation-only evidence commits'
 [ -z "$(git status --short)" ] || fail 'worktree must be clean'
 
 for evidence_head in \
@@ -169,7 +169,8 @@ require_text 'market normal listing decision seller=agent_2' "$MARKETS_DIR/marke
 require_text 'checkpoint saved name=market-reentered-open-v34' "$MARKETS_DIR/market-phase4.log"
 require_text 'checkpoint loaded name=market-reentered-open-v34' "$MARKETS_DIR/market-phase5.log"
 require_text 'custodyDuplicates=0 physicalBoundary=acquired' "$MARKETS_DIR/market-phase5.log"
-require_text 'market unsold withdrawal completed seller=agent_2' "$MARKETS_DIR/market-phase5.log"
+require_text 'market unsold withdrawal completed deposit=' "$MARKETS_DIR/market-phase5.log"
+require_text 'seller=agent_2 receipt=market:withdraw:' "$MARKETS_DIR/market-phase5.log"
 require_text 'physical=market:central:[]' "$MARKETS_DIR/market-phase5.log"
 require_text 'physicalLoss=0 physicalDuplication=0 syntheticTradeMaterial=0 duplicateReservations=0 duplicateDeposits=0 observerMutationCount=0' \
     "$MARKETS_DIR/market-phase5.log"
