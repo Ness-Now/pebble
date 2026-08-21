@@ -2,14 +2,36 @@
 
 ## Verdict
 
-`LOCAL PASS CANDIDATE — SENIOR REVIEW REQUIRED`
+`PASS — SENIOR REVIEW APPROVED`
 
-This evaluation does not acquire Gate E. It records fresh, independent local
-evidence for `V4-GATE-E-v1 — Local Material Economy` at the exact published
-baseline `9d841cc28dd4a43f70aff6265ead2e25fa6f160c`.
+Gate E is locally `ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH`.
+After this containing acquisition commit is manually pushed and independently
+remote SHA verified, Gate E becomes `ACQUIRED AND PUBLISHED`. This commit does
+not claim that publication has already occurred.
+
+Evaluation 05 records fresh, independent evidence for
+`V4-GATE-E-v1 — Local Material Economy` at the exact published baseline
+`9d841cc28dd4a43f70aff6265ead2e25fa6f160c`.
 
 No product correction was made. CIV-38 was not started, currency was not made
-a dependency, goldens were not regenerated, and no push was attempted.
+a dependency, goldens were not regenerated, and no push was attempted. The
+next eligible required phase is `CIV-39`; this commit does not start it.
+
+## Accepted evidence and senior review
+
+```text
+evaluated product baseline: 9d841cc28dd4a43f70aff6265ead2e25fa6f160c
+accepted evidence commit 1: cccd531dbe2a640a80844482b8943f7cf2f32563
+accepted evidence commit 2: 91b60d230f4ff314f44582e773d36d3366ebd927
+accepted evidence commit 3: d511ccd377be762444cf57ba0ef050f66c57a3b1
+accepted final evidence HEAD: 6332656566e507464e5322742dc0675d91067a57
+review archive SHA-256: 9960f586cf7d2efca2ae235e2e878e5e2e289f0a095ae3161cb2aa5f61ebb5f4
+archive integrity: PASS
+internal checksums: 205/205 PASS
+Evaluation 05 result: PASS
+senior review: APPROVED
+publication: pending manual user push and independent remote SHA verification
+```
 
 ## Repository and historical authority
 
@@ -27,8 +49,8 @@ a dependency, goldens were not regenerated, and no push was attempted.
 
 Evaluations 01–04 retain `FAIL — HISTORICAL IMMUTABLE EVIDENCE`.
 Blockers 01–04 remain `FIXED + PUBLISHED + REMOTE VERIFIED`. Gate E remains
-`PLANNED — NOT ACQUIRED`. CIV-38 remains `OPTIONAL — NOT STARTED`, and currency
-is not a Gate E dependency.
+locally `ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH`. CIV-38 remains
+`OPTIONAL — NOT STARTED`, and currency is not a Gate E dependency.
 
 ## Evaluation design
 
@@ -193,9 +215,12 @@ errors and were followed by verified rollback and clean retry. Every decisive
 and auxiliary campaign demonstrated its required exact cleanup; all process
 roots were isolated.
 
-## Senior-review boundary
+## Acquisition publication boundary
 
-This is evaluation evidence only. Gate E acquisition requires separate senior
-review, publication, and explicit program-state canonization. Evaluation 05
-therefore returns `LOCAL PASS CANDIDATE — SENIOR REVIEW REQUIRED` and does not
-claim Gate E acquired.
+Senior review approved Evaluation 05 as the successful independent complete
+Gate E proof. Locally Gate E is
+`ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH`. Once this acquisition
+commit is manually pushed and independently remote SHA verified, it represents
+`V4-GATE-E-v1: ACQUIRED AND PUBLISHED`. `CIV-39` is the next eligible required
+phase but remains not started. `CIV-38` remains optional and not started;
+currency remains outside the Gate E dependency. Codex did not push.

@@ -90,7 +90,16 @@
     "gateEBlocker04ProductCorrectionCommit": "0318133fe95949c441974871f2581f38c43c6128",
     "gateEBlocker04ReviewedCandidateHead": "54009009e436c913276e50c162cd30203d8931c3",
     "gateEBlocker04ReviewBundleSHA256": "f36ba77cc2c58e75b70748892043f72c4703668df1da4291c36f4e828a723b9f",
-    "meaning": "Canonical published history is complete through senior-review-approved CIV-37 and Gate E Blocker 04; Gate D Evaluation 11 remains the first accepted Gate D PASS; Gate D Evaluations 01 through 10 and Gate E Evaluations 01 through 04 remain immutable historical FAIL evidence; their published blockers do not rewrite those verdicts; CIV-38 is optional and not started and currency is outside the Gate E dependency; Gate E remains planned and not acquired; Gate E Evaluation 05 is not started and becomes the next authorized action only after manual publication and independent remote SHA verification.",
+    "gateEEvaluation05EvaluatedProductHead": "9d841cc28dd4a43f70aff6265ead2e25fa6f160c",
+    "gateEEvaluation05EvidenceCommits": [
+      "cccd531dbe2a640a80844482b8943f7cf2f32563",
+      "91b60d230f4ff314f44582e773d36d3366ebd927",
+      "d511ccd377be762444cf57ba0ef050f66c57a3b1",
+      "6332656566e507464e5322742dc0675d91067a57"
+    ],
+    "gateEEvaluation05FinalEvidenceHead": "6332656566e507464e5322742dc0675d91067a57",
+    "gateEEvaluation05ReviewArchiveSHA256": "9960f586cf7d2efca2ae235e2e878e5e2e289f0a095ae3161cb2aa5f61ebb5f4",
+    "meaning": "Canonical product history is complete through senior-review-approved CIV-37 and Gate E Blocker 04; Gate E Evaluation 05 is the first accepted complete Gate E PASS and is senior-review approved; Gate E is locally an acquisition publication candidate awaiting user push and becomes acquired and published only after independent remote SHA verification; Gate E Evaluations 01 through 04 remain immutable historical FAIL evidence and Blockers 01 through 04 remain fixed and published; CIV-38 is optional and not started and currency is outside the Gate E dependency; CIV-39 is the next eligible required phase and is not started.",
     "safeBootstrapHardeningPublished": true
   },
   "documents": {
@@ -116,6 +125,8 @@
     "gateEBlocker02EvolvedProductionIdentity": "docs/pebblelab/GATE_E_BLOCKER_02_EVOLVED_PRODUCTION_IDENTITY.md",
     "gateEBlocker03TerminalMarketReservationAuthority": "docs/pebblelab/GATE_E_BLOCKER_03_TERMINAL_MARKET_RESERVATION_AUTHORITY.md",
     "gateEBlocker04ComposedAssetCommitmentAuthority": "docs/pebblelab/GATE_E_BLOCKER_04_COMPOSED_ASSET_COMMITMENT_AUTHORITY.md",
+    "gateEEvaluation05EvidenceMarkdown": "docs/pebblelab/GATE_E_EVALUATION_05_REPORT.md",
+    "gateEEvaluation05EvidenceJSON": "docs/pebblelab/GATE_E_EVALUATION_05_REPORT.json",
     "renewableSubsistenceMilestoneEvidence": "docs/pebblelab/RENEWABLE_SUBSISTENCE_MILESTONE_SUMMARY.md",
     "gateDBlocker01PositionRestoreFix": "docs/pebblelab/GATE_D_BLOCKER_01_POSITION_RESTORE_FIX.md",
     "gateDBlocker02EcologicalObserverHistoryFix": "docs/pebblelab/GATE_D_BLOCKER_02_ECOLOGICAL_OBSERVER_HISTORY_FIX.md",
@@ -142,9 +153,8 @@
   "currentState": {
     "activePhase": null,
     "completedThrough": "CIV-37",
-    "nextEligiblePhase": null,
-    "nextAuthorizedAction": "NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-05",
-    "nextAuthorizedActionRequiresManualPublicationAndIndependentRemoteSHAVerification": true,
+    "nextEligiblePhase": "CIV-39",
+    "nextAuthorizedAction": "CIV-39",
     "civ27Status": "completed",
     "civ28Status": "completed",
     "gateCStatus": "acquired",
@@ -189,7 +199,11 @@
     "civ37Status": "completed",
     "civ37ReviewStatus": "published",
     "civ38Status": "optionalNotStarted",
-    "gateEStatus": "plannedNotAcquired",
+    "gateEStatus": "acquiredPublicationCandidateAwaitingUserPush",
+    "gateEAcquiredLocally": true,
+    "gateEPublished": false,
+    "gateEManualPushPendingLocally": true,
+    "gateEStatusAfterManualPushAndIndependentRemoteSHAVerification": "acquiredPublished",
     "gateEEvaluation01Status": "evaluatedFailNotAcquired",
     "gateEBlocker01Status": "fixedPublished",
     "gateEEvaluation02Status": "evaluatedFailNotAcquired",
@@ -198,7 +212,8 @@
     "gateEBlocker03Status": "fixedPublished",
     "gateEEvaluation04Status": "evaluatedFailNotAcquired",
     "gateEBlocker04Status": "fixedPublished",
-    "gateEEvaluation05Status": "notStarted",
+    "gateEEvaluation05Status": "passedSeniorReviewApproved",
+    "civ39Status": "notStartedNextEligibleRequiredPhase",
     "renewableSubsistenceMilestoneStatus": "completedPublished",
     "v4CanonicalDocumentSet": true
   },
@@ -1650,6 +1665,76 @@
     "evaluation05Status": "notStarted",
     "nextAuthorizedActionAfterManualPublicationAndIndependentRemoteSHAVerification": "NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-05"
   },
+  "gateEEvaluation05Validation": {
+    "title": "V4-GATE-E-v1 — Local Material Economy Evaluation 05",
+    "status": "passedSeniorReviewApproved",
+    "verdict": "pass",
+    "seniorReview": "approved",
+    "evaluatedProductBaseline": "9d841cc28dd4a43f70aff6265ead2e25fa6f160c",
+    "evidenceCommits": [
+      "cccd531dbe2a640a80844482b8943f7cf2f32563",
+      "91b60d230f4ff314f44582e773d36d3366ebd927",
+      "d511ccd377be762444cf57ba0ef050f66c57a3b1",
+      "6332656566e507464e5322742dc0675d91067a57"
+    ],
+    "finalEvidenceHead": "6332656566e507464e5322742dc0675d91067a57",
+    "evidenceMarkdown": "docs/pebblelab/GATE_E_EVALUATION_05_REPORT.md",
+    "evidenceJSON": "docs/pebblelab/GATE_E_EVALUATION_05_REPORT.json",
+    "reviewArchiveSHA256": "9960f586cf7d2efca2ae235e2e878e5e2e289f0a095ae3161cb2aa5f61ebb5f4",
+    "archiveIntegrity": "PASS",
+    "internalChecksums": "205/205 PASS",
+    "focusedEvaluation05Passed": 21,
+    "focusedEvaluation05Failed": 0,
+    "owningRegressionsPassed": 305,
+    "owningRegressionsFailed": 0,
+    "blockerFocusedAndLive": {
+      "blocker01": "27/27 focused — live PASS",
+      "blocker02": "33/33 focused — live PASS",
+      "blocker03": "25/25 focused — live PASS",
+      "blocker04": "28/28 focused — live PASS"
+    },
+    "repositoryStepsPassed": 35,
+    "repositoryStepsTotal": 35,
+    "repositoryAssertionsPassed": 4015,
+    "repositoryAssertionsFailed": 0,
+    "decisiveLiveEvidence": {
+      "status": "passed",
+      "freshProcesses": 17,
+      "captures": 54,
+      "allHarnessesPassed": true
+    },
+    "auxiliaryPassingEvidence": {
+      "status": "passed",
+      "freshProcesses": 8,
+      "captures": 33
+    },
+    "totalInspectedFinalCaptures": 87,
+    "checkpointSchema": 34,
+    "replaySchema": 34,
+    "observerSchema": 11,
+    "physicalLoss": 0,
+    "physicalDuplication": 0,
+    "syntheticMaterial": 0,
+    "duplicateLiveCommitments": 0,
+    "duplicateDeposits": 0,
+    "duplicateReservations": 0,
+    "duplicateReceipts": 0,
+    "duplicateSettlements": 0,
+    "observerMutationCount": 0,
+    "unexpectedRuntimeErrors": 0,
+    "cleanup": "exactPass",
+    "goldensRegenerated": false,
+    "productCorrectionMade": false,
+    "historicalEvaluations01Through04": "failHistoricalImmutableEvidence",
+    "blockers01Through04": "fixedPublished",
+    "gateELocalStatus": "acquiredPublicationCandidateAwaitingUserPush",
+    "gateEStatusAfterManualPushAndIndependentRemoteSHAVerification": "acquiredPublished",
+    "civ38Status": "optionalNotStarted",
+    "currencyRequiredForGateE": false,
+    "nextEligiblePhase": "CIV-39",
+    "nextAuthorizedAction": "CIV-39",
+    "civ39Started": false
+  },
   "publishedPostGateHardening": [
     {
       "id": "POST-GATE-B-SAFE-BOOTSTRAP",
@@ -1879,8 +1964,11 @@
     "E": {
       "contractId": "V4-GATE-E-v1",
       "title": "Local Material Economy",
-      "status": "planned",
-      "acquired": false,
+      "status": "acquiredPublicationCandidateAwaitingUserPush",
+      "acquired": true,
+      "published": false,
+      "manualPushPendingLocally": true,
+      "statusAfterManualPushAndIndependentRemoteSHAVerification": "acquiredPublished",
       "requiredPhases": [
         "CIV-34",
         "CIV-35",
@@ -1969,9 +2057,23 @@
         "gateAcquired": false
       },
       "evaluation05": {
-        "status": "notStarted",
-        "nextAuthorizedAction": true,
-        "requiresBlocker04ManualPublicationAndIndependentRemoteSHAVerification": true
+        "status": "passedSeniorReviewApproved",
+        "evaluatedProductBaseline": "9d841cc28dd4a43f70aff6265ead2e25fa6f160c",
+        "evidenceCommits": [
+          "cccd531dbe2a640a80844482b8943f7cf2f32563",
+          "91b60d230f4ff314f44582e773d36d3366ebd927",
+          "d511ccd377be762444cf57ba0ef050f66c57a3b1",
+          "6332656566e507464e5322742dc0675d91067a57"
+        ],
+        "finalEvidenceHead": "6332656566e507464e5322742dc0675d91067a57",
+        "evidence": "docs/pebblelab/GATE_E_EVALUATION_05_REPORT.md",
+        "machineReadableEvidence": "docs/pebblelab/GATE_E_EVALUATION_05_REPORT.json",
+        "verdict": "pass",
+        "seniorReview": "approved",
+        "reviewArchiveSHA256": "9960f586cf7d2efca2ae235e2e878e5e2e289f0a095ae3161cb2aa5f61ebb5f4",
+        "archiveIntegrity": "PASS",
+        "internalChecksums": "205/205 PASS",
+        "productCorrectionMade": false
       }
     },
     "F": {
@@ -2406,7 +2508,7 @@
     {
       "id": "CIV-39",
       "title": "Multi-Settlement, Population Scaling and Fidelity Tiers V1",
-      "status": "planned",
+      "status": "notStarted",
       "wave": "wave-4-scale-settlements",
       "requiredForCanonicalProgression": true,
       "dependsOn": [
