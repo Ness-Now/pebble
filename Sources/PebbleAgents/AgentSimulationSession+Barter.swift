@@ -57,6 +57,28 @@ extension AgentSimulationSession {
     public func discoverBarterOpportunities(
         from candidates: [AgentBarterPhysicalPairObservation]
     ) throws -> [AgentBarterOpportunityObservation] {
+        try discoverBarterOpportunities(
+            from: candidates, acceptsAdapterRefreshedCustody: false
+        )
+    }
+
+    /// Pebble-only discovery seam for observations whose exact stack authority
+    /// was reacquired from the live custody gateway immediately before this
+    /// call. The ordinary public discovery path continues to reject a changed
+    /// custody fingerprint, so a caller cannot silently turn stale session
+    /// evidence into current physical authority.
+    public func discoverPhysicallyVerifiedBarterOpportunities(
+        from candidates: [AgentBarterPhysicalPairObservation]
+    ) throws -> [AgentBarterOpportunityObservation] {
+        try discoverBarterOpportunities(
+            from: candidates, acceptsAdapterRefreshedCustody: true
+        )
+    }
+
+    private func discoverBarterOpportunities(
+        from candidates: [AgentBarterPhysicalPairObservation],
+        acceptsAdapterRefreshedCustody: Bool
+    ) throws -> [AgentBarterOpportunityObservation] {
         guard let state = barterState else {
             throw AgentSessionError.barter(.disabled)
         }
@@ -90,6 +112,11 @@ extension AgentSimulationSession {
             try validateBarterLegProvenance(candidate.actorBGood)
             guard !barterAssetReserved(candidate.actorAGood.assetID, in: state),
                   !barterAssetReserved(candidate.actorBGood.assetID, in: state),
+                  !exactAssetIsEconomicallyCommitted(
+                      candidate.actorAGood.assetID
+                  ), !exactAssetIsEconomicallyCommitted(
+                      candidate.actorBGood.assetID
+                  ),
                   let actorAReason = bestBarterReason(
                     actorID: candidate.actorAID,
                     received: candidate.actorBGood.material,
@@ -100,20 +127,22 @@ extension AgentSimulationSession {
                     received: candidate.actorAGood.material,
                     configuration: state.configuration
                   ) else { continue }
-            let actorADisposition = evaluateMaterialUse(AgentMaterialUseRequest(
-                requestID: "barter-discovery:\(candidate.candidateID):a",
-                assetID: candidate.actorAGood.assetID,
-                actorID: candidate.actorAID, use: .transferCustody,
-                verifiedHolder: candidate.actorAGood.holderObservation
-            ))
-            let actorBDisposition = evaluateMaterialUse(AgentMaterialUseRequest(
-                requestID: "barter-discovery:\(candidate.candidateID):b",
-                assetID: candidate.actorBGood.assetID,
-                actorID: candidate.actorBID, use: .transferCustody,
-                verifiedHolder: candidate.actorBGood.holderObservation
-            ))
-            guard actorADisposition.verdict == .allowed,
-                  actorBDisposition.verdict == .allowed else { continue }
+            guard evaluateCurrentBarterMaterialUse(
+                    requestID: "barter-discovery:\(candidate.candidateID):a",
+                    assetID: candidate.actorAGood.assetID,
+                    actorID: candidate.actorAID,
+                    currentObservation: candidate.actorAGood.holderObservation,
+                    acceptsAdapterRefreshedCustody:
+                        acceptsAdapterRefreshedCustody
+                  )?.verdict == .allowed,
+                  evaluateCurrentBarterMaterialUse(
+                    requestID: "barter-discovery:\(candidate.candidateID):b",
+                    assetID: candidate.actorBGood.assetID,
+                    actorID: candidate.actorBID,
+                    currentObservation: candidate.actorBGood.holderObservation,
+                    acceptsAdapterRefreshedCustody:
+                        acceptsAdapterRefreshedCustody
+                  )?.verdict == .allowed else { continue }
             let opportunity = AgentBarterOpportunityObservation(
                 opportunityID: "barter-opportunity-"
                     + AgentAutonomousActivityDigest.make(candidate.candidateID),
@@ -146,6 +175,11 @@ extension AgentSimulationSession {
                   opportunity.expiresAtTick >= tick,
                   !barterAssetReserved(opportunity.offered.assetID, in: state),
                   !barterAssetReserved(opportunity.requested.assetID, in: state),
+                  !exactAssetIsEconomicallyCommitted(
+                      opportunity.offered.assetID
+                  ), !exactAssetIsEconomicallyCommitted(
+                      opportunity.requested.assetID
+                  ),
                   bestBarterReason(
                     actorID: opportunity.offerorID,
                     received: opportunity.requested.material,
@@ -156,19 +190,22 @@ extension AgentSimulationSession {
                     received: opportunity.offered.material,
                     configuration: state.configuration
                   ) == opportunity.counterpartyReason else { return false }
-            let offered = evaluateMaterialUse(AgentMaterialUseRequest(
+            let offered = evaluateCurrentBarterMaterialUse(
                 requestID: "barter-proposal:\(opportunity.opportunityID):offered",
                 assetID: opportunity.offered.assetID,
-                actorID: opportunity.offerorID, use: .transferCustody,
-                verifiedHolder: opportunity.offered.holderObservation
-            ))
-            let requested = evaluateMaterialUse(AgentMaterialUseRequest(
+                actorID: opportunity.offerorID,
+                currentObservation: opportunity.offered.holderObservation,
+                acceptsAdapterRefreshedCustody: true
+            )
+            let requested = evaluateCurrentBarterMaterialUse(
                 requestID: "barter-proposal:\(opportunity.opportunityID):requested",
                 assetID: opportunity.requested.assetID,
-                actorID: opportunity.counterpartyID, use: .transferCustody,
-                verifiedHolder: opportunity.requested.holderObservation
-            ))
-            return offered.verdict == .allowed && requested.verdict == .allowed
+                actorID: opportunity.counterpartyID,
+                currentObservation: opportunity.requested.holderObservation,
+                acceptsAdapterRefreshedCustody: true
+            )
+            return offered?.verdict == .allowed
+                && requested?.verdict == .allowed
         }.sorted { lhs, rhs in
             let lhsPriority = barterReasonPriority(lhs.offerorReason)
             let rhsPriority = barterReasonPriority(rhs.offerorReason)
@@ -316,6 +353,15 @@ extension AgentSimulationSession {
               !barterAssetReserved(opportunity.requested.assetID, in: state) else {
             throw AgentSessionError.barter(.invalidOffer(offerID.rawValue))
         }
+        let logicalOperationID = "barter:\(offerID.rawValue)"
+        try prevalidateNewExactAssetCommitment(
+            assetID: opportunity.offered.assetID,
+            logicalOperationID: logicalOperationID
+        )
+        try prevalidateNewExactAssetCommitment(
+            assetID: opportunity.requested.assetID,
+            logicalOperationID: logicalOperationID
+        )
         compactTerminalBarterOffersForCapacity(state: &state)
         guard state.offers.count < state.configuration.maximumOffers else {
             throw AgentSessionError.barter(.capacityReached("offers"))
@@ -416,6 +462,7 @@ extension AgentSimulationSession {
               offer.status == .accepted else {
             throw AgentSessionError.barter(.staleOffer(outcome.offerID.rawValue))
         }
+        try prevalidateAcceptedBarterCommitment(offerID: outcome.offerID)
         guard !state.processedOperationIDs.contains(outcome.operationID),
               outcome.completedAtTick == tick,
               validBarterText(outcome.operationID, maximum: 256),
@@ -441,24 +488,22 @@ extension AgentSimulationSession {
                 == offer.opportunity.requested.material.count else {
             throw AgentSessionError.barter(.invalidOutcome(outcome.operationID))
         }
-        let offeredDecision = evaluateMaterialUse(AgentMaterialUseRequest(
-            requestID: "barter:\(offer.offerID.rawValue):offered",
-            assetID: offer.opportunity.offered.assetID,
-            actorID: offer.opportunity.offerorID,
-            use: .transferCustody,
-            verifiedHolder: offer.opportunity.offered.holderObservation
-        ))
-        let requestedDecision = evaluateMaterialUse(AgentMaterialUseRequest(
-            requestID: "barter:\(offer.offerID.rawValue):requested",
-            assetID: offer.opportunity.requested.assetID,
-            actorID: offer.opportunity.counterpartyID,
-            use: .transferCustody,
-            verifiedHolder: offer.opportunity.requested.holderObservation
-        ))
-        guard offeredDecision.verdict == .allowed,
-              requestedDecision.verdict == .allowed else {
+        guard evaluateCurrentBarterMaterialUse(
+                requestID: "barter:\(offer.offerID.rawValue):offered",
+                assetID: offer.opportunity.offered.assetID,
+                actorID: offer.opportunity.offerorID,
+                currentObservation: offer.opportunity.offered.holderObservation,
+                acceptsAdapterRefreshedCustody: true
+              )?.verdict == .allowed,
+              evaluateCurrentBarterMaterialUse(
+                requestID: "barter:\(offer.offerID.rawValue):requested",
+                assetID: offer.opportunity.requested.assetID,
+                actorID: offer.opportunity.counterpartyID,
+                currentObservation: offer.opportunity.requested.holderObservation,
+                acceptsAdapterRefreshedCustody: true
+              )?.verdict == .allowed else {
             throw AgentSessionError.barter(.unauthorized(
-                "offered=\(offeredDecision.reason.rawValue) requested=\(requestedDecision.reason.rawValue)"
+                "current exact-asset disposition"
             ))
         }
         try prevalidateCausalAppend(count: 3)
@@ -571,6 +616,16 @@ extension AgentSimulationSession {
         state.lastBarterEventID = event.eventID
         materialRightsState = rights
         barterState = state
+        fulfillProductionNeedFromVerifiedReceipt(
+            offerBefore.opportunity.offerorReason.needID,
+            received: offerBefore.opportunity.requested.material,
+            operationID: outcome.operationID
+        )
+        fulfillProductionNeedFromVerifiedReceipt(
+            offerBefore.opportunity.counterpartyReason.needID,
+            received: offerBefore.opportunity.offered.material,
+            operationID: outcome.operationID
+        )
         try validateMaterialRightsStateIfEnabled()
         try validateBarterStateIfEnabled()
     }
@@ -623,6 +678,7 @@ extension AgentSimulationSession {
             $0.offer.status == .completed
                 && $0.outcome.offerID == $0.offer.offerID
         }) else { throw AgentSessionError.barter(.invalidState("record")) }
+        try validateComposedExactAssetCommitments()
     }
 
     private func validateBarterOpportunity(
@@ -653,6 +709,8 @@ extension AgentSimulationSession {
                 == observation.offered.material.count,
               observation.requested.holderObservation.quantity
                 == observation.requested.material.count,
+              observation.offered.holderObservation.observedAtTick == tick,
+              observation.requested.holderObservation.observedAtTick == tick,
               observation.distance >= 0,
               observation.distance <= state.configuration.maximumLocalDistance,
               observation.lineOfSight, observation.chunksReady,
@@ -696,6 +754,40 @@ extension AgentSimulationSession {
         ) else {
             throw AgentSessionError.barter(.invalidOpportunity(leg.assetID.rawValue))
         }
+    }
+
+    /// Material Rights remains the social constraint while Pebble supplies a
+    /// fresh full-custody fingerprint as immediate physical authority. An
+    /// unrelated slot change may replace the historical fingerprint only for
+    /// the same exact asset, holder, identity, and quantity. Discovery binds
+    /// the observation to the current tick; once an offer is published, that
+    /// bounded observation remains immutable until physical prevalidation.
+    public func evaluateCurrentBarterMaterialUse(
+        requestID: String,
+        assetID: AgentMaterialAssetID,
+        actorID: AgentID,
+        currentObservation: AgentMaterialHolderObservation,
+        acceptsAdapterRefreshedCustody: Bool = false
+    ) -> AgentMaterialUseDecision? {
+        guard let record = materialRightsState?.records.first(where: {
+                  $0.asset.assetID == assetID
+              }), record.lastVerifiedHolder.holder == .agent(actorID),
+              currentObservation.holder == record.lastVerifiedHolder.holder,
+              currentObservation.materialIdentity
+                == record.lastVerifiedHolder.materialIdentity,
+              currentObservation.quantity == record.lastVerifiedHolder.quantity,
+              acceptsAdapterRefreshedCustody || (
+                currentObservation.custodyFingerprint
+                    == record.lastVerifiedHolder.custodyFingerprint
+                    && currentObservation.physicalReceiptID
+                        == record.lastVerifiedHolder.physicalReceiptID
+              )
+        else { return nil }
+        return evaluateMaterialUse(AgentMaterialUseRequest(
+            requestID: requestID, assetID: assetID, actorID: actorID,
+            use: .transferCustody,
+            verifiedHolder: record.lastVerifiedHolder
+        ))
     }
 
     private func barterAssetReserved(
@@ -810,7 +902,12 @@ extension AgentSimulationSession {
     ) throws {
         guard let index = rights.records.firstIndex(where: {
             $0.asset.assetID == leg.assetID
-        }), rights.records[index].lastVerifiedHolder == leg.sourceObservation,
+        }), rights.records[index].lastVerifiedHolder.holder
+                == leg.sourceObservation.holder,
+              rights.records[index].lastVerifiedHolder.materialIdentity
+                == leg.sourceObservation.materialIdentity,
+              rights.records[index].lastVerifiedHolder.quantity
+                == leg.sourceObservation.quantity,
               rights.records[index].recognizedOwnership?.ownerID == from,
               rights.records[index].claims.count
                 < rights.configuration.maximumClaimsPerAsset else {

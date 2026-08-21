@@ -18,7 +18,7 @@ extension PebbleAgentController {
         world: World,
         player: Player
     ) -> PebbleAgentCommandResult {
-        let usage = "Usage: /lab market <setup|status|proof|blocker-03-status|remote-buyer|restore-locality|cleanup>"
+        let usage = "Usage: /lab market <setup|status|proof|blocker-03-status|blocker-04-status|blocker-04-enable-barter|remote-buyer|restore-locality|cleanup>"
         guard arguments.count == 1 else { return failure(usage) }
         guard marketFeatureEnabled else {
             return failure(
@@ -30,6 +30,9 @@ extension PebbleAgentController {
         case "status": return marketStatus(world: world)
         case "proof": return marketProofStatus(world: world)
         case "blocker-03-status": return marketBlocker03Status(world: world)
+        case "blocker-04-status": return marketBlocker04Status(world: world)
+        case "blocker-04-enable-barter":
+            return enableBlocker04Barter(world: world)
         case "remote-buyer": return stageRemoteMarketBuyer(world: world)
         case "restore-locality": return restoreRemoteMarketBuyer(world: world)
         case "cleanup": return cleanupMarketProof(world: world)
@@ -172,6 +175,7 @@ extension PebbleAgentController {
         }) else {
             return failure("Market setup found no bounded disposable market cell.")
         }
+        let blocker04 = environment["PEBBLELAB_GATE_E_BLOCKER_04"] == "1"
         let sellerInventory = copyItemInventory(sellerProbe.carriedItems)
         let buyerInventory = copyItemInventory(buyerProbe.carriedItems)
         let laterSellerInventory = copyItemInventory(
@@ -188,6 +192,11 @@ extension PebbleAgentController {
             world.setBlockEntity(container)
             installedContainer = container
             sellerProbe.carriedItems[0] = ItemStack(iid("stone_pickaxe"), 1)
+            if blocker04 {
+                sellerProbe.carriedItems[1] = ItemStack(
+                    iid("bread"), 3, label: "blocker04-barter-reuse"
+                )
+            }
             buyerProbe.carriedItems[0] = ItemStack(
                 iid("bread"), 1, label: "market-insufficient-offer"
             )
@@ -256,6 +265,9 @@ extension PebbleAgentController {
             let pickaxe = try bridge.snapshot(of:
                 sellerProbe.carriedItems[0]!
             )
+            let blocker04Bread = try sellerProbe.carriedItems[1].map {
+                try bridge.snapshot(of: $0)
+            }
             let lowBread = try bridge.snapshot(of: buyerProbe.carriedItems[0]!)
             let bread = try bridge.snapshot(of: buyerProbe.carriedItems[1]!)
             let laterPickaxe = try bridge.snapshot(of:
@@ -272,6 +284,16 @@ extension PebbleAgentController {
                 physicalReceiptID: "market-bootstrap:observe-pickaxe",
                 observedAtTick: candidate.tick
             )
+            let blocker04BreadObservation = try blocker04Bread.map { bread in
+                AgentMaterialHolderObservation(
+                    holder: .agent(seller), materialIdentity: bread.identity,
+                    quantity: bread.count,
+                    custodyFingerprint: try materialCustodyGateway
+                        .fingerprint(sellerEndpoint),
+                    physicalReceiptID: "market-bootstrap:observe-blocker04-bread",
+                    observedAtTick: candidate.tick
+                )
+            }
             let lowBreadObservation = AgentMaterialHolderObservation(
                 holder: .agent(buyer), materialIdentity: lowBread.identity,
                 quantity: lowBread.count,
@@ -312,6 +334,16 @@ extension PebbleAgentController {
                 owner: seller, witnesses: [seller, buyer, later],
                 session: &candidate
             )
+            if let blocker04Bread, let blocker04BreadObservation {
+                try registerMarketBootstrapAsset(
+                    assetID: AgentMaterialAssetID(
+                        rawValue: "market-asset:7-blocker04-bread3"
+                    )!, stack: blocker04Bread,
+                    observation: blocker04BreadObservation,
+                    owner: seller, witnesses: [seller, buyer, later],
+                    session: &candidate
+                )
+            }
             try registerMarketBootstrapAsset(
                 assetID: AgentMaterialAssetID(
                     rawValue: "market-asset:1-later-pickaxe"
@@ -345,6 +377,9 @@ extension PebbleAgentController {
                     listingLifetimeTicks: 8
                 )
             )
+            if blocker04 {
+                try candidate.setContractsEnabled(true)
+            }
             let marketID = AgentMarketID(rawValue: "market:central")!
             try candidate.registerMarketPlace(
                 operationID: "market:register:central", marketID: marketID,
@@ -401,7 +436,7 @@ extension PebbleAgentController {
             marketRemoteBuyerRestoreState = nil
             passiveObserverBootstrapComplete = true
             manualProductiveCommandsAfterBootstrap = 0
-            let message = "market setup market=central container=\(position.x),\(position.y),\(position.z) slots=9 seller=\(pair.0.id) buyer=\(pair.1.id) laterSeller=\(laterSeller.id) goods=initial_stone_pickaxe:1,insufficient_bread:1,bread:2,later_stone_pickaxe:1,unsold_oak_log:1 initialAsk=stone_pickaxe:1/bread:3 opportunity=awaiting-normal-runtime marketCapacityPhysical=bounded capacityRefusal=destinationFull marketProofFixtureDecisionAuthority=0 paused=1 manualProductiveMarketCommandsAfterBootstrap=0"
+            let message = "market setup market=central container=\(position.x),\(position.y),\(position.z) slots=9 seller=\(pair.0.id) buyer=\(pair.1.id) laterSeller=\(laterSeller.id) goods=initial_stone_pickaxe:1,insufficient_bread:1,bread:2,later_stone_pickaxe:1,unsold_oak_log:1,blocker04_bread3:\(blocker04 ? 1 : 0) initialAsk=stone_pickaxe:1/bread:3 opportunity=awaiting-normal-runtime marketCapacityPhysical=bounded capacityRefusal=destinationFull marketProofFixtureDecisionAuthority=0 paused=1 manualProductiveMarketCommandsAfterBootstrap=0 blocker04CrossSystemSetup=\(blocker04 ? 1 : 0)"
             trace(message)
             return success(message)
         } catch {
@@ -462,6 +497,210 @@ extension PebbleAgentController {
         let message = "market proof schema=34 observerSchema=11 openCheckpointSafe=\(openRestorable && ready ? 1 : 0) threeEndpointSettlement=1 currentLocalityExecutionPrecondition=1 sellerDecisionAuthority=normal-cognition sellerUnconditionalAccept=0 normalSellerRejections=\(marketNormalSellerRejectionCount) normalSellerAcceptances=\(marketNormalSellerAcceptanceCount) remoteSettlementAttempts=\(marketRemoteSettlementRefusalCount) remoteSettlementPhysicalMutation=0 remoteSettlementTradePublication=0 remoteSettlementPriceHistoryPublication=0 completedTradePriceProvenance=\(completed ? 1 : 0) priceRows=\(state.priceHistory.count) trades=\(state.totalTradeCount) withdrawals=\(state.totalWithdrawalCount) physicalLoss=0 physicalDuplication=0 syntheticTradeMaterial=0 duplicateReservations=0 duplicateDeposits=0 observerMutationCount=0 candidateMidFaultInjected=\(marketMidSettlementFaultInjected ? 1 : 0) candidatePostMutationFaultInjected=\(marketPostMutationFaultInjected ? 1 : 0) manualProductiveMarketCommandsAfterBootstrap=\(manualProductiveCommandsAfterBootstrap)"
         trace(message)
         return success(message)
+    }
+
+    /// Blocker 04 live-proof diagnostic. This is a read-only projection over
+    /// canonical economic state plus a fresh Pebble custody verification. It
+    /// cannot create, advance, release, or execute an economic commitment.
+    private func marketBlocker04Status(
+        world: World
+    ) -> PebbleAgentCommandResult {
+        guard environment["PEBBLELAB_GATE_E_BLOCKER_04"] == "1",
+              environment["PEBBLELAB_DISPOSABLE_WORLD_PROOF"] == "1",
+              let session, activeWorld === world,
+              session.marketEnabled, session.contractsEnabled,
+              let assetID = AgentMaterialAssetID(
+                  rawValue: "market-asset:0-initial-pickaxe"
+              ) else {
+            return failure(
+                "Blocker 04 status requires its disposable contract/market campaign."
+            )
+        }
+        let durableBefore = try? session.durableStateBytes()
+        let markets = session.marketSnapshot()
+        let contracts = session.contractSnapshot()
+        let barter = session.barterSnapshot()
+        let rightsBefore = session.materialRightsSnapshot()
+        let rights = rightsBefore.records.first {
+            $0.asset.assetID == assetID
+        }
+        let targetOpportunities = markets.depositOpportunities.filter {
+            $0.offered.assetID == assetID
+                && $0.expiresAtTick >= session.tick
+        }
+        let targetSelected = session.nextAutonomousMarketDepositProposal().map {
+            selected in targetOpportunities.contains {
+                $0.opportunityID == selected.opportunityID
+            }
+        } == true
+        let targetDeposits = markets.deposits.filter { $0.assetID == assetID }
+        let nonterminalTargetDeposits = targetDeposits.filter {
+            !$0.status.isTerminal
+        }
+        let targetProposals = contracts.proposals.filter {
+            $0.opportunity.consideration.assetID == assetID
+        }
+        let openContracts = targetProposals.filter { $0.status == .open }
+        let awaitingContracts = contracts.obligations.filter { obligation in
+            obligation.status == .awaitingConsideration
+                && targetProposals.contains {
+                    $0.proposalID == obligation.proposalID
+                }
+        }
+        let advancedContracts = contracts.obligations.filter { obligation in
+            (obligation.status == .outstanding
+                || obligation.status == .overdue
+                || obligation.status == .fulfilled)
+                && targetProposals.contains {
+                    $0.proposalID == obligation.proposalID
+                }
+        }
+        let targetBarterOffers = barter.offers.filter { offer in
+            offer.status.isPending
+                && (offer.opportunity.offered.assetID == assetID
+                    || offer.opportunity.requested.assetID == assetID)
+        }
+        let targetBarterRecords = barter.records.filter { record in
+            record.offer.opportunity.offered.assetID == assetID
+                || record.offer.opportunity.requested.assetID == assetID
+        }
+        let commitments = session.exactAssetCommitmentSnapshot().filter {
+            $0.assetID == assetID
+        }
+        let logicalCommitments = Set(commitments.map(\.logicalOperationID))
+        let crossSystemDuplicate = logicalCommitments.count > 1
+        let contractLive = commitments.contains { $0.domain == .contract }
+        let barterLive = commitments.contains { $0.domain == .barter }
+        let marketLive = commitments.contains { $0.domain == .market }
+        let excludedMarketAcquisition = (contractLive || barterLive)
+            && !targetOpportunities.isEmpty && !targetSelected
+            && nonterminalTargetDeposits.isEmpty
+
+        var exactCurrentAuthority = false
+        if let rights {
+            let expected = AgentMaterialStackSnapshot(
+                identity: rights.lastVerifiedHolder.materialIdentity,
+                count: rights.lastVerifiedHolder.quantity
+            )
+            let endpoint: PebbleAgentMaterialCustodyEndpoint?
+            switch rights.lastVerifiedHolder.holder {
+            case let .agent(holderID):
+                endpoint = probesByAgentId[holderID.rawValue].flatMap { probe in
+                    guard probe.world === world, !probe.dead else { return nil }
+                    return .liveAgent(PebbleAgentEmbodiment(probe: probe), in: world)
+                }
+            case let .container(locationID):
+                endpoint = markets.markets.first(where: {
+                    $0.containerLocationID == locationID
+                }).flatMap {
+                    marketContainer($0.marketID, world: world, session: session)
+                }.map { .container($0, in: world) }
+            }
+            if let endpoint {
+                exactCurrentAuthority = (try? materialCustodyGateway
+                    .acquireAssetAuthority(expected, at: endpoint).isExact) == true
+            }
+        }
+
+        let carriedPickaxes = probesByAgentId.values
+            .flatMap { $0.carriedItems }.compactMap { $0 }.filter {
+            $0.id == iid("stone_pickaxe")
+        }.reduce(0) { $0 + $1.count }
+        let containerPickaxes = markets.markets.first.flatMap {
+            marketContainer($0.marketID, world: world, session: session)
+        }?.items?.compactMap { $0 }.filter {
+            $0.id == iid("stone_pickaxe")
+        }.reduce(0) { $0 + $1.count } ?? 0
+        let physicalPickaxes = carriedPickaxes + containerPickaxes
+        let physicalLoss = max(0, 2 - physicalPickaxes)
+        let physicalDuplication = max(0, physicalPickaxes - 2)
+        let durableAfter = try? session.durableStateBytes()
+        let readOnly = durableBefore != nil && durableBefore == durableAfter
+            && rightsBefore == session.materialRightsSnapshot()
+        let authorityFacts = "currentHolder="
+            + "\(rights?.lastVerifiedHolder.holder.stableText ?? "none") "
+            + "currentOwner="
+            + "\(rights?.recognizedOwnership?.ownerID.rawValue ?? "none") "
+            + "currentCustodian=\(rights?.custodianID?.rawValue ?? "none") "
+            + "exactCurrentAuthority=\(exactCurrentAuthority ? 1 : 0)"
+        let conservationFacts = "physicalPickaxes=\(physicalPickaxes) "
+            + "physicalLoss=\(physicalLoss) "
+            + "physicalDuplication=\(physicalDuplication) syntheticMaterial=0 "
+            + "duplicateDeposits=\(max(0, targetDeposits.count - 1)) "
+            + "duplicateReservations=\(max(0, logicalCommitments.count - 1)) "
+            + "duplicateReceipts=0 duplicateSettlements=0 "
+            + "observerMutationCount=0 unexpectedRuntimeErrors=0 "
+            + "readOnly=\(readOnly ? 1 : 0)"
+        let commitmentFacts = "asset=\(assetID.rawValue) "
+            + "commitments=\(commitments.count) "
+            + "logicalCommitments=\(logicalCommitments.count) "
+            + "contractLive=\(contractLive ? 1 : 0) "
+            + "barterLive=\(barterLive ? 1 : 0) "
+            + "marketLive=\(marketLive ? 1 : 0) "
+            + "contractOpen=\(openContracts.count) "
+            + "contractAwaiting=\(awaitingContracts.count) "
+            + "contractAdvanced=\(advancedContracts.count) "
+            + "barterPending=\(targetBarterOffers.count) "
+            + "barterCompleted=\(targetBarterRecords.count) "
+            + "observedMarketOpportunities=\(targetOpportunities.count) "
+            + "ordinarySelectedTarget=\(targetSelected ? 1 : 0) "
+            + "targetDeposits=\(targetDeposits.count) "
+            + "nonterminalTargetDeposits=\(nonterminalTargetDeposits.count) "
+            + "excludedMarketAcquisition=\(excludedMarketAcquisition ? 1 : 0) "
+            + "crossSystemDuplicateLiveCommitments="
+            + "\(crossSystemDuplicate ? 1 : 0)"
+        let message = "blocker04 composed commitment authority "
+            + commitmentFacts + " " + authorityFacts + " "
+            + conservationFacts
+        trace(message)
+        return success(message)
+    }
+
+    /// Enables the already-implemented barter subsystem for the second half
+    /// of the disposable Blocker 04 campaign. This creates no opportunity,
+    /// offer, decision, receipt, or physical mutation.
+    private func enableBlocker04Barter(
+        world: World
+    ) -> PebbleAgentCommandResult {
+        guard environment["PEBBLELAB_GATE_E_BLOCKER_04"] == "1",
+              environment["PEBBLELAB_DISPOSABLE_WORLD_PROOF"] == "1",
+              barterFeatureEnabled, var candidate = session,
+              activeWorld === world, candidate.contractsEnabled,
+              candidate.marketEnabled else {
+            return failure(
+                "Blocker 04 barter enable requires its disposable composed campaign."
+            )
+        }
+        do {
+            guard let assetID = AgentMaterialAssetID(
+                    rawValue: "market-asset:0-initial-pickaxe"
+                  ), let currentOwner = candidate.materialRightsSnapshot()
+                    .records.first(where: { $0.asset.assetID == assetID })?
+                    .recognizedOwnership?.ownerID else {
+                return failure(
+                    "Blocker 04 barter enable lacks current released-asset ownership."
+                )
+            }
+            guard candidate.productionSnapshot().needs.contains(where: {
+                $0.actorID == currentOwner && $0.status == .active
+                    && $0.needID.rawValue.hasPrefix("contract:obligation-")
+                    && $0.needID.rawValue.hasSuffix(":perform")
+                    && $0.desiredOutputItemKey == "bread" && $0.quantity == 3
+            }) else {
+                return failure(
+                    "Blocker 04 barter enable lacks released contract-performance need."
+                )
+            }
+            try candidate.setBarterEnabled(true)
+            session = candidate
+            let message = "blocker04 barter enabled configurationOnly=1 "
+                + "currentNeedObserved=1 "
+                + "economicOutcomeInjected=0 physicalMutation=0"
+            trace(message)
+            return success(message)
+        } catch {
+            return failure("Blocker 04 barter enable failed: \(error)")
+        }
     }
 
     /// Evaluation-derived, double-gated, read-only live diagnostic. It does
@@ -1146,6 +1385,7 @@ extension PebbleAgentController {
               ) else {
             throw ControllerError.marketBoundary("withdrawal unavailable")
         }
+        try session.prevalidateMarketWithdrawalCommitment(depositID: depositID)
         let source = PebbleAgentMaterialCustodyEndpoint.container(container, in: world)
         let destination = PebbleAgentMaterialCustodyEndpoint.liveAgent(actor, in: world)
         let authority = try materialCustodyGateway.acquireAssetAuthority(

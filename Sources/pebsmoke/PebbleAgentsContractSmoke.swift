@@ -561,6 +561,15 @@ func runPebbleAgentsContractSmoke() {
             }?.recognizedOwnership?.ownerID == obligation.promisorID
             && consideration.transfer.physicalReceiptID
                 == "contract-consideration-primary")
+    check(
+        "verified consideration fulfills the promisor's exact motivating need",
+        session.productionSnapshot().needs.first {
+            $0.needID == obligation.promisorReason.needID
+        }.map {
+            $0.status == .fulfilled
+                && $0.fulfilledByOperationID == consideration.operationID
+        } == true
+    )
     check("consideration causally raises debtor production need without materializing output",
           session.productionSnapshot().needs.contains {
               $0.needID.rawValue
@@ -693,6 +702,15 @@ func runPebbleAgentsContractSmoke() {
             && restoredOpen.contractSnapshot().totalFulfilledCount == 1
             && fulfillment.transfer.productionOperationIDs
                 == [produced.1.operationID])
+    check(
+        "verified performance fulfills the promisee's exact motivating need",
+        restoredOpen.productionSnapshot().needs.first {
+            $0.needID == obligation.promiseeReason.needID
+        }.map {
+            $0.status == .fulfilled
+                && $0.fulfilledByOperationID == fulfillment.operationID
+        } == true
+    )
     let fulfilledBytes = try! restoredOpen.durableStateBytes()
     check("repeat fulfillment cannot double-spend or publish duplicate receipt",
           (try? restoredOpen.recordVerifiedContractFulfillment(

@@ -163,6 +163,9 @@ extension AgentSimulationSession {
             opportunity.observedAtTick == tick
                 && opportunity.expiresAtTick >= tick
                 && !opportunity.offered.assetID.isReservedInMarket(state)
+                && !exactAssetIsEconomicallyCommitted(
+                    opportunity.offered.assetID
+                )
         }.sorted {
             if $0.offered.assetID != $1.offered.assetID {
                 return $0.offered.assetID < $1.offered.assetID
@@ -183,8 +186,7 @@ extension AgentSimulationSession {
     /// Current market reservation authority is derived from the complete live
     /// operation, never from proposal history alone.
     public func marketAssetIsReserved(_ assetID: AgentMaterialAssetID) -> Bool {
-        guard let state = marketState else { return false }
-        return assetID.isReservedInMarket(state)
+        exactAssetIsEconomicallyCommitted(assetID)
     }
 
     public mutating func applyVerifiedMarketDeposit(
@@ -220,6 +222,11 @@ extension AgentSimulationSession {
                     outcome.depositID.rawValue
                 ))
             }
+            try session.prevalidateNewExactAssetCommitment(
+                assetID: outcome.assetID,
+                logicalOperationID:
+                    "market-deposit:\(outcome.depositID.rawValue)"
+            )
             session.compactTerminalMarketState(state: &state)
             guard state.deposits.count < state.configuration.maximumDeposits else {
                 throw AgentSessionError.market(.capacityReached("deposits"))
@@ -331,6 +338,22 @@ extension AgentSimulationSession {
         try validateMarketCurrentLocality(
             currentLocality, proposal: proposal, listing: listing, state: state
         )
+        guard let deposit = state.deposits.first(where: {
+            $0.depositID == listing.depositID
+        }) else {
+            throw AgentSessionError.market(.invalidDeposit(
+                listing.depositID.rawValue
+            ))
+        }
+        try prevalidateExactAssetCommitmentContinuation(
+            assetID: deposit.assetID,
+            logicalOperationID: "market-deposit:\(deposit.depositID.rawValue)"
+        )
+        try prevalidateExactAssetCommitmentContinuation(
+            assetID: proposal.consideration.assetID,
+            logicalOperationID:
+                "market-proposal:\(proposal.proposalID.rawValue)"
+        )
     }
 
     public mutating func createMarketListing(
@@ -432,6 +455,11 @@ extension AgentSimulationSession {
                     proposal.proposalID.rawValue
                 ))
             }
+            try session.prevalidateNewExactAssetCommitment(
+                assetID: observation.consideration.assetID,
+                logicalOperationID:
+                    "market-proposal:\(proposal.proposalID.rawValue)"
+            )
             try session.requireActiveMarketReason(
                 observation.buyerReason, actor: observation.buyerID,
                 desiredItem: proposal.terms.baseItemKey
@@ -645,14 +673,22 @@ extension AgentSimulationSession {
                     outcome.considerationLeg.physicalReceiptID].sorted(),
                 causalEventID: event.eventID
             ))
-            session.fulfillMarketNeed(
+            session.fulfillProductionNeedFromVerifiedReceipt(
                 state.deposits[depositIndex].quoteReason.needID,
-                received: outcome.considerationLeg.destinationObservation,
+                received: AgentMaterialStackSnapshot(
+                    identity: outcome.considerationLeg.destinationObservation
+                        .materialIdentity,
+                    count: outcome.considerationLeg.destinationObservation.quantity
+                ),
                 operationID: outcome.operationID
             )
-            session.fulfillMarketNeed(
+            session.fulfillProductionNeedFromVerifiedReceipt(
                 state.proposals[proposalIndex].buyerReason.needID,
-                received: outcome.offeredLeg.destinationObservation,
+                received: AgentMaterialStackSnapshot(
+                    identity: outcome.offeredLeg.destinationObservation
+                        .materialIdentity,
+                    count: outcome.offeredLeg.destinationObservation.quantity
+                ),
                 operationID: outcome.operationID
             )
             state.totalTradeCount += 1
@@ -853,6 +889,7 @@ extension AgentSimulationSession {
                 throw AgentSessionError.market(.invalidState("price provenance"))
             }
         }
+        try validateComposedExactAssetCommitments()
     }
 
     private mutating func marketTransaction(
@@ -1024,24 +1061,6 @@ extension AgentSimulationSession {
                 claimID: claimID, ownerID: newOwner,
                 recognizingAgentIDs: [newOwner], recognizedAtTick: tick
             )
-    }
-
-    private mutating func fulfillMarketNeed(
-        _ needID: AgentProductionNeedID,
-        received: AgentMaterialHolderObservation,
-        operationID: String
-    ) {
-        guard let index = productionState?.needs.firstIndex(where: {
-            $0.needID == needID && $0.status == .active
-        }), productionState!.needs[index].desiredOutputItemKey
-                == received.materialIdentity.itemKey,
-              received.quantity >= productionState!.needs[index].quantity else {
-            // V1 does not invent partial-need accounting. A verified trade may
-            // advance a motive without falsely fulfilling a larger need.
-            return
-        }
-        productionState!.needs[index].status = .fulfilled
-        productionState!.needs[index].fulfilledByOperationID = operationID
     }
 
     private func evaluateMarketSellerDecision(

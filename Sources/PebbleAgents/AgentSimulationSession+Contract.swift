@@ -78,6 +78,8 @@ extension AgentSimulationSession {
             try validateContractOpportunity(candidate, state: state)
             guard !contractConsiderationReserved(
                 candidate.consideration.assetID, in: state
+            ), !exactAssetIsEconomicallyCommitted(
+                candidate.consideration.assetID
             ), !state.obligations.contains(where: {
                 $0.status.isActive
                     && $0.promisorID == candidate.promisorID
@@ -158,6 +160,9 @@ extension AgentSimulationSession {
         let opportunity = state.opportunities.filter {
             $0.observedAtTick == tick && $0.expiresAtTick >= tick
                 && !contractConsiderationReserved($0.consideration.assetID, in: state)
+                && !exactAssetIsEconomicallyCommitted(
+                    $0.consideration.assetID
+                )
                 && currentContractReason(
                     $0.promisorReason, actorID: $0.promisorID,
                     received: $0.consideration.material
@@ -222,6 +227,10 @@ extension AgentSimulationSession {
               ) else {
             throw AgentSessionError.contract(.invalidProposal(proposalID.rawValue))
         }
+        try prevalidateNewExactAssetCommitment(
+            assetID: opportunity.consideration.assetID,
+            logicalOperationID: "contract:\(proposalID.rawValue)"
+        )
         compactContractProposalsForCapacity(state: &state)
         guard state.proposals.count < state.configuration.maximumProposals else {
             throw AgentSessionError.contract(.capacityReached("proposals"))
@@ -463,6 +472,10 @@ extension AgentSimulationSession {
             )
         }
         let expected = proposal.opportunity.consideration
+        try prevalidateExactAssetCommitmentContinuation(
+            assetID: expected.assetID,
+            logicalOperationID: "contract:\(proposal.proposalID.rawValue)"
+        )
         guard !state.processedOperationIDs.contains(outcome.operationID),
               validContractText(outcome.operationID, maximum: 256),
               validContractText(outcome.transfer.physicalReceiptID, maximum: 256),
@@ -539,6 +552,14 @@ extension AgentSimulationSession {
         state.lastContractEventID = event.eventID
         retainContractOperation(outcome.operationID, state: &state)
         contractState = state
+        fulfillProductionNeedFromVerifiedReceipt(
+            obligation.promisorReason.needID,
+            received: AgentMaterialStackSnapshot(
+                identity: outcome.transfer.destinationObservation.materialIdentity,
+                count: outcome.transfer.destinationObservation.quantity
+            ),
+            operationID: outcome.operationID
+        )
         try raiseProductionNeedInPlace(
             needID: contractPerformanceNeedID(obligation.obligationID),
             actorID: obligation.promisorID, reason: .materialWork,
@@ -571,6 +592,11 @@ extension AgentSimulationSession {
             )
         }
         let terms = obligation.promisedPerformance.material
+        try prevalidateNewExactAssetCommitment(
+            assetID: outcome.transfer.assetID,
+            logicalOperationID:
+                "contract-fulfillment:\(obligation.obligationID.rawValue)"
+        )
         guard !state.processedOperationIDs.contains(outcome.operationID),
               validContractText(outcome.operationID, maximum: 256),
               validContractText(outcome.transfer.physicalReceiptID, maximum: 256),
@@ -652,6 +678,14 @@ extension AgentSimulationSession {
         state.lastContractEventID = event.eventID
         retainContractOperation(outcome.operationID, state: &state)
         contractState = state
+        fulfillProductionNeedFromVerifiedReceipt(
+            obligation.promiseeReason.needID,
+            received: AgentMaterialStackSnapshot(
+                identity: outcome.transfer.destinationObservation.materialIdentity,
+                count: outcome.transfer.destinationObservation.quantity
+            ),
+            operationID: outcome.operationID
+        )
         try validateContractStateIfEnabled()
     }
 
@@ -845,6 +879,7 @@ extension AgentSimulationSession {
                 }
             }
         }
+        try validateComposedExactAssetCommitments()
     }
 
     private func validateContractOpportunity(

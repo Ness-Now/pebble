@@ -1,4 +1,23 @@
 extension AgentSimulationSession {
+    /// A verified physical receipt may satisfy the exact active need that
+    /// motivated production, barter, contract, or market cognition. Partial
+    /// quantities remain active because V1 does not invent partial accounting.
+    mutating func fulfillProductionNeedFromVerifiedReceipt(
+        _ needID: AgentProductionNeedID,
+        received: AgentMaterialStackSnapshot,
+        operationID: String
+    ) {
+        guard let index = productionState?.needs.firstIndex(where: {
+            $0.needID == needID && $0.status == .active
+        }), productionState!.needs[index].desiredOutputItemKey
+                == received.identity.itemKey,
+              received.count >= productionState!.needs[index].quantity else {
+            return
+        }
+        productionState!.needs[index].status = .fulfilled
+        productionState!.needs[index].fulfilledByOperationID = operationID
+    }
+
     public var productionEnabled: Bool { productionState != nil }
 
     public func productionSnapshot() -> AgentProductionSnapshot {

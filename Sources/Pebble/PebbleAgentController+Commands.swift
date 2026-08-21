@@ -359,7 +359,9 @@ extension PebbleAgentController {
         guard let command = arguments.first?.lowercased() else { return false }
         if command == "market" || command == "markets" {
             let subcommand = arguments.dropFirst().first?.lowercased()
-            return subcommand != "status" && subcommand != "proof"
+            return ![
+                "status", "proof", "blocker-03-status", "blocker-04-status",
+            ].contains(subcommand)
         }
         let productiveDomains: Set<String> = [
             "interaction", "gateway", "material", "harvest", "construction",

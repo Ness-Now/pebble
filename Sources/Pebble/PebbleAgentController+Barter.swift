@@ -330,7 +330,7 @@ extension PebbleAgentController {
         let physicalCandidates = observeLocalBarterPhysicalPairs(
             world: world, session: session
         )
-        let discoveries = try session.discoverBarterOpportunities(
+        let discoveries = try session.discoverPhysicallyVerifiedBarterOpportunities(
             from: physicalCandidates
         )
         for opportunity in discoveries {
@@ -544,28 +544,36 @@ extension PebbleAgentController {
         }.sorted {
             $0.asset.assetID < $1.asset.assetID
         }.compactMap { record -> AgentBarterLeg? in
-            let observation = record.lastVerifiedHolder
+            let historicalObservation = record.lastVerifiedHolder
             let material = AgentMaterialStackSnapshot(
-                identity: observation.materialIdentity,
-                count: observation.quantity
+                identity: historicalObservation.materialIdentity,
+                count: historicalObservation.quantity
             )
             let exactPhysicalQuantity = physical.filter { stack in
                 stack.identity == material.identity
             }.reduce(0) { total, stack in
                 total + stack.count
             }
-            guard observation.custodyFingerprint == currentFingerprint,
-                  exactPhysicalQuantity == material.count,
+            guard exactPhysicalQuantity == material.count,
                   (try? materialCustodyGateway.acquireAssetAuthority(
                     material, at: endpoint
                   ).status) == .exact else { return nil }
-            let disposition = session.evaluateMaterialUse(AgentMaterialUseRequest(
+            let observation = AgentMaterialHolderObservation(
+                holder: historicalObservation.holder,
+                materialIdentity: historicalObservation.materialIdentity,
+                quantity: historicalObservation.quantity,
+                custodyFingerprint: currentFingerprint,
+                physicalReceiptID: "barter-current-observe:"
+                    + record.asset.assetID.rawValue,
+                observedAtTick: session.tick
+            )
+            let disposition = session.evaluateCurrentBarterMaterialUse(
                 requestID: "barter-observe:\(record.asset.assetID.rawValue)",
                 assetID: record.asset.assetID,
-                actorID: agentID, use: .transferCustody,
-                verifiedHolder: observation
-            ))
-            guard disposition.verdict == .allowed else { return nil }
+                actorID: agentID, currentObservation: observation,
+                acceptsAdapterRefreshedCustody: true
+            )
+            guard disposition?.verdict == .allowed else { return nil }
             return AgentBarterLeg(
                 assetID: record.asset.assetID,
                 holderID: agentID,

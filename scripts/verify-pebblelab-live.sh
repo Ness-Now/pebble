@@ -194,6 +194,7 @@ BARTER_GATE=0
 CONTRACT_GATE=0
 MARKET_GATE=0
 GATE_E_BLOCKER_03=0
+GATE_E_BLOCKER_04=0
 AUTONOMOUS_CIVILIZATION_GATE=0
 INTEGRATED_TEACHING_PROOF=0
 PASSIVE_OBSERVER_INPUT_PROOF=0
@@ -221,6 +222,19 @@ if [ "$MODE" = "markets" ]; then
         MARKET_PHASE2_COMMANDS='/tp 14 68 -18;/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab checkpoint load market-open-v34;/lab market status;/lab market proof;/lab overlay compact|/lab step;/lab market status|/lab step;/lab market status;/lab market blocker-03-status;/lab market remote-buyer|/lab market status;/lab market proof;/lab overlay compact|/lab step;/lab market status;/lab market proof;/lab market restore-locality|/lab step;/lab market status;/lab overlay compact|/lab step;/lab market status;/lab overlay compact|/lab step;/lab market status;/lab market proof;/lab market blocker-03-status;/lab checkpoint save market-traded-v34;/lab checkpoint status;/lab causality tail 20;/lab status'
         MARKET_PHASE3_COMMANDS='/tp 14 68 -18;/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab checkpoint load market-traded-v34;/lab market status;/lab market proof;/lab overlay compact|/lab step;/lab market status|/lab step;/lab market status|/lab step;/lab market status|/lab step;/lab market status|/lab step;/lab market status;/lab overlay compact|/lab step;/lab market status|/lab step;/lab market status|/lab step;/lab market status;/lab overlay compact|/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab market status;/lab market proof;/lab market blocker-03-status;/lab checkpoint save market-final-v34;/lab checkpoint status;/lab causality tail 20;/lab status'
         MARKET_PHASE4_COMMANDS='/tp 14 68 -18;/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab checkpoint load market-final-v34;/lab market status;/lab market proof;/lab market blocker-03-status;/lab overlay compact|/lab step;/lab market status;/lab market blocker-03-status;/lab overlay compact|/lab step;/lab market status;/lab market blocker-03-status;/lab overlay compact|/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab market status;/lab market proof;/lab market blocker-03-status;/lab checkpoint save market-blocker03-reentered-v34;/lab checkpoint status;/lab observer status;/lab overlay compact|/lab market cleanup;/lab status'
+    fi
+    if [ "${PEBBLELAB_GATE_E_BLOCKER_04:-0}" = "1" ]; then
+        [ "$GATE_E_BLOCKER_03" -eq 0 ] \
+            || fail "Gate E Blocker 04 cannot share a Blocker 03 live campaign"
+        GATE_E_BLOCKER_04=1
+        BARTER_GATE=1
+        CONTRACT_GATE=1
+        WORLD_NAME="PebbleLab-Disposable-Gate-E-Blocker-04-46"
+        CAPTURE_NAME="gate-e-blocker04-final-cleanup.png"
+        MARKET_PHASE1_COMMANDS='/gamerule randomTickSpeed 0;/gamerule doMobSpawning false;/gamerule doDaylightCycle false;/gamerule doWeatherCycle false;/time set 1000;/weather clear;/tp 14 68 -18|/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab market setup;/lab market status;/lab market blocker-04-status;/lab overlay compact|/lab step;/lab market status;/lab contract status;/lab market blocker-04-status;/lab observer status;/lab overlay compact|/lab checkpoint save gate-e-blocker04-live-contract-v34;/lab checkpoint status;/lab causality tail 20;/lab status'
+        MARKET_PHASE2_COMMANDS='/tp 14 68 -18;/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab checkpoint load gate-e-blocker04-live-contract-v34;/lab market status;/lab contract status;/lab market blocker-04-status;/lab observer status;/lab overlay compact|/lab step;/lab market status;/lab contract status;/lab market blocker-04-status;/lab market blocker-04-enable-barter;/lab market blocker-04-status;/lab overlay compact|/lab checkpoint save gate-e-blocker04-released-v34;/lab checkpoint status;/lab causality tail 20;/lab status'
+        MARKET_PHASE3_COMMANDS='/tp 14 68 -18;/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab checkpoint load gate-e-blocker04-released-v34;/lab market status;/lab contract status;/lab market blocker-04-status;/lab observer status;/lab overlay compact|/lab step;/lab market status;/lab contract status;/lab market blocker-04-status;/lab overlay compact|/lab step;/lab market status;/lab contract status;/lab market blocker-04-status;/lab overlay compact|/lab checkpoint save gate-e-blocker04-barter-completed-v34;/lab checkpoint status;/lab causality tail 20;/lab status'
+        MARKET_PHASE4_COMMANDS='/tp 14 68 -18;/lab start;/tp 14 73 -22;/lab pause;/lab movement off;/lab checkpoint load gate-e-blocker04-barter-completed-v34;/lab market status;/lab contract status;/lab market blocker-04-status;/lab observer status;/lab overlay compact|/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab step;/lab market status;/lab contract status;/lab market blocker-04-status;/lab overlay compact|/lab market cleanup;/lab status'
     fi
     LAB_COMMANDS="$MARKET_PHASE1_COMMANDS"
 elif [ "$MODE" = "contracts" ]; then
@@ -968,6 +982,10 @@ print_plan() {
     printf '  PEBBLELAB_APP_AGENTS_BARTER=%s\n' "$BARTER_GATE"
     printf '  PEBBLELAB_APP_AGENTS_CONTRACTS=%s\n' "$CONTRACT_GATE"
     printf '  PEBBLELAB_APP_AGENTS_MARKETS=%s\n' "$MARKET_GATE"
+    if [ "$GATE_E_BLOCKER_04" -eq 1 ]; then
+        printf '  PEBBLELAB_APP_AGENTS_OBSERVER=1\n'
+        printf '  PEBBLELAB_GATE_E_BLOCKER_04=1\n'
+    fi
     printf '  PEBBLELAB_APP_AGENTS_AUTONOMOUS_CIVILIZATION=%s\n' "$AUTONOMOUS_CIVILIZATION_GATE"
     printf '  PEBBLELAB_INTEGRATED_TEACHING_PROOF=%s\n' "$INTEGRATED_TEACHING_PROOF"
     printf '  PEBBLELAB_PASSIVE_OBSERVER_INPUT_PROOF=%s\n' "$PASSIVE_OBSERVER_INPUT_PROOF"
@@ -1051,7 +1069,13 @@ print_plan() {
     IFS=$old_ifs
     printf '\nOperator checks:\n'
     printf '  1. Wait for automatic disposable-world creation, commands, capture, and normal termination.\n'
-    if [ "$MODE" = "markets" ]; then
+    if [ "$MODE" = "markets" ] && [ "$GATE_E_BLOCKER_04" -eq 1 ]; then
+        printf '  2. Confirm ordinary contract cognition commits the exact pickaxe while ordinary market discovery observes but cannot select it.\n'
+        printf '  3. Confirm fresh restore preserves the exclusion, same-contract continuation transfers consideration, and terminal progress releases the commitment.\n'
+        printf '  4. Confirm ordinary barter reuses the released pickaxe, remains the sole live commitment while the bounded stall admits no new lot, and completes both real physical legs exactly once.\n'
+        printf '  5. Confirm terminal release survives the final fresh restore, permits one ordinary market reuse, then reaches bounded withdrawal without barter replay.\n'
+        printf '  6. Confirm schema 34, Observer schema 11, exact current authority, conservation, and zero duplicate commitments or receipts.\n'
+    elif [ "$MODE" = "markets" ]; then
         printf '  2. Confirm normal deposit/listing behavior and an open physical lot at the first checkpoint.\n'
         printf '  3. Confirm normal seller rejection/acceptance, then a real remote buyer refusal with zero mutation/publication and exact locality restore.\n'
         printf '  4. Confirm both exact rollback faults, immediate retry, and one completed local price row.\n'
@@ -1246,6 +1270,21 @@ DB_PATH="$SESSION_HOME/Library/Application Support/Pebble/pebble.db"
 [ ! -e "$DB_PATH" ] || fail "fresh disposable database already exists: $DB_PATH"
 /bin/mkdir -p "$SESSION_HOME" "$CAPTURE_DIR"
 if [ "$MODE" = "markets" ]; then
+    if [ "$GATE_E_BLOCKER_04" -eq 1 ]; then
+        CAPTURE_BLOCKER04_SETUP_PATH="$CAPTURE_DIR/blocker04-composed-setup.png"
+        CAPTURE_BLOCKER04_EXCLUSION_PATH="$CAPTURE_DIR/blocker04-contract-blocks-market.png"
+        CAPTURE_BLOCKER04_CHECKPOINT_PATH="$CAPTURE_DIR/blocker04-live-checkpoint.png"
+        CAPTURE_BLOCKER04_RESTORED_PATH="$CAPTURE_DIR/blocker04-exclusion-restored.png"
+        CAPTURE_BLOCKER04_CONTINUED_PATH="$CAPTURE_DIR/blocker04-contract-continuation.png"
+        CAPTURE_BLOCKER04_RELEASED_PATH="$CAPTURE_DIR/blocker04-terminal-release.png"
+        CAPTURE_BLOCKER04_BARTER_RESTORED_PATH="$CAPTURE_DIR/blocker04-release-restored.png"
+        CAPTURE_BLOCKER04_BARTER_EXCLUSION_PATH="$CAPTURE_DIR/blocker04-barter-blocks-market.png"
+        CAPTURE_BLOCKER04_BARTER_COMPLETED_PATH="$CAPTURE_DIR/blocker04-barter-completed.png"
+        CAPTURE_BLOCKER04_BARTER_CHECKPOINT_PATH="$CAPTURE_DIR/blocker04-barter-checkpoint.png"
+        CAPTURE_BLOCKER04_FINAL_RESTORE_PATH="$CAPTURE_DIR/blocker04-terminal-reuse-restored.png"
+        CAPTURE_BLOCKER04_CLEANUP_READY_PATH="$CAPTURE_DIR/blocker04-cleanup-ready.png"
+        SHOT_SPEC="-|$CAPTURE_BLOCKER04_SETUP_PATH|$CAPTURE_BLOCKER04_EXCLUSION_PATH|$CAPTURE_BLOCKER04_CHECKPOINT_PATH"
+    else
     CAPTURE_BEFORE_PATH="$CAPTURE_DIR/market-established.png"
     CAPTURE_DEPOSITED_PATH="$CAPTURE_DIR/market-deposited.png"
     CAPTURE_OPEN_PATH="$CAPTURE_DIR/market-open-listing.png"
@@ -1264,6 +1303,7 @@ if [ "$MODE" = "markets" ]; then
         CAPTURE_BLOCKER03_CONTINUED_PATH="$CAPTURE_DIR/blocker03-continued-market-path.png"
     fi
     SHOT_SPEC="-|$CAPTURE_BEFORE_PATH|$CAPTURE_DEPOSITED_PATH|$CAPTURE_OPEN_PATH"
+    fi
 elif [ "$MODE" = "contracts" ]; then
     CAPTURE_CAPACITY_PATH="$CAPTURE_DIR/contract-capacity-refusal.png"
     CAPTURE_BEFORE_PATH="$CAPTURE_DIR/contract-before-promise.png"
@@ -1394,15 +1434,18 @@ if [ "$MODE" = "markets" ]; then
             PEBBLELAB_APP_AGENTS_TRACE=1 \
             PEBBLELAB_APP_AGENTS_TRACE_EVERY=1 \
             PEBBLELAB_APP_AGENTS_INTERACT=1 \
-            PEBBLELAB_APP_AGENTS_OBSERVER="$GATE_E_BLOCKER_03" \
+            PEBBLELAB_APP_AGENTS_OBSERVER="$((GATE_E_BLOCKER_03 + GATE_E_BLOCKER_04))" \
             PEBBLELAB_APP_AGENTS_MATERIAL=1 \
             PEBBLELAB_APP_AGENTS_PERSISTENCE=1 \
             PEBBLELAB_APP_AGENTS_PRODUCTION=1 \
+            PEBBLELAB_APP_AGENTS_BARTER="$GATE_E_BLOCKER_04" \
+            PEBBLELAB_APP_AGENTS_CONTRACTS="$GATE_E_BLOCKER_04" \
             PEBBLELAB_APP_AGENTS_MARKETS=1 \
             PEBBLELAB_APP_AGENTS_AUTONOMOUS_CIVILIZATION=1 \
             PEBBLELAB_DISPOSABLE_MARKET_MID_FAULT="$mid_fault" \
             PEBBLELAB_DISPOSABLE_MARKET_POST_MUTATION_FAULT="$post_fault" \
             PEBBLELAB_GATE_E_BLOCKER_03="$GATE_E_BLOCKER_03" \
+            PEBBLELAB_GATE_E_BLOCKER_04="$GATE_E_BLOCKER_04" \
             PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
             PEBBLE_CMD_WORLD_TICK="$command_world_tick" \
             PEBBLE_CMD="$run_commands" \
@@ -1412,6 +1455,140 @@ if [ "$MODE" = "markets" ]; then
             fail "Pebble process remained after market phase: $run_trace"
         fi
     }
+
+    if [ "$GATE_E_BLOCKER_04" -eq 1 ]; then
+        printf '\nGate E Blocker 04 phase 1: ordinary contract commitment excludes the exact market asset.\n'
+        run_market_app "$SESSION_HOME" "$PHASE1_TRACE" \
+            "$MARKET_PHASE1_COMMANDS" 1 100 "$SHOT_SPEC" 0 0
+        TRACE_PATH="$PHASE1_TRACE"
+        for capture in \
+            "$CAPTURE_BLOCKER04_SETUP_PATH" \
+            "$CAPTURE_BLOCKER04_EXCLUSION_PATH" \
+            "$CAPTURE_BLOCKER04_CHECKPOINT_PATH"; do
+            [ -s "$capture" ] || fail "Blocker 04 phase-one capture missing: $capture"
+        done
+        require_trace 'market setup .*blocker04_bread3:1 .*blocker04CrossSystemSetup=1' 'bounded physical setup enables normal contract, barter, and market paths'
+        require_trace 'contract normal promise proposal .*normalProposalDecision=1 proofFixtureDecisionAuthority=0 physicalMutation=0' 'ordinary contract cognition acquires the first exact commitment'
+        require_trace 'blocker04 composed commitment authority asset=market-asset:0-initial-pickaxe .*contractLive=1 barterLive=0 marketLive=0 contractOpen=1 .*observedMarketOpportunities=1 ordinarySelectedTarget=0 targetDeposits=0 nonterminalTargetDeposits=0 excludedMarketAcquisition=1 crossSystemDuplicateLiveCommitments=0 .*exactCurrentAuthority=1 .*physicalLoss=0 physicalDuplication=0 syntheticMaterial=0 .*readOnly=1' 'ordinary market discovery sees but cannot select the contract-bound exact asset'
+        require_trace 'checkpoint saved name=gate-e-blocker04-live-contract-v34 .*restartSafe=1 ' 'live composed exclusion is schema-34 restart safe'
+        require_trace 'observer status .*schema=11 ' 'Observer remains schema 11 and read-only'
+        require_trace 'summary .*runtimeErrors=0 .*probesRemoved=3 ' 'clean phase-one process termination'
+        reject_trace 'market deposit completed .*asset=market-asset:0-initial-pickaxe|crossSystemDuplicateLiveCommitments=1|CANDIDATE_PHYSICAL_HARD_FAILURE' 'conflicting target deposit, duplicate commitment, or hard physical failure'
+
+        PERSISTENCE_ROOT="$SESSION_HOME/Library/Application Support/Pebble/PebbleLabAgents"
+        LIVE_SESSION=$(/usr/bin/find "$PERSISTENCE_ROOT" -type f -path '*/checkpoints/gate-e-blocker04-live-contract-v34/session.json' -print -quit)
+        [ -n "$LIVE_SESSION" ] || fail "Blocker 04 live checkpoint missing"
+        /usr/bin/grep -q '"schemaVersion":34' "$LIVE_SESSION" \
+            || fail "Blocker 04 live checkpoint is not schema 34"
+        LIVE_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint saved name=gate-e-blocker04-live-contract-v34 .* digest=\([0-9a-f]*\) storageDigest=.*/\1/p' "$PHASE1_TRACE" | /usr/bin/tail -1)
+        [ -n "$LIVE_DIGEST" ] || fail "Blocker 04 live digest extraction failed"
+        persisted_world_tick=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT json_extract(json, '$.dims.\"0\".time') FROM worlds;")
+        case "$persisted_world_tick" in
+            ''|*[!0-9]*) fail "invalid Blocker 04 World tick: $persisted_world_tick" ;;
+        esac
+        continuation_command_tick=$((persisted_world_tick + 100))
+
+        printf '\nGate E Blocker 04 phase 2: fresh restore, legitimate continuation, and release.\n'
+        PHASE2_SHOTS="$CAPTURE_BLOCKER04_RESTORED_PATH|$CAPTURE_BLOCKER04_CONTINUED_PATH|$CAPTURE_BLOCKER04_RELEASED_PATH"
+        run_market_app "$SESSION_HOME" "$PHASE2_TRACE" \
+            "$MARKET_PHASE2_COMMANDS" 0 "$continuation_command_tick" \
+            "$PHASE2_SHOTS" 0 0
+        TRACE_PATH="$PHASE2_TRACE"
+        for capture in \
+            "$CAPTURE_BLOCKER04_RESTORED_PATH" \
+            "$CAPTURE_BLOCKER04_CONTINUED_PATH" \
+            "$CAPTURE_BLOCKER04_RELEASED_PATH"; do
+            [ -s "$capture" ] || fail "Blocker 04 phase-two capture missing: $capture"
+        done
+        require_trace "checkpoint loaded name=gate-e-blocker04-live-contract-v34 .*digest=$LIVE_DIGEST .*restartSafe=1 .*custodyDuplicates=0 physicalBoundary=acquired" 'fresh process reconstructs the derived live exclusion'
+        require_trace 'blocker04 composed commitment authority asset=market-asset:0-initial-pickaxe .*contractLive=1 barterLive=0 marketLive=0 contractOpen=1 .*excludedMarketAcquisition=1 crossSystemDuplicateLiveCommitments=0 .*exactCurrentAuthority=1' 'restart preserves the live contract-to-market exclusion'
+        require_trace 'contract normal promisee decision .*decision=accepted .*normalAcceptanceDecision=1 .*physicalMutation=0' 'ordinary promisee decision advances the same commitment'
+        require_trace 'contract physical publication .*action=consideration .*material=stone_pickaxe:1 .*publication=verified' 'verified physical consideration completes the exact commitment leg'
+        require_trace 'blocker04 composed commitment authority asset=market-asset:0-initial-pickaxe commitments=0 logicalCommitments=0 contractLive=0 barterLive=0 marketLive=0 .*contractAdvanced=1 .*crossSystemDuplicateLiveCommitments=0 .*exactCurrentAuthority=1 .*physicalLoss=0 physicalDuplication=0 syntheticMaterial=0' 'successful consideration deterministically releases commitment authority while retaining physical verification'
+        require_trace 'blocker04 barter enabled configurationOnly=1 currentNeedObserved=1 economicOutcomeInjected=0 physicalMutation=0' 'barter uses the already-published contract-performance need without injecting an economic decision or physical effect'
+        require_trace 'checkpoint saved name=gate-e-blocker04-released-v34 .*restartSafe=1 ' 'released state is schema-34 restart safe'
+        require_trace 'summary .*runtimeErrors=0 .*probesRemoved=3 ' 'clean phase-two process termination'
+        reject_trace 'crossSystemDuplicateLiveCommitments=1|CANDIDATE_PHYSICAL_HARD_FAILURE|CANDIDATE_PHYSICAL_ROLLBACK' 'duplicate commitment, hard failure, or unexpected rollback'
+
+        RELEASED_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint saved name=gate-e-blocker04-released-v34 .* digest=\([0-9a-f]*\) storageDigest=.*/\1/p' "$PHASE2_TRACE" | /usr/bin/tail -1)
+        [ -n "$RELEASED_DIGEST" ] || fail "Blocker 04 released digest extraction failed"
+        RELEASED_SESSION=$(/usr/bin/find "$PERSISTENCE_ROOT" -type f -path '*/checkpoints/gate-e-blocker04-released-v34/session.json' -print -quit)
+        [ -n "$RELEASED_SESSION" ] || fail "Blocker 04 released checkpoint missing"
+        persisted_world_tick=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT json_extract(json, '$.dims.\"0\".time') FROM worlds;")
+        continuation_command_tick=$((persisted_world_tick + 100))
+
+        printf '\nGate E Blocker 04 phase 3: released-state restart, ordinary barter reuse, and a second composed exclusion.\n'
+        PHASE3_SHOTS="$CAPTURE_BLOCKER04_BARTER_RESTORED_PATH|$CAPTURE_BLOCKER04_BARTER_EXCLUSION_PATH|$CAPTURE_BLOCKER04_BARTER_COMPLETED_PATH|$CAPTURE_BLOCKER04_BARTER_CHECKPOINT_PATH"
+        run_market_app "$SESSION_HOME" "$PHASE3_TRACE" \
+            "$MARKET_PHASE3_COMMANDS" 0 "$continuation_command_tick" \
+            "$PHASE3_SHOTS" 0 0
+        TRACE_PATH="$PHASE3_TRACE"
+        for capture in \
+            "$CAPTURE_BLOCKER04_BARTER_RESTORED_PATH" \
+            "$CAPTURE_BLOCKER04_BARTER_EXCLUSION_PATH" \
+            "$CAPTURE_BLOCKER04_BARTER_COMPLETED_PATH" \
+            "$CAPTURE_BLOCKER04_BARTER_CHECKPOINT_PATH"; do
+            [ -s "$capture" ] || fail "Blocker 04 phase-three capture missing: $capture"
+        done
+        require_trace "checkpoint loaded name=gate-e-blocker04-released-v34 .*digest=$RELEASED_DIGEST .*restartSafe=1 .*custodyDuplicates=0 physicalBoundary=acquired" 'fresh process preserves terminal release without replay'
+        require_trace 'barter normal offer decision .*normalOfferDecision=1 barterProofFixtureDecisionAuthority=0 physicalMutation=0' 'ordinary barter cognition reuses the released exact asset'
+        require_trace 'blocker04 composed commitment authority asset=market-asset:0-initial-pickaxe commitments=1 logicalCommitments=1 contractLive=0 barterLive=1 marketLive=0 .*barterPending=1 .*observedMarketOpportunities=0 ordinarySelectedTarget=0 targetDeposits=0 nonterminalTargetDeposits=0 excludedMarketAcquisition=0 crossSystemDuplicateLiveCommitments=0 .*exactCurrentAuthority=1' 'live barter commitment remains singular while the bounded one-lot stall admits no competing acquisition'
+        require_trace 'barter normal counterparty decision .*decision=accepted .*normalCounterpartyDecision=1 .*physicalMutation=0' 'ordinary counterparty accepts without fixture authority'
+        require_trace 'barter completed .*offered=bread:3 requested=stone_pickaxe:1 .*publication=verified' 'ordinary verified two-leg barter completes the released asset reuse'
+        require_trace 'blocker04 composed commitment authority asset=market-asset:0-initial-pickaxe commitments=0 logicalCommitments=0 contractLive=0 barterLive=0 marketLive=0 .*barterPending=0 barterCompleted=1 .*crossSystemDuplicateLiveCommitments=0 .*exactCurrentAuthority=1 .*physicalLoss=0 physicalDuplication=0 syntheticMaterial=0' 'terminal barter history releases authority while retaining current physical truth'
+        require_trace 'checkpoint saved name=gate-e-blocker04-barter-completed-v34 .*restartSafe=1 ' 'terminal barter release is schema-34 restart safe'
+        require_trace 'summary .*runtimeErrors=0 .*probesRemoved=3 ' 'clean phase-three process termination'
+        reject_trace 'crossSystemDuplicateLiveCommitments=1|market deposit completed .*asset=market-asset:0-initial-pickaxe|CANDIDATE_PHYSICAL_HARD_FAILURE|CANDIDATE_PHYSICAL_ROLLBACK' 'duplicate commitment, conflicting market mutation, or unexpected physical failure'
+
+        BARTER_DIGEST=$(/usr/bin/sed -n 's/.*checkpoint saved name=gate-e-blocker04-barter-completed-v34 .* digest=\([0-9a-f]*\) storageDigest=.*/\1/p' "$PHASE3_TRACE" | /usr/bin/tail -1)
+        [ -n "$BARTER_DIGEST" ] || fail "Blocker 04 barter digest extraction failed"
+        BARTER_SESSION=$(/usr/bin/find "$PERSISTENCE_ROOT" -type f -path '*/checkpoints/gate-e-blocker04-barter-completed-v34/session.json' -print -quit)
+        [ -n "$BARTER_SESSION" ] || fail "Blocker 04 barter checkpoint missing"
+        persisted_world_tick=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT json_extract(json, '$.dims.\"0\".time') FROM worlds;")
+        continuation_command_tick=$((persisted_world_tick + 100))
+
+        printf '\nGate E Blocker 04 phase 4: terminal-release restart, ordinary market reuse, bounded withdrawal, cleanup, and no replay.\n'
+        PHASE4_SHOTS="$CAPTURE_BLOCKER04_FINAL_RESTORE_PATH|$CAPTURE_BLOCKER04_CLEANUP_READY_PATH|$CAPTURE_PATH"
+        run_market_app "$SESSION_HOME" "$PHASE4_TRACE" \
+            "$MARKET_PHASE4_COMMANDS" 0 "$continuation_command_tick" \
+            "$PHASE4_SHOTS" 0 0
+        TRACE_PATH="$PHASE4_TRACE"
+        for capture in \
+            "$CAPTURE_BLOCKER04_FINAL_RESTORE_PATH" \
+            "$CAPTURE_BLOCKER04_CLEANUP_READY_PATH" \
+            "$CAPTURE_PATH"; do
+            [ -s "$capture" ] || fail "Blocker 04 phase-four capture missing: $capture"
+        done
+        require_trace "checkpoint loaded name=gate-e-blocker04-barter-completed-v34 .*digest=$BARTER_DIGEST .*restartSafe=1 .*custodyDuplicates=0 physicalBoundary=acquired" 'fresh process preserves barter terminal release without replay'
+        require_trace_at_least 'blocker04 composed commitment authority asset=market-asset:0-initial-pickaxe .*crossSystemDuplicateLiveCommitments=0 .*exactCurrentAuthority=1 .*physicalLoss=0 physicalDuplication=0 syntheticMaterial=0 .*duplicateReceipts=0 duplicateSettlements=0 observerMutationCount=0 unexpectedRuntimeErrors=0 readOnly=1' 2 'current exact authority and zero duplicate commitment survive restart and bounded progress'
+        require_trace_count 'market deposit completed .*asset=market-asset:0-initial-pickaxe .*ordinaryAutonomousSelection=1 .*publication=verified duplicateDeposits=0' 1 'terminal barter release permits one ordinary verified market reuse'
+        require_trace 'blocker04 composed commitment authority asset=market-asset:0-initial-pickaxe commitments=0 logicalCommitments=0 contractLive=0 barterLive=0 marketLive=0 .*barterCompleted=1 .*targetDeposits=1 nonterminalTargetDeposits=0 .*crossSystemDuplicateLiveCommitments=0 .*currentHolder=agent:agent_0 .*exactCurrentAuthority=1' 'bounded listing expiry and verified withdrawal release the reused exact asset'
+        require_trace 'Restored disposable market air cell after restart; completed economic custody was preserved.' 'exact disposable market cell cleanup'
+        require_trace 'summary .*runtimeErrors=0 .*probesRemoved=3 ' 'clean phase-four process termination'
+        reject_trace 'crossSystemDuplicateLiveCommitments=1|barter completed|CANDIDATE_PHYSICAL_HARD_FAILURE|CANDIDATE_PHYSICAL_ROLLBACK' 'barter replay, duplicate commitment, or unexpected physical failure'
+
+        world_facts=$(/usr/bin/sqlite3 "$DB_PATH" "SELECT count(*), json_extract(json, '$.seed'), json_extract(json, '$.name'), json_extract(json, '$.dims.\"0\".dayTime'), json_extract(json, '$.dims.\"0\".raining'), json_extract(json, '$.dims.\"0\".thundering'), json_extract(json, '$.gameRules.doMobSpawning'), json_extract(json, '$.gameRules.doDaylightCycle'), json_extract(json, '$.gameRules.doWeatherCycle') FROM worlds;")
+        expected_world_facts="1|$WORLD_SEED|$WORLD_NAME|1000|0|0|0|0|0"
+        [ "$world_facts" = "$expected_world_facts" ] \
+            || fail "unexpected Blocker 04 disposable World facts: $world_facts"
+        if /usr/bin/pgrep -x Pebble >/dev/null 2>&1 \
+            || /usr/bin/pgrep -x swift-run >/dev/null 2>&1 \
+            || /usr/bin/pgrep -x pebsmoke >/dev/null 2>&1; then
+            fail "residual PebbleLab process after Blocker 04 proof"
+        fi
+        printf '\nPASS: Blocker 04 composed exclusion, same-operation continuation, terminal release, restart, conservation, and cleanup verified.\n'
+        printf 'Phase 1 trace: %s\n' "$PHASE1_TRACE"
+        printf 'Phase 2 trace: %s\n' "$PHASE2_TRACE"
+        printf 'Phase 3 trace: %s\n' "$PHASE3_TRACE"
+        printf 'Phase 4 trace: %s\n' "$PHASE4_TRACE"
+        printf 'Live checkpoint: %s\n' "$LIVE_SESSION"
+        printf 'Released checkpoint: %s\n' "$RELEASED_SESSION"
+        printf 'Barter checkpoint: %s\n' "$BARTER_SESSION"
+        printf 'Checkpoint schema: 34\n'
+        printf 'Observer schema: 11\n'
+        printf 'Retained isolated session: %s\n' "$SESSION_ROOT"
+        exit 0
+    fi
 
     printf '\nMarket phase 1: physical place, bounded capacity, normal deposit/listing, and open checkpoint.\n'
     PHASE1_SHOTS="-|$CAPTURE_BEFORE_PATH|-|$CAPTURE_DEPOSITED_PATH|$CAPTURE_OPEN_PATH"

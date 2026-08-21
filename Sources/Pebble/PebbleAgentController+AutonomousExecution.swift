@@ -200,6 +200,7 @@ extension PebbleAgentController {
               ], counterpartyProbe.world === world, !counterpartyProbe.dead else {
             throw ControllerError.barterBoundary("accepted local offer unavailable")
         }
+        try session.prevalidateAcceptedBarterCommitment(offerID: offerID)
         let counterparty = PebbleAgentEmbodiment(probe: counterpartyProbe)
         let offerorEndpoint = PebbleAgentMaterialCustodyEndpoint.liveAgent(
             actor, in: world
@@ -207,25 +208,25 @@ extension PebbleAgentController {
         let counterpartyEndpoint = PebbleAgentMaterialCustodyEndpoint.liveAgent(
             counterparty, in: world
         )
-        let offeredDecision = session.evaluateMaterialUse(AgentMaterialUseRequest(
+        let offeredDecision = session.evaluateCurrentBarterMaterialUse(
             requestID: "barter:\(offerID.rawValue):offered",
             assetID: offer.opportunity.offered.assetID,
             actorID: offer.opportunity.offerorID,
-            use: .transferCustody,
-            verifiedHolder: offer.opportunity.offered.holderObservation
-        ))
-        let requestedDecision = session.evaluateMaterialUse(AgentMaterialUseRequest(
+            currentObservation: offer.opportunity.offered.holderObservation,
+            acceptsAdapterRefreshedCustody: true
+        )
+        let requestedDecision = session.evaluateCurrentBarterMaterialUse(
             requestID: "barter:\(offerID.rawValue):requested",
             assetID: offer.opportunity.requested.assetID,
             actorID: offer.opportunity.counterpartyID,
-            use: .transferCustody,
-            verifiedHolder: offer.opportunity.requested.holderObservation
-        ))
-        guard offeredDecision.verdict == .allowed,
-              requestedDecision.verdict == .allowed else {
+            currentObservation: offer.opportunity.requested.holderObservation,
+            acceptsAdapterRefreshedCustody: true
+        )
+        guard offeredDecision?.verdict == .allowed,
+              requestedDecision?.verdict == .allowed else {
             try session.markBarterOfferFailed(
                 offerID: offerID, status: .failed,
-                reason: "rights refused offered=\(offeredDecision.reason.rawValue) requested=\(requestedDecision.reason.rawValue)"
+                reason: "rights refused current exact-asset disposition"
             )
             throw ControllerError.barterBoundary("voluntary disposition refused")
         }

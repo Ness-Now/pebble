@@ -81,6 +81,13 @@ if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
     exit(failed > 0 ? 1 : 0)
 }
 
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
+    == "gate-e-blocker-04" {
+    runPebbleAgentsComposedAssetCommitmentSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
 if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "markets" {
     runPebbleAgentsMarketSmoke()
     print("\n\(passed) passed, \(failed) failed")
@@ -2497,6 +2504,7 @@ runPebbleAgentsEvolvedProductionIdentitySmoke()
 runPebbleAgentsBarterSmoke()
 runPebbleAgentsContractSmoke()
 runPebbleAgentsMarketSmoke()
+runPebbleAgentsComposedAssetCommitmentSmoke()
 
 print("\n\(passed) passed, \(failed) failed")
 exit(failed > 0 ? 1 : 0)

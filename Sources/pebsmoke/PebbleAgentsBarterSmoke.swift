@@ -266,12 +266,27 @@ private func barterPhysicalPair(
     lifetime: Int,
     suffix: String
 ) -> AgentBarterPhysicalPairObservation {
-    AgentBarterPhysicalPairObservation(
+    func currentLeg(_ leg: AgentBarterLeg) -> AgentBarterLeg {
+        AgentBarterLeg(
+            assetID: leg.assetID, holderID: leg.holderID,
+            material: leg.material,
+            holderObservation: AgentMaterialHolderObservation(
+                holder: leg.holderObservation.holder,
+                materialIdentity: leg.holderObservation.materialIdentity,
+                quantity: leg.holderObservation.quantity,
+                custodyFingerprint: leg.holderObservation.custodyFingerprint,
+                physicalReceiptID: leg.holderObservation.physicalReceiptID,
+                observedAtTick: tick
+            ),
+            productionOperationIDs: leg.productionOperationIDs
+        )
+    }
+    return AgentBarterPhysicalPairObservation(
         candidateID: "physical:\(suffix):t\(tick)",
         actorAID: opportunity.offerorID,
         actorBID: opportunity.counterpartyID,
-        actorAGood: opportunity.offered,
-        actorBGood: opportunity.requested,
+        actorAGood: currentLeg(opportunity.offered),
+        actorBGood: currentLeg(opportunity.requested),
         distance: opportunity.distance,
         lineOfSight: opportunity.lineOfSight,
         chunksReady: opportunity.chunksReady,
@@ -449,6 +464,16 @@ func runPebbleAgentsBarterSmoke() {
     )
 
     var changedNeedFixture = barterFixture("civ35-changed-need")
+    check(
+        "fresh same-asset barter observation preserves social disposition",
+        changedNeedFixture.session.evaluateCurrentBarterMaterialUse(
+            requestID: "barter-smoke:current-observation",
+            assetID: changedNeedFixture.opportunity.offered.assetID,
+            actorID: changedNeedFixture.opportunity.offerorID,
+            currentObservation:
+                changedNeedFixture.opportunity.offered.holderObservation
+        )?.verdict == .allowed
+    )
     let changedOpportunity = discoverCurrentBarterOpportunity(
         from: changedNeedFixture.opportunity,
         suffix: "changed-need",
@@ -572,6 +597,18 @@ func runPebbleAgentsBarterSmoke() {
                 .physicalReceiptID == "physical:offered"
             && session.barterSnapshot().records[0].outcome.requestedLeg
                 .physicalReceiptID == "physical:requested")
+    check(
+        "verified barter receipt fulfills both exact motivating needs",
+        [fixture.opportunity.offerorReason.needID,
+         fixture.opportunity.counterpartyReason.needID].allSatisfy { needID in
+            session.productionSnapshot().needs.first {
+                $0.needID == needID
+            }.map {
+                $0.status == .fulfilled
+                    && $0.fulfilledByOperationID == outcome.operationID
+            } == true
+        }
+    )
     check("voluntary exchange reconciles holder owner custodian and received claim",
           rights.first { $0.asset.assetID == fixture.opportunity.offered.assetID }
             .map {
