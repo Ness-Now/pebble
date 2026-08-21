@@ -21,7 +21,7 @@ SHA of the documentation commit that contains it.
   **OPTIONAL — NOT STARTED**.
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
 
-Published Gate E history:
+Gate E history and current local correction status:
 
 - Gate E Evaluation 01: **FAIL — HISTORICAL IMMUTABLE EVIDENCE**.
 - V4-GATE-E-v1 Blocker 01: **FIXED AND PUBLISHED** after senior-review
@@ -32,8 +32,10 @@ Published Gate E history:
 - Gate E Evaluation 03: **FAIL — HISTORICAL IMMUTABLE EVIDENCE**.
 - V4-GATE-E-v1 Blocker 03: **FIXED AND PUBLISHED** after senior-review
   approval.
-- Gate E Evaluation 04: **NOT_STARTED — NEXT AUTHORIZED ACTION AFTER REMOTE
-  PUBLICATION VERIFICATION**.
+- Gate E Evaluation 04: **FAIL — HISTORICAL IMMUTABLE EVIDENCE**.
+- V4-GATE-E-v1 Blocker 04: **IMPLEMENTED_LOCAL_REVIEW_CANDIDATE — NOT
+  PUBLISHED**.
+- Gate E Evaluation 05: **NOT_STARTED**.
 
 Blocker 01 binds exact production origin to an exact durable Material Rights
 asset. It is product correction publication evidence, not Gate E acquisition
@@ -344,13 +346,41 @@ duplicate receipts or settlements, Observer mutation or unexpected runtime
 errors. Goldens were not regenerated. Remote publication verification is not
 claimed by this containing commit.
 
+Gate E Evaluation 04 evaluated exact published baseline
+`e8bc2fc8add491c324f15478fcd1b82d77566d57` and remains immutable **FAIL —
+PRODUCT CORRECTION REQUIRED** evidence at HEAD
+`07ded1e583b62137b5e8b6cc32d8a61ead73cc53`. Its decisive counterexample made
+one exact durable pickaxe simultaneous accepted contract and market
+consideration, retained both commitments across restart, then let market
+settlement move exact current authority while the contract retained stale
+custody evidence. The historical result is permanently **FAIL — HISTORICAL
+IMMUTABLE EVIDENCE** and is not in the correction ancestry.
+
+The local Blocker 04 correction adds one deterministic, derived exact-asset
+commitment authority to the existing `AgentSimulationSession`. It composes live
+barter, contract and market state, allows only the same logical operation to
+continue its commitment, and releases terminal state without erasing history.
+Physical gateways and exact current Material Rights remain independently
+mandatory. Verified economic receipts fulfill the exact motivating production
+need once. No durable projection was added: checkpoint/replay remains schema
+34 and Observer remains schema 11 and read-only.
+
+Focused Blocker 04 checks pass 28/28, owning regressions pass 305/305, Blocker
+01 through 03 focused checks pass 27/27, 33/33 and 25/25, and the repository
+gate passes 35/35 steps with 4015/4015 assertions. The fresh four-process live
+campaign has 13 inspected captures and proves contract and barter exclusion,
+same-operation continuation, terminal release, ordinary post-restart market
+reuse, conservation and exact cleanup. Fresh inherited Blocker 01 through 03
+live regressions also pass. Goldens were not regenerated. This is an
+implemented local review candidate only; publication is not claimed.
+
 ## Current program position
 
 ```text
 active CIV phase: null
 completed and published through: CIV-37
 next eligible phase: null
-next authorized action after remote publication verification: NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-04
+next authorized action: SENIOR_REVIEW_V4_GATE_E_BLOCKER_04
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -387,7 +417,9 @@ Gate E Evaluation 02 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 02 status: FIXED AND PUBLISHED
 Gate E Evaluation 03 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 03 status: FIXED AND PUBLISHED
-Gate E Evaluation 04 status: NOT_STARTED — NEXT AUTHORIZED ACTION AFTER REMOTE PUBLICATION VERIFICATION
+Gate E Evaluation 04 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
+V4-GATE-E-v1 Blocker 04 status: IMPLEMENTED_LOCAL_REVIEW_CANDIDATE — NOT PUBLISHED
+Gate E Evaluation 05 status: NOT_STARTED
 V4-GATE-E-v1 status: PLANNED — NOT ACQUIRED
 roadmap generation: V4
 ```
@@ -703,8 +735,10 @@ HISTORICAL IMMUTABLE EVIDENCE**. V4-GATE-E-v1 Blocker 03 is **FIXED AND
 PUBLISHED** after senior-review approval; it makes reservation authority depend
 on the complete live proposal/listing/deposit triad and preserves terminal
 proposal, trade and price history without allowing that history to reserve
-current matter. Gate E remains **PLANNED — NOT ACQUIRED** and Evaluation 04 is
-**NOT_STARTED**. After manual publication and independent remote SHA
-verification, the next authorized action is
-**NEW-INDEPENDENT-V4-GATE-E-v1-EVALUATION-04**. This containing commit does not
-claim remote publication verification or start Evaluation 04.
+current matter. Evaluation 04 remains **FAIL — HISTORICAL IMMUTABLE EVIDENCE**.
+V4-GATE-E-v1 Blocker 04 is an **IMPLEMENTED_LOCAL_REVIEW_CANDIDATE — NOT
+PUBLISHED**; it composes exact-asset commitments across barter, contracts and
+markets without replacing their canonical states or physical gateways. Gate E
+remains **PLANNED — NOT ACQUIRED**, Evaluation 05 is **NOT_STARTED**, and the
+next authorized action is senior review of the Blocker 04 candidate. This
+containing commit does not claim publication or start Evaluation 05.
