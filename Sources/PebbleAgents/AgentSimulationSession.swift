@@ -347,7 +347,9 @@ public struct AgentSimulationSession {
                 .pendingMaterialExit(pending.agentID.rawValue)
             )
         }
-        let execution = fidelityExecutionCounts(at: tick + 1)
+        let nextSimulationTick = try clock.nextTick()
+        let nextTick = nextSimulationTick.rawValue
+        let execution = fidelityExecutionCounts(at: nextTick)
         let liveIDSet = Set(execution.live.map(\.rawValue))
         try prevalidateCausalAppend(
             count: execution.live.count
@@ -396,8 +398,6 @@ public struct AgentSimulationSession {
             perceptionsById[perception.agentId] = perception
         }
 
-        let nextSimulationTick = try clock.nextTick()
-        let nextTick = nextSimulationTick.rawValue
         let mortalityWasEnabled = mortalityState != nil
         var mortalitySurvivalMemories: [String: AgentMemoryEntry] = [:]
         if mortalityWasEnabled {
