@@ -774,7 +774,8 @@ extension AgentSimulationSession {
         }
         if let scale = registry.scaleState {
             try validatePopulationScaleState(
-                scale, registry: registry, clock: clock
+                scale, registry: registry, clock: clock,
+                departedAgentIDs: departedAgentIDs
             )
         } else if !(registry.additionalSettlements ?? []).isEmpty {
             throw AgentCheckpointError.invalidBound("settlements without scale state")
@@ -843,6 +844,7 @@ extension AgentCausalEventKind {
              .migrationFailed, .populationMemberExited, .populationStateCleared,
              .populationScalingInitialized, .settlementRegistered,
              .settlementMigrationStarted, .settlementMigrationArrived,
+             .settlementMigrationFailed,
              .fidelityTransitioned:
             return true
         case .populationMemberBorn:

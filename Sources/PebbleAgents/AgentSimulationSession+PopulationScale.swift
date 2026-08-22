@@ -684,7 +684,8 @@ extension AgentSimulationSession {
     static func validatePopulationScaleState(
         _ scale: AgentPopulationScaleState,
         registry: AgentPopulationRegistry,
-        clock: AgentSimulationClock
+        clock: AgentSimulationClock,
+        departedAgentIDs: Set<AgentID> = []
     ) throws {
         let agentIDs = Set(registry.members.map(\.agentID))
         let recordIDs = scale.fidelityRecords.map(\.agentID)
@@ -727,6 +728,10 @@ extension AgentSimulationSession {
             }
         }
         for migration in scale.settlementMigrations {
+            let referencesActive = agentIDs.contains(migration.agentID)
+            let referencesDeparted = departedAgentIDs.contains(
+                migration.agentID
+            ) && migration.status.isTerminal
             let member = registry.members.first {
                 $0.agentID == migration.agentID
             }
@@ -736,8 +741,9 @@ extension AgentSimulationSession {
             let destination = registry.settlement(
                 withID: migration.destinationSettlementID
             )
-            guard agentIDs.contains(migration.agentID),
-                  member != nil, origin != nil, destination != nil,
+            guard (referencesActive || referencesDeparted),
+                  (referencesActive ? member != nil : member == nil),
+                  origin != nil, destination != nil,
                   migration.originSettlementID
                     != migration.destinationSettlementID,
                   migration.route.count >= 2,
@@ -755,24 +761,46 @@ extension AgentSimulationSession {
                     }),
                   migration.startedTick <= clock.tick.rawValue,
                   migration.arrivedTick.map({ $0 <= clock.tick.rawValue }) ?? true,
+                  migration.failedTick.map({ $0 <= clock.tick.rawValue }) ?? true,
                   migration.startedEventID.simulationID == clock.simulationID,
                   migration.arrivedEventID?.simulationID == clock.simulationID
                     || migration.arrivedEventID == nil,
+                  migration.failureEventID?.simulationID == clock.simulationID
+                    || migration.failureEventID == nil,
                   migration.status == .inTransit
-                    ? (member?.status == .migrating
+                    ? (referencesActive
+                        && member?.status == .migrating
                         && member?.settlementID
                             == migration.originSettlementID
                         && origin?.inTransitIDs.contains(migration.agentID)
-                            == true)
+                            == true
+                        && migration.arrivedTick == nil
+                        && migration.arrivedEventID == nil
+                        && migration.failure == nil
+                        && migration.failedTick == nil
+                        && migration.failureEventID == nil)
                     : true,
                   migration.status == .arrived
-                    ? (member?.status != .migrating
-                        && member?.settlementID
-                            == migration.destinationSettlementID
-                        && destination?.residentIDs.contains(migration.agentID)
-                            == true
+                    ? ((referencesDeparted
+                            || (member?.status != .migrating
+                                && member?.settlementID
+                                    == migration.destinationSettlementID
+                                && destination?.residentIDs.contains(
+                                    migration.agentID
+                                ) == true))
                         && migration.arrivedTick != nil
-                        && migration.arrivedEventID != nil)
+                        && migration.arrivedEventID != nil
+                        && migration.failure == nil
+                        && migration.failedTick == nil
+                        && migration.failureEventID == nil)
+                    : true,
+                  migration.status == .failed
+                    ? (referencesDeparted
+                        && migration.failure == .memberDied
+                        && migration.failedTick != nil
+                        && migration.failureEventID != nil
+                        && migration.arrivedTick == nil
+                        && migration.arrivedEventID == nil)
                     : true else {
                 throw AgentCheckpointError.invalidReference(
                     migration.migrationID.rawValue

@@ -98,6 +98,12 @@ public enum AgentSettlementMigrationStatus: String, Codable, CaseIterable, Senda
     var isTerminal: Bool { self != .inTransit }
 }
 
+public enum AgentSettlementMigrationFailure: String, Codable, CaseIterable,
+    Sendable
+{
+    case memberDied
+}
+
 public struct AgentSettlementMigrationID: RawRepresentable, Codable, Hashable,
     Comparable, Sendable
 {
@@ -131,6 +137,9 @@ public struct AgentSettlementMigrationRecord: Codable, Equatable, Sendable {
     public let startedEventID: AgentCausalEventID
     public internal(set) var arrivedEventID: AgentCausalEventID?
     public internal(set) var lastMovementEventID: AgentCausalEventID?
+    public internal(set) var failure: AgentSettlementMigrationFailure? = nil
+    public internal(set) var failedTick: Int? = nil
+    public internal(set) var failureEventID: AgentCausalEventID? = nil
 }
 
 public struct AgentFidelityWorkCounters: Codable, Equatable, Sendable {

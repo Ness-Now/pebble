@@ -38,6 +38,8 @@ func validateScenario(_ scenario: String) {
         || scenario == "persistent_checkpoint_replay_smoke"
         || scenario == "population_registry_migration_smoke"
         || scenario == "population_scaling_fidelity_smoke"
+        || scenario == "population_scale_mortality_exit_smoke"
+        || scenario == "population_scale_mortality_restore_smoke"
         || scenario == "settlement_metrics_multiscale_smoke"
         || scenario == "local_ecology_subsistence_smoke"
         || scenario == "mortality_population_exit_smoke"

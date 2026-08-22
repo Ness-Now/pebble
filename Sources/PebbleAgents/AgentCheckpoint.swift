@@ -1965,9 +1965,12 @@ extension AgentSimulationSession {
                 AgentID(rawValue: "agent_\($0)")
             })
         let retainedDepartedIDs = Set(state.mortalityState?.records.map(\.agentID) ?? [])
+        let compactedDepartedIDs = Set(state.mortalityState?
+            .compactedDeathSummaries?.map(\.agentID) ?? [])
         let departedIDs = Set((state.populationRegistry?.migrations ?? []).compactMap { migration in
             migration.failure == .memberDied ? migration.migrantID : nil
-        }).union(retainedDepartedIDs).union(historicalPopulationIDs.subtracting(agentIDs))
+        }).union(retainedDepartedIDs).union(compactedDepartedIDs)
+            .union(historicalPopulationIDs.subtracting(agentIDs))
         let knownPopulationIDs = agentIDs.union(departedIDs).union(historicalPopulationIDs)
         if let project = state.constructionProject,
            !agentIDs.contains(AgentID(rawValue: project.builderAgentId) ?? AgentID(rawValue: "invalid")!) {
@@ -2546,6 +2549,14 @@ extension AgentSimulationSession {
                     $0.kind == .migrationFailed && $0.actorID == record.agentID
                         && $0.sequence > commitments.sequence && $0.sequence < exit.sequence
                 }
+                let settlementMigrationRecord = state.populationRegistry?
+                    .scaleState?.settlementMigrations.first {
+                        $0.agentID == record.agentID
+                            && $0.failure == .memberDied
+                            && $0.failedTick == record.deathTick
+                    }
+                let settlementMigrationFailure = settlementMigrationRecord?
+                    .failureEventID.flatMap(event)
                 let careExit = exit.causes.compactMap { causeID in
                     event(causeID)
                 }.filter {
@@ -2591,6 +2602,23 @@ extension AgentSimulationSession {
                           }) ?? (state.causalLedger.droppedEventCount > 0) else {
                         throw AgentCheckpointError.invalidBound(
                             "mortality terminal physiology cause"
+                        )
+                    }
+                }
+                if let settlementMigrationRecord {
+                    guard settlementMigrationRecord.status == .failed,
+                          settlementMigrationFailure?.kind
+                            == .settlementMigrationFailed,
+                          settlementMigrationFailure?.actorID == record.agentID,
+                          settlementMigrationFailure?.subjectID == record.agentID,
+                          settlementMigrationFailure?.simulationTick.rawValue
+                            == record.deathTick,
+                          settlementMigrationFailure?.causes == [
+                              settlementMigrationRecord.startedEventID,
+                              commitments.eventID,
+                          ].sorted() else {
+                        throw AgentCheckpointError.invalidBound(
+                            "mortality settlement migration failure"
                         )
                     }
                 }
@@ -2677,6 +2705,7 @@ extension AgentSimulationSession {
                           resources.eventID,
                           commitments.eventID,
                           migrationFailure?.eventID,
+                          settlementMigrationFailure?.eventID,
                           careExit,
                           familyExit,
                           householdExit,

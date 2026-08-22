@@ -104,6 +104,7 @@ public enum AgentCausalEventKind: String, Codable, CaseIterable, Sendable {
     case settlementRegistered
     case settlementMigrationStarted
     case settlementMigrationArrived
+    case settlementMigrationFailed
     case fidelityTransitioned
     case settlementMetricsInitialized
     case settlementMacroPulse
@@ -930,6 +931,7 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
              (.settlementRegistered, .operation),
              (.settlementMigrationStarted, .operation),
              (.settlementMigrationArrived, .operation),
+             (.settlementMigrationFailed, .operation),
              (.fidelityTransitioned, .operation),
              (.migrationProposed, .migration),
              (.migrationAdmitted, .migration),

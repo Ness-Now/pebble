@@ -1109,7 +1109,7 @@ print_plan() {
     if [ "$MODE" = "civ39" ]; then
         printf '  2. Confirm twelve distinct rendered inhabitants and two locality projections coexist.\n'
         printf '  3. Confirm agent_0 travels through Core movement, arrives once, and later rotates out of LIVE.\n'
-        printf '  4. Confirm the fresh process restores schema 35, Observer schema 12, all identities, and exact cleanup.\n'
+        printf '  4. Confirm the fresh process restores schema 35, Observer schema 13, all identities, and exact cleanup.\n'
     elif [ "$MODE" = "markets" ] && [ "$GATE_E_BLOCKER_04" -eq 1 ]; then
         printf '  2. Confirm ordinary contract cognition commits the exact pickaxe while ordinary market discovery observes but cannot select it.\n'
         printf '  3. Confirm fresh restore preserves the exclusion, same-contract continuation transfers consideration, and terminal progress releases the commitment.\n'
@@ -1569,7 +1569,7 @@ if [ "$MODE" = "civ39" ]; then
     TRACE_PATH="$PHASE2_TRACE"
     require_trace 'checkpoint loaded name=civ39-arrived-v35 .*tick=8 .*restartSafe=1 .*probes=12 .*probeRestoredMissing=9 .*probeRepositionedVerified=2 .*custodyDuplicates=0 .*worldMutation=verified_probe_position_restore civ39RestoreCount=1' 'fresh-process twelve-probe restore'
     require_trace 'observer status .*selected=agent_0 schema=12 .*settlement=settlement-east fidelity=NEAR population=12 settlements=2 live=4 near=4 dormant=4 .*mutation=none .*digestStable=1' 'post-restart Observer continuity'
-    require_trace 'CIV39_LIVE_PROOF_PASS settlements=2 population=12 live=4 near=4 dormant=4 migration=arrived identity=agent_0 identityStable=1 checkpointSchema=35 observerSchema=12 observerMutations=0 restartCount=1 restartDuplicateEffects=0 duplicateInhabitants=0 duplicateDurableIdentities=0 duplicateEconomicCommitments=0 duplicateReceipts=0 physicalLoss=0 physicalDuplication=0 syntheticMaterial=0 unexpectedRuntimeErrors=0 probes=12' 'complete CIV-39 live proof'
+    require_trace 'CIV39_LIVE_PROOF_PASS settlements=2 population=12 live=4 near=4 dormant=4 migration=arrived identity=agent_0 identityStable=1 checkpointSchema=35 observerSchema=13 observerMutations=0 restartCount=1 restartDuplicateEffects=0 duplicateInhabitants=0 duplicateDurableIdentities=0 duplicateEconomicCommitments=0 duplicateReceipts=0 physicalLoss=0 physicalDuplication=0 syntheticMaterial=0 unexpectedRuntimeErrors=0 probes=12' 'complete CIV-39 live proof'
     require_trace 'summary reason=stop .*ticks=0 .*agents=12 .*runtimeErrors=0 .*probesRemoved=12 .*causalTick=8 ' 'fresh-process exact twelve-probe cleanup'
     require_trace 'stop probesRemoved=12 reason=stop .*taggedCustodySpills=0' 'fresh-process physical cleanup'
     require_trace 'status inactive gate=enabled' 'post-cleanup inactive session'

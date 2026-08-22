@@ -537,12 +537,18 @@ extension AgentSimulationSession {
         let familyEventCount = familyDeathEventCount(
             agentIDs: lethal.map(\.agentID)
         )
+        let settlementMigrationEventCount = lethal.reduce(0) { count, item in
+            count + ((registry.scaleState?.settlementMigrations.contains {
+                $0.agentID == item.agentID && $0.status == .inTransit
+            } ?? false) ? 1 : 0)
+        }
         try prevalidateCausalAppend(
             count: lethal.count * (lifecycleState == nil ? 7 : 9)
                 + householdEventCount
                 + (dependentCareState?.configuration.maximumCareTransitionsPerTick ?? 0)
                 + terminalWorkEventCount
                 + familyEventCount
+                + settlementMigrationEventCount
         )
         let preDeathIDs = Set(statesById.values.map(\.agentID))
         guard lethal.map(\.agentID) == lethal.map(\.agentID).sorted(),
@@ -557,6 +563,18 @@ extension AgentSimulationSession {
                   validLethalPhysiology(state: state, candidate: item),
                   registry.members.contains(where: { $0.agentID == item.agentID }) else {
                 throw AgentSessionError.mortality(.invalidLethalTransition(item.agentID.rawValue))
+            }
+            if let scale = registry.scaleState {
+                guard scale.fidelityRecords.filter({
+                    $0.agentID == item.agentID
+                }).count == 1,
+                scale.settlementMigrations.filter({
+                    $0.agentID == item.agentID && $0.status == .inTransit
+                }).count <= 1 else {
+                    throw AgentSessionError.mortality(.invalidState(
+                        "scaled population authority \(item.agentID.rawValue)"
+                    ))
+                }
             }
             let ordinal = mortality.totalDeathCount + offset + 1
             let digest = AgentMortalityDigest.make(
@@ -836,6 +854,37 @@ extension AgentSimulationSession {
                 registry.migrations[migrationIndex].status = .failed
                 registry.migrations[migrationIndex].failure = .memberDied
             }
+            var settlementMigrationFailureEvent: AgentCausalEvent?
+            if var scale = registry.scaleState,
+               let migrationIndex = scale.settlementMigrations.firstIndex(where: {
+                   $0.agentID == item.agentID && $0.status == .inTransit
+               }) {
+                let migration = scale.settlementMigrations[migrationIndex]
+                let failureEvent = try requiredMortalityEvent(
+                    kind: .settlementMigrationFailed,
+                    actorID: item.agentID,
+                    subjectID: item.agentID,
+                    causes: [
+                        migration.startedEventID,
+                        commitmentsEvent.eventID,
+                    ].sorted(),
+                    payload: .operation(
+                        status: AgentSettlementMigrationStatus.failed.rawValue,
+                        detail: "migration=\(migration.migrationID.rawValue) "
+                            + "reason=\(AgentSettlementMigrationFailure.memberDied.rawValue)"
+                    ),
+                    summary: "settlement migration failed member died id="
+                        + migration.migrationID.rawValue
+                )
+                settlementMigrationFailureEvent = failureEvent
+                scale.settlementMigrations[migrationIndex].status = .failed
+                scale.settlementMigrations[migrationIndex].failure = .memberDied
+                scale.settlementMigrations[migrationIndex].failedTick = mortalityTick
+                scale.settlementMigrations[migrationIndex].failureEventID =
+                    failureEvent.eventID
+                scale.lastScaleEventID = failureEvent.eventID
+                registry.scaleState = scale
+            }
             let familyEventID = try applyFamilyDeath(
                 agentID: item.agentID,
                 causeEventID: lethalEvent.eventID,
@@ -852,8 +901,11 @@ extension AgentSimulationSession {
                 at: mortalityTick
             )
             registry.members.remove(at: memberIndex)
-            registry.settlement.residentIDs.removeAll { $0 == item.agentID }
-            registry.settlement.inTransitIDs.removeAll { $0 == item.agentID }
+            registry.removeMemberFromEverySettlement(item.agentID)
+            if var scale = registry.scaleState {
+                scale.fidelityRecords.removeAll { $0.agentID == item.agentID }
+                registry.scaleState = scale
+            }
             statesById[item.agentID.rawValue] = nil
             let populationAfter = registry.members.count
 
@@ -866,6 +918,7 @@ extension AgentSimulationSession {
                     resourcesEvent.eventID,
                     commitmentsEvent.eventID,
                     migrationFailureEvent?.eventID,
+                    settlementMigrationFailureEvent?.eventID,
                     careEventID,
                     familyEventID,
                     householdEventID,
@@ -1084,8 +1137,19 @@ extension AgentSimulationSession {
         } ?? false
         guard remaining == preDeathIDs.subtracting(lethal.map(\.agentID)),
               Set(registry.members.map(\.agentID)) == remaining,
-              registry.settlement.residentIDs.allSatisfy({ !deadIDs.contains($0) }),
-              registry.settlement.inTransitIDs.allSatisfy({ !deadIDs.contains($0) }),
+              registry.settlements.allSatisfy({ settlement in
+                  settlement.residentIDs.allSatisfy({ !deadIDs.contains($0) })
+                    && settlement.inTransitIDs.allSatisfy({
+                        !deadIDs.contains($0)
+                    })
+              }),
+              registry.scaleState?.fidelityRecords.allSatisfy({
+                  !deadIDs.contains($0.agentID)
+              }) ?? true,
+              registry.scaleState?.settlementMigrations.allSatisfy({ migration in
+                  !deadIDs.contains(migration.agentID)
+                    || migration.status.isTerminal
+              }) ?? true,
               reservationsByTarget.values.allSatisfy({ !deadRawIDs.contains($0.agentId) }),
               failedNaturalResourceTargetKeysByAgentId.keys.allSatisfy({ !deadRawIDs.contains($0) }),
               activeSocialVerificationByAgentId.keys.allSatisfy({ !deadRawIDs.contains($0) }),
@@ -1102,6 +1166,15 @@ extension AgentSimulationSession {
               conservationSnapshotWith(mortality: mortality).balanced else {
             throw AgentSessionError.mortality(.invalidState("post-transition invariants"))
         }
+        let departedIDs = Set(mortality.records.map(\.agentID)).union(
+            mortality.compactedDeathSummaries?.map(\.agentID) ?? []
+        )
+        try Self.validatePopulationRegistry(
+            registry,
+            agents: Array(statesById.values),
+            clock: clock,
+            departedAgentIDs: departedIDs
+        )
         populationRegistry = registry
         mortalityState = mortality
         try validateHouseholdCrossDomainIfEnabled()

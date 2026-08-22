@@ -25,6 +25,10 @@ if options.scenario == "population_registry_migration_smoke" {
 if options.scenario == "population_scaling_fidelity_smoke" {
     runPopulationScalingFidelitySmoke(options)
 }
+if options.scenario == "population_scale_mortality_exit_smoke"
+    || options.scenario == "population_scale_mortality_restore_smoke" {
+    runPopulationScaleMortalitySmoke(options)
+}
 if options.scenario == "settlement_metrics_multiscale_smoke" {
     runSettlementMetricsMultiscaleSmoke(options)
 }

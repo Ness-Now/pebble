@@ -8,7 +8,12 @@ private let civ39MigrationRoute = (0...4).map {
     AgentPosition(x: 0, y: 64, z: $0)
 }
 
-private func civ39Agent(_ id: String, ordinal: Int) -> AgentSessionAgentState {
+private func civ39Agent(
+    _ id: String,
+    ordinal: Int,
+    lethalNextTick: Bool = false,
+    mortalityAfterProgression: Bool = false
+) -> AgentSessionAgentState {
     let position: AgentPosition
     if ordinal < 3 {
         position = AgentPosition(x: ordinal * 2, y: 64, z: 0)
@@ -21,8 +26,12 @@ private func civ39Agent(_ id: String, ordinal: Int) -> AgentSessionAgentState {
     }
     return AgentSessionAgentState(
         id: id, state: "idle", position: position,
-        needs: AgentNeeds(hunger: 0, fatigue: 0, curiosity: 0, safety: 1),
-        health: 100, fear: 0, homePosition: position, nearbyAgents: [],
+        needs: AgentNeeds(
+            hunger: lethalNextTick ? 1 : (mortalityAfterProgression ? 0.39 : 0),
+            fatigue: 0, curiosity: 0, safety: 1
+        ),
+        health: lethalNextTick ? 10 : (mortalityAfterProgression ? 30 : 100),
+        fear: 0, homePosition: position, nearbyAgents: [],
         currentGoal: AgentGoal(
             kind: .idle, reason: "CIV-39 scale fixture",
             startedAtTick: 0, urgency: 0
@@ -37,7 +46,11 @@ private func civ39Agent(_ id: String, ordinal: Int) -> AgentSessionAgentState {
         goalSelectionCount: 0, goalChangeCount: 0,
         actionCount: 0, actionEffectCount: 0, movementCount: 0,
         totalManhattanDistanceMoved: 0, returnHomeMoveCount: 0,
-        totalDistanceReducedTowardHome: 0
+        totalDistanceReducedTowardHome: 0,
+        survivalProgress: AgentSurvivalProgress(
+            status: lethalNextTick ? .starving : .stable,
+            consecutiveCriticalHungerTicks: lethalNextTick ? 2 : 0
+        )
     )
 }
 
@@ -100,7 +113,9 @@ private func civ39Session(
     population: Int = 24,
     scaleConfiguration: AgentPopulationScaleConfiguration
         = civ39ScaleConfiguration(),
-    economicAsset: Bool = false
+    economicAsset: Bool = false,
+    lethalAgentID: String? = nil,
+    progressionMortalityAgentID: String? = nil
 ) -> AgentSimulationSession {
     precondition((3...128).contains(population))
     var session = try! AgentSimulationSession(
@@ -110,9 +125,24 @@ private func civ39Session(
             memoryPolicy: .bounded(maxEntries: 64)
         ),
         agents: [
-            civ39Agent("agent_0", ordinal: 0),
-            civ39Agent("agent_1", ordinal: 1),
-            civ39Agent("agent_2", ordinal: 2),
+            civ39Agent(
+                "agent_0", ordinal: 0,
+                lethalNextTick: lethalAgentID == "agent_0",
+                mortalityAfterProgression:
+                    progressionMortalityAgentID == "agent_0"
+            ),
+            civ39Agent(
+                "agent_1", ordinal: 1,
+                lethalNextTick: lethalAgentID == "agent_1",
+                mortalityAfterProgression:
+                    progressionMortalityAgentID == "agent_1"
+            ),
+            civ39Agent(
+                "agent_2", ordinal: 2,
+                lethalNextTick: lethalAgentID == "agent_2",
+                mortalityAfterProgression:
+                    progressionMortalityAgentID == "agent_2"
+            ),
         ],
         simulationID: try! AgentSimulationID(validating: id),
         causalLedgerPolicy: .bounded(maxEvents: 65_536)
@@ -129,7 +159,11 @@ private func civ39Session(
     let admissions = (3..<population).map { ordinal in
         AgentScaledResidentAdmission(
             state: civ39Agent(
-                String(format: "agent_%03d", ordinal), ordinal: ordinal
+                String(format: "agent_%03d", ordinal), ordinal: ordinal,
+                lethalNextTick: lethalAgentID
+                    == String(format: "agent_%03d", ordinal),
+                mortalityAfterProgression: progressionMortalityAgentID
+                    == String(format: "agent_%03d", ordinal)
             ),
             settlementID: ordinal.isMultiple(of: 2) ? .main : civ39EastID
         )
@@ -146,6 +180,14 @@ private func civ39Session(
         configuration: scaleConfiguration
     )
     return session
+}
+
+private func civ39FinalizeLethalTick(
+    _ session: inout AgentSimulationSession
+) throws {
+    session.setSurvivalEnabled(true)
+    try session.setMortalityEnabled(true)
+    _ = try session.advanceTick()
 }
 
 private func civ39NavigationPerception(
@@ -268,7 +310,7 @@ func runPebbleAgentsPopulationScaleSmoke() {
         worldBinding: civ39ObserverBinding(tick: session.tick)
     )
     let observerAfterBytes = try! session.durableStateBytes()
-    check("CIV-39 Observer schema 12", observerA.header.schemaVersion == 12)
+    check("CIV-39 Observer schema 13", observerA.header.schemaVersion == 13)
     check("CIV-39 Observer exposes settlements and tier totals",
           observerA.populationScale?.settlements.count == 2
             && observerA.populationScale?.liveCount == 4
@@ -563,6 +605,340 @@ func runPebbleAgentsPopulationScaleSmoke() {
     }
     check("CIV-39 duplicate settlement refusal atomic",
           try! duplicateSettlement.durableStateBytes() == duplicateBefore)
+
+    let mainDeathID = AgentID(rawValue: "agent_004")!
+    var mainDeath = civ39Session(
+        id: "civ39-mortality-main", lethalAgentID: mainDeathID.rawValue
+    )
+    try! mainDeath.setLifecycleEnabled(true)
+    let mainDeathCompleted = (try? civ39FinalizeLethalTick(&mainDeath)) != nil
+    let mainDeathPopulation = mainDeath.populationSnapshot()
+    let mainDeathScale = mainDeath.populationScaleSnapshot()
+    check("CIV-39 scaled main-settlement mortality finalizes",
+          mainDeathCompleted
+            && !mainDeath.expectedActiveAgentIDs().contains(mainDeathID)
+            && mainDeath.mortalitySnapshot().records.last?.agentID
+                == mainDeathID)
+    check("CIV-39 scaled main-settlement death removes all current authority",
+          mainDeathPopulation.settlements.allSatisfy {
+              !$0.residentIDs.contains(mainDeathID)
+                && !$0.inTransitIDs.contains(mainDeathID)
+          } && !mainDeathScale.fidelityRecords.contains {
+              $0.agentID == mainDeathID
+          })
+    let mainDeathObserverBefore = try! mainDeath.durableStateBytes()
+    let mainDeathObserver = mainDeath.observerSnapshot(
+        worldBinding: civ39ObserverBinding(tick: mainDeath.tick)
+    )
+    check("CIV-39 Observer reports reduced population after death read-only",
+          mainDeathObserver.individuals.count == 23
+            && mainDeathObserver.populationScale?.fidelityRecords.count == 23
+            && !mainDeathObserver.individuals.contains {
+                $0.agentID == mainDeathID
+            }
+            && (try! mainDeath.durableStateBytes()) == mainDeathObserverBefore)
+    for _ in 0..<8 { _ = try! mainDeath.advanceTick() }
+    let mainDeathRotated = mainDeath.populationScaleSnapshot()
+    check("CIV-39 fidelity rotation excludes removed inhabitant",
+          mainDeathRotated.fidelityRecords.count == 23
+            && !mainDeathRotated.fidelityRecords.contains {
+                $0.agentID == mainDeathID
+            }
+            && mainDeathRotated.liveCount <= 4
+            && mainDeathRotated.nearCount <= 8
+            && Set(mainDeathRotated.fidelityRecords.map(\.agentID))
+                == Set(mainDeath.expectedActiveAgentIDs()))
+    check("CIV-39 Gate D death history survives scaled cleanup",
+          mainDeath.mortalitySnapshot().records.last?.agentID == mainDeathID
+            && mainDeath.mortalitySnapshot().records.last?
+                .demographicAgeTicks != nil
+            && !mainDeath.lifecycleSnapshot().members.contains {
+                $0.agentID == mainDeathID
+            })
+
+    let lowerFidelityDeathID = AgentID(rawValue: "agent_013")!
+    var lowerFidelityDeath = civ39Session(
+        id: "civ39-mortality-dormant",
+        lethalAgentID: lowerFidelityDeathID.rawValue
+    )
+    let lowerFidelityBefore = lowerFidelityDeath.populationScaleSnapshot()
+        .fidelityRecords.first { $0.agentID == lowerFidelityDeathID }?.fidelity
+    try! lowerFidelityDeath.setLifecycleEnabled(true)
+    let lowerFidelityDeathCompleted =
+        (try? civ39FinalizeLethalTick(&lowerFidelityDeath)) != nil
+    let lowerFidelityPopulation = lowerFidelityDeath.populationSnapshot()
+    let lowerFidelityScale = lowerFidelityDeath.populationScaleSnapshot()
+    check("CIV-39 DORMANT mortality uses global lifecycle authority",
+          lowerFidelityBefore == .dormant && lowerFidelityDeathCompleted
+            && lowerFidelityDeath.mortalitySnapshot().records.last?.agentID
+                == lowerFidelityDeathID)
+    check("CIV-39 DORMANT death removes membership and fidelity authority",
+          lowerFidelityPopulation.settlements.allSatisfy {
+              !$0.residentIDs.contains(lowerFidelityDeathID)
+                && !$0.inTransitIDs.contains(lowerFidelityDeathID)
+          } && !lowerFidelityScale.fidelityRecords.contains {
+              $0.agentID == lowerFidelityDeathID
+          })
+
+    var arrivedDeath = civ39Session(
+        id: "civ39-mortality-arrived",
+        progressionMortalityAgentID: "agent_0"
+    )
+    let arrivedDeathID = AgentID(rawValue: "agent_0")!
+    _ = try! arrivedDeath.beginSettlementMigration(
+        agentID: arrivedDeathID,
+        destinationSettlementID: civ39EastID,
+        verifiedRoute: civ39MigrationRoute
+    )
+    for _ in 0..<4 { _ = try! civ39AdvanceMigration(&arrivedDeath) }
+    let arrivedBeforeDeath = arrivedDeath.populationScaleSnapshot()
+        .settlementMigrations.first { $0.agentID == arrivedDeathID }
+    try! arrivedDeath.setLifecycleEnabled(true)
+    arrivedDeath.setSurvivalEnabled(true)
+    try! arrivedDeath.setMortalityEnabled(true)
+    var arrivedDeathError: Error?
+    for _ in 0..<48 where arrivedDeath.expectedActiveAgentIDs().contains(
+        arrivedDeathID
+    ) {
+        do { _ = try arrivedDeath.advanceTick() }
+        catch { arrivedDeathError = error; break }
+    }
+    let arrivedDeathCompleted = arrivedDeathError == nil
+        && !arrivedDeath.expectedActiveAgentIDs().contains(arrivedDeathID)
+    let arrivedDeathPopulation = arrivedDeath.populationSnapshot()
+    let arrivedDeathScale = arrivedDeath.populationScaleSnapshot()
+    check("CIV-39 mortality after non-main arrival finalizes",
+          arrivedDeathCompleted
+            && arrivedBeforeDeath?.status == .arrived
+            && arrivedDeath.mortalitySnapshot().records.last?.agentID
+                == arrivedDeathID,
+          "before=\(String(describing: arrivedBeforeDeath?.status)) "
+            + "error=\(String(describing: arrivedDeathError)) deaths="
+            + "\(arrivedDeath.mortalitySnapshot().records.map(\.agentID)) active="
+            + "\(arrivedDeath.expectedActiveAgentIDs().contains(arrivedDeathID))")
+    check("CIV-39 mortality after non-main arrival removes current authority",
+          arrivedDeathPopulation.settlements.allSatisfy {
+              !$0.residentIDs.contains(arrivedDeathID)
+                && !$0.inTransitIDs.contains(arrivedDeathID)
+          } && !arrivedDeathScale.fidelityRecords.contains {
+              $0.agentID == arrivedDeathID
+          })
+
+    var migratingDeath = civ39Session(
+        id: "civ39-mortality-in-transit", lethalAgentID: "agent_0"
+    )
+    let activeDeathMigration = try! migratingDeath.beginSettlementMigration(
+        agentID: AgentID(rawValue: "agent_0")!,
+        destinationSettlementID: civ39EastID,
+        verifiedRoute: civ39MigrationRoute
+    )
+    try! migratingDeath.setLifecycleEnabled(true)
+    let migratingDeathCompleted =
+        (try? civ39FinalizeLethalTick(&migratingDeath)) != nil
+    let migratingDeathPopulation = migratingDeath.populationSnapshot()
+    let migratingDeathScale = migratingDeath.populationScaleSnapshot()
+    let terminalDeathMigrations = migratingDeathScale.settlementMigrations
+        .filter { $0.migrationID == activeDeathMigration.migrationID }
+    check("CIV-39 mortality during active settlement migration finalizes",
+          migratingDeathCompleted
+            && migratingDeath.mortalitySnapshot().records.last?.agentID.rawValue
+                == "agent_0")
+    check("CIV-39 active migration death terminates once without current authority",
+          terminalDeathMigrations.count == 1
+            && terminalDeathMigrations[0].status != .inTransit
+            && terminalDeathMigrations[0].failure == .memberDied
+            && terminalDeathMigrations[0].failedTick == migratingDeath.tick
+            && terminalDeathMigrations[0].failureEventID != nil
+            && migratingDeathPopulation.settlements.allSatisfy {
+                !$0.residentIDs.contains(AgentID(rawValue: "agent_0")!)
+                    && !$0.inTransitIDs.contains(AgentID(rawValue: "agent_0")!)
+            } && !migratingDeathScale.fidelityRecords.contains {
+                $0.agentID.rawValue == "agent_0"
+            }
+            && migratingDeath.causalLedgerSnapshot().events.filter {
+                $0.kind == .settlementMigrationFailed
+                    && $0.actorID?.rawValue == "agent_0"
+            }.count == 1)
+    let migratingDeathCheckpoint = try! migratingDeath.makeCheckpoint()
+    var migratingDeathRestored = try! AgentSimulationSession.restoring(
+        migratingDeathCheckpoint
+    )
+    let migratingDeathRestoreBytes = try! migratingDeathRestored
+        .durableStateBytes()
+    check("CIV-39 active-migration death schema-35 restore exact",
+          migratingDeathCheckpoint.schemaVersion == 35
+            && migratingDeathRestoreBytes
+                == (try! migratingDeath.durableStateBytes()))
+    for _ in 0..<8 { _ = try! migratingDeathRestored.advanceTick() }
+    let postRestartDeathMigrations = migratingDeathRestored
+        .populationScaleSnapshot().settlementMigrations.filter {
+            $0.migrationID == activeDeathMigration.migrationID
+        }
+    check("CIV-39 dead migration remains terminal exactly once after restart",
+          postRestartDeathMigrations.count == 1
+            && postRestartDeathMigrations[0].status == .failed
+            && postRestartDeathMigrations[0].failure == .memberDied
+            && migratingDeathRestored.mortalitySnapshot().totalDeathCount == 1
+            && !migratingDeathRestored.causalLedgerSnapshot().events.contains {
+                $0.kind == .settlementMigrationArrived
+                    && $0.actorID?.rawValue == "agent_0"
+                    && $0.simulationTick.rawValue > migratingDeath.tick
+            })
+    check("CIV-39 dead migration restart has no current reintroduction",
+          !migratingDeathRestored.expectedActiveAgentIDs().contains(
+              AgentID(rawValue: "agent_0")!
+          ) && migratingDeathRestored.populationSnapshot().settlements
+            .allSatisfy {
+                !$0.residentIDs.contains(AgentID(rawValue: "agent_0")!)
+                    && !$0.inTransitIDs.contains(
+                        AgentID(rawValue: "agent_0")!
+                    )
+            } && !migratingDeathRestored.populationScaleSnapshot()
+                .fidelityRecords.contains {
+                    $0.agentID.rawValue == "agent_0"
+                })
+    let migrationDeathObserverBefore = try! migratingDeathRestored
+        .durableStateBytes()
+    let migrationDeathObserver = migratingDeathRestored.observerSnapshot(
+        worldBinding: civ39ObserverBinding(tick: migratingDeathRestored.tick)
+    )
+    check("CIV-39 Observer exposes terminal migration without mutation",
+          migrationDeathObserver.header.schemaVersion == 13
+            && migrationDeathObserver.populationScale?.settlementMigrations
+                .first?.failure == .memberDied
+            && migrationDeathObserver.populationScale?.settlementMigrations
+                .first?.failureEventID != nil
+            && (try! migratingDeathRestored.durableStateBytes())
+                == migrationDeathObserverBefore)
+
+    let arrivedDeathCheckpoint = try? arrivedDeath.makeCheckpoint()
+    var arrivedDeathRestored: AgentSimulationSession?
+    var arrivedDeathRestoreError = "none"
+    if let arrivedDeathCheckpoint {
+        do {
+            arrivedDeathRestored = try AgentSimulationSession.restoring(
+                arrivedDeathCheckpoint
+            )
+        } catch {
+            arrivedDeathRestoreError = String(describing: error)
+        }
+    }
+    check("CIV-39 schema-35 restores finalized scaled death",
+          arrivedDeathCheckpoint?.schemaVersion == 35
+            && arrivedDeathRestored != nil
+            && arrivedDeathRestored?.expectedActiveAgentIDs().contains(
+                arrivedDeathID
+            ) == false
+            && arrivedDeathRestored?.populationSnapshot().settlements
+                .allSatisfy {
+                    !$0.residentIDs.contains(arrivedDeathID)
+                        && !$0.inTransitIDs.contains(arrivedDeathID)
+                } == true
+            && arrivedDeathRestored?.populationScaleSnapshot()
+                .fidelityRecords.contains {
+                    $0.agentID == arrivedDeathID
+                } == false
+            && arrivedDeathRestored?.mortalitySnapshot().totalDeathCount == 1
+            && arrivedDeathRestored?.populationScaleSnapshot()
+                .settlementMigrations.first {
+                    $0.agentID == arrivedDeathID
+                }?.status == .arrived,
+          "restoreError=\(arrivedDeathRestoreError) events="
+            + arrivedDeath.causalLedgerSnapshot(tail: 16).events.map {
+                "\($0.kind.rawValue)#\($0.sequence.rawValue)<-"
+                    + $0.causes.map { String($0.sequence.rawValue) }
+                        .joined(separator: ",")
+            }.joined(separator: ";"))
+    if let arrivedDeathRestored {
+        let activeIDs = arrivedDeathRestored.expectedActiveAgentIDs()
+        let membershipIDs = arrivedDeathRestored.populationSnapshot()
+            .settlements.flatMap { $0.residentIDs + $0.inTransitIDs }
+        check("CIV-39 scaled death restart has unique identities and memberships",
+              activeIDs.count == Set(activeIDs).count
+                && membershipIDs.count == Set(membershipIDs).count
+                && Set(activeIDs) == Set(membershipIDs)
+                && Set(activeIDs)
+                    == Set(arrivedDeathRestored.identitySnapshot().agentIDs))
+    } else {
+        check("CIV-39 scaled death restart has unique identities and memberships",
+              false, "restore unavailable")
+    }
+
+    var materialDeath = civ39Session(
+        id: "civ39-mortality-material", economicAsset: true,
+        lethalAgentID: "agent_0"
+    )
+    try! materialDeath.setLifecycleEnabled(true)
+    materialDeath.setSurvivalEnabled(true)
+    try! materialDeath.setMortalityEnabled(true)
+    _ = try! materialDeath.advanceTick()
+    let materialPending = materialDeath.pendingMortalityTransitions().first!
+    let materialRecord = materialDeath.materialRightsSnapshot().records.first!
+    let materialDestination = AgentMaterialHolderObservation(
+        holder: .container("civ39-terminal"),
+        materialIdentity: materialRecord.asset.materialIdentity,
+        quantity: materialRecord.asset.quantity,
+        custodyFingerprint: "civ39-terminal-custody",
+        physicalReceiptID: "civ39-terminal-receipt",
+        observedAtTick: materialDeath.tick
+    )
+    _ = try! materialDeath.applyMaterialRightsOperation(
+        .mortalityPhysicalExit(AgentMaterialMortalityExitOutcome(
+            operationID: "civ39-terminal-material-exit",
+            assetID: materialRecord.asset.assetID,
+            terminalAgentID: materialPending.agentID,
+            sourceObservation: materialRecord.lastVerifiedHolder,
+            destinationObservation: materialDestination,
+            physicalReceiptID: "civ39-terminal-receipt"
+        ))
+    )
+    _ = try! materialDeath.applyMortalityPhysicalCustodyOutcome(
+        AgentMortalityPhysicalCustodyOutcome(
+            operationID: "civ39-terminal-custody",
+            terminalAgentID: materialPending.agentID,
+            kind: .transferred,
+            physicalReceiptID: "civ39-terminal-receipt",
+            destinationHolderID: "container:civ39-terminal",
+            stackCount: 1, itemCount: 1,
+            physicalAssets: [AgentMaterialStackSnapshot(
+                identity: materialRecord.asset.materialIdentity, count: 1
+            )],
+            verifiedAtTick: materialDeath.tick
+        )
+    )
+    _ = try! materialDeath.finalizePendingMortality(
+        for: materialPending.agentID
+    )
+    let materialDeathRights = materialDeath.materialRightsSnapshot()
+    check("CIV-39 Gate E custody remains singular through scaled death",
+          materialDeathRights.records.count == 1
+            && materialDeathRights.records[0].lastVerifiedHolder.holder
+                == .container("civ39-terminal")
+            && materialDeathRights.records[0].recognizedOwnership?.ownerID
+                == materialPending.agentID
+            && materialDeathRights.records[0].lastVerifiedHolder
+                .physicalReceiptID == "civ39-terminal-receipt")
+    check("CIV-39 Gate E scaled death removes only current population authority",
+          materialDeath.conservationSnapshot().balanced
+            && !materialDeath.expectedActiveAgentIDs().contains(
+                materialPending.agentID
+            )
+            && materialDeath.populationSnapshot().settlements.allSatisfy {
+                !$0.residentIDs.contains(materialPending.agentID)
+                    && !$0.inTransitIDs.contains(materialPending.agentID)
+            }
+            && !materialDeath.populationScaleSnapshot().fidelityRecords
+                .contains { $0.agentID == materialPending.agentID })
+    check("CIV-39 Gate E scaled death schema-35 restart exact", {
+        guard let checkpoint = try? materialDeath.makeCheckpoint(),
+              checkpoint.schemaVersion == 35,
+              let restored = try? AgentSimulationSession.restoring(checkpoint)
+        else { return false }
+        return (try? restored.durableStateBytes())
+            == (try? materialDeath.durableStateBytes())
+            && restored.materialRightsSnapshot().records.count == 1
+            && restored.mortalitySnapshot().totalDeathCount == 1
+    }())
 
     let oldSchema = try! AgentSimulationSession(
         configuration: try! AgentSessionConfiguration(

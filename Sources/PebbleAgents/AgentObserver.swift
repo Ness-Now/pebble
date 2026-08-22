@@ -932,7 +932,7 @@ extension AgentSimulationSession {
         )
         return AgentObserverSnapshot(
             header: AgentObserverSnapshotHeader(
-                schemaVersion: populationScale.enabled ? 12
+                schemaVersion: populationScale.enabled ? 13
                     : markets.enabled ? 11 : contracts.enabled ? 10
                     : barter.enabled ? 9 : production.enabled ? 8
                     : renewableSubsistence.isEmpty ? (estates.enabled ? 6
