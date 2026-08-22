@@ -2,19 +2,21 @@
 
 ## Status
 
-`V4-GATE-F-v1 Blocker 02: FIXED — LOCAL CORRECTION CANDIDATE — SENIOR REVIEW REQUIRED`
+`V4-GATE-F-v1 Blocker 02: FIXED + PUBLISHED + REMOTE VERIFIED`
 
-This is a targeted product correction rooted directly at published canonical
-baseline `c60eda84210cc8ed32f910f6f36ec29c1f747a9b`. It preserves both Gate F
-evaluations as immutable historical evidence. It does not publish the
-correction, perform Evaluation 03, acquire Gate F, or start CIV-40 or CIV-41.
+The targeted product correction was rooted directly at published canonical
+baseline `c60eda84210cc8ed32f910f6f36ec29c1f747a9b`. Senior review approved it,
+manual fast-forward publication completed and independent remote verification
+passed at canonical HEAD `40ae812205abe231317e0d1720b5db4cecf9f24d`.
+Both Gate F evaluations remain immutable historical evidence. This correction
+does not perform Evaluation 03, acquire Gate F, or start CIV-40 or CIV-41.
 
 - Gate F Evaluation 01: `FAIL — HISTORICAL IMMUTABLE EVIDENCE`
 - Gate F Blocker 01: `FIXED + PUBLISHED + REMOTE VERIFIED`
 - Gate F Evaluation 02: `FAIL — HISTORICAL IMMUTABLE EVIDENCE`
-- Gate F Blocker 02: `FIXED — LOCAL CORRECTION CANDIDATE — SENIOR REVIEW REQUIRED`
+- Gate F Blocker 02: `FIXED + PUBLISHED + REMOTE VERIFIED`
 - Gate F: `PLANNED — NOT ACQUIRED`
-- Gate F Evaluation 03: `NOT AUTHORIZED / NOT PERFORMED`
+- Gate F Evaluation 03: `NOT PERFORMED`
 - CIV-40: `OPTIONAL TOOLING — NOT STARTED`
 - CIV-41: `NOT STARTED`
 
@@ -22,12 +24,15 @@ correction, perform Evaluation 03, acquire Gate F, or start CIV-40 or CIV-41.
 
 ```text
 published correction baseline: c60eda84210cc8ed32f910f6f36ec29c1f747a9b
-verified origin/lab/pebblelab-v1: c60eda84210cc8ed32f910f6f36ec29c1f747a9b
+verified origin/lab/pebblelab-v1 at correction start: c60eda84210cc8ed32f910f6f36ec29c1f747a9b
 correction branch: codex/gate-f-blocker-02-migration-capacity
 product/test/runtime-proof commit: 7ec342dce329b611d418562383956bad40c9023d
-documentation candidate commit: 8cb127f77ed8c57636e1be82e211f6758267c31d
-publication: NOT PERFORMED
-independent remote verification of correction: NOT PERFORMED
+documentation commit: 8cb127f77ed8c57636e1be82e211f6758267c31d
+published canonical blocker HEAD: 40ae812205abe231317e0d1720b5db4cecf9f24d
+senior review: APPROVED FOR MANUAL FAST-FORWARD
+manual publication: COMPLETED
+independent remote verification of correction: PASS
+final review archive SHA-256: bebd3b6c32b16db499b1285bea216768d5654c432529c239af9bbca166e37c35
 ```
 
 Gate F Evaluation 02 identity remains:
@@ -44,6 +49,17 @@ verdict: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 Both Evaluation 02 ancestry checks return exit `1` from
 `git merge-base --is-ancestor`. Neither evaluation commit is part of this
 correction branch. No evaluation commit was merged or cherry-picked.
+
+## Review, publication and remote verification
+
+The local correction was independently senior-reviewed and approved for manual
+fast-forward. The manual publication completed with product/test/runtime-proof
+commit `7ec342dce329b611d418562383956bad40c9023d`, documentation commit
+`8cb127f77ed8c57636e1be82e211f6758267c31d` and final verification/evidence
+commit at published canonical blocker HEAD
+`40ae812205abe231317e0d1720b5db4cecf9f24d`. Independent remote verification
+confirmed that exact canonical HEAD. The final review archive SHA-256 is
+`bebd3b6c32b16db499b1285bea216768d5654c432529c239af9bbca166e37c35`.
 
 ## Historical contradiction and root cause
 
@@ -261,9 +277,9 @@ The validation-only runtime does not claim a new rendered campaign. Existing
 CIV-39 and candidate-physical-atomicity regressions retain the real Pebble/Core
 movement, compensation and rollback evidence.
 
-## Regression evidence
+## Published validation evidence
 
-Fresh results at the local correction candidate:
+Fresh results for the correction that was subsequently published:
 
 | Surface | Result |
 | --- | ---: |
@@ -314,12 +330,13 @@ Focused and runtime proof:
 
 ## Limitations and non-claims
 
-- This is a local correction candidate, not a published correction.
-- Senior review, manual publication and independent remote verification remain
-  required before Evaluation 03 can be authorized.
+- The correction is fixed, published and independently remote verified; that
+  status does not itself evaluate or acquire Gate F.
 - Evaluations 01 and 02 remain immutable historical FAIL evidence.
 - Gate F remains planned and is not acquired.
 - Evaluation 03 is not performed.
+- The next authorized action is
+  `NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-03`.
 - CIV-40 and CIV-41 are not started.
 - Schema remains 35 and Observer remains 13.
 - Settlement capacity, global population capacity and migration concurrency are

@@ -57,16 +57,18 @@ Gate F correction history:
   `fcc85fd95ab7acb3ba194fd75a664c4dda6b065d`, final evidence HEAD
   `6d30677fef504c51cc9f5847289e6206941b1d6c` and review archive SHA-256
   `1e2f9f6da0fd8f05ae343393a51eddb0a2391b015f4db38afadf5f01ce7d27de`.
-- V4-GATE-F-v1 Blocker 02: **FIXED — LOCAL CORRECTION CANDIDATE — SENIOR
-  REVIEW REQUIRED** on branch `codex/gate-f-blocker-02-migration-capacity` at
-  product/test/runtime commit `7ec342dce329b611d418562383956bad40c9023d`.
+- V4-GATE-F-v1 Blocker 02: **FIXED + PUBLISHED + REMOTE VERIFIED** at
+  product/test/runtime commit `7ec342dce329b611d418562383956bad40c9023d`
+  and published canonical blocker HEAD
+  `40ae812205abe231317e0d1720b5db4cecf9f24d`.
   It derives durable incoming slot claims from active schema-35 migration
   authority, refuses full destinations before publication and preserves exact
-  arrival/death/failure/restart/compaction semantics. It is not published or
-  remotely verified.
+  arrival/death/failure/restart/compaction semantics. Senior review approved
+  manual fast-forward, publication completed and independent remote
+  verification passed. The final review archive SHA-256 is
+  `bebd3b6c32b16db499b1285bea216768d5654c432529c239af9bbca166e37c35`.
 - Gate F remains **PLANNED — NOT ACQUIRED**.
-- Gate F Evaluation 03 is **NOT AUTHORIZED / NOT PERFORMED** pending senior
-  review, manual publication and independent remote verification of Blocker 02.
+- Gate F Evaluation 03 is **NOT PERFORMED**.
 
 Published Gate E history:
 
@@ -463,10 +465,10 @@ the Gate E acquisition are now published and independently remote verified.
 ## Current program position
 
 ```text
-active CIV phase: none; Gate F Blocker 02 is a local correction candidate
+active CIV phase: none; Gate F Evaluation 03 is not performed
 completed and published through: CIV-39 (CIV-38 remains optional and unstarted)
-next eligible phase: null pending Blocker 02 review/publication/remote verification
-next authorized action: SENIOR-REVIEW-V4-GATE-F-v1-BLOCKER-02
+next eligible phase: null; the next required action is an independent evaluation
+next authorized action: NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-03
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -514,8 +516,8 @@ V4-GATE-F-v1 status: PLANNED — NOT ACQUIRED
 Gate F Evaluation 01 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-F-v1 Blocker 01 status: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate F Evaluation 02 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
-V4-GATE-F-v1 Blocker 02 status: FIXED — LOCAL CORRECTION CANDIDATE — SENIOR REVIEW REQUIRED
-Gate F Evaluation 03 status: NOT AUTHORIZED / NOT PERFORMED
+V4-GATE-F-v1 Blocker 02 status: FIXED + PUBLISHED + REMOTE VERIFIED
+Gate F Evaluation 03 status: NOT PERFORMED
 CIV-40 status: OPTIONAL TOOLING — NOT STARTED
 CIV-41 status: NOT STARTED
 roadmap generation: V4
@@ -836,12 +838,12 @@ HEAD `690c431d47f2e9edf9b1a9a9e91c71876981d09c`, documented in
 Senior review approved manual fast-forward, publication completed and
 independent remote verification passed. Evaluation 02 then failed on immutable
 historical evidence against baseline
-`c60eda84210cc8ed32f910f6f36ec29c1f747a9b`. Blocker 02 is **FIXED — LOCAL
-CORRECTION CANDIDATE — SENIOR REVIEW REQUIRED** at
-`7ec342dce329b611d418562383956bad40c9023d`, but is not published or remotely
-verified. Gate F remains **PLANNED — NOT ACQUIRED**, Evaluation 03 is **NOT
-AUTHORIZED / NOT PERFORMED**, and the next authorized action is
-`SENIOR-REVIEW-V4-GATE-F-v1-BLOCKER-02`.
+`c60eda84210cc8ed32f910f6f36ec29c1f747a9b`. Blocker 02 is **FIXED +
+PUBLISHED + REMOTE VERIFIED** at product commit
+`7ec342dce329b611d418562383956bad40c9023d` and published canonical blocker
+HEAD `40ae812205abe231317e0d1720b5db4cecf9f24d`. Gate F remains **PLANNED — NOT
+ACQUIRED**, Evaluation 03 is **NOT PERFORMED**, and the next authorized action
+is `NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-03`.
 `CIV-38` remains **OPTIONAL — NOT STARTED** and is not a prerequisite.
 `CIV-40` remains **OPTIONAL TOOLING — NOT STARTED**. Currency is not a Gate E
 or CIV-39 prerequisite.

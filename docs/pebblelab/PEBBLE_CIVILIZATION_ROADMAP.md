@@ -135,10 +135,10 @@ CIV-38: OPTIONAL — NOT STARTED
 Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
-active CIV phase: none; Gate F Blocker 02 is a local correction candidate
+active CIV phase: none; Gate F Evaluation 03 is not performed
 completed and published through: CIV-39 (CIV-38 remains optional and unstarted)
-next eligible phase: null pending Blocker 02 review/publication/remote verification
-next authorized action: SENIOR-REVIEW-V4-GATE-F-v1-BLOCKER-02
+next eligible phase: null; the next required action is an independent evaluation
+next authorized action: NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-03
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
@@ -186,8 +186,8 @@ V4-GATE-F-v1: PLANNED — NOT ACQUIRED
 Gate F Evaluation 01: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-F-v1 Blocker 01: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate F Evaluation 02: FAIL — HISTORICAL IMMUTABLE EVIDENCE
-V4-GATE-F-v1 Blocker 02: FIXED — LOCAL CORRECTION CANDIDATE — SENIOR REVIEW REQUIRED
-Gate F Evaluation 03: NOT AUTHORIZED / NOT PERFORMED
+V4-GATE-F-v1 Blocker 02: FIXED + PUBLISHED + REMOTE VERIFIED
+Gate F Evaluation 03: NOT PERFORMED
 CIV-40: OPTIONAL TOOLING — NOT STARTED
 CIV-41: NOT STARTED
 ```
@@ -530,10 +530,11 @@ and remains historical immutable evidence. Blocker 01 is fixed, published and
 independently remote verified at product commit
 `54c5f4e9d1acab06a0fc44b2cd96dc74c04c72ec` and published canonical HEAD
 `690c431d47f2e9edf9b1a9a9e91c71876981d09c`. Evaluation 02 remains historical
-immutable FAIL evidence. Blocker 02 is fixed only as a local correction
-candidate at `7ec342dce329b611d418562383956bad40c9023d`; Gate F remains planned
-and not acquired, Evaluation 03 is not authorized or performed, and `CIV-40`
-remains optional tooling and not started.
+immutable FAIL evidence. Blocker 02 is fixed, published and independently
+remote verified at product commit `7ec342dce329b611d418562383956bad40c9023d`
+and published canonical HEAD `40ae812205abe231317e0d1720b5db4cecf9f24d`.
+Gate F remains planned and not acquired, Evaluation 03 is not performed, and
+`CIV-40` remains optional tooling and not started.
 
 | Phase | Requirement | Outcome |
 | --- | --- | --- |
@@ -880,10 +881,11 @@ independently remote-verified canonical HEAD
 historical immutable FAIL evidence. Its Blocker 01 correction is fixed,
 published and independently remote verified at canonical HEAD
 `690c431d47f2e9edf9b1a9a9e91c71876981d09c`. Evaluation 02 remains historical
-immutable FAIL evidence. Blocker 02 is fixed only as a local correction
-candidate at `7ec342dce329b611d418562383956bad40c9023d`; Gate F remains planned
-and not acquired, Evaluation 03 is not authorized or performed, and CIV-40
-remains optional tooling and not started.
+immutable FAIL evidence. Blocker 02 is fixed, published and independently
+remote verified at product commit `7ec342dce329b611d418562383956bad40c9023d`
+and published canonical HEAD `40ae812205abe231317e0d1720b5db4cecf9f24d`.
+Gate F remains planned and not acquired, Evaluation 03 is not performed, and
+CIV-40 remains optional tooling and not started.
 
 ## Wave 3 — Local material economy
 
@@ -1290,15 +1292,15 @@ Evaluation 05 product correction: NO
 Evaluation 05 verdict: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 Gate E status: ACQUIRED AND PUBLISHED
 Gate E acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f76744f83
-next authorized action: SENIOR-REVIEW-V4-GATE-F-v1-BLOCKER-02
+next authorized action: NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-03
 CIV-39 status: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 Gate F status: PLANNED — NOT ACQUIRED
 Gate F Evaluation 01 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 Gate F Blocker 01 status: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate F Evaluation 02 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
-Gate F Blocker 02 status: FIXED — LOCAL CORRECTION CANDIDATE — SENIOR REVIEW REQUIRED
-Gate F Evaluation 03 status: NOT AUTHORIZED / NOT PERFORMED
+Gate F Blocker 02 status: FIXED + PUBLISHED + REMOTE VERIFIED
+Gate F Evaluation 03 status: NOT PERFORMED
 CIV-40 status: OPTIONAL TOOLING — NOT STARTED
 ```
 
@@ -1422,14 +1424,17 @@ Its destination-capacity Blocker 02 correction derives committed resident
 slots from already-persisted active migration authority, refuses a full
 destination before migration publication, revalidates capacity before exact
 arrival, releases claims on terminal death/failure and retains active claims
-through schema-35 restart and history compaction. The local product/test/runtime
+through schema-35 restart and history compaction. The product/test/runtime
 commit is `7ec342dce329b611d418562383956bad40c9023d`; the correction record is
 [`GATE_F_BLOCKER_02_MIGRATION_DESTINATION_CAPACITY.md`](GATE_F_BLOCKER_02_MIGRATION_DESTINATION_CAPACITY.md).
-This is **FIXED — LOCAL CORRECTION CANDIDATE — SENIOR REVIEW REQUIRED**, not
-published or remotely verified.
+This is **FIXED + PUBLISHED + REMOTE VERIFIED** at published canonical blocker
+HEAD `40ae812205abe231317e0d1720b5db4cecf9f24d`. Senior review approved manual
+fast-forward, publication completed and independent remote verification passed.
+The final review archive SHA-256 is
+`bebd3b6c32b16db499b1285bea216768d5654c432529c239af9bbca166e37c35`.
 
-Gate F remains not acquired. Evaluation 03 is not authorized or performed.
-The next authorized action is `SENIOR-REVIEW-V4-GATE-F-v1-BLOCKER-02`. CIV-40
+Gate F remains not acquired. Evaluation 03 is not performed. The next
+authorized action is `NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-03`. CIV-40
 remains optional tooling and is not a prerequisite; CIV-41 is not started.
 
 ## Wave 5 — Knowledge, language and culture
@@ -1588,7 +1593,7 @@ keeps incarnation physical and produces verifiable long-duration history.
 | `V4-GATE-C-v1` | acquired | `CIV-26`–`CIV-28` |
 | `V4-GATE-D-v1` | acquired and published | `CIV-29`–`CIV-33`, renewable subsistence milestone and Blockers 01–10 published; Evaluations 01–10 remain historical FAIL evidence; Evaluation 11 PASS is senior-review approved |
 | `V4-GATE-E-v1` | acquired and published | `CIV-34`–`CIV-37`; `CIV-38` optional and currency not required; Evaluations 01–04 historical FAIL; Blockers 01–04 fixed/published/remote-verified; Evaluation 05 PASS senior-review-approved published evidence |
-| `V4-GATE-F-v1` | planned, not acquired | required `CIV-39` complete/published/remote-verified; Evaluations 01–02 historical FAIL; Blocker 01 fixed/published/remote-verified; Blocker 02 fixed local correction candidate awaiting senior review/publication/remote verification; Evaluation 03 not authorized/performed; `CIV-40` optional tooling and not started |
+| `V4-GATE-F-v1` | planned, not acquired | required `CIV-39` complete/published/remote-verified; Evaluations 01–02 historical FAIL; Blockers 01–02 fixed/published/remote-verified; Evaluation 03 not performed and is the next independent action; `CIV-40` optional tooling and not started |
 | `V4-GATE-G-v1` | planned | `CIV-41`–`CIV-47` |
 | `V4-GATE-H-v1` | planned | `CIV-48`–`CIV-52` |
 | `V4-GATE-I-v1` | planned | `CIV-53`–`CIV-56` |

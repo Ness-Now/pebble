@@ -44,7 +44,7 @@ These documents form the minimal permanent memory of the project:
 | [`CIV_37_PHASE_SUMMARY.md`](CIV_37_PHASE_SUMMARY.md) | Published architecture, correction history, physical-market proof, price causality, validation and non-claims for CIV-37. |
 | [`CIV_39_PHASE_SUMMARY.md`](CIV_39_PHASE_SUMMARY.md) | Published CIV-39 architecture, multi-settlement/fidelity contract, Senior Review Correction 01 mortality composition, Evidence Reconciliation 02 schema-13 rendered proof, validation, publication history and non-claims. |
 | [`GATE_F_BLOCKER_01_SETTLEMENT_ADMISSION_CAPACITY.md`](GATE_F_BLOCKER_01_SETTLEMENT_ADMISSION_CAPACITY.md) | Published, independently remote-verified Blocker 01 correction record; preserves Gate F Evaluation 01 historical FAIL and documents shared publication/restore per-settlement admission capacity, atomic refusal and two-process schema-35 proof. |
-| [`GATE_F_BLOCKER_02_MIGRATION_DESTINATION_CAPACITY.md`](GATE_F_BLOCKER_02_MIGRATION_DESTINATION_CAPACITY.md) | Local Blocker 02 correction candidate; preserves Evaluation 02 historical FAIL and documents derived durable destination-slot authority, atomic full-destination refusal, exact arrival/death/failure release, schema-35 restart and two-process proof. |
+| [`GATE_F_BLOCKER_02_MIGRATION_DESTINATION_CAPACITY.md`](GATE_F_BLOCKER_02_MIGRATION_DESTINATION_CAPACITY.md) | Published, independently remote-verified Blocker 02 correction record; preserves Evaluation 02 historical FAIL and documents derived durable destination-slot authority, atomic full-destination refusal, exact arrival/death/failure release, schema-35 restart and two-process proof. |
 | [`GATE_E_BLOCKER_01_EXACT_PRODUCTION_PROVENANCE.md`](GATE_E_BLOCKER_01_EXACT_PRODUCTION_PROVENANCE.md) | Published Blocker 01 product-correction record; preserves Evaluation 01 FAIL and documents exact asset-bound production provenance. |
 | [`GATE_E_BLOCKER_02_EVOLVED_PRODUCTION_IDENTITY.md`](GATE_E_BLOCKER_02_EVOLVED_PRODUCTION_IDENTITY.md) | Published Blocker 02 product-correction record; preserves Evaluation 02 FAIL and separates immutable production origin, durable current-identity continuity and exact current physical authority. |
 | [`GATE_E_BLOCKER_03_TERMINAL_MARKET_RESERVATION_AUTHORITY.md`](GATE_E_BLOCKER_03_TERMINAL_MARKET_RESERVATION_AUTHORITY.md) | Published Blocker 03 product-correction record; preserves Evaluation 03 FAIL and separates terminal market history from coherent live reservation authority. |
@@ -90,9 +90,9 @@ CIV-37: COMPLETE AND PUBLISHED
 CIV-38: OPTIONAL — NOT STARTED
 V4-GATE-E-v1: ACQUIRED AND PUBLISHED
 V4-GATE-E-v1 acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f76744f83
-active phase: V4-GATE-F-v1 Blocker 02 local correction candidate
+active phase: none; Gate F Evaluation 03 is not performed
 completed through: CIV-39 (CIV-38 optional and unstarted)
-next eligible phase: null pending Blocker 02 review/publication/remote verification
+next eligible phase: null; the next required action is an independent evaluation
 Gate E Evaluation 01: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 01: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 02: FAIL — HISTORICAL IMMUTABLE EVIDENCE
@@ -102,15 +102,15 @@ V4-GATE-E-v1 Blocker 03: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 04: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 04: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 05: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
-next authorized action: SENIOR-REVIEW-V4-GATE-F-v1-BLOCKER-02
+next authorized action: NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-03
 CIV-39: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 V4-GATE-F-v1: PLANNED — NOT ACQUIRED
 Gate F Evaluation 01: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-F-v1 Blocker 01: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate F Evaluation 02: FAIL — HISTORICAL IMMUTABLE EVIDENCE
-V4-GATE-F-v1 Blocker 02: FIXED — LOCAL CORRECTION CANDIDATE — SENIOR REVIEW REQUIRED
-Gate F Evaluation 03: NOT AUTHORIZED / NOT PERFORMED
+V4-GATE-F-v1 Blocker 02: FIXED + PUBLISHED + REMOTE VERIFIED
+Gate F Evaluation 03: NOT PERFORMED
 CIV-40: OPTIONAL TOOLING — NOT STARTED
 CIV-41: NOT STARTED
 ```
@@ -289,10 +289,11 @@ immutable evidence. The per-settlement admission-capacity correction is a
 fixed, published and independently remote-verified blocker at product commit
 `54c5f4e9d1acab06a0fc44b2cd96dc74c04c72ec` and published canonical HEAD
 `690c431d47f2e9edf9b1a9a9e91c71876981d09c`. Evaluation 02 remains historical
-immutable FAIL evidence, and Blocker 02 is fixed only as a local correction
-candidate at `7ec342dce329b611d418562383956bad40c9023d`. Gate F remains planned
-and not acquired; Evaluation 03 is not authorized or performed. The next
-authorized action is `SENIOR-REVIEW-V4-GATE-F-v1-BLOCKER-02`. `CIV-38`
+immutable FAIL evidence. Blocker 02 is fixed, published and independently
+remote verified at product commit `7ec342dce329b611d418562383956bad40c9023d`
+and published canonical HEAD `40ae812205abe231317e0d1720b5db4cecf9f24d`.
+Gate F remains planned and not acquired; Evaluation 03 is not performed. The
+next authorized action is `NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-03`. `CIV-38`
 remains optional and not started; `CIV-40` remains optional tooling and not
 started. Currency is not a Gate E or CIV-39 prerequisite.
 
