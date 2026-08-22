@@ -18,6 +18,7 @@ implementation/proof commit: 3052dca3959ef1131081b6839f84b0860f531144
 checked-tick integration correction: c06bcda12f2c56ab4cefea7cca200bb2d547f379
 previous reviewed candidate: e2de172c5ac8b2a14c67341d4b3b6fa0147c2f00
 Senior Review Correction 01 product/proof commit: 2c9dc3fb4d2124b184ea81709a1165adc1831964
+Senior Review Evidence Reconciliation 02 harness commit: 605afd9c5cae864519bc8ddcd2aefb46a2c3ae75
 ```
 
 Program status represented by this candidate is:
@@ -66,6 +67,23 @@ publication to:
 No second mortality API, lifecycle owner, World effect or schema beyond 35 was
 introduced. The local candidate remains unpublished and awaits renewed senior
 review.
+
+## Senior Review Evidence Reconciliation 02 — rendered schema contract
+
+Renewed architectural review accepted the Correction 01 mortality composition
+but found one governed evidence inconsistency. Population-scale Observer
+snapshots correctly emit schema 13, and the final CIV-39 proof expectation
+already required `observerSchema=13`, while three executable intermediate
+`require_trace` patterns still required `schema=12`: the initial LIVE
+identity, post-arrival LIVE-to-NEAR rotation and post-restart continuity rows.
+The terminal success text also still said `Observer v12`.
+
+Commit `605afd9c5cae864519bc8ddcd2aefb46a2c3ae75` changes only those four
+current harness strings to schema 13/v13. It does not change product source,
+mortality semantics, checkpoint schema, other feature contracts or historical
+schema-12 evidence. Shell syntax/static checks, the CIV-39 dry-run and the real
+two-process rendered campaign now execute one coherent current contract:
+checkpoint schema 35 and Observer schema 13.
 
 ## Bounded product result
 
@@ -375,6 +393,10 @@ optimized product builds, deterministic scenario pairs, canonical output/replay
 comparisons and repository hygiene. No golden is regenerated and no proof is
 weakened.
 
+Evidence Reconciliation 02, which changes no product source, freshly reran the
+dedicated selector for **69/69 PASS** and the canonical repository gate for
+**35/35 steps and 4,084/4,084 assertions PASS**.
+
 The first canonical-gate attempt exposed an optimized-build arithmetic trap in
 the legacy `Int.max` clock-overflow regression: initial scale scheduling used
 an unchecked `tick + 1` before the existing checked clock transition. Commit
@@ -384,7 +406,7 @@ an unchecked `tick + 1` before the existing checked clock transition. Commit
 failed attempt is retained as diagnostic evidence rather than counted as a
 PASS.
 
-## Fresh live/visual and Correction 01 runtime proof
+## Fresh live/visual, Reconciliation 02 and Correction 01 mortality proof
 
 The canonical launcher dry-run and fresh disposable campaign use:
 
@@ -393,12 +415,11 @@ scripts/verify-pebblelab-live.sh --civ39 --dry-run
 scripts/verify-pebblelab-live.sh --civ39
 ```
 
-The original candidate's decisive campaign used world seed 46, disabled dynamics, two fresh
-processes and six inspected captures. Normal product code performs the migration
-after prepared bootstrap. The proof visibly shows two settlements, 12 exact
-physical inhabitants, 4/4/4 tiers, stable `agent_0` identity, a verified
-settlement-main to settlement-east migration, tier change, checkpoint, fresh
-restore, global Observer inspection and exact cleanup.
+The original pre-Correction-01 candidate's historical campaign used world seed
+46, disabled dynamics, two fresh processes and six inspected captures. Normal
+product code performed the migration after prepared bootstrap. Those captures
+truthfully show Observer schema 12 and remain historical evidence only; they
+are not current-candidate rendered proof and are not rewritten.
 
 ```text
 CIV39_LIVE_PROOF_PASS settlements=2 population=12 live=4 near=4 dormant=4
@@ -414,11 +435,36 @@ All decisive harnesses exit successfully. Captures inspected are setup,
 transition, pre-restart, restored, proof and cleanup. Cleanup stops the session,
 removes exactly 12 probes and leaves no residual process.
 
-Correction 01 dry-ran the updated canonical launcher successfully and updated
-its governed expectation to Observer schema 13. The current CIV-39 rendered
-mode explicitly has `PEBBLELAB_APP_AGENTS_MORTALITY=0`; it cannot exercise the
-corrected mortality path. No rendered mortality success or fresh capture is
-claimed.
+Evidence Reconciliation 02 ran a new standard campaign from the current
+candidate in isolated session `PebbleLab-live.q9F9tv`, World identity
+`wmt447pfm5z1h` and simulation identity `live-46-14-68--18`. Both processes
+exited successfully and all six fresh captures were inspected. The current
+machine-checkable result is:
+
+```text
+CIV39_LIVE_PROOF_PASS settlements=2 population=12 live=4 near=4 dormant=4
+migration=arrived identity=agent_0 identityStable=1 checkpointSchema=35
+observerSchema=13 observerMutations=0 restartCount=1
+restartDuplicateEffects=0 duplicateInhabitants=0
+duplicateDurableIdentities=0 duplicateEconomicCommitments=0
+duplicateReceipts=0 physicalLoss=0 physicalDuplication=0
+syntheticMaterial=0 unexpectedRuntimeErrors=0 probes=12
+```
+
+Initial inspection records `agent_0` in `settlement-main` at `LIVE`; Core and
+Pebble then verify its bounded physical route and exactly one arrival in
+`settlement-east`, where the same ID is `NEAR` at tick 8. A schema-35 checkpoint
+restores in the second process with 12 probes, Observer schema 13 and the same
+identity/locality/tier. Global Observer inspection remains read-only. Exact
+cleanup removes 12 probes, reports zero tagged custody spills and leaves no
+Pebble, `swift-run` or `pebsmoke` process. Reconciliation 02 decisive evidence:
+**2 fresh processes, 6 fresh captures**.
+
+The current CIV-39 rendered mode explicitly has
+`PEBBLELAB_APP_AGENTS_MORTALITY=0`; it cannot exercise the corrected mortality
+path. Reconciliation 02's fresh rendered campaign is settlement/fidelity/
+migration evidence, not rendered mortality evidence. Correction 01's separate
+two-process mortality proof remains valid.
 
 The strongest supported decisive Correction 01 proof is therefore the fresh
 two-process headless runtime pair:

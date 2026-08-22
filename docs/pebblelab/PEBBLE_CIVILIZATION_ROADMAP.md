@@ -1338,7 +1338,12 @@ Correction 01 at product/proof commit
 `2c9dc3fb4d2124b184ea81709a1165adc1831964` composes the existing mortality
 transaction with all current settlement/fidelity authority and terminalizes an
 active scaled migration exactly once; the corrected candidate remains local
-and unpublished. `CIV-40` may compare
+and unpublished. Senior Review Evidence Reconciliation 02 at harness commit
+`605afd9c5cae864519bc8ddcd2aefb46a2c3ae75` reconciles the three stale current
+rendered Observer trace assertions and success text to schema 13. Its fresh
+two-process/six-capture campaign passes with checkpoint schema 35, Observer
+schema 13, exactly one embodied arrival, exact restart and cleanup; prior
+schema-12 captures remain historical only. `CIV-40` may compare
 policies or export trajectories, but no external policy becomes runtime
 authority; it is not started by the CIV-39 candidate.
 

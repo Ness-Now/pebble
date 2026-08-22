@@ -42,7 +42,7 @@ These documents form the minimal permanent memory of the project:
 | [`DOCUMENTATION_INDEX.md`](DOCUMENTATION_INDEX.md) | Classification and navigation for the documentation set. |
 | [`CIV_36_PHASE_SUMMARY.md`](CIV_36_PHASE_SUMMARY.md) | Published architecture, contract semantics, correction history, physical proof, validation and non-claims for CIV-36. |
 | [`CIV_37_PHASE_SUMMARY.md`](CIV_37_PHASE_SUMMARY.md) | Published architecture, correction history, physical-market proof, price causality, validation and non-claims for CIV-37. |
-| [`CIV_39_PHASE_SUMMARY.md`](CIV_39_PHASE_SUMMARY.md) | Local candidate architecture, multi-settlement/fidelity contract, Senior Review Correction 01 mortality composition, scale measurements, live/runtime proof, validation and non-claims for CIV-39; awaiting renewed senior review/publication. |
+| [`CIV_39_PHASE_SUMMARY.md`](CIV_39_PHASE_SUMMARY.md) | Local candidate architecture, multi-settlement/fidelity contract, Senior Review Correction 01 mortality composition, Evidence Reconciliation 02 current schema-13 rendered proof, scale measurements, validation and non-claims for CIV-39; awaiting renewed senior review/publication. |
 | [`GATE_E_BLOCKER_01_EXACT_PRODUCTION_PROVENANCE.md`](GATE_E_BLOCKER_01_EXACT_PRODUCTION_PROVENANCE.md) | Published Blocker 01 product-correction record; preserves Evaluation 01 FAIL and documents exact asset-bound production provenance. |
 | [`GATE_E_BLOCKER_02_EVOLVED_PRODUCTION_IDENTITY.md`](GATE_E_BLOCKER_02_EVOLVED_PRODUCTION_IDENTITY.md) | Published Blocker 02 product-correction record; preserves Evaluation 02 FAIL and separates immutable production origin, durable current-identity continuity and exact current physical authority. |
 | [`GATE_E_BLOCKER_03_TERMINAL_MARKET_RESERVATION_AUTHORITY.md`](GATE_E_BLOCKER_03_TERMINAL_MARKET_RESERVATION_AUTHORITY.md) | Published Blocker 03 product-correction record; preserves Evaluation 03 FAIL and separates terminal market history from coherent live reservation authority. |
@@ -268,7 +268,11 @@ immutable historical FAIL evidence; Blockers 01–04 remain fixed, published and
 remote verified. `CIV-39` is implemented locally from exact published baseline
 `e567f9a5b283a71e42b5f8139c47f80f6562a5dc`; Senior Review Correction 01 at
 `2c9dc3fb4d2124b184ea81709a1165adc1831964` composes mortality with current
-scale authority, and the candidate awaits renewed senior review and publication.
+scale authority. Evidence Reconciliation 02 at
+`605afd9c5cae864519bc8ddcd2aefb46a2c3ae75` reconciles the current rendered
+harness to Observer schema 13 and records a fresh passing two-process,
+six-capture campaign; historical schema-12 evidence remains labeled as such.
+The candidate awaits renewed senior review and publication.
 Gate F remains planned and not acquired or evaluated. `CIV-38`
 remains optional and not started; `CIV-40` remains optional tooling and not
 started. Currency remains outside the Gate E dependency.
