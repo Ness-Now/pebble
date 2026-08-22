@@ -33,6 +33,10 @@ if options.scenario == "gate_f_blocker_01_capacity_exit_smoke"
     || options.scenario == "gate_f_blocker_01_capacity_restore_smoke" {
     runGateFBlocker01CapacitySmoke(options)
 }
+if options.scenario == "gate_f_blocker_02_migration_exit_smoke"
+    || options.scenario == "gate_f_blocker_02_migration_restore_smoke" {
+    runGateFBlocker02MigrationCapacitySmoke(options)
+}
 if options.scenario == "settlement_metrics_multiscale_smoke" {
     runSettlementMetricsMultiscaleSmoke(options)
 }

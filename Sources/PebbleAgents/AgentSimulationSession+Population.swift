@@ -298,6 +298,11 @@ extension AgentSimulationSession {
         guard registry.members.count < registry.configuration.maximumActivePopulation else {
             throw AgentSessionError.population(.admission(.populationFull))
         }
+        guard registry.hasCommittedResidentCapacity(
+            forProposedAdmissions: [intent.destinationSettlementID]
+        ) else {
+            throw AgentSessionError.population(.capacityReached)
+        }
         guard !registry.migrations.contains(where: {
             $0.origin == intent.origin
                 && $0.destinationSettlementID == intent.destinationSettlementID
@@ -615,6 +620,9 @@ extension AgentSimulationSession {
                   state.navigationProgress.status == .arrived,
                   state.navigationProgress.routeIndex
                     == registry.migrations[index].route.count - 1 else { continue }
+            guard registry.hasCommittedResidentCapacity() else {
+                throw AgentSessionError.population(.capacityReached)
+            }
             let migration = registry.migrations[index]
             let arrival = try requiredPopulationEvent(
                 kind: .migrationArrived,
@@ -734,7 +742,8 @@ extension AgentSimulationSession {
                   settlement.residentIDs == settlement.residentIDs.sorted()
                       && settlement.inTransitIDs
                         == settlement.inTransitIDs.sorted()
-              }), registry.hasResidentCapacity() else {
+              }), registry.hasResidentCapacity(),
+              registry.hasCommittedResidentCapacity() else {
             throw AgentCheckpointError.invalidBound("population settlement")
         }
         for member in registry.members {

@@ -561,6 +561,29 @@ extension AgentPopulationRegistry {
         }
     }
 
+    /// Counts current residents plus every durable incoming claim that can
+    /// still become current residence. Both legacy external migration and
+    /// CIV-39 settlement migration persist their active authority in schema
+    /// 35, so this value is reconstructible and needs no second occupancy
+    /// counter. Terminal history deliberately contributes no current claim.
+    func hasCommittedResidentCapacity(
+        forProposedAdmissions admissionSettlementIDs: [AgentSettlementID] = []
+    ) -> Bool {
+        let legacyClaims = migrations.compactMap { migration in
+            migration.status == .admitted || migration.status == .inTransit
+                ? migration.destinationSettlementID : nil
+        }
+        let scaledClaims = scaleState?.settlementMigrations.compactMap {
+            migration in
+            migration.status == .inTransit
+                ? migration.destinationSettlementID : nil
+        } ?? []
+        return hasResidentCapacity(
+            forProposedAdmissions:
+                legacyClaims + scaledClaims + admissionSettlementIDs
+        )
+    }
+
     mutating func removeMemberFromEverySettlement(_ agentID: AgentID) {
         _ = updateSettlement(withID: settlement.settlementID) {
             $0.residentIDs.removeAll { $0 == agentID }

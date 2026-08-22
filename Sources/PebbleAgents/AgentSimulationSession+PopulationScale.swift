@@ -182,7 +182,7 @@ extension AgentSimulationSession {
         }
         var capacityCandidate = registry
         capacityCandidate.additionalSettlements = sortedSettlements
-        guard capacityCandidate.hasResidentCapacity(
+        guard capacityCandidate.hasCommittedResidentCapacity(
             forProposedAdmissions: additions.map(\.settlementID)
         ) else {
             throw AgentSessionError.population(.capacityReached)
@@ -358,10 +358,20 @@ extension AgentSimulationSession {
               origin.settlementID != destination.settlementID,
               scale.settlementMigrations.filter({ !$0.status.isTerminal }).count
                 < scale.configuration.maximumConcurrentSettlementMigrations,
-              registry.members[memberIndex].status != .migrating else {
+              registry.members[memberIndex].status != .migrating,
+              origin.residentIDs.contains(agentID),
+              !origin.inTransitIDs.contains(agentID) else {
             throw AgentSessionError.population(
                 .admission(.migrationAlreadyActive)
             )
+        }
+        // The active migration record is the durable destination-slot claim.
+        // Establish it before any causal, membership, fidelity or ordinal
+        // publication. Restore derives the same accounting from schema 35.
+        guard registry.hasCommittedResidentCapacity(
+            forProposedAdmissions: [destinationSettlementID]
+        ) else {
+            throw AgentSessionError.population(.capacityReached)
         }
         guard verifiedRoute.count >= 2,
               verifiedRoute.count - 1
@@ -435,6 +445,10 @@ extension AgentSimulationSession {
         )
         scale.settlementMigrations.append(migration)
         scale.settlementMigrations.sort { $0.migrationID < $1.migrationID }
+        // Make room by evicting terminal history only. The just-created
+        // in-flight record is current destination-capacity authority and is
+        // therefore never a compaction victim, including at history bound.
+        compactScaleHistories(&scale)
         scale.nextSettlementMigrationOrdinal = ordinal + 1
         scale.lastScaleEventID = event.eventID
         registry.scaleState = scale
@@ -455,8 +469,9 @@ extension AgentSimulationSession {
         for index in activeIndices {
             let migration = scale.settlementMigrations[index]
             guard var state = statesById[migration.agentID.rawValue] else {
-                scale.settlementMigrations[index].status = .failed
-                continue
+                throw AgentSessionError.population(
+                    .invalidMigration(migration.migrationID.rawValue)
+                )
             }
             // The durable route is a bounded, caller-verified intent. Pebble
             // may replan the detailed physical route from newer World truth,
@@ -473,10 +488,30 @@ extension AgentSimulationSession {
             guard state.position == migration.route.last,
                   state.navigationProgress.status == .arrived,
                   state.navigationProgress.route?.purpose == .migrationArrival,
-                  state.navigationProgress.route?.target == migration.route.last,
-                  let memberIndex = registry.members.firstIndex(where: {
+                  state.navigationProgress.route?.target == migration.route.last
+            else { continue }
+            guard let memberIndex = registry.members.firstIndex(where: {
                       $0.agentID == migration.agentID
-                  }) else { continue }
+                  }), registry.members[memberIndex].status == .migrating,
+                  registry.members[memberIndex].settlementID
+                    == migration.originSettlementID,
+                  registry.settlement(withID: migration.originSettlementID)?
+                    .inTransitIDs.contains(migration.agentID) == true else {
+                throw AgentSessionError.population(
+                    .invalidMigration(migration.migrationID.rawValue)
+                )
+            }
+            // The in-flight record already owns exactly one destination claim.
+            // Revalidate that complete committed occupancy before publishing
+            // arrival. The public movement operation is a session candidate;
+            // Pebble's verified movement transaction compensates physical
+            // movement if this late fail-closed guard ever rejects.
+            guard registry.hasCommittedResidentCapacity(),
+                  !destinationResidentIDs(
+                      in: registry, for: migration.destinationSettlementID
+                  ).contains(migration.agentID) else {
+                throw AgentSessionError.population(.capacityReached)
+            }
             let event = try requiredPopulationEvent(
                 kind: .settlementMigrationArrived,
                 actorID: migration.agentID, subjectID: migration.agentID,
@@ -537,6 +572,13 @@ extension AgentSimulationSession {
         compactScaleHistories(&scale)
         registry.scaleState = scale
         populationRegistry = registry
+    }
+
+    private func destinationResidentIDs(
+        in registry: AgentPopulationRegistry,
+        for settlementID: AgentSettlementID
+    ) -> [AgentID] {
+        registry.settlement(withID: settlementID)?.residentIDs ?? []
     }
 
     func fidelityExecutionCounts(at simulationTick: Int) -> (
@@ -723,6 +765,9 @@ extension AgentSimulationSession {
               }),
               Set(migrationIDs).count == migrationIDs.count else {
             throw AgentCheckpointError.invalidBound("population scale")
+        }
+        guard registry.hasCommittedResidentCapacity() else {
+            throw AgentCheckpointError.invalidBound("population settlement")
         }
         for record in scale.fidelityRecords {
             guard record.enteredTick <= clock.tick.rawValue,

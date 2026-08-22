@@ -449,6 +449,16 @@ extension AgentSimulationSession {
             lifecycleState = lifecycle
             return nil
         }
+        guard registry.hasCommittedResidentCapacity(
+            forProposedAdmissions: [registry.settlement.settlementID]
+        ) else {
+            try cancelReproductionPlan(
+                &lifecycle, index: planIndex, plan: plan,
+                reason: .populationFull, status: .cancelled
+            )
+            lifecycleState = lifecycle
+            return nil
+        }
         if let parentFailure = reproductionPlanParentFailureReason(
             plan: plan, lifecycle: lifecycle, registry: registry
         ) {
