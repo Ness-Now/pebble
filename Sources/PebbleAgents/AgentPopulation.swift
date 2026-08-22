@@ -537,6 +537,30 @@ extension AgentPopulationRegistry {
         return true
     }
 
+    /// The single current-resident capacity rule used by both candidate
+    /// publication and durable-state validation. In-transit inhabitants remain
+    /// governed by their migration authority; settlement capacity bounds the
+    /// current resident projection exactly as persisted by schema 35.
+    func hasResidentCapacity(
+        forProposedAdmissions admissionSettlementIDs: [AgentSettlementID] = []
+    ) -> Bool {
+        let currentSettlements = settlements
+        let knownSettlementIDs = Set(currentSettlements.map(\.settlementID))
+        guard admissionSettlementIDs.allSatisfy(knownSettlementIDs.contains)
+        else { return false }
+        return currentSettlements.allSatisfy { settlement in
+            guard settlement.residentIDs.count <= settlement.capacity else {
+                return false
+            }
+            let proposedCount = admissionSettlementIDs.reduce(into: 0) {
+                count, settlementID in
+                if settlementID == settlement.settlementID { count += 1 }
+            }
+            return proposedCount
+                <= settlement.capacity - settlement.residentIDs.count
+        }
+    }
+
     mutating func removeMemberFromEverySettlement(_ agentID: AgentID) {
         _ = updateSettlement(withID: settlement.settlementID) {
             $0.residentIDs.removeAll { $0 == agentID }

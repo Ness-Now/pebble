@@ -734,8 +734,7 @@ extension AgentSimulationSession {
                   settlement.residentIDs == settlement.residentIDs.sorted()
                       && settlement.inTransitIDs
                         == settlement.inTransitIDs.sorted()
-                      && settlement.residentIDs.count <= settlement.capacity
-              }) else {
+              }), registry.hasResidentCapacity() else {
             throw AgentCheckpointError.invalidBound("population settlement")
         }
         for member in registry.members {

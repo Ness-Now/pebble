@@ -29,6 +29,7 @@ func usage() -> String {
       persistent_checkpoint_replay_smoke writes versioned checkpoint and pure replay proof outputs.
       population_scaling_fidelity_smoke writes CIV-39 24/64/128-agent full-vs-tiered runtime, memory, checkpoint, restore, and determinism evidence.
       population_scale_mortality_exit_smoke and population_scale_mortality_restore_smoke form the two-process CIV-39 scaled-death/restart proof.
+      gate_f_blocker_01_capacity_exit_smoke and gate_f_blocker_01_capacity_restore_smoke form the two-process settlement-capacity refusal/retry/restart proof.
       settlement_metrics_multiscale_smoke writes bounded macro settlement metric and A/B neutrality outputs.
       local_ecology_subsistence_smoke writes bounded forage, pressure, checkpoint v4, and replay proof outputs.
       mortality_population_exit_smoke writes bounded mortality, population exit, checkpoint v5, and replay outputs.

@@ -29,6 +29,10 @@ if options.scenario == "population_scale_mortality_exit_smoke"
     || options.scenario == "population_scale_mortality_restore_smoke" {
     runPopulationScaleMortalitySmoke(options)
 }
+if options.scenario == "gate_f_blocker_01_capacity_exit_smoke"
+    || options.scenario == "gate_f_blocker_01_capacity_restore_smoke" {
+    runGateFBlocker01CapacitySmoke(options)
+}
 if options.scenario == "settlement_metrics_multiscale_smoke" {
     runSettlementMetricsMultiscaleSmoke(options)
 }

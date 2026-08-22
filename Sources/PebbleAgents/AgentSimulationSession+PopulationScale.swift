@@ -180,6 +180,13 @@ extension AgentSimulationSession {
                 <= registry.configuration.maximumActivePopulation else {
             throw AgentSessionError.population(.capacityReached)
         }
+        var capacityCandidate = registry
+        capacityCandidate.additionalSettlements = sortedSettlements
+        guard capacityCandidate.hasResidentCapacity(
+            forProposedAdmissions: additions.map(\.settlementID)
+        ) else {
+            throw AgentSessionError.population(.capacityReached)
+        }
         try prevalidateCausalAppend(
             count: 1 + sortedSettlements.count + additions.count
                 + registry.members.count + additions.count
