@@ -43,6 +43,7 @@ These documents form the minimal permanent memory of the project:
 | [`CIV_36_PHASE_SUMMARY.md`](CIV_36_PHASE_SUMMARY.md) | Published architecture, contract semantics, correction history, physical proof, validation and non-claims for CIV-36. |
 | [`CIV_37_PHASE_SUMMARY.md`](CIV_37_PHASE_SUMMARY.md) | Published architecture, correction history, physical-market proof, price causality, validation and non-claims for CIV-37. |
 | [`CIV_39_PHASE_SUMMARY.md`](CIV_39_PHASE_SUMMARY.md) | Published CIV-39 architecture, multi-settlement/fidelity contract, Senior Review Correction 01 mortality composition, Evidence Reconciliation 02 schema-13 rendered proof, validation, publication history and non-claims. |
+| [`GATE_F_BLOCKER_01_SETTLEMENT_ADMISSION_CAPACITY.md`](GATE_F_BLOCKER_01_SETTLEMENT_ADMISSION_CAPACITY.md) | Local Blocker 01 correction record; preserves Gate F Evaluation 01 historical FAIL and documents shared publication/restore per-settlement admission capacity, atomic refusal and two-process schema-35 proof. |
 | [`GATE_E_BLOCKER_01_EXACT_PRODUCTION_PROVENANCE.md`](GATE_E_BLOCKER_01_EXACT_PRODUCTION_PROVENANCE.md) | Published Blocker 01 product-correction record; preserves Evaluation 01 FAIL and documents exact asset-bound production provenance. |
 | [`GATE_E_BLOCKER_02_EVOLVED_PRODUCTION_IDENTITY.md`](GATE_E_BLOCKER_02_EVOLVED_PRODUCTION_IDENTITY.md) | Published Blocker 02 product-correction record; preserves Evaluation 02 FAIL and separates immutable production origin, durable current-identity continuity and exact current physical authority. |
 | [`GATE_E_BLOCKER_03_TERMINAL_MARKET_RESERVATION_AUTHORITY.md`](GATE_E_BLOCKER_03_TERMINAL_MARKET_RESERVATION_AUTHORITY.md) | Published Blocker 03 product-correction record; preserves Evaluation 03 FAIL and separates terminal market history from coherent live reservation authority. |
@@ -88,7 +89,7 @@ CIV-37: COMPLETE AND PUBLISHED
 CIV-38: OPTIONAL — NOT STARTED
 V4-GATE-E-v1: ACQUIRED AND PUBLISHED
 V4-GATE-E-v1 acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f76744f83
-active phase: none while Gate F awaits independent evaluation
+active phase: none while Gate F Blocker 01 awaits senior review/publication
 completed through: CIV-39 (CIV-38 optional and unstarted)
 next eligible phase: null pending Gate F disposition
 Gate E Evaluation 01: FAIL — HISTORICAL IMMUTABLE EVIDENCE
@@ -100,11 +101,13 @@ V4-GATE-E-v1 Blocker 03: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 04: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 04: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 05: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
-next authorized action: NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-01
+next authorized action: SENIOR-REVIEW-V4-GATE-F-v1-BLOCKER-01-LOCAL-CANDIDATE
 CIV-39: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 V4-GATE-F-v1: PLANNED — NOT ACQUIRED
-Gate F evaluation: NOT PERFORMED
+Gate F Evaluation 01: FAIL — HISTORICAL IMMUTABLE EVIDENCE
+V4-GATE-F-v1 Blocker 01: LOCAL BLOCKER-CORRECTION CANDIDATE
+Gate F Evaluation 02: NOT AUTHORIZED / NOT PERFORMED
 CIV-40: OPTIONAL TOOLING — NOT STARTED
 ```
 
@@ -276,9 +279,12 @@ harness to Observer schema 13 and records a fresh passing two-process,
 six-capture campaign; historical schema-12 evidence remains labeled as such.
 Senior review approved manual fast-forward, and final HEAD
 `0b0ec535cda62b70add182875c65eaee27bb5bb2` is published and independently
-remote verified. Gate F remains planned and not acquired or evaluated; the
-next authorized required action is a new independent Gate F Evaluation 01.
-`CIV-38`
+remote verified. Independent Gate F Evaluation 01 failed against published
+baseline `29c8a7328f06748817abba1545acdb259a4d192a` and remains historical
+immutable evidence. The per-settlement admission-capacity correction is a
+local candidate at `54c5f4e9d1acab06a0fc44b2cd96dc74c04c72ec`; Gate F remains
+planned and not acquired. The next authorized action is senior review, not
+Evaluation 02. `CIV-38`
 remains optional and not started; `CIV-40` remains optional tooling and not
 started. Currency is not a Gate E or CIV-39 prerequisite.
 
