@@ -24,8 +24,9 @@ SHA of the documentation commit that contains it.
 - `CIV-38 — Currency, Units of Account and Accounting V1`:
   **OPTIONAL — NOT STARTED**.
 - `CIV-39 — Multi-Settlement, Population Scaling and Fidelity Tiers V1`:
-  **IMPLEMENTED LOCALLY — AWAITING SENIOR REVIEW AND PUBLICATION** from exact
-  published baseline `e567f9a5b283a71e42b5f8139c47f80f6562a5dc`.
+  **COMPLETE AND PUBLISHED** at independently remote-verified canonical HEAD
+  `0b0ec535cda62b70add182875c65eaee27bb5bb2`, implemented from exact published
+  baseline `e567f9a5b283a71e42b5f8139c47f80f6562a5dc`.
   Senior Review Correction 01 composes mortality/population exit with current
   multi-settlement, fidelity and migration authority at product/proof commit
   `2c9dc3fb4d2124b184ea81709a1165adc1831964`. Senior Review Evidence
@@ -33,7 +34,8 @@ SHA of the documentation commit that contains it.
   `605afd9c5cae864519bc8ddcd2aefb46a2c3ae75` reconciles every current CIV-39
   rendered Observer assertion to schema 13 and supplies a fresh passing
   two-process/six-capture campaign; historical schema-12 captures remain
-  historical only. The candidate remains local and unpublished.
+  historical only. Senior review approved the final candidate for manual
+  fast-forward and remote publication is verified.
 - `CIV-40 — Training and Evaluation Bridge V1`:
   **OPTIONAL TOOLING — NOT STARTED**.
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
@@ -433,10 +435,10 @@ the Gate E acquisition are now published and independently remote verified.
 ## Current program position
 
 ```text
-active CIV phase: CIV-39 — LOCAL CANDIDATE AWAITING SENIOR REVIEW/PUBLICATION
-completed and published through: CIV-37
-next eligible phase: null while CIV-39 candidate awaits disposition
-next authorized action: SENIOR-REVIEW-CIV-39
+active CIV phase: none while Gate F awaits independent evaluation
+completed and published through: CIV-39 (CIV-38 remains optional and unstarted)
+next eligible phase: null pending Gate F disposition
+next authorized action: NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-01
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -478,8 +480,10 @@ V4-GATE-E-v1 Blocker 04 status: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 05 status: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 V4-GATE-E-v1 status: ACQUIRED AND PUBLISHED
 V4-GATE-E-v1 acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f76744f83
-CIV-39 status: IMPLEMENTED LOCALLY — AWAITING SENIOR REVIEW AND PUBLICATION
+CIV-39 status: COMPLETE AND PUBLISHED
+CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 V4-GATE-F-v1 status: PLANNED — NOT ACQUIRED
+Gate F evaluation status: NOT PERFORMED
 CIV-40 status: OPTIONAL TOOLING — NOT STARTED
 roadmap generation: V4
 ```
@@ -783,12 +787,12 @@ remain **FAIL — HISTORICAL IMMUTABLE EVIDENCE**, and Blockers 01–04 remain
 at independently remote-verified canonical HEAD
 `076a616a97a229e921a5c36eebdfd12f76744f83`.
 `CIV-39 — Multi-Settlement, Population Scaling and Fidelity Tiers V1` is
-**IMPLEMENTED LOCALLY — AWAITING SENIOR REVIEW AND PUBLICATION** from exact
-published baseline `e567f9a5b283a71e42b5f8139c47f80f6562a5dc`; its durable
-candidate record is
-[`CIV_39_PHASE_SUMMARY.md`](CIV_39_PHASE_SUMMARY.md). The next authorized
-action is renewed senior review after Correction 01 and Evidence
-Reconciliation 02, not a later product phase. Gate F remains **PLANNED — NOT
-ACQUIRED** and was not evaluated. `CIV-38` remains **OPTIONAL
+**COMPLETE AND PUBLISHED** at independently remote-verified canonical HEAD
+`0b0ec535cda62b70add182875c65eaee27bb5bb2`; its durable published record is
+[`CIV_39_PHASE_SUMMARY.md`](CIV_39_PHASE_SUMMARY.md). Senior review approved
+manual fast-forward publication after Correction 01 and Evidence
+Reconciliation 02. The next authorized required action is a new independent
+`V4-GATE-F-v1` Evaluation 01, not optional `CIV-40`. Gate F remains **PLANNED —
+NOT ACQUIRED** and its evaluation is **NOT PERFORMED**. `CIV-38` remains **OPTIONAL
 — NOT STARTED** and is not a prerequisite. `CIV-40` remains **OPTIONAL TOOLING
-— NOT STARTED**. Currency remains outside the Gate E dependency.
+— NOT STARTED**. Currency is not a Gate E or CIV-39 prerequisite.

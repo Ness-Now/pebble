@@ -1,10 +1,11 @@
 # CIV-39 — Multi-Settlement, Population Scaling and Fidelity Tiers V1
 
-## Candidate verdict
+## Published verdict
 
-`CIV-39` is **IMPLEMENTED LOCALLY — AWAITING SENIOR REVIEW AND
-PUBLICATION** in its bounded V1 contract. This is candidate evidence, not a
-publication or Gate F acquisition claim.
+`CIV-39` is **COMPLETE AND PUBLISHED** in its bounded V1 contract. Senior review
+approved the final candidate for manual fast-forward; publication at canonical
+HEAD `0b0ec535cda62b70add182875c65eaee27bb5bb2` was independently remote
+verified. Publication does not acquire or evaluate Gate F.
 
 Exact published starting baseline and independently fetched canonical remote:
 
@@ -18,19 +19,42 @@ implementation/proof commit: 3052dca3959ef1131081b6839f84b0860f531144
 checked-tick integration correction: c06bcda12f2c56ab4cefea7cca200bb2d547f379
 previous reviewed candidate: e2de172c5ac8b2a14c67341d4b3b6fa0147c2f00
 Senior Review Correction 01 product/proof commit: 2c9dc3fb4d2124b184ea81709a1165adc1831964
+Correction 01 documentation/evidence commit: 343f5bbdf525e36ac36c1e694d258c523e735b93
 Senior Review Evidence Reconciliation 02 harness commit: 605afd9c5cae864519bc8ddcd2aefb46a2c3ae75
+final published evidence/documentation HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
+final review archive SHA-256: 027faab657b48285d9862f2b132bea652b223fdfcc136c997637957de7d960f8
+Correction 01 archive SHA-256: f5d6bbbf6e785f79cbec2e091d77d0c1ad68c00391f188c702f989b73b8ffabe
+senior review verdict: APPROVED FOR MANUAL FAST-FORWARD
+remote publication: VERIFIED
 ```
 
-Program status represented by this candidate is:
+Current published program status is:
 
 ```text
 CIV-00 through CIV-37: COMPLETE AND PUBLISHED
 CIV-38: OPTIONAL — NOT STARTED
-CIV-39: IMPLEMENTED LOCALLY — AWAITING SENIOR REVIEW AND PUBLICATION
+CIV-39: COMPLETE AND PUBLISHED
+CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 CIV-40: OPTIONAL TOOLING — NOT STARTED
 Gate F: PLANNED — NOT ACQUIRED
 Gate F evaluation performed: NO
+currency: not a Gate E or CIV-39 prerequisite
+next authorized required action: NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-01
 ```
+
+## Publication history
+
+The published line is deliberately explicit. Commit
+`3052dca3959ef1131081b6839f84b0860f531144` implemented the original product
+and proof. Commit `c06bcda12f2c56ab4cefea7cca200bb2d547f379` corrected checked
+tick integration. Initial reviewed candidate
+`e2de172c5ac8b2a14c67341d4b3b6fa0147c2f00` then received Senior Review
+Correction 01 at `2c9dc3fb4d2124b184ea81709a1165adc1831964`, with correction
+documentation/evidence at `343f5bbdf525e36ac36c1e694d258c523e735b93`.
+Evidence Reconciliation 02 at `605afd9c5cae864519bc8ddcd2aefb46a2c3ae75`
+made the governed rendered harness consistently require Observer schema 13.
+Senior review approved final HEAD `0b0ec535cda62b70add182875c65eaee27bb5bb2`
+for manual fast-forward; that exact canonical remote publication is verified.
 
 ## Senior Review Correction 01 — mortality composition
 
@@ -65,8 +89,8 @@ publication to:
   fails.
 
 No second mortality API, lifecycle owner, World effect or schema beyond 35 was
-introduced. The local candidate remains unpublished and awaits renewed senior
-review.
+introduced. At that historical correction stage the candidate remained
+unpublished pending renewed review; the final corrected line is now published.
 
 ## Senior Review Evidence Reconciliation 02 — rendered schema contract
 
@@ -387,7 +411,7 @@ Owning regression results:
 | gate-e-blocker-04 | 28/28 PASS |
 
 Correction 01 ran 23 owning selectors for **1,711/1,711 PASS**. The corrected
-candidate passes the canonical `scripts/verify-pebblelab.sh`: **35/35 steps and
+published line passes the canonical `scripts/verify-pebblelab.sh`: **35/35 steps and
 4,084/4,084 smoke assertions PASS**. This includes debug and
 optimized product builds, deterministic scenario pairs, canonical output/replay
 comparisons and repository hygiene. No golden is regenerated and no proof is
@@ -419,7 +443,7 @@ The original pre-Correction-01 candidate's historical campaign used world seed
 46, disabled dynamics, two fresh processes and six inspected captures. Normal
 product code performed the migration after prepared bootstrap. Those captures
 truthfully show Observer schema 12 and remain historical evidence only; they
-are not current-candidate rendered proof and are not rewritten.
+are not current published rendered proof and are not rewritten.
 
 ```text
 CIV39_LIVE_PROOF_PASS settlements=2 population=12 live=4 near=4 dormant=4
@@ -435,8 +459,8 @@ All decisive harnesses exit successfully. Captures inspected are setup,
 transition, pre-restart, restored, proof and cleanup. Cleanup stops the session,
 removes exactly 12 probes and leaves no residual process.
 
-Evidence Reconciliation 02 ran a new standard campaign from the current
-candidate in isolated session `PebbleLab-live.q9F9tv`, World identity
+Evidence Reconciliation 02 ran a new standard campaign from the final
+published line in isolated session `PebbleLab-live.q9F9tv`, World identity
 `wmt447pfm5z1h` and simulation identity `live-46-14-68--18`. Both processes
 exited successfully and all six fresh captures were inspected. The current
 machine-checkable result is:
@@ -503,5 +527,6 @@ physical duplication 0 and synthetic material 0. Decisive Correction 01 proof:
 - The existing rendered CIV-39 mode cannot enable mortality together with its
   prepared scale fixture; Correction 01 therefore uses a deterministic
   two-process headless proof and claims no fresh mortality capture.
-- CIV-38 remains optional and unstarted. CIV-40 is not implemented. Gate F is
-  not evaluated or acquired by this phase candidate.
+- CIV-38 remains optional and unstarted. CIV-40 is optional tooling and is not
+  started. CIV-39 publication neither evaluates nor acquires Gate F; the next
+  required action is an independent Gate F Evaluation 01.
