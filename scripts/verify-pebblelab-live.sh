@@ -1528,10 +1528,10 @@ if [ "$MODE" = "civ39" ]; then
         "$PHASE1_TRACE" "$CIV39_PHASE1_COMMANDS" 1 100 "$SHOT_SPEC"
     TRACE_PATH="$PHASE1_TRACE"
     require_trace 'CIV39_SETUP_PASS settlements=2 population=12 live=4 near=4 dormant=4 probes=12 .*authority=verified' 'transactional twelve-inhabitant setup'
-    require_trace 'observer status .*selected=agent_0 schema=12 .*settlement=settlement-main fidelity=LIVE population=12 settlements=2 live=4 near=4 dormant=4 .*mutation=none .*digestStable=1' 'Observer reads initial LIVE identity without mutation'
+    require_trace 'observer status .*selected=agent_0 schema=13 .*settlement=settlement-main fidelity=LIVE population=12 settlements=2 live=4 near=4 dormant=4 .*mutation=none .*digestStable=1' 'Observer reads initial LIVE identity without mutation'
     require_trace 'CIV39_MIGRATION_STARTED .*agent=agent_0 identityStable=1 .*origin=settlement-main destination=settlement-east .*physicalAuthority=observed_and_planned publication=causal' 'causal bounded settlement migration'
     require_trace 'CIV39_STATUS enabled=1 settlements=2 population=12 live=4 near=4 dormant=4 tick=8 .*settlement-east:residents=5:transit=0.*settlement-main:residents=7:transit=0 .*settlement-migration-00000001:agent_0:arrived' 'physical arrival and singular current residency'
-    require_trace 'observer status .*selected=agent_0 schema=12 .*settlement=settlement-east fidelity=NEAR population=12 settlements=2 live=4 near=4 dormant=4 .*mutation=none .*digestStable=1' 'stable agent rotates from LIVE to NEAR after arrival'
+    require_trace 'observer status .*selected=agent_0 schema=13 .*settlement=settlement-east fidelity=NEAR population=12 settlements=2 live=4 near=4 dormant=4 .*mutation=none .*digestStable=1' 'stable agent rotates from LIVE to NEAR after arrival'
     require_trace 'checkpoint saved name=civ39-arrived-v35 .*tick=8 .*restartSafe=1 ' 'restart-safe CIV-39 checkpoint'
     require_trace 'summary .*ticks=8 .*agents=12 .*runtimeErrors=0 .*probesRemoved=12 ' 'phase-one exact probe cleanup'
     reject_trace 'CIV-39 command failed|CIV39_LIVE_PROOF_FAIL|runtimeErrors=[1-9]|rollback failed|rollbackFailure' 'CIV-39 phase-one failure'
@@ -1568,7 +1568,7 @@ if [ "$MODE" = "civ39" ]; then
         "$continuation_command_tick" "$PHASE2_SHOTS"
     TRACE_PATH="$PHASE2_TRACE"
     require_trace 'checkpoint loaded name=civ39-arrived-v35 .*tick=8 .*restartSafe=1 .*probes=12 .*probeRestoredMissing=9 .*probeRepositionedVerified=2 .*custodyDuplicates=0 .*worldMutation=verified_probe_position_restore civ39RestoreCount=1' 'fresh-process twelve-probe restore'
-    require_trace 'observer status .*selected=agent_0 schema=12 .*settlement=settlement-east fidelity=NEAR population=12 settlements=2 live=4 near=4 dormant=4 .*mutation=none .*digestStable=1' 'post-restart Observer continuity'
+    require_trace 'observer status .*selected=agent_0 schema=13 .*settlement=settlement-east fidelity=NEAR population=12 settlements=2 live=4 near=4 dormant=4 .*mutation=none .*digestStable=1' 'post-restart Observer continuity'
     require_trace 'CIV39_LIVE_PROOF_PASS settlements=2 population=12 live=4 near=4 dormant=4 migration=arrived identity=agent_0 identityStable=1 checkpointSchema=35 observerSchema=13 observerMutations=0 restartCount=1 restartDuplicateEffects=0 duplicateInhabitants=0 duplicateDurableIdentities=0 duplicateEconomicCommitments=0 duplicateReceipts=0 physicalLoss=0 physicalDuplication=0 syntheticMaterial=0 unexpectedRuntimeErrors=0 probes=12' 'complete CIV-39 live proof'
     require_trace 'summary reason=stop .*ticks=0 .*agents=12 .*runtimeErrors=0 .*probesRemoved=12 .*causalTick=8 ' 'fresh-process exact twelve-probe cleanup'
     require_trace 'stop probesRemoved=12 reason=stop .*taggedCustodySpills=0' 'fresh-process physical cleanup'
@@ -1589,7 +1589,7 @@ if [ "$MODE" = "civ39" ]; then
         || /usr/bin/pgrep -x pebsmoke >/dev/null 2>&1; then
         fail "residual PebbleLab process after CIV-39 proof"
     fi
-    printf '\nPASS: CIV-39 two settlements, twelve inhabitants, LIVE/NEAR/DORMANT rotation, embodied migration, v35 restart, Observer v12, and exact cleanup verified.\n'
+    printf '\nPASS: CIV-39 two settlements, twelve inhabitants, LIVE/NEAR/DORMANT rotation, embodied migration, v35 restart, Observer v13, and exact cleanup verified.\n'
     printf 'Phase 1 trace: %s\n' "$PHASE1_TRACE"
     printf 'Phase 2 trace: %s\n' "$PHASE2_TRACE"
     printf 'Capture directory: %s\n' "$CAPTURE_DIR"
