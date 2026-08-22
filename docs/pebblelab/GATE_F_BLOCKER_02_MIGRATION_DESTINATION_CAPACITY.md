@@ -25,6 +25,7 @@ published correction baseline: c60eda84210cc8ed32f910f6f36ec29c1f747a9b
 verified origin/lab/pebblelab-v1: c60eda84210cc8ed32f910f6f36ec29c1f747a9b
 correction branch: codex/gate-f-blocker-02-migration-capacity
 product/test/runtime-proof commit: 7ec342dce329b611d418562383956bad40c9023d
+documentation candidate commit: 8cb127f77ed8c57636e1be82e211f6758267c31d
 publication: NOT PERFORMED
 independent remote verification of correction: NOT PERFORMED
 ```
@@ -276,7 +277,7 @@ Fresh results at the local correction candidate:
 | Gate E owning continuity, including E01–E04 | 291/291 PASS |
 | migration/embodiment/persistence/Observer/atomicity | 949/949 PASS |
 | all listed owning selectors | 1738/1738 PASS |
-| canonical repository verification | pending final evidence reconciliation |
+| canonical repository verification | 35/35 steps; 4104/4104 assertions PASS |
 
 Gate D includes homeostasis/health, lifecycle, mortality,
 estates/inheritance/succession, unions/family/lineages/houses, dependent care
@@ -286,6 +287,11 @@ includes population migration, embodiment/Core descent, autonomous
 civilization, checkpoint/replay, persistence/reconciliation, Observer and
 candidate physical atomicity.
 
+Canonical `scripts/verify-pebblelab.sh` passes all `35/35` steps with
+`4104/4104` assertions. It rebuilds debug Pebble, release Pebble, release
+PebbleLab and release pebsmoke; runs the read-only golden/shared-runtime suite;
+then proves deterministic canonical outputs for agents, settlement metrics,
+ecology, mortality, lifecycle, kinship, households, dependent care and skills.
 No golden is regenerated and no test is weakened.
 
 ## Changed product and proof surfaces
