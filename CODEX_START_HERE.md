@@ -46,11 +46,15 @@ for the compact status. In particular:
 - `CIV-38` is optional and not started.
 - `CIV-39` is complete and published at independently remote-verified
   canonical HEAD `0b0ec535cda62b70add182875c65eaee27bb5bb2`.
+- Gate F Evaluation 01 is `FAIL — HISTORICAL IMMUTABLE EVIDENCE`.
+- Gate F Blocker 01 is **FIXED + PUBLISHED + REMOTE VERIFIED** at canonical
+  HEAD `690c431d47f2e9edf9b1a9a9e91c71876981d09c`.
 - `CIV-40` is optional tooling and not started.
-- Gate F is planned and not acquired; its evaluation has not been performed.
-- The next authorized required action is a new independent
-  `V4-GATE-F-v1` Evaluation 01. Do not infer that optional `CIV-40` is a
-  prerequisite.
+- Gate F remains planned and not acquired; Evaluation 02 has not been
+  performed.
+- The next authorized required action is
+  `NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-02`. Do not infer that optional
+  `CIV-40` is a prerequisite.
 
 Historical Gate B `FAIL` reports and the closure-candidate report are preserved
 as evidence of their own evaluations. They do not reopen Gate B.

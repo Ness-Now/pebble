@@ -2,17 +2,17 @@
 
 ## Status
 
-`V4-GATE-F-v1 Blocker 01: LOCAL BLOCKER-CORRECTION CANDIDATE`
+`V4-GATE-F-v1 Blocker 01: FIXED + PUBLISHED + REMOTE VERIFIED`
 
-This record documents the local product correction for the deterministic
-publication/persistence split found by independent Gate F Evaluation 01. It
-does not rewrite or supersede that evaluation, claim publication, authorize
+This record preserves the local product correction and reconciles its later
+senior-review approval, manual fast-forward publication and independent remote
+verification. It does not rewrite or supersede Gate F Evaluation 01, perform
 Evaluation 02, acquire Gate F, or begin CIV-40 or CIV-41.
 
 - Gate F Evaluation 01: `FAIL — HISTORICAL IMMUTABLE EVIDENCE`
-- Gate F Blocker 01: `LOCAL BLOCKER-CORRECTION CANDIDATE`
+- Gate F Blocker 01: `FIXED + PUBLISHED + REMOTE VERIFIED`
 - Gate F: `PLANNED — NOT ACQUIRED`
-- Gate F Evaluation 02: `NOT AUTHORIZED / NOT PERFORMED`
+- Gate F Evaluation 02: `NOT PERFORMED`
 - CIV-40: `OPTIONAL TOOLING — NOT STARTED`
 - CIV-41: `NOT STARTED`
 
@@ -22,19 +22,38 @@ Evaluation 02, acquire Gate F, or begin CIV-40 or CIV-41.
 evaluated published baseline: 29c8a7328f06748817abba1545acdb259a4d192a
 correction branch: codex/gate-f-blocker-01-settlement-capacity
 product/test/runtime-proof commit: 54c5f4e9d1acab06a0fc44b2cd96dc74c04c72ec
+documentation/evidence commit: 690c431d47f2e9edf9b1a9a9e91c71876981d09c
+published canonical blocker HEAD: 690c431d47f2e9edf9b1a9a9e91c71876981d09c
+senior review verdict: APPROVED FOR MANUAL FAST-FORWARD
+manual publication: COMPLETED
+independent remote verification: PASS
+final review archive SHA-256: 1a94f86a0e43154d7b8d64fdbce0f7fe5ac303417eda4821231fcd6a91061065
 evaluation branch: codex/gate-f-evaluation-01
 evaluation harness commit: 8f519d1ee9a8387117447057aa50b471b487143a
 evaluation final evidence HEAD: 1cd056b6f74b4334cc6f63e969f3b629b3d79ae2
 evaluation review archive SHA-256: 107d10073892a85fc2200f34158ad7adf9ecfcb23bbae218ff54db64d067be7a
 evaluation verdict: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 evaluation commits in correction ancestry: NO
-publication verified: NO
+publication verified: YES
 ```
 
 Both evaluation ancestry checks return exit `1` from
 `git merge-base --is-ancestor`. The correction descends directly from the
 evaluated published baseline and does not contain the evaluation harness or
 evidence commits.
+
+## Correction and publication history
+
+1. Independent Evaluation 01 recorded the historical immutable failure above.
+2. The local correction was implemented and proven at product/test/runtime
+   commit `54c5f4e9d1acab06a0fc44b2cd96dc74c04c72ec`.
+3. Senior review returned `APPROVED FOR MANUAL FAST-FORWARD`.
+4. Manual fast-forward publication completed at canonical blocker HEAD
+   `690c431d47f2e9edf9b1a9a9e91c71876981d09c`.
+5. Independent remote verification confirmed that exact canonical HEAD.
+
+The final review archive SHA-256 is
+`1a94f86a0e43154d7b8d64fdbce0f7fe5ac303417eda4821231fcd6a91061065`.
 
 ## Historical failure
 
@@ -62,7 +81,7 @@ authoritativeStateMutated=1
 checkpointCreated=1
 restoreRejected=1
 restoreError=invalidBound(population_settlement)
-deterministicDigest=a73b4ad8124effd4
+deterministicDigest=a73b4ad8124ef8d4
 ```
 
 ## Corrected publication authority
@@ -212,12 +231,11 @@ with `4104/4104` smoke assertions. No golden is regenerated.
 
 ## Limitations and non-claims
 
-- This is a local candidate, not a published correction.
+- This is a fixed, published and independently remote-verified blocker
+  correction; it is not Gate F acquisition evidence.
 - Gate F Evaluation 01 remains immutable historical FAIL evidence.
 - Gate F is not acquired.
-- Evaluation 02 is not performed or authorized by this candidate. It can be
-  considered only after manual publication and independent remote SHA
-  verification of the blocker correction.
+- Evaluation 02 is not performed in this reconciliation.
 - CIV-40 and CIV-41 are not started.
 - No rendered campaign is claimed. This validation-only initialization and
   persistence authority defect is proven by deterministic headless and
@@ -226,6 +244,7 @@ with `4104/4104` smoke assertions. No golden is regenerated.
   semantics are added.
 - Goldens are not regenerated and no historical evidence is modified.
 
-The next authorized action is senior review of this local blocker-correction
-candidate. Publication, independent remote verification and any later
-Evaluation 02 require separate decisions.
+The blocker that prevented another independent Gate F evaluation is cleared.
+The next authorized required action is
+`NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-02`; that evaluation remains separate
+and is not performed here.
