@@ -103,8 +103,10 @@
     "civ39ExactPublishedBaseline": "e567f9a5b283a71e42b5f8139c47f80f6562a5dc",
     "civ39LocalImplementationProofCommit": "3052dca3959ef1131081b6839f84b0860f531144",
     "civ39CheckedTickIntegrationCorrectionCommit": "c06bcda12f2c56ab4cefea7cca200bb2d547f379",
+    "civ39PreviousReviewedCandidateHead": "e2de172c5ac8b2a14c67341d4b3b6fa0147c2f00",
+    "civ39SeniorReviewCorrection01ProductProofCommit": "2c9dc3fb4d2124b184ea81709a1165adc1831964",
     "civ39PublicationStatus": "awaitingSeniorReviewAndPublication",
-    "meaning": "Canonical published product history is complete through CIV-37; Gate E Evaluation 05 is the first accepted complete Gate E PASS and is senior-review-approved published evidence; Gate E is acquired and published at independently remote-verified canonical HEAD 076a616a97a229e921a5c36eebdfd12f76744f83; Gate E Evaluations 01 through 04 remain immutable historical FAIL evidence and Blockers 01 through 04 remain fixed, published and remote verified; CIV-38 is optional and not started and currency is outside the Gate E dependency; CIV-39 is implemented locally from exact published baseline e567f9a5b283a71e42b5f8139c47f80f6562a5dc and awaits senior review and publication; Gate F remains planned and not acquired or evaluated; CIV-40 remains optional tooling and not started.",
+    "meaning": "Canonical published product history is complete through CIV-37; Gate E Evaluation 05 is the first accepted complete Gate E PASS and is senior-review-approved published evidence; Gate E is acquired and published at independently remote-verified canonical HEAD 076a616a97a229e921a5c36eebdfd12f76744f83; Gate E Evaluations 01 through 04 remain immutable historical FAIL evidence and Blockers 01 through 04 remain fixed, published and remote verified; CIV-38 is optional and not started and currency is outside the Gate E dependency; CIV-39 is implemented locally from exact published baseline e567f9a5b283a71e42b5f8139c47f80f6562a5dc, includes Senior Review Correction 01 mortality/scale composition at 2c9dc3fb4d2124b184ea81709a1165adc1831964 and awaits renewed senior review and publication; Gate F remains planned and not acquired or evaluated; CIV-40 remains optional tooling and not started.",
     "safeBootstrapHardeningPublished": true
   },
   "documents": {
@@ -2535,7 +2537,8 @@
       ],
       "evidence": [
         "docs/pebblelab/CIV_39_PHASE_SUMMARY.md"
-      ]
+      ],
+      "seniorReviewCorrection01Commit": "2c9dc3fb4d2124b184ea81709a1165adc1831964"
     },
     {
       "id": "CIV-40",

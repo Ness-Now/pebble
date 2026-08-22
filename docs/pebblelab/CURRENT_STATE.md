@@ -26,6 +26,10 @@ SHA of the documentation commit that contains it.
 - `CIV-39 — Multi-Settlement, Population Scaling and Fidelity Tiers V1`:
   **IMPLEMENTED LOCALLY — AWAITING SENIOR REVIEW AND PUBLICATION** from exact
   published baseline `e567f9a5b283a71e42b5f8139c47f80f6562a5dc`.
+  Senior Review Correction 01 composes mortality/population exit with current
+  multi-settlement, fidelity and migration authority at product/proof commit
+  `2c9dc3fb4d2124b184ea81709a1165adc1831964`; the candidate remains local and
+  unpublished.
 - `CIV-40 — Training and Evaluation Bridge V1`:
   **OPTIONAL TOOLING — NOT STARTED**.
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
@@ -779,7 +783,8 @@ at independently remote-verified canonical HEAD
 published baseline `e567f9a5b283a71e42b5f8139c47f80f6562a5dc`; its durable
 candidate record is
 [`CIV_39_PHASE_SUMMARY.md`](CIV_39_PHASE_SUMMARY.md). The next authorized
-action is senior review of CIV-39, not a later product phase. Gate F remains
+action is renewed senior review after Correction 01 commit
+`2c9dc3fb4d2124b184ea81709a1165adc1831964`, not a later product phase. Gate F remains
 **PLANNED — NOT ACQUIRED** and was not evaluated. `CIV-38` remains **OPTIONAL
 — NOT STARTED** and is not a prerequisite. `CIV-40` remains **OPTIONAL TOOLING
 — NOT STARTED**. Currency remains outside the Gate E dependency.

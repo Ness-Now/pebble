@@ -1333,7 +1333,12 @@ gate dependency.
 Its bounded candidate introduces measured population growth and
 `LIVE`/`NEAR`/`DORMANT` fidelity while preserving identity, matter and
 obligations. Architecture, measurements, validation and non-claims are recorded
-in [`CIV_39_PHASE_SUMMARY.md`](CIV_39_PHASE_SUMMARY.md). `CIV-40` may compare
+in [`CIV_39_PHASE_SUMMARY.md`](CIV_39_PHASE_SUMMARY.md). Senior Review
+Correction 01 at product/proof commit
+`2c9dc3fb4d2124b184ea81709a1165adc1831964` composes the existing mortality
+transaction with all current settlement/fidelity authority and terminalizes an
+active scaled migration exactly once; the corrected candidate remains local
+and unpublished. `CIV-40` may compare
 policies or export trajectories, but no external policy becomes runtime
 authority; it is not started by the CIV-39 candidate.
 
