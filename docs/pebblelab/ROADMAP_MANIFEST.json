@@ -172,10 +172,10 @@
     "historicalPlans": "nonDirective"
   },
   "currentState": {
-    "activePhase": null,
+    "activePhase": "V4-GATE-F-v1-BLOCKER-02-LOCAL-CORRECTION-CANDIDATE",
     "completedThrough": "CIV-39",
     "nextEligiblePhase": null,
-    "nextAuthorizedAction": "NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-02",
+    "nextAuthorizedAction": "SENIOR-REVIEW-V4-GATE-F-v1-BLOCKER-02",
     "civ27Status": "completed",
     "civ28Status": "completed",
     "gateCStatus": "acquired",
@@ -249,8 +249,15 @@
     "gateFBlocker01ProductCorrectionCommit": "54c5f4e9d1acab06a0fc44b2cd96dc74c04c72ec",
     "gateFBlocker01PublishedCanonicalHead": "690c431d47f2e9edf9b1a9a9e91c71876981d09c",
     "gateFBlocker01ReviewArchiveSHA256": "1a94f86a0e43154d7b8d64fdbce0f7fe5ac303417eda4821231fcd6a91061065",
-    "gateFEvaluation02Status": "notPerformed",
+    "gateFEvaluation02Status": "evaluatedFailHistoricalImmutableEvidence",
+    "gateFBlocker02Status": "fixedLocalCorrectionCandidateSeniorReviewRequired",
+    "gateFBlocker02Fixed": true,
+    "gateFBlocker02Published": false,
+    "gateFBlocker02PublicationVerified": false,
+    "gateFBlocker02ProductCorrectionCommit": "7ec342dce329b611d418562383956bad40c9023d",
+    "gateFEvaluation03Status": "notAuthorizedNotPerformed",
     "civ40Status": "optionalNotStarted",
+    "civ41Status": "plannedNotStarted",
     "renewableSubsistenceMilestoneStatus": "completedPublished",
     "v4CanonicalDocumentSet": true
   },
@@ -2178,8 +2185,25 @@
       "blocker01ProductCorrectionCommit": "54c5f4e9d1acab06a0fc44b2cd96dc74c04c72ec",
       "blocker01PublishedCanonicalHead": "690c431d47f2e9edf9b1a9a9e91c71876981d09c",
       "blocker01ReviewArchiveSHA256": "1a94f86a0e43154d7b8d64fdbce0f7fe5ac303417eda4821231fcd6a91061065",
-      "evaluation02Status": "notPerformed",
-      "nextAuthorizedAction": "NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-02",
+    "evaluation02Status": "evaluatedFailHistoricalImmutableEvidence",
+    "evaluation02Evidence": {
+      "evaluatedProductHead": "c60eda84210cc8ed32f910f6f36ec29c1f747a9b",
+      "harnessCommit": "fcc85fd95ab7acb3ba194fd75a664c4dda6b065d",
+      "finalEvidenceHead": "6d30677fef504c51cc9f5847289e6206941b1d6c",
+      "reviewArchiveSHA256": "1e2f9f6da0fd8f05ae343393a51eddb0a2391b015f4db38afadf5f01ce7d27de",
+      "deterministicBlockerDigest": "3e6ac273c41315cd",
+      "verdict": "FAIL_HISTORICAL_IMMUTABLE_EVIDENCE"
+    },
+    "blocker02Status": "fixedLocalCorrectionCandidateSeniorReviewRequired",
+    "blocker02Fixed": true,
+    "blocker02Published": false,
+    "blocker02PublicationVerified": false,
+    "blocker02ProductCorrectionCommit": "7ec342dce329b611d418562383956bad40c9023d",
+    "blocker02Evidence": [
+      "docs/pebblelab/GATE_F_BLOCKER_02_MIGRATION_DESTINATION_CAPACITY.md"
+    ],
+    "evaluation03Status": "notAuthorizedNotPerformed",
+    "nextAuthorizedAction": "SENIOR-REVIEW-V4-GATE-F-v1-BLOCKER-02",
       "requiredPhases": [
         "CIV-39"
       ],
