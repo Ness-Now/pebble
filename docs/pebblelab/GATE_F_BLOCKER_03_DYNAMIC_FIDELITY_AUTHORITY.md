@@ -2,28 +2,32 @@
 
 ## Status
 
-`V4-GATE-F-v1 Blocker 03: FIXED — LOCAL CORRECTION CANDIDATE`
+`V4-GATE-F-v1 Blocker 03: FIXED + PUBLISHED + REMOTE VERIFIED`
 
-This candidate is rooted directly at verified canonical baseline
+The correction was rooted directly at verified canonical baseline
 `0407e8290aa98bde154cb98389893bcc577f830e`. Its product, focused-proof and
 two-process runtime commit is
-`8358811204c35a79a4be202e57a28dfad4fb3e0f`. It has not yet been senior-reviewed,
-manually published or independently remote verified.
+`8358811204c35a79a4be202e57a28dfad4fb3e0f`. Senior review approved manual
+fast-forward, publication completed at canonical blocker HEAD
+`2c6fe63e81b20ee4a37315a6f5ad528a721c2355`, and independent remote
+verification passed. The final review archive SHA-256 is
+`26c2cfb0326623c276bed2d7c3838394792d7e6f590b2a5aee41ea3cbdeb2a6f`.
 
 - Gate F Evaluation 01: `FAIL — HISTORICAL IMMUTABLE EVIDENCE`
 - Gate F Blocker 01: `FIXED + PUBLISHED + REMOTE VERIFIED`
 - Gate F Evaluation 02: `FAIL — HISTORICAL IMMUTABLE EVIDENCE`
 - Gate F Blocker 02: `FIXED + PUBLISHED + REMOTE VERIFIED`
 - Gate F Evaluation 03: `FAIL — HISTORICAL IMMUTABLE EVIDENCE`
-- Gate F Blocker 03: `FIXED — LOCAL CORRECTION CANDIDATE`
+- Gate F Blocker 03: `FIXED + PUBLISHED + REMOTE VERIFIED`
 - Gate F: `PLANNED — NOT ACQUIRED`
-- Gate F Evaluation 04: `NOT AUTHORIZED / NOT PERFORMED`
+- Gate F Evaluation 04: `NOT PERFORMED`
 - CIV-40: `OPTIONAL TOOLING — NOT STARTED`
 - CIV-41: `NOT STARTED`
 
-The candidate status is deliberately local. Evaluation 04 remains unauthorized
-until senior review, manual publication and independent remote verification all
-complete. This correction does not acquire Gate F or start CIV-40 or CIV-41.
+Publication of this correction does not acquire Gate F or start CIV-40 or
+CIV-41. The next authorized required action is
+`NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-04`; Evaluation 04 was not performed
+in this reconciliation.
 
 ## Git and historical evidence identity
 
@@ -32,8 +36,11 @@ canonical correction baseline: 0407e8290aa98bde154cb98389893bcc577f830e
 verified origin/lab/pebblelab-v1 at correction start: 0407e8290aa98bde154cb98389893bcc577f830e
 correction branch: codex/gate-f-blocker-03-dynamic-fidelity-authority
 product/test/runtime-proof commit: 8358811204c35a79a4be202e57a28dfad4fb3e0f
-publication: NOT ATTEMPTED
-independent remote verification: PENDING PUBLICATION
+documentation/evidence commit and published canonical blocker HEAD: 2c6fe63e81b20ee4a37315a6f5ad528a721c2355
+senior review: APPROVED FOR MANUAL FAST-FORWARD
+manual publication: COMPLETED
+independent remote verification: PASS
+final review archive SHA-256: 26c2cfb0326623c276bed2d7c3838394792d7e6f590b2a5aee41ea3cbdeb2a6f
 ```
 
 Evaluation 03 remains immutable historical evidence:
@@ -51,6 +58,19 @@ Both Evaluation 03 ancestry checks return exit `1` from
 `git merge-base --is-ancestor`. Neither evaluation commit is an ancestor of
 this correction branch; no evaluation harness or evidence commit was merged or
 cherry-picked.
+
+## Review, publication and remote verification
+
+Senior review approved the product correction and documentation/evidence for
+manual fast-forward. Manual publication then completed, establishing
+`2c6fe63e81b20ee4a37315a6f5ad528a721c2355` as the published canonical Blocker
+03 HEAD. An independent fetch and remote-ref comparison subsequently passed.
+The final review archive SHA-256 is
+`26c2cfb0326623c276bed2d7c3838394792d7e6f590b2a5aee41ea3cbdeb2a6f`.
+
+These publication facts close Blocker 03 only. Evaluation 03 remains historical
+immutable FAIL evidence, Gate F remains planned and not acquired, and
+Evaluation 04 remains not performed.
 
 ## Historical contradiction and root cause
 
@@ -293,16 +313,16 @@ Focused and runtime proof:
 
 ## Limitations and non-claims
 
-- This is a local correction candidate, not a published correction.
-- Senior review, manual publication and independent remote verification remain
-  pending.
+- This is published Blocker 03 correction evidence, not Gate F acquisition
+  evidence.
 - Evaluations 01–03 remain immutable historical FAIL evidence.
 - Gate F remains planned and is not acquired.
-- Evaluation 04 is not authorized and was not performed.
+- Evaluation 04 was not performed; its new independent evaluation is the next
+  authorized required action.
 - CIV-40 remains optional tooling and is not started; CIV-41 is not started.
 - Checkpoint schema remains 35 and Observer schema remains 13.
 - No capacity, migration-concurrency or fidelity bound is increased.
 - No second civilization authority, physical engine, currency or rendered proof
   is introduced.
 - Goldens regenerated: NO.
-- Push attempted: NO.
+- Documentation-reconciliation push attempted: NO.

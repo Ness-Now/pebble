@@ -52,11 +52,15 @@ for the compact status. In particular:
 - Gate F Evaluation 02 is `FAIL — HISTORICAL IMMUTABLE EVIDENCE`.
 - Gate F Blocker 02 is **FIXED + PUBLISHED + REMOTE VERIFIED** at canonical
   HEAD `40ae812205abe231317e0d1720b5db4cecf9f24d`.
+- Gate F Evaluation 03 is `FAIL — HISTORICAL IMMUTABLE EVIDENCE`.
+- Gate F Blocker 03 is **FIXED + PUBLISHED + REMOTE VERIFIED** at canonical
+  HEAD `2c6fe63e81b20ee4a37315a6f5ad528a721c2355`.
 - `CIV-40` is optional tooling and not started.
-- Gate F remains planned and not acquired; Evaluation 03 has not been
+- `CIV-41` is not started.
+- Gate F remains planned and not acquired; Evaluation 04 has not been
   performed.
 - The next authorized required action is
-  `NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-03`. Do not infer that optional
+  `NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-04`. Do not infer that optional
   `CIV-40` is a prerequisite.
 
 Historical Gate B `FAIL` reports and the closure-candidate report are preserved
