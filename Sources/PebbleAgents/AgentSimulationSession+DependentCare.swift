@@ -72,6 +72,31 @@ extension AgentSimulationSession {
         }
     }
 
+    /// CIV-39 settlement migration moves one embodied inhabitant. V1 has no
+    /// coupled physical/social transaction for moving a dependent together
+    /// with a caregiver or guardian, so those durable obligations must refuse
+    /// before the individual physical route starts rather than becoming split
+    /// across settlement-bound household authority.
+    func prevalidateDependentCareSettlementMigration(
+        agentID: AgentID
+    ) throws {
+        guard let care = dependentCareState else { return }
+        try requireStageCapability(.voluntaryMigration, for: agentID)
+        guard !care.assignments.contains(where: {
+            $0.status == .active
+                && ($0.dependentID == agentID || $0.caregiverID == agentID)
+        }), !care.activeEngagements.contains(where: {
+            $0.dependentID == agentID || $0.caregiverID == agentID
+        }), care.childhoodV2?.guardianships.contains(where: {
+            $0.status == .active
+                && ($0.dependentID == agentID || $0.guardianID == agentID)
+        }) != true else {
+            throw AgentSessionError.dependentCare(.invalidState(
+                "settlement migration requires unsupported care relocation"
+            ))
+        }
+    }
+
     func permitsStageCapability(
         _ capability: AgentStageCapability,
         for agentID: AgentID

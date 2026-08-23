@@ -604,9 +604,14 @@ extension AgentSimulationSession {
                   let (lhs, rhs) = pair
                   return abs(lhs.x - rhs.x) + abs(lhs.z - rhs.z) == 1
                       && (-1...1).contains(rhs.y - lhs.y)
-              }) else {
+        }) else {
             throw AgentSessionError.population(.admission(.routeUnavailable))
         }
+        try prevalidateDependentCareSettlementMigration(agentID: agentID)
+        try prevalidateHouseholdSettlementMigration(
+            agentID: agentID,
+            destinationSettlementID: destinationSettlementID
+        )
         let ordinal = scale.nextSettlementMigrationOrdinal
         guard ordinal < UInt64.max,
               let migrationID = AgentSettlementMigrationID(
@@ -733,6 +738,13 @@ extension AgentSimulationSession {
                   ).contains(migration.agentID) else {
                 throw AgentSessionError.population(.capacityReached)
             }
+            try prevalidateDependentCareSettlementMigration(
+                agentID: migration.agentID
+            )
+            try prevalidateHouseholdSettlementMigration(
+                agentID: migration.agentID,
+                destinationSettlementID: migration.destinationSettlementID
+            )
             let event = try requiredPopulationEvent(
                 kind: .settlementMigrationArrived,
                 actorID: migration.agentID, subjectID: migration.agentID,
@@ -779,6 +791,13 @@ extension AgentSimulationSession {
             ) else {
                 throw AgentSessionError.population(.admission(.settlementMissing))
             }
+            populationRegistry = registry
+            try registerHouseholdSettlementMigrationArrival(
+                agentID: migration.agentID,
+                destinationSettlementID: migration.destinationSettlementID,
+                residenceAnchor: migration.route.last!,
+                causeEventID: event.eventID
+            )
             state.state = "idle"
             state.homePosition = migration.route.last!
             state.currentGoal = AgentGoal(
@@ -793,6 +812,10 @@ extension AgentSimulationSession {
         compactScaleHistories(&scale)
         registry.scaleState = scale
         populationRegistry = registry
+        try validateHouseholdCrossDomainIfEnabled()
+        try validateDependentCareCrossDomainIfEnabled()
+        try validateFamilyCrossDomainIfEnabled()
+        try validateEstateCrossDomainIfEnabled()
     }
 
     private func destinationResidentIDs(

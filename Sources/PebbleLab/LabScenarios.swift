@@ -46,6 +46,8 @@ func validateScenario(_ scenario: String) {
         || scenario == "gate_f_blocker_02_migration_restore_smoke"
         || scenario == "gate_f_blocker_03_birth_exit_smoke"
         || scenario == "gate_f_blocker_03_birth_restore_smoke"
+        || scenario == "gate_f_blocker_04_household_exit_smoke"
+        || scenario == "gate_f_blocker_04_household_restore_smoke"
         || scenario == "settlement_metrics_multiscale_smoke"
         || scenario == "local_ecology_subsistence_smoke"
         || scenario == "mortality_population_exit_smoke"

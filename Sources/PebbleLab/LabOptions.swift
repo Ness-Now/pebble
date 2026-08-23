@@ -32,6 +32,7 @@ func usage() -> String {
       gate_f_blocker_01_capacity_exit_smoke and gate_f_blocker_01_capacity_restore_smoke form the two-process settlement-capacity refusal/retry/restart proof.
       gate_f_blocker_02_migration_exit_smoke and gate_f_blocker_02_migration_restore_smoke form the two-process destination-claim/refusal/arrival/release proof.
       gate_f_blocker_03_birth_exit_smoke and gate_f_blocker_03_birth_restore_smoke form the two-process dynamic-membership/fidelity/rotation proof.
+      gate_f_blocker_04_household_exit_smoke and gate_f_blocker_04_household_restore_smoke form the two-process settlement-migration household-authority proof.
       settlement_metrics_multiscale_smoke writes bounded macro settlement metric and A/B neutrality outputs.
       local_ecology_subsistence_smoke writes bounded forage, pressure, checkpoint v4, and replay proof outputs.
       mortality_population_exit_smoke writes bounded mortality, population exit, checkpoint v5, and replay outputs.

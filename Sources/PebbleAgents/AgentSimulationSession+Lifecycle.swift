@@ -473,6 +473,7 @@ extension AgentSimulationSession {
         let careBirth = try prevalidateDependentCareBirth(parentIDs: plan.progenitorIDs)
         let householdEventCount = try householdBirthEventCount(
             parentIDs: plan.progenitorIDs,
+            settlementID: plan.settlementID,
             preferredHouseholdID: careBirth?.householdID
         )
         let familyEventCount = familyBirthEventCount(parentIDs: plan.progenitorIDs)
@@ -567,6 +568,7 @@ extension AgentSimulationSession {
         let householdEventID = try registerHouseholdBirth(
             childID: newbornID,
             parentIDs: plan.progenitorIDs,
+            settlementID: plan.settlementID,
             residenceAnchor: observation.position,
             causeEventID: kinshipEventID ?? born.eventID,
             preferredHouseholdID: careBirth?.householdID

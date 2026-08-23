@@ -188,14 +188,21 @@ extension AgentSimulationSession {
         guard residents.allSatisfy({ statesById[$0.agentID.rawValue] != nil }) else {
             throw AgentSessionError.household(.invalidState("resident without AgentState"))
         }
-        var groups: [AgentPosition: [AgentID]] = [:]
+        var groups: [AgentSettlementID: [AgentPosition: [AgentID]]] = [:]
         for member in residents {
-            groups[statesById[member.agentID.rawValue]!.homePosition, default: []]
-                .append(member.agentID)
+            groups[member.settlementID, default: [:]][
+                statesById[member.agentID.rawValue]!.homePosition,
+                default: []
+            ].append(member.agentID)
         }
-        let orderedGroups = groups.map { anchor, ids in
-            (anchor: anchor, ids: ids.sorted())
+        let orderedGroups = groups.flatMap { settlementID, settlementGroups in
+            settlementGroups.map { anchor, ids in
+                (settlementID: settlementID, anchor: anchor, ids: ids.sorted())
+            }
         }.sorted {
+            if $0.settlementID != $1.settlementID {
+                return $0.settlementID < $1.settlementID
+            }
             if householdPositionLess($0.anchor, $1.anchor) { return true }
             if householdPositionLess($1.anchor, $0.anchor) { return false }
             return $0.ids[0] < $1.ids[0]
@@ -222,7 +229,8 @@ extension AgentSimulationSession {
         try prevalidateCausalAppend(count: 1 + orderedGroups.count + residents.count)
         let digest = AgentHouseholdDigest.make(
             "initialize|" + orderedGroups.map {
-                "\(householdPositionText($0.anchor)):\($0.ids.map(\.rawValue).joined(separator: ","))"
+                "\($0.settlementID.rawValue):\(householdPositionText($0.anchor)):"
+                    + $0.ids.map(\.rawValue).joined(separator: ",")
             }.joined(separator: ";")
         )
         let initialized = try requiredHouseholdEvent(
@@ -259,7 +267,7 @@ extension AgentSimulationSession {
                 causes: [state.lastHouseholdEventID],
                 payload: householdPayload(
                     householdID: householdID, ordinal: ordinal,
-                    settlementID: population.settlement.settlementID,
+                    settlementID: group.settlementID,
                     agentID: nil, anchor: group.anchor,
                     householdCount: state.households.count + 1,
                     membershipCount: state.membershipPeriods.count,
@@ -269,7 +277,7 @@ extension AgentSimulationSession {
             )
             var record = AgentHouseholdRecord(
                 householdID: householdID, ordinal: ordinal,
-                settlementID: population.settlement.settlementID,
+                settlementID: group.settlementID,
                 residenceAnchor: group.anchor, createdTick: tick,
                 createdEventID: created.eventID, status: .active,
                 dissolvedTick: nil, lastHouseholdEventID: created.eventID
@@ -287,7 +295,7 @@ extension AgentSimulationSession {
                     causes: [created.eventID],
                     payload: householdPayload(
                         householdID: householdID, ordinal: ordinal,
-                        settlementID: population.settlement.settlementID,
+                        settlementID: group.settlementID,
                         agentID: agentID, anchor: group.anchor,
                         householdCount: state.households.count,
                         membershipCount: state.membershipPeriods.count + 1,
@@ -316,12 +324,23 @@ extension AgentSimulationSession {
     private mutating func formHouseholdInPlace(
         memberIDs: [AgentID],
         residenceAnchor: AgentPosition,
-        joinedReason: AgentHouseholdMembershipReason
+        joinedReason: AgentHouseholdMembershipReason,
+        leavingReason: AgentHouseholdMembershipReason = .leftForNewHousehold,
+        causeEventIDs: [AgentCausalEventID] = []
     ) throws -> AgentHouseholdRecord {
         guard var state = householdState else {
             throw AgentSessionError.household(.kinshipRequired)
         }
         let members = try prevalidatedHouseholdMembers(memberIDs, state: state)
+        let memberSettlementIDs = Set(members.compactMap { agentID in
+            populationRegistry?.members.first { $0.agentID == agentID }?.settlementID
+        })
+        guard memberSettlementIDs.count == 1,
+              let settlementID = memberSettlementIDs.first else {
+            throw AgentSessionError.household(.invalidState(
+                "household members span settlements"
+            ))
+        }
         guard state.households.count < state.configuration.maximumHistoricalHouseholds else {
             throw AgentSessionError.household(.householdCapacityReached)
         }
@@ -356,10 +375,10 @@ extension AgentSimulationSession {
         let priorLast = state.lastHouseholdEventID
         let created = try requiredHouseholdEvent(
             kind: .householdCreated,
-            causes: [priorLast],
+            causes: Array(Set([priorLast] + causeEventIDs)).sorted(),
             payload: householdPayload(
                 householdID: householdID, ordinal: state.nextHouseholdOrdinal,
-                settlementID: populationRegistry!.settlement.settlementID,
+                settlementID: settlementID,
                 agentID: nil, anchor: residenceAnchor,
                 householdCount: state.households.count + 1,
                 membershipCount: state.membershipPeriods.count,
@@ -369,7 +388,7 @@ extension AgentSimulationSession {
         )
         var newRecord = AgentHouseholdRecord(
             householdID: householdID, ordinal: state.nextHouseholdOrdinal,
-            settlementID: populationRegistry!.settlement.settlementID,
+            settlementID: settlementID,
             residenceAnchor: residenceAnchor, createdTick: tick,
             createdEventID: created.eventID, status: .active,
             dissolvedTick: nil, lastHouseholdEventID: created.eventID
@@ -387,27 +406,31 @@ extension AgentSimulationSession {
             let ended = try requiredHouseholdEvent(
                 kind: .householdMembershipEnded,
                 actorID: agentID, subjectID: agentID,
-                causes: [created.eventID, prior.joinedEventID].sorted(),
+                causes: Array(Set(
+                    [created.eventID, prior.joinedEventID] + causeEventIDs
+                )).sorted(),
                 payload: householdPayload(
                     householdID: prior.householdID,
                     ordinal: state.households.first {
                         $0.householdID == prior.householdID
                     }!.ordinal,
-                    settlementID: populationRegistry!.settlement.settlementID,
+                    settlementID: state.households.first {
+                        $0.householdID == prior.householdID
+                    }!.settlementID,
                     agentID: agentID,
                     anchor: state.households.first {
                         $0.householdID == prior.householdID
                     }!.residenceAnchor,
                     householdCount: state.households.count,
                     membershipCount: state.membershipPeriods.count,
-                    reason: .leftForNewHousehold, status: "membershipEnded",
+                    reason: leavingReason, status: "membershipEnded",
                     digest: state.rollingDigest
                 ),
                 summary: "household membership ended agent=\(agentID.rawValue) household=\(prior.householdID.rawValue)"
             )
             state.membershipPeriods[priorIndex].leftTick = tick
             state.membershipPeriods[priorIndex].leftEventID = ended.eventID
-            state.membershipPeriods[priorIndex].leftReason = .leftForNewHousehold
+            state.membershipPeriods[priorIndex].leftReason = leavingReason
             if let sourceIndex = state.households.firstIndex(where: {
                 $0.householdID == prior.householdID
             }) {
@@ -417,7 +440,9 @@ extension AgentSimulationSession {
             let joined = try requiredHouseholdEvent(
                 kind: .householdMembershipStarted,
                 actorID: agentID, subjectID: agentID,
-                causes: [created.eventID, ended.eventID].sorted(),
+                causes: Array(Set(
+                    [created.eventID, ended.eventID] + causeEventIDs
+                )).sorted(),
                 payload: householdPayload(
                     householdID: householdID, ordinal: newRecord.ordinal,
                     settlementID: newRecord.settlementID, agentID: agentID,
@@ -476,6 +501,14 @@ extension AgentSimulationSession {
         }) else { throw AgentSessionError.household(.unknownHousehold(householdID)) }
         guard state.households[targetIndex].status == .active else {
             throw AgentSessionError.household(.dissolvedHousehold(householdID))
+        }
+        guard members.allSatisfy({ agentID in
+            populationRegistry?.members.first { $0.agentID == agentID }?
+                .settlementID == state.households[targetIndex].settlementID
+        }) else {
+            throw AgentSessionError.household(.invalidState(
+                "household move spans settlements"
+            ))
         }
         guard members.allSatisfy({ currentHouseholdID(for: $0, in: state) != householdID }) else {
             throw AgentSessionError.household(.noOp)
@@ -666,6 +699,7 @@ extension AgentSimulationSession {
 
     func householdBirthEventCount(
         parentIDs: [AgentID],
+        settlementID: AgentSettlementID,
         preferredHouseholdID: AgentHouseholdID? = nil
     ) throws -> Int {
         guard let state = householdState else { return 0 }
@@ -685,6 +719,7 @@ extension AgentSimulationSession {
             let targetID = preferredHouseholdID ?? first
             guard state.households.contains(where: {
                 $0.householdID == targetID && $0.status == .active
+                    && $0.settlementID == settlementID
             }) else {
                 throw AgentSessionError.household(.unknownHousehold(targetID))
             }
@@ -701,13 +736,15 @@ extension AgentSimulationSession {
     mutating func registerHouseholdBirth(
         childID: AgentID,
         parentIDs: [AgentID],
+        settlementID: AgentSettlementID,
         residenceAnchor: AgentPosition,
         causeEventID: AgentCausalEventID,
         preferredHouseholdID: AgentHouseholdID? = nil
     ) throws -> AgentCausalEventID? {
         guard var state = householdState else { return nil }
         _ = try householdBirthEventCount(
-            parentIDs: parentIDs, preferredHouseholdID: preferredHouseholdID
+            parentIDs: parentIDs, settlementID: settlementID,
+            preferredHouseholdID: preferredHouseholdID
         )
         let first = currentHouseholdID(for: parentIDs[0], in: state)!
         let second = currentHouseholdID(for: parentIDs[1], in: state)!
@@ -719,12 +756,18 @@ extension AgentSimulationSession {
         } else {
             target = try createRootHouseholdInPlace(
                 agentID: childID,
+                settlementID: settlementID,
                 residenceAnchor: residenceAnchor,
                 reason: .birth,
                 causeEventID: causeEventID,
                 state: &state,
                 createMembership: false
             )
+        }
+        guard target.settlementID == settlementID else {
+            throw AgentSessionError.household(.invalidState(
+                "birth household settlement"
+            ))
         }
         let joined = try startRootMembershipInPlace(
             agentID: childID,
@@ -764,8 +807,14 @@ extension AgentSimulationSession {
     ) throws {
         guard var state = householdState else { return }
         try prevalidateHouseholdMigrationAdmission()
+        guard let settlementID = populationRegistry?.members.first(where: {
+            $0.agentID == agentID
+        })?.settlementID else {
+            throw AgentSessionError.household(.invalidMembership(agentID))
+        }
         _ = try createRootHouseholdInPlace(
             agentID: agentID,
+            settlementID: settlementID,
             residenceAnchor: residenceAnchor,
             reason: .migrationAdmission,
             causeEventID: causeEventID,
@@ -783,6 +832,68 @@ extension AgentSimulationSession {
         state.households.sort(by: householdRecordSort)
         state.membershipPeriods.sort(by: householdPeriodSort)
         householdState = state
+    }
+
+    func prevalidateHouseholdSettlementMigration(
+        agentID: AgentID,
+        destinationSettlementID: AgentSettlementID
+    ) throws {
+        guard let state = householdState else { return }
+        guard let registry = populationRegistry,
+              registry.settlement(withID: destinationSettlementID) != nil,
+              let member = registry.members.first(where: {
+                  $0.agentID == agentID
+              }),
+              let membership = state.membershipPeriods.first(where: {
+                  $0.agentID == agentID && $0.leftTick == nil
+              }),
+              let source = state.households.first(where: {
+                  $0.householdID == membership.householdID
+              }), source.status == .active,
+              source.settlementID == member.settlementID,
+              source.settlementID != destinationSettlementID else {
+            throw AgentSessionError.household(.invalidMembership(agentID))
+        }
+        guard state.households.count < state.configuration.maximumHistoricalHouseholds else {
+            throw AgentSessionError.household(.householdCapacityReached)
+        }
+        guard state.membershipPeriods.count < state.configuration.maximumMembershipPeriods else {
+            throw AgentSessionError.household(.membershipPeriodCapacityReached)
+        }
+        let sourceWillDissolve = currentMemberIDs(
+            of: source.householdID, in: state
+        ).count == 1
+        let activeCount = state.households.filter { $0.status == .active }.count
+            + 1 - (sourceWillDissolve ? 1 : 0)
+        guard activeCount <= state.configuration.maximumActiveHouseholds else {
+            throw AgentSessionError.household(.activeHouseholdCapacityReached)
+        }
+        guard state.nextHouseholdOrdinal.rawValue < Int.max else {
+            throw AgentSessionError.household(.ordinalOverflow)
+        }
+        var preview = state
+        try prevalidateHouseholdTransitionCount(1, state: &preview)
+    }
+
+    mutating func registerHouseholdSettlementMigrationArrival(
+        agentID: AgentID,
+        destinationSettlementID: AgentSettlementID,
+        residenceAnchor: AgentPosition,
+        causeEventID: AgentCausalEventID
+    ) throws {
+        guard householdState != nil else { return }
+        guard populationRegistry?.members.first(where: {
+            $0.agentID == agentID
+        })?.settlementID == destinationSettlementID else {
+            throw AgentSessionError.household(.invalidMembership(agentID))
+        }
+        _ = try formHouseholdInPlace(
+            memberIDs: [agentID],
+            residenceAnchor: residenceAnchor,
+            joinedReason: .settlementMigration,
+            leavingReason: .settlementMigration,
+            causeEventIDs: [causeEventID]
+        )
     }
 
     mutating func registerHouseholdArrivalIfNeeded(
@@ -896,6 +1007,7 @@ extension AgentSimulationSession {
 
     private mutating func createRootHouseholdInPlace(
         agentID: AgentID,
+        settlementID: AgentSettlementID,
         residenceAnchor: AgentPosition,
         reason: AgentHouseholdMembershipReason,
         causeEventID: AgentCausalEventID,
@@ -910,7 +1022,7 @@ extension AgentSimulationSession {
             causes: Array(Set([causeEventID, state.lastHouseholdEventID])).sorted(),
             payload: householdPayload(
                 householdID: householdID, ordinal: ordinal,
-                settlementID: populationRegistry!.settlement.settlementID,
+                settlementID: settlementID,
                 agentID: nil, anchor: residenceAnchor,
                 householdCount: state.households.count + 1,
                 membershipCount: state.membershipPeriods.count,
@@ -920,7 +1032,7 @@ extension AgentSimulationSession {
         )
         var record = AgentHouseholdRecord(
             householdID: householdID, ordinal: ordinal,
-            settlementID: populationRegistry!.settlement.settlementID,
+            settlementID: settlementID,
             residenceAnchor: residenceAnchor, createdTick: tick,
             createdEventID: created.eventID, status: .active,
             dissolvedTick: nil, lastHouseholdEventID: created.eventID
@@ -1091,9 +1203,10 @@ extension AgentSimulationSession {
                 throw AgentHouseholdError.invalidCausalReference(state.initializedEventID)
             }
         }
+        let settlementIDs = Set(population.settlements.map(\.settlementID))
         for record in state.households {
             guard record.householdID.rawValue == "household_\(record.ordinal.rawValue)",
-                  record.settlementID == population.settlement.settlementID,
+                  settlementIDs.contains(record.settlementID),
                   record.createdTick >= 0, record.createdTick <= clock.tick.rawValue,
                   record.createdEventID.simulationID == clock.simulationID,
                   record.lastHouseholdEventID.simulationID == clock.simulationID,
@@ -1284,12 +1397,16 @@ extension AgentSimulationSession {
             if resident || admittedAfterActivation {
                 guard let open, let household = recordsByID[open.householdID],
                       let agent = agentsByID[member.agentID],
+                      household.settlementID == member.settlementID,
                       agent.homePosition == household.residenceAnchor else {
                     throw AgentHouseholdError.projectionMismatch(member.agentID)
                 }
-            } else if let open, let household = recordsByID[open.householdID],
-                      agentsByID[member.agentID]?.homePosition != household.residenceAnchor {
-                throw AgentHouseholdError.projectionMismatch(member.agentID)
+            } else if let open, let household = recordsByID[open.householdID] {
+                guard household.settlementID == member.settlementID,
+                      agentsByID[member.agentID]?.homePosition
+                        == household.residenceAnchor else {
+                    throw AgentHouseholdError.projectionMismatch(member.agentID)
+                }
             }
         }
         for (agentID, periods) in periodsByAgent where periods.contains(where: {

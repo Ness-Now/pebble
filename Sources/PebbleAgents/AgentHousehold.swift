@@ -101,6 +101,7 @@ public enum AgentHouseholdMembershipReason: String, Codable, CaseIterable, Senda
     case joinedHousehold
     case birth
     case migrationAdmission
+    case settlementMigration
     case leftForNewHousehold
     case death
     case householdDissolution

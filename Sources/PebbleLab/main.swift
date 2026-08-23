@@ -41,6 +41,10 @@ if options.scenario == "gate_f_blocker_03_birth_exit_smoke"
     || options.scenario == "gate_f_blocker_03_birth_restore_smoke" {
     runGateFBlocker03DynamicFidelitySmoke(options)
 }
+if options.scenario == "gate_f_blocker_04_household_exit_smoke"
+    || options.scenario == "gate_f_blocker_04_household_restore_smoke" {
+    runGateFBlocker04HouseholdMigrationSmoke(options)
+}
 if options.scenario == "settlement_metrics_multiscale_smoke" {
     runSettlementMetricsMultiscaleSmoke(options)
 }
