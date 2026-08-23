@@ -81,10 +81,22 @@ Gate F correction history:
   blocker HEAD `2c6fe63e81b20ee4a37315a6f5ad528a721c2355`, and independent remote
   verification passed. The final review archive SHA-256 is
   `26c2cfb0326623c276bed2d7c3838394792d7e6f590b2a5aee41ea3cbdeb2a6f`.
+- Gate F Evaluation 04: **FAIL — HISTORICAL IMMUTABLE EVIDENCE** for exact
+  evaluated baseline `9b261c2bc513e1abfc31cdcf0acb64cdf035508c`, harness
+  commit `136b1ebed6a153166d0887722f8ca08adf2e9644`, final evidence HEAD
+  `eb26347bbbdbd4954d8ed975e6ca30de97d14bd4`, review archive SHA-256
+  `4bfcd1ac27c89be8688e89ce0c3ada99cb1de5c47be7a7752e09e25520159e60`
+  and deterministic blocker digest
+  `5401cad6b29ffa07ec20c388601efd26847eb28305c1006e53046967698f5095`.
+- V4-GATE-F-v1 Blocker 04: **FIXED — LOCAL CORRECTION CANDIDATE** at
+  product/test/runtime-proof commit
+  `f1be1830c2d5903a0765d028fd7a3a0e821afec7`. Verified scaled arrival now
+  closes origin household membership and creates one settlement-aware
+  destination singleton household; unsupported active care, guardianship and
+  child relocation refuses before physical movement. Checkpoint schema 35 and
+  Observer schema 13 are unchanged. The correction is not published.
 - Gate F remains **PLANNED — NOT ACQUIRED**.
-- Gate F Evaluation 04 is **NOT PERFORMED**.
-- The next authorized required action is
-  `NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-04`.
+- Gate F Evaluation 05 is **NOT AUTHORIZED / NOT PERFORMED**.
 
 Published Gate E history:
 
@@ -484,7 +496,7 @@ the Gate E acquisition are now published and independently remote verified.
 active CIV phase: none
 completed and published through: CIV-39 (CIV-38 remains optional and unstarted)
 next eligible phase: null; Gate F remains planned and not acquired
-next authorized action: NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-04
+next authorized action: senior review of local Gate F Blocker 04 correction candidate
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -535,7 +547,9 @@ Gate F Evaluation 02 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-F-v1 Blocker 02 status: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate F Evaluation 03 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-F-v1 Blocker 03 status: FIXED + PUBLISHED + REMOTE VERIFIED
-Gate F Evaluation 04 status: NOT PERFORMED
+Gate F Evaluation 04 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
+V4-GATE-F-v1 Blocker 04 status: FIXED — LOCAL CORRECTION CANDIDATE
+Gate F Evaluation 05 status: NOT AUTHORIZED / NOT PERFORMED
 CIV-40 status: OPTIONAL TOOLING — NOT STARTED
 CIV-41 status: NOT STARTED
 roadmap generation: V4
@@ -868,9 +882,17 @@ documented in
 [`GATE_F_BLOCKER_03_DYNAMIC_FIDELITY_AUTHORITY.md`](GATE_F_BLOCKER_03_DYNAMIC_FIDELITY_AUTHORITY.md).
 Senior review approved manual fast-forward, publication completed at canonical
 blocker HEAD `2c6fe63e81b20ee4a37315a6f5ad528a721c2355`, and independent remote
-verification passed. Gate F remains **PLANNED — NOT ACQUIRED**. Evaluation 04
-is **NOT PERFORMED**; the next authorized required action is
-`NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-04`.
+verification passed. Evaluation 04 then failed against baseline
+`9b261c2bc513e1abfc31cdcf0acb64cdf035508c`; harness
+`136b1ebed6a153166d0887722f8ca08adf2e9644` and final evidence HEAD
+`eb26347bbbdbd4954d8ed975e6ca30de97d14bd4` remain **FAIL — HISTORICAL
+IMMUTABLE EVIDENCE**. Blocker 04 is **FIXED — LOCAL CORRECTION CANDIDATE** at
+product/test/runtime-proof commit
+`f1be1830c2d5903a0765d028fd7a3a0e821afec7`, documented in
+[`GATE_F_BLOCKER_04_HOUSEHOLD_MIGRATION_AUTHORITY.md`](GATE_F_BLOCKER_04_HOUSEHOLD_MIGRATION_AUTHORITY.md).
+It composes verified settlement arrival with current household and residence
+authority without weakening restore validation. Gate F remains **PLANNED — NOT
+ACQUIRED**. Evaluation 05 is **NOT AUTHORIZED / NOT PERFORMED**.
 `CIV-38` remains **OPTIONAL — NOT STARTED** and is not a prerequisite.
 `CIV-40` remains **OPTIONAL TOOLING — NOT STARTED**. Currency is not a Gate E
 or CIV-39 prerequisite.

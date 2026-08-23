@@ -134,7 +134,15 @@
     "gateFBlocker03PublishedCanonicalHead": "2c6fe63e81b20ee4a37315a6f5ad528a721c2355",
     "gateFBlocker03ReviewArchiveSHA256": "26c2cfb0326623c276bed2d7c3838394792d7e6f590b2a5aee41ea3cbdeb2a6f",
     "gateFBlocker03Status": "fixedPublishedRemoteVerified",
-    "meaning": "Canonical published product history is complete through CIV-39, with optional CIV-38 unstarted; Gate E is acquired and published at independently remote-verified canonical HEAD 076a616a97a229e921a5c36eebdfd12f76744f83; CIV-39 is complete and published at independently remote-verified canonical HEAD 0b0ec535cda62b70add182875c65eaee27bb5bb2 after Senior Review Correction 01 and Evidence Reconciliation 02; Gate F Evaluations 01 through 03 are FAIL historical immutable evidence; Gate F Blockers 01 through 03 are fixed, published and independently remote verified; Gate F remains planned and not acquired; Evaluation 04 was not performed and NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-04 is the next authorized action; CIV-40 remains optional tooling and not started; currency is not a Gate E or CIV-39 dependency.",
+    "gateFEvaluation04EvaluatedProductHead": "9b261c2bc513e1abfc31cdcf0acb64cdf035508c",
+    "gateFEvaluation04HarnessCommit": "136b1ebed6a153166d0887722f8ca08adf2e9644",
+    "gateFEvaluation04FinalEvidenceHead": "eb26347bbbdbd4954d8ed975e6ca30de97d14bd4",
+    "gateFEvaluation04ReviewArchiveSHA256": "4bfcd1ac27c89be8688e89ce0c3ada99cb1de5c47be7a7752e09e25520159e60",
+    "gateFEvaluation04DeterministicBlockerDigest": "5401cad6b29ffa07ec20c388601efd26847eb28305c1006e53046967698f5095",
+    "gateFEvaluation04BlockerKind": "scaledMigrationHouseholdProjection",
+    "gateFBlocker04ProductCorrectionCommit": "f1be1830c2d5903a0765d028fd7a3a0e821afec7",
+    "gateFBlocker04Status": "fixedLocalCorrectionCandidate",
+    "meaning": "Canonical published product history is complete through CIV-39, with optional CIV-38 unstarted; Gate E is acquired and published at independently remote-verified canonical HEAD 076a616a97a229e921a5c36eebdfd12f76744f83; CIV-39 is complete and published at independently remote-verified canonical HEAD 0b0ec535cda62b70add182875c65eaee27bb5bb2 after Senior Review Correction 01 and Evidence Reconciliation 02; Gate F Evaluations 01 through 04 are FAIL historical immutable evidence; Gate F Blockers 01 through 03 are fixed, published and independently remote verified; Gate F Blocker 04 is fixed only as a local correction candidate at product/test/runtime-proof commit f1be1830c2d5903a0765d028fd7a3a0e821afec7; Gate F remains planned and not acquired; Evaluation 05 is not authorized or performed; CIV-40 remains optional tooling and not started; currency is not a Gate E or CIV-39 dependency.",
     "safeBootstrapHardeningPublished": true
   },
   "documents": {
@@ -160,6 +168,7 @@
     "gateFBlocker01SettlementAdmissionCapacity": "docs/pebblelab/GATE_F_BLOCKER_01_SETTLEMENT_ADMISSION_CAPACITY.md",
     "gateFBlocker02MigrationDestinationCapacity": "docs/pebblelab/GATE_F_BLOCKER_02_MIGRATION_DESTINATION_CAPACITY.md",
     "gateFBlocker03DynamicFidelityAuthority": "docs/pebblelab/GATE_F_BLOCKER_03_DYNAMIC_FIDELITY_AUTHORITY.md",
+    "gateFBlocker04HouseholdMigrationAuthority": "docs/pebblelab/GATE_F_BLOCKER_04_HOUSEHOLD_MIGRATION_AUTHORITY.md",
     "gateEBlocker01ExactProductionProvenance": "docs/pebblelab/GATE_E_BLOCKER_01_EXACT_PRODUCTION_PROVENANCE.md",
     "gateEBlocker02EvolvedProductionIdentity": "docs/pebblelab/GATE_E_BLOCKER_02_EVOLVED_PRODUCTION_IDENTITY.md",
     "gateEBlocker03TerminalMarketReservationAuthority": "docs/pebblelab/GATE_E_BLOCKER_03_TERMINAL_MARKET_RESERVATION_AUTHORITY.md",
@@ -193,7 +202,7 @@
     "activePhase": null,
     "completedThrough": "CIV-39",
     "nextEligiblePhase": null,
-    "nextAuthorizedAction": "NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-04",
+    "nextAuthorizedAction": "seniorReviewGateFBlocker04LocalCorrectionCandidate",
     "civ27Status": "completed",
     "civ28Status": "completed",
     "gateCStatus": "acquired",
@@ -2315,8 +2324,26 @@
     "blocker03Evidence": [
       "docs/pebblelab/GATE_F_BLOCKER_03_DYNAMIC_FIDELITY_AUTHORITY.md"
     ],
-    "evaluation04Status": "notPerformed",
-    "nextAuthorizedAction": "NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-04",
+    "evaluation04Status": "evaluatedFailHistoricalImmutableEvidence",
+    "evaluation04Evidence": {
+      "evaluatedProductHead": "9b261c2bc513e1abfc31cdcf0acb64cdf035508c",
+      "harnessCommit": "136b1ebed6a153166d0887722f8ca08adf2e9644",
+      "finalEvidenceHead": "eb26347bbbdbd4954d8ed975e6ca30de97d14bd4",
+      "reviewArchiveSHA256": "4bfcd1ac27c89be8688e89ce0c3ada99cb1de5c47be7a7752e09e25520159e60",
+      "deterministicBlockerDigest": "5401cad6b29ffa07ec20c388601efd26847eb28305c1006e53046967698f5095",
+      "blockerKind": "scaledMigrationHouseholdProjection",
+      "verdict": "FAIL_HISTORICAL_IMMUTABLE_EVIDENCE"
+    },
+    "blocker04Status": "fixedLocalCorrectionCandidate",
+    "blocker04Fixed": true,
+    "blocker04Published": false,
+    "blocker04PublicationVerified": false,
+    "blocker04ProductCorrectionCommit": "f1be1830c2d5903a0765d028fd7a3a0e821afec7",
+    "blocker04Evidence": [
+      "docs/pebblelab/GATE_F_BLOCKER_04_HOUSEHOLD_MIGRATION_AUTHORITY.md"
+    ],
+    "evaluation05Status": "notAuthorizedNotPerformed",
+    "nextAuthorizedAction": "seniorReviewGateFBlocker04LocalCorrectionCandidate",
       "requiredPhases": [
         "CIV-39"
       ],
