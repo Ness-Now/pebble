@@ -110,6 +110,219 @@ extension AgentSimulationSession {
         }
     }
 
+    /// Returns the one deterministic CIV-39 tier assignment for a complete
+    /// current population. Population ordinal owns ring order; active legacy
+    /// and settlement migrants are pinned before the rotating window is
+    /// filled. Every caller that creates or rotates fidelity authority uses
+    /// this policy rather than selecting a tier in its owning domain.
+    private func fidelityPolicyAssignments(
+        members: [(agentID: AgentID, ordinal: AgentPopulationOrdinal)],
+        configuration: AgentPopulationScaleConfiguration,
+        rotationOffset: Int,
+        activeMigrantIDs: Set<AgentID>
+    ) throws -> [AgentID: AgentSimulationFidelity] {
+        let ordered = members.sorted {
+            $0.ordinal == $1.ordinal
+                ? $0.agentID < $1.agentID : $0.ordinal < $1.ordinal
+        }
+        let memberIDs = Set(ordered.map(\.agentID))
+        guard memberIDs.count == ordered.count,
+              Set(ordered.map(\.ordinal)).count == ordered.count,
+              activeMigrantIDs.isSubset(of: memberIDs),
+              activeMigrantIDs.count <= configuration.maximumLiveAgents else {
+            throw AgentSessionError.population(
+                .invalidConfiguration("fidelity policy membership")
+            )
+        }
+        guard !ordered.isEmpty else { return [:] }
+
+        var desired: [AgentID: AgentSimulationFidelity] = [:]
+        for id in activeMigrantIDs.sorted() { desired[id] = .live }
+        let offset = rotationOffset % ordered.count
+        let ring = (0..<ordered.count).map {
+            ordered[(offset + $0) % ordered.count].agentID
+        }.filter { desired[$0] == nil }
+        let liveRemaining = max(
+            0, configuration.maximumLiveAgents - desired.count
+        )
+        for id in ring.prefix(liveRemaining) { desired[id] = .live }
+        for id in ring.dropFirst(liveRemaining).prefix(
+            configuration.maximumNearAgents
+        ) { desired[id] = .near }
+        for id in ring where desired[id] == nil { desired[id] = .dormant }
+        return desired
+    }
+
+    private func activeFidelityMigrationIDs(
+        in registry: AgentPopulationRegistry
+    ) -> Set<AgentID> {
+        Set(registry.migrations.compactMap { migration in
+            migration.status == .admitted || migration.status == .inTransit
+                ? migration.migrantID : nil
+        }).union(Set(registry.scaleState?.settlementMigrations.compactMap {
+            $0.status == .inTransit ? $0.agentID : nil
+        } ?? []))
+    }
+
+    /// Prevalidates the exact transition/ordinal work needed to add one current
+    /// population identity while scale authority is active. The caller invokes
+    /// this before its first causal publication; the later reconciliation is
+    /// therefore unable to consume a partial fidelity ordinal on rejection.
+    func dynamicFidelityTransitionCount(
+        in registry: AgentPopulationRegistry,
+        adding agentID: AgentID,
+        ordinal: AgentPopulationOrdinal,
+        activeMigration: Bool
+    ) throws -> Int {
+        guard let scale = registry.scaleState else { return 0 }
+        let memberIDs = Set(registry.members.map(\.agentID))
+        let recordIDs = scale.fidelityRecords.map(\.agentID)
+        guard !memberIDs.contains(agentID),
+              !recordIDs.contains(agentID),
+              Set(recordIDs) == memberIDs,
+              Set(recordIDs).count == recordIDs.count else {
+            throw AgentSessionError.population(
+                .invalidConfiguration("dynamic fidelity authority")
+            )
+        }
+        var policyMembers = registry.members.map {
+            (agentID: $0.agentID, ordinal: $0.ordinal)
+        }
+        policyMembers.append((agentID: agentID, ordinal: ordinal))
+        var activeMigrantIDs = activeFidelityMigrationIDs(in: registry)
+        if activeMigration { activeMigrantIDs.insert(agentID) }
+        let desired = try fidelityPolicyAssignments(
+            members: policyMembers,
+            configuration: scale.configuration,
+            rotationOffset: scale.rotationOffset,
+            activeMigrantIDs: activeMigrantIDs
+        )
+        let changedExisting = scale.fidelityRecords.filter {
+            desired[$0.agentID] != $0.fidelity
+        }
+        guard changedExisting.allSatisfy({ $0.transitionCount < Int.max }) else {
+            throw AgentSessionError.population(.ordinalOverflow)
+        }
+        let count = changedExisting.count + 1
+        guard UInt64(count) <= UInt64.max
+                - scale.nextFidelityTransitionOrdinal else {
+            throw AgentSessionError.population(.ordinalOverflow)
+        }
+        return count
+    }
+
+    /// Atomically composes one already-staged population member with current
+    /// CIV-39 fidelity authority. The owning birth or migration transaction
+    /// remains responsible for the person; this method alone owns tier policy,
+    /// transition causality, history compaction and scale ordinals.
+    @discardableResult
+    mutating func reconcileDynamicFidelityAuthority(
+        in registry: inout AgentPopulationRegistry,
+        for agentID: AgentID,
+        membershipCauseEventID: AgentCausalEventID
+    ) throws -> AgentCausalEventID? {
+        guard var scale = registry.scaleState else { return nil }
+        let memberIDs = Set(registry.members.map(\.agentID))
+        let recordIDs = scale.fidelityRecords.map(\.agentID)
+        guard memberIDs.contains(agentID),
+              !recordIDs.contains(agentID),
+              Set(recordIDs) == memberIDs.subtracting([agentID]),
+              Set(recordIDs).count == recordIDs.count else {
+            throw AgentSessionError.population(
+                .invalidConfiguration("dynamic fidelity authority")
+            )
+        }
+        let activeMigrantIDs = activeFidelityMigrationIDs(in: registry)
+        let desired = try fidelityPolicyAssignments(
+            members: registry.members.map {
+                (agentID: $0.agentID, ordinal: $0.ordinal)
+            },
+            configuration: scale.configuration,
+            rotationOffset: scale.rotationOffset,
+            activeMigrantIDs: activeMigrantIDs
+        )
+        let existingByID = Dictionary(uniqueKeysWithValues:
+            scale.fidelityRecords.enumerated().map { ($0.element.agentID, $0.offset) }
+        )
+        let changedIDs = registry.members.compactMap { member -> AgentID? in
+            guard let tier = desired[member.agentID] else { return member.agentID }
+            return existingByID[member.agentID].map {
+                scale.fidelityRecords[$0].fidelity == tier ? nil : member.agentID
+            } ?? member.agentID
+        }.sorted()
+        guard changedIDs.contains(agentID),
+              UInt64(changedIDs.count) <= UInt64.max
+                - scale.nextFidelityTransitionOrdinal,
+              changedIDs.allSatisfy({ id in
+                  existingByID[id].map {
+                      scale.fidelityRecords[$0].transitionCount < Int.max
+                  } ?? true
+              }) else {
+            throw AgentSessionError.population(.ordinalOverflow)
+        }
+        try prevalidateCausalAppend(count: changedIDs.count)
+
+        let transitionCause: AgentFidelityTransitionCause =
+            activeMigrantIDs.isEmpty ? .initialPolicy : .activeMigration
+        var lastEventID: AgentCausalEventID?
+        for id in changedIDs {
+            guard scale.nextFidelityTransitionOrdinal < UInt64.max,
+                  let tier = desired[id] else {
+                throw AgentSessionError.population(.ordinalOverflow)
+            }
+            let existingIndex = scale.fidelityRecords.firstIndex {
+                $0.agentID == id
+            }
+            let from = existingIndex.map { scale.fidelityRecords[$0].fidelity }
+            let fromText = from?.rawValue ?? "none"
+            let event = try requiredPopulationEvent(
+                kind: .fidelityTransitioned,
+                actorID: id, subjectID: id,
+                causes: Array(Set([
+                    scale.lastScaleEventID, membershipCauseEventID,
+                ])).sorted(),
+                payload: .operation(
+                    status: tier.rawValue,
+                    detail: "agent=\(id.rawValue) from="
+                        + "\(fromText) cause="
+                        + transitionCause.rawValue
+                ),
+                summary: "fidelity reconciled agent=\(id.rawValue) "
+                    + "\(fromText)>\(tier.rawValue)"
+            )
+            if let index = existingIndex {
+                scale.fidelityRecords[index].fidelity = tier
+                scale.fidelityRecords[index].enteredTick = tick
+                scale.fidelityRecords[index].transitionCount += 1
+                scale.fidelityRecords[index].lastTransitionEventID = event.eventID
+                if tier != .live, var state = statesById[id.rawValue] {
+                    state.lastAction = nil
+                    state.lastActionEffect = nil
+                    statesById[id.rawValue] = state
+                }
+            } else {
+                scale.fidelityRecords.append(AgentFidelityRecord(
+                    agentID: id, fidelity: tier, enteredTick: tick,
+                    transitionCount: 1,
+                    lastTransitionEventID: event.eventID
+                ))
+            }
+            scale.fidelityTransitions.append(AgentFidelityTransitionRecord(
+                ordinal: scale.nextFidelityTransitionOrdinal,
+                agentID: id, from: from, to: tier, tick: tick,
+                cause: transitionCause, eventID: event.eventID
+            ))
+            scale.nextFidelityTransitionOrdinal += 1
+            scale.lastScaleEventID = event.eventID
+            registry.lastPopulationEventID = event.eventID
+            lastEventID = event.eventID
+        }
+        scale.fidelityRecords.sort { $0.agentID < $1.agentID }
+        compactScaleHistories(&scale)
+        registry.scaleState = scale
+        return lastEventID
+    }
+
     /// Starts CIV-39 from the existing population owner. New inhabitants are
     /// full AgentSessionAgentState records owned by this same session. This V1
     /// deliberately refuses to splice new people into already-active
@@ -179,6 +392,10 @@ extension AgentSimulationSession {
               registry.members.count + additions.count
                 <= registry.configuration.maximumActivePopulation else {
             throw AgentSessionError.population(.capacityReached)
+        }
+        guard additions.count <= Int.max
+                - registry.nextPopulationOrdinal.rawValue else {
+            throw AgentSessionError.population(.ordinalOverflow)
         }
         var capacityCandidate = registry
         capacityCandidate.additionalSettlements = sortedSettlements
@@ -261,19 +478,23 @@ extension AgentSimulationSession {
         }
         registry.members.sort { $0.agentID < $1.agentID }
         let orderedMembers = registry.members.sorted { $0.ordinal < $1.ordinal }
+        let activeMigrantIDs = activeFidelityMigrationIDs(in: registry)
+        let desired = try fidelityPolicyAssignments(
+            members: orderedMembers.map {
+                (agentID: $0.agentID, ordinal: $0.ordinal)
+            },
+            configuration: configuration,
+            rotationOffset: 0,
+            activeMigrantIDs: activeMigrantIDs
+        )
         var records: [AgentFidelityRecord] = []
         var transitions: [AgentFidelityTransitionRecord] = []
         var nextTransition: UInt64 = 1
-        for (index, member) in orderedMembers.enumerated() {
-            let tier: AgentSimulationFidelity
-            if index < configuration.maximumLiveAgents {
-                tier = .live
-            } else if index < configuration.maximumLiveAgents
-                + configuration.maximumNearAgents {
-                tier = .near
-            } else {
-                tier = .dormant
-            }
+        for member in orderedMembers {
+            let tier = desired[member.agentID]!
+            let cause: AgentFidelityTransitionCause = activeMigrantIDs.contains(
+                member.agentID
+            ) ? .activeMigration : .initialPolicy
             let event = try requiredPopulationEvent(
                 kind: .fidelityTransitioned,
                 actorID: member.agentID, subjectID: member.agentID,
@@ -281,7 +502,7 @@ extension AgentSimulationSession {
                 payload: .operation(
                     status: tier.rawValue,
                     detail: "agent=\(member.agentID.rawValue) from=none "
-                        + "cause=\(AgentFidelityTransitionCause.initialPolicy.rawValue)"
+                        + "cause=\(cause.rawValue)"
                 ),
                 summary: "fidelity initialized agent=\(member.agentID.rawValue) "
                     + "tier=\(tier.rawValue)"
@@ -292,7 +513,7 @@ extension AgentSimulationSession {
             ))
             transitions.append(AgentFidelityTransitionRecord(
                 ordinal: nextTransition, agentID: member.agentID,
-                from: nil, to: tier, tick: tick, cause: .initialPolicy,
+                from: nil, to: tier, tick: tick, cause: cause,
                 eventID: event.eventID
             ))
             nextTransition += 1
@@ -630,25 +851,15 @@ extension AgentSimulationSession {
         guard !ordered.isEmpty else { return }
         scale.rotationOffset = (scale.rotationOffset
             + scale.configuration.maximumLiveAgents) % ordered.count
-        let activeMigrantIDs = Set(scale.settlementMigrations.filter {
-            $0.status == .inTransit
-        }.map(\.agentID))
-        var desired: [AgentID: AgentSimulationFidelity] = [:]
-        let pinned = activeMigrantIDs.sorted()
-        for id in pinned.prefix(scale.configuration.maximumLiveAgents) {
-            desired[id] = .live
-        }
-        let ring = (0..<ordered.count).map {
-            ordered[(scale.rotationOffset + $0) % ordered.count].agentID
-        }.filter { desired[$0] == nil }
-        let liveRemaining = max(
-            0, scale.configuration.maximumLiveAgents - desired.count
+        let activeMigrantIDs = activeFidelityMigrationIDs(in: registry)
+        let desired = try fidelityPolicyAssignments(
+            members: ordered.map {
+                (agentID: $0.agentID, ordinal: $0.ordinal)
+            },
+            configuration: scale.configuration,
+            rotationOffset: scale.rotationOffset,
+            activeMigrantIDs: activeMigrantIDs
         )
-        for id in ring.prefix(liveRemaining) { desired[id] = .live }
-        for id in ring.dropFirst(liveRemaining).prefix(
-            scale.configuration.maximumNearAgents
-        ) { desired[id] = .near }
-        for id in ring where desired[id] == nil { desired[id] = .dormant }
         let cause: AgentFidelityTransitionCause = activeMigrantIDs.isEmpty
             ? .scheduledRotation : .activeMigration
         let changed = scale.fidelityRecords.indices.filter {

@@ -442,22 +442,12 @@ extension AgentSimulationSession {
             throw AgentSessionError.lifecycle(.populationRequired)
         }
         guard registry.members.count < registry.configuration.maximumActivePopulation else {
-            try cancelReproductionPlan(
-                &lifecycle, index: planIndex, plan: plan,
-                reason: .populationFull, status: .cancelled
-            )
-            lifecycleState = lifecycle
-            return nil
+            throw AgentSessionError.lifecycle(.populationFull)
         }
         guard registry.hasCommittedResidentCapacity(
             forProposedAdmissions: [registry.settlement.settlementID]
         ) else {
-            try cancelReproductionPlan(
-                &lifecycle, index: planIndex, plan: plan,
-                reason: .populationFull, status: .cancelled
-            )
-            lifecycleState = lifecycle
-            return nil
+            throw AgentSessionError.lifecycle(.populationFull)
         }
         if let parentFailure = reproductionPlanParentFailureReason(
             plan: plan, lifecycle: lifecycle, registry: registry
@@ -497,12 +487,17 @@ extension AgentSimulationSession {
         let birthID = AgentBirthID(
             rawValue: "birth-\(String(format: "%08d", lifecycle.totalBirthCount + 1))"
         )!
+        let dynamicFidelityEventCount = try dynamicFidelityTransitionCount(
+            in: registry, adding: newbornID, ordinal: ordinal,
+            activeMigration: false
+        )
         try prevalidateCausalAppend(
             count: (kinshipEnabled ? 4 : 3) + householdEventCount
                 + (careBirth == nil ? 0 : 2)
                 + (childhoodV2Enabled ? 2 : 0)
                 + (geneticsEnabled ? 1 : 0)
                 + familyEventCount
+                + dynamicFidelityEventCount
         )
         let site = try requiredLifecycleEvent(
             kind: .birthSiteValidated,
@@ -537,6 +532,30 @@ extension AgentSimulationSession {
             ),
             summary: "population member born id=\(newbornID.rawValue) birth=\(birthID.rawValue)"
         )
+        registry.members.append(AgentPopulationMemberRecord(
+            agentID: newbornID,
+            ordinal: ordinal,
+            settlementID: registry.settlement.settlementID,
+            status: .resident,
+            founder: false,
+            registeredTick: tick,
+            arrivalTick: tick,
+            migrationID: nil,
+            entryPosition: nil,
+            receptionPosition: observation.position,
+            registrationEventID: born.eventID,
+            arrivalEventID: born.eventID
+        ))
+        registry.members.sort { $0.agentID < $1.agentID }
+        registry.settlement.residentIDs.append(newbornID)
+        registry.settlement.residentIDs.sort()
+        registry.nextPopulationOrdinal = nextOrdinal
+        registry.lastPopulationEventID = born.eventID
+        let fidelityEventID = try reconcileDynamicFidelityAuthority(
+            in: &registry,
+            for: newbornID,
+            membershipCauseEventID: born.eventID
+        )
         let kinshipEventID = try registerKinshipBirth(
             childID: newbornID,
             ordinal: ordinal,
@@ -569,7 +588,10 @@ extension AgentSimulationSession {
             kind: .birthFinalized,
             actorID: plan.progenitorIDs[0],
             subjectID: newbornID,
-            causes: [careEventID ?? householdEventID ?? kinshipEventID ?? born.eventID],
+            causes: Array(Set([
+                careEventID ?? householdEventID ?? kinshipEventID ?? born.eventID,
+                fidelityEventID,
+            ].compactMap { $0 })).sorted(),
             payload: birthPayload(
                 birthID: birthID, plan: plan, newbornID: newbornID,
                 ordinal: ordinal, observation: observation, status: "finalized"
@@ -611,25 +633,6 @@ extension AgentSimulationSession {
             returnHomeMoveCount: 0,
             totalDistanceReducedTowardHome: 0
         )
-        registry.members.append(AgentPopulationMemberRecord(
-            agentID: newbornID,
-            ordinal: ordinal,
-            settlementID: registry.settlement.settlementID,
-            status: .resident,
-            founder: false,
-            registeredTick: tick,
-            arrivalTick: tick,
-            migrationID: nil,
-            entryPosition: nil,
-            receptionPosition: observation.position,
-            registrationEventID: born.eventID,
-            arrivalEventID: born.eventID
-        ))
-        registry.members.sort { $0.agentID < $1.agentID }
-        registry.settlement.residentIDs.append(newbornID)
-        registry.settlement.residentIDs.sort()
-        registry.nextPopulationOrdinal = nextOrdinal
-        registry.lastPopulationEventID = born.eventID
         let lifecycleMember = AgentLifecycleMember(
             agentID: newbornID,
             ordinal: ordinal,

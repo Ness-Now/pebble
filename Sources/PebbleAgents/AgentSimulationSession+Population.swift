@@ -248,11 +248,26 @@ extension AgentSimulationSession {
         var candidate = self
         try candidate.prevalidateKinshipAdmission(parentIDs: nil)
         try candidate.prevalidateHouseholdMigrationAdmission()
+        let dynamicFidelityEventCount: Int
+        if let registry = candidate.populationRegistry,
+           let migrantID = AgentID(
+               rawValue: "agent_\(registry.nextPopulationOrdinal.rawValue)"
+           ) {
+            dynamicFidelityEventCount = try candidate
+                .dynamicFidelityTransitionCount(
+                    in: registry, adding: migrantID,
+                    ordinal: registry.nextPopulationOrdinal,
+                    activeMigration: true
+                )
+        } else {
+            dynamicFidelityEventCount = 0
+        }
         try candidate.prevalidateCausalAppend(
             count: 4 + (candidate.lifecycleState == nil ? 0 : 1)
                 + (candidate.kinshipState == nil ? 0 : 1)
                 + (candidate.householdState == nil ? 0 : 2)
                 + (candidate.geneticsState == nil ? 0 : 1)
+                + dynamicFidelityEventCount
         )
         let migration = try candidate.admitMigrationInPlace(
             intent: intent,
@@ -362,10 +377,14 @@ extension AgentSimulationSession {
               let nextOrdinal = AgentPopulationOrdinal(rawValue: ordinal.rawValue + 1) else {
             throw AgentSessionError.population(.ordinalOverflow)
         }
+        let dynamicFidelityEventCount = try dynamicFidelityTransitionCount(
+            in: registry, adding: agentID, ordinal: ordinal,
+            activeMigration: true
+        )
         let migrationID = AgentMigrationID(
             rawValue: "migration-\(String(format: "%08d", ordinal.rawValue))"
         )!
-        try prevalidateCausalAppend(count: 4)
+        try prevalidateCausalAppend(count: 4 + dynamicFidelityEventCount)
         let proposed = try requiredPopulationEvent(
             kind: .migrationProposed,
             actorID: agentID,
@@ -518,6 +537,11 @@ extension AgentSimulationSession {
         registry.settlement.inTransitIDs.sort()
         registry.nextPopulationOrdinal = nextOrdinal
         registry.lastPopulationEventID = started.eventID
+        _ = try reconcileDynamicFidelityAuthority(
+            in: &registry,
+            for: agentID,
+            membershipCauseEventID: started.eventID
+        )
         populationRegistry = registry
         return migration
     }

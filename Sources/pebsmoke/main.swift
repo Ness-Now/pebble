@@ -109,6 +109,13 @@ if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
     exit(failed > 0 ? 1 : 0)
 }
 
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
+    == "gate-f-blocker-03" {
+    runPebbleAgentsGateFBlocker03Smoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
 if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "markets" {
     runPebbleAgentsMarketSmoke()
     print("\n\(passed) passed, \(failed) failed")
@@ -2489,6 +2496,7 @@ runPebbleAgentsPersistenceReplaySmoke()
 runPebbleAgentsPopulationMigrationSmoke()
 runPebbleAgentsPopulationScaleSmoke()
 runPebbleAgentsGateFBlocker01Smoke()
+runPebbleAgentsGateFBlocker03Smoke()
 runPebbleAgentsSettlementMetricsSmoke()
 runPebbleAgentsLocalEcologySmoke()
 runPebbleAgentsMortalityPopulationExitSmoke()
