@@ -1,15 +1,17 @@
 # Gate F Blocker 06 — Sequential Migration Historical-vs-Current Authority
 
-- Status: **FIXED — LOCAL CORRECTION CANDIDATE**
+- Status: **FIXED + PUBLISHED + REMOTE VERIFIED**
 - Gate F: **PLANNED — NOT ACQUIRED**
-- Evaluation 07: **NOT AUTHORIZED / NOT PERFORMED**
+- Evaluation 07: **NOT PERFORMED**
 - `CIV-40`: **OPTIONAL TOOLING — NOT STARTED**
 - `CIV-41`: **NOT STARTED**
 
 This record documents the targeted product correction for the deterministic
-contradiction found by independent Gate F Evaluation 06. The correction does
-not rewrite or import the evaluation, acquire Gate F, start a CIV phase, push,
-or regenerate goldens.
+contradiction found by independent Gate F Evaluation 06 and its subsequent
+publication reconciliation. The original correction did not rewrite or import
+the evaluation, acquire Gate F, start a CIV phase, push, or regenerate goldens.
+Senior review later approved manual fast-forward, publication completed and
+independent remote verification passed.
 
 ## Git identity and immutable evaluation evidence
 
@@ -21,6 +23,13 @@ or regenerate goldens.
   `codex/gate-f-blocker-06-sequential-migration-history`
 - product/test/runtime-proof commit:
   `647dade73afa4d8e044423f422292dbf0c08f43e`
+- published canonical blocker HEAD:
+  `fe5bca7074b8ac65c31e03299195c3d7cfe307b1`
+- final correction review archive SHA-256:
+  `ab2c496aa84af59cd1f3d72906cee55f8f8c7e381720165a5052a2b8d1807f6c`
+- senior review: **APPROVED FOR MANUAL FAST-FORWARD**
+- manual publication: **COMPLETED**
+- independent remote verification: **PASS**
 - Evaluation 06 harness commit
   `21523064810d10c30f10315397508431e34bb12a` is not an ancestor
 - Evaluation 06 final-evidence commit
@@ -28,8 +37,7 @@ or regenerate goldens.
 - push attempted: **NO**
 
 Gate F Evaluations 01–06 remain **FAIL — HISTORICAL IMMUTABLE EVIDENCE**.
-Blockers 01–05 remain **FIXED + PUBLISHED + REMOTE VERIFIED**. Blocker 06 is
-**FIXED — LOCAL CORRECTION CANDIDATE**.
+Blockers 01–06 are **FIXED + PUBLISHED + REMOTE VERIFIED**.
 
 Evaluation 06 immutable identifiers:
 
@@ -214,10 +222,14 @@ Documentation/status surfaces are this report, `CODEX_START_HERE.md`,
 ## Boundary and non-claims
 
 - Gate F Evaluations 01–06 remain immutable historical FAIL evidence.
-- Gate F Blockers 01–05 remain fixed, published and remote verified.
-- Blocker 06 is a local correction candidate only; it is not published or
-  remotely verified.
-- Evaluation 07 was not authorized or performed.
+- Gate F Blockers 01–06 are fixed, published and remote verified. Blocker 06
+  is published at canonical HEAD
+  `fe5bca7074b8ac65c31e03299195c3d7cfe307b1`; its final correction review
+  archive SHA-256 is
+  `ab2c496aa84af59cd1f3d72906cee55f8f8c7e381720165a5052a2b8d1807f6c`.
+- Evaluation 07 was not performed. After this documentation reconciliation is
+  reviewed, published and remotely verified, the next authorized action is
+  `NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-07`.
 - Gate F remains planned and was not acquired.
 - `CIV-40` and `CIV-41` were not started.
 - Checkpoint schema 35 and Observer schema 13 are unchanged.

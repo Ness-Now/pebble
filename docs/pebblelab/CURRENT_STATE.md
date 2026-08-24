@@ -126,16 +126,20 @@ Gate F correction history:
   Its blocker kind is `sequentialMigrationHistoricalArrivalValidation` and
   deterministic digest is
   `1795926d8b9452dc35284aa214c63f58c074c7febd165c7ab9865929d7d531d2`.
-- V4-GATE-F-v1 Blocker 06: **FIXED — LOCAL CORRECTION CANDIDATE** at product/
+- V4-GATE-F-v1 Blocker 06: **FIXED + PUBLISHED + REMOTE VERIFIED** at product/
   test/runtime-proof commit
   `647dade73afa4d8e044423f422292dbf0c08f43e`. Restore now validates each
   retained migration intrinsically, enforces adjacent retained per-agent chain
   continuity and grants current residence/migration authority only to the
   latest retained record. Schema 35 and Observer schema 13 are unchanged.
+  Senior review approved manual fast-forward, publication completed at
+  canonical blocker HEAD `fe5bca7074b8ac65c31e03299195c3d7cfe307b1`, and
+  independent remote verification passed. The final review archive SHA-256 is
+  `ab2c496aa84af59cd1f3d72906cee55f8f8c7e381720165a5052a2b8d1807f6c`.
 - Gate F remains **PLANNED — NOT ACQUIRED**.
-- Gate F Evaluation 07 is **NOT AUTHORIZED / NOT PERFORMED**.
-- The next authorized action is senior review and manual publication of the
-  Blocker 06 local correction candidate.
+- Gate F Evaluation 07 is **NOT PERFORMED**.
+- The next authorized action is
+  `NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-07`.
 
 Published Gate E history:
 
@@ -535,7 +539,7 @@ the Gate E acquisition are now published and independently remote verified.
 active CIV phase: none
 completed and published through: CIV-39 (CIV-38 remains optional and unstarted)
 next eligible phase: null; Gate F remains planned and not acquired
-next authorized action: SENIOR REVIEW / MANUAL PUBLICATION OF V4-GATE-F-v1 BLOCKER 06
+next authorized action: NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-07
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -591,8 +595,8 @@ V4-GATE-F-v1 Blocker 04 status: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate F Evaluation 05 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-F-v1 Blocker 05 status: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate F Evaluation 06 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
-V4-GATE-F-v1 Blocker 06 status: FIXED — LOCAL CORRECTION CANDIDATE
-Gate F Evaluation 07 status: NOT AUTHORIZED / NOT PERFORMED
+V4-GATE-F-v1 Blocker 06 status: FIXED + PUBLISHED + REMOTE VERIFIED
+Gate F Evaluation 07 status: NOT PERFORMED
 CIV-40 status: OPTIONAL TOOLING — NOT STARTED
 CIV-41 status: NOT STARTED
 roadmap generation: V4
@@ -950,13 +954,16 @@ verification passed. The final review archive SHA-256 is
 `b27904bceba21901e87cdf8d1e9aedea3db65e9828606db4c46d5d829be2f689`.
 Evaluation 06 remains **FAIL — HISTORICAL IMMUTABLE EVIDENCE** against baseline
 `31f785ca9051be6b4f39ab97102f89410a776824`. Its sequential-migration
-historical/current-authority Blocker 06 is **FIXED — LOCAL CORRECTION
-CANDIDATE** at product/test/runtime-proof commit
+historical/current-authority Blocker 06 is **FIXED + PUBLISHED + REMOTE
+VERIFIED** at product/test/runtime-proof commit
 `647dade73afa4d8e044423f422292dbf0c08f43e`, documented in
 [`GATE_F_BLOCKER_06_SEQUENTIAL_MIGRATION_HISTORY.md`](GATE_F_BLOCKER_06_SEQUENTIAL_MIGRATION_HISTORY.md).
-Evaluation 07 is **NOT AUTHORIZED / NOT PERFORMED**; the next authorized action
-is senior review and manual publication of the Blocker 06 local correction
-candidate.
+Senior review approved manual fast-forward, publication completed at canonical
+blocker HEAD `fe5bca7074b8ac65c31e03299195c3d7cfe307b1`, and independent
+remote verification passed. The final review archive SHA-256 is
+`ab2c496aa84af59cd1f3d72906cee55f8f8c7e381720165a5052a2b8d1807f6c`.
+Evaluation 07 is **NOT PERFORMED**; the next authorized action is
+`NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-07`.
 `CIV-38` remains **OPTIONAL — NOT STARTED** and is not a prerequisite.
 `CIV-40` remains **OPTIONAL TOOLING — NOT STARTED**. Currency is not a Gate E
 or CIV-39 prerequisite.
