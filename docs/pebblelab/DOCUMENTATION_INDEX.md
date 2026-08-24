@@ -48,6 +48,7 @@ These documents form the minimal permanent memory of the project:
 | [`GATE_F_BLOCKER_03_DYNAMIC_FIDELITY_AUTHORITY.md`](GATE_F_BLOCKER_03_DYNAMIC_FIDELITY_AUTHORITY.md) | Published, independently remote-verified Blocker 03 correction record; preserves Evaluation 03 historical FAIL and documents shared dynamic-member fidelity composition, exact birth refusal/retry, legacy migration, mortality, rotation and two-process schema-35 proof. |
 | [`GATE_F_BLOCKER_04_HOUSEHOLD_MIGRATION_AUTHORITY.md`](GATE_F_BLOCKER_04_HOUSEHOLD_MIGRATION_AUTHORITY.md) | Published, independently remote-verified Blocker 04 correction record; preserves Evaluation 04 historical FAIL and documents verified scaled-arrival composition with settlement-aware household residence, bounded causal transition, social fail-closed policy and two-process schema-35 proof. |
 | [`GATE_F_BLOCKER_05_FAMILY_SCHEMA35_VALIDATION.md`](GATE_F_BLOCKER_05_FAMILY_SCHEMA35_VALIDATION.md) | Published, independently remote-verified Blocker 05 correction record; preserves Evaluation 05 historical FAIL and documents the canonical Family schema-25/26–35 compatibility policy, live/durable parity, strict malformed-state rejection and debug/optimized two-process schema-35 proof. |
+| [`GATE_F_BLOCKER_06_SEQUENTIAL_MIGRATION_HISTORY.md`](GATE_F_BLOCKER_06_SEQUENTIAL_MIGRATION_HISTORY.md) | Local Blocker 06 correction candidate; preserves Evaluation 06 historical FAIL and documents per-agent retained migration-chain continuity, latest-record current authority, bounded compaction, strict malformed-history rejection and debug/optimized two-process schema-35 proof. |
 | [`GATE_E_BLOCKER_01_EXACT_PRODUCTION_PROVENANCE.md`](GATE_E_BLOCKER_01_EXACT_PRODUCTION_PROVENANCE.md) | Published Blocker 01 product-correction record; preserves Evaluation 01 FAIL and documents exact asset-bound production provenance. |
 | [`GATE_E_BLOCKER_02_EVOLVED_PRODUCTION_IDENTITY.md`](GATE_E_BLOCKER_02_EVOLVED_PRODUCTION_IDENTITY.md) | Published Blocker 02 product-correction record; preserves Evaluation 02 FAIL and separates immutable production origin, durable current-identity continuity and exact current physical authority. |
 | [`GATE_E_BLOCKER_03_TERMINAL_MARKET_RESERVATION_AUTHORITY.md`](GATE_E_BLOCKER_03_TERMINAL_MARKET_RESERVATION_AUTHORITY.md) | Published Blocker 03 product-correction record; preserves Evaluation 03 FAIL and separates terminal market history from coherent live reservation authority. |
@@ -105,7 +106,7 @@ V4-GATE-E-v1 Blocker 03: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 04: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 04: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 05: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
-next authorized action: NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-06
+next authorized action: SENIOR REVIEW / MANUAL PUBLICATION OF V4-GATE-F-v1 BLOCKER 06
 CIV-39: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 V4-GATE-F-v1: PLANNED — NOT ACQUIRED
@@ -119,7 +120,9 @@ Gate F Evaluation 04: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-F-v1 Blocker 04: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate F Evaluation 05: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-F-v1 Blocker 05: FIXED + PUBLISHED + REMOTE VERIFIED
-Gate F Evaluation 06: NOT PERFORMED
+Gate F Evaluation 06: FAIL — HISTORICAL IMMUTABLE EVIDENCE
+V4-GATE-F-v1 Blocker 06: FIXED — LOCAL CORRECTION CANDIDATE
+Gate F Evaluation 07: NOT AUTHORIZED / NOT PERFORMED
 CIV-40: OPTIONAL TOOLING — NOT STARTED
 CIV-41: NOT STARTED
 ```
@@ -327,10 +330,14 @@ PUBLISHED + REMOTE VERIFIED** at product/test/runtime-proof commit
 `b1f3fad3ec4959c1ecf43e91eac0d291d6f9acf4` and canonical blocker HEAD
 `df1c042c0f8d4f45ad8928c9fb7d0bbe5558af8b`; the final review archive SHA-256
 is `b27904bceba21901e87cdf8d1e9aedea3db65e9828606db4c46d5d829be2f689`.
-Evaluation 06 is not performed. The next authorized action is
-`NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-06`. `CIV-38` remains optional and
-not started; `CIV-40` remains optional tooling and not started. Currency is
-not a Gate E or CIV-39 prerequisite.
+Evaluation 06 remains historical immutable FAIL evidence against baseline
+`31f785ca9051be6b4f39ab97102f89410a776824`. Its Blocker 06 is **FIXED —
+LOCAL CORRECTION CANDIDATE** at product/test/runtime-proof commit
+`647dade73afa4d8e044423f422292dbf0c08f43e`. Evaluation 07 is not authorized
+or performed. The next authorized action is senior review and manual
+publication of Blocker 06. `CIV-38` remains optional and not started;
+`CIV-40` remains optional tooling and not started. Currency is not a Gate E or
+CIV-39 prerequisite.
 
 ## Operational
 

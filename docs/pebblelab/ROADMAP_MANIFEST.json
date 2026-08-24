@@ -155,7 +155,7 @@
     "gateFBlocker05PublishedCanonicalHead": "df1c042c0f8d4f45ad8928c9fb7d0bbe5558af8b",
     "gateFBlocker05ReviewArchiveSHA256": "b27904bceba21901e87cdf8d1e9aedea3db65e9828606db4c46d5d829be2f689",
     "gateFBlocker05Status": "fixedPublishedRemoteVerified",
-    "meaning": "Canonical published product history is complete through CIV-39, with optional CIV-38 unstarted; Gate E is acquired and published at independently remote-verified canonical HEAD 076a616a97a229e921a5c36eebdfd12f76744f83; CIV-39 is complete and published at independently remote-verified canonical HEAD 0b0ec535cda62b70add182875c65eaee27bb5bb2 after Senior Review Correction 01 and Evidence Reconciliation 02; Gate F Evaluations 01 through 05 are FAIL historical immutable evidence; Gate F Blockers 01 through 05 are fixed, published and independently remote verified; Gate F Blocker 05 product/test/runtime-proof commit b1f3fad3ec4959c1ecf43e91eac0d291d6f9acf4 is published at canonical blocker HEAD df1c042c0f8d4f45ad8928c9fb7d0bbe5558af8b; Gate F remains planned and not acquired; Evaluation 06 is not performed and NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-06 is the next authorized action; CIV-40 remains optional tooling and not started; currency is not a Gate E or CIV-39 dependency.",
+    "meaning": "Canonical published product history is complete through CIV-39, with optional CIV-38 unstarted; Gate E is acquired and published at independently remote-verified canonical HEAD 076a616a97a229e921a5c36eebdfd12f76744f83; CIV-39 is complete and published at independently remote-verified canonical HEAD 0b0ec535cda62b70add182875c65eaee27bb5bb2 after Senior Review Correction 01 and Evidence Reconciliation 02; Gate F Evaluations 01 through 06 are FAIL historical immutable evidence; Gate F Blockers 01 through 05 are fixed, published and independently remote verified; Gate F Blocker 06 is fixed as a local correction candidate at product/test/runtime-proof commit 647dade73afa4d8e044423f422292dbf0c08f43e; Gate F remains planned and not acquired; Evaluation 07 is not authorized or performed and senior review plus manual publication of Blocker 06 is the next authorized action; CIV-40 remains optional tooling and not started; currency is not a Gate E or CIV-39 dependency.",
     "safeBootstrapHardeningPublished": true
   },
   "documents": {
@@ -216,7 +216,7 @@
     "activePhase": null,
     "completedThrough": "CIV-39",
     "nextEligiblePhase": null,
-    "nextAuthorizedAction": "NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-06",
+    "nextAuthorizedAction": "SENIOR-REVIEW-MANUAL-PUBLICATION-V4-GATE-F-v1-BLOCKER-06",
     "civ27Status": "completed",
     "civ28Status": "completed",
     "gateCStatus": "acquired",
@@ -330,7 +330,20 @@
     "gateFBlocker05PublishedCanonicalHead": "df1c042c0f8d4f45ad8928c9fb7d0bbe5558af8b",
     "gateFBlocker05ReviewArchiveSHA256": "b27904bceba21901e87cdf8d1e9aedea3db65e9828606db4c46d5d829be2f689",
     "gateFBlocker05Evidence": "docs/pebblelab/GATE_F_BLOCKER_05_FAMILY_SCHEMA35_VALIDATION.md",
-    "gateFEvaluation06Status": "notPerformed",
+    "gateFEvaluation06Status": "evaluatedFailHistoricalImmutableEvidence",
+    "gateFEvaluation06EvaluatedProductHead": "31f785ca9051be6b4f39ab97102f89410a776824",
+    "gateFEvaluation06HarnessCommit": "21523064810d10c30f10315397508431e34bb12a",
+    "gateFEvaluation06FinalEvidenceHead": "60abe393aed274db84d1f07d23aae59bf7a032f2",
+    "gateFEvaluation06ReviewArchiveSHA256": "441dbb02eb0589a90e2b75a06c1eee6dc254e5655350b2358df0b8a2bc92abb7",
+    "gateFEvaluation06DeterministicBlockerDigest": "1795926d8b9452dc35284aa214c63f58c074c7febd165c7ab9865929d7d531d2",
+    "gateFEvaluation06BlockerKind": "sequentialMigrationHistoricalArrivalValidation",
+    "gateFBlocker06Status": "fixedLocalCorrectionCandidate",
+    "gateFBlocker06Fixed": true,
+    "gateFBlocker06Published": false,
+    "gateFBlocker06PublicationVerified": false,
+    "gateFBlocker06ProductCorrectionCommit": "647dade73afa4d8e044423f422292dbf0c08f43e",
+    "gateFBlocker06Evidence": "docs/pebblelab/GATE_F_BLOCKER_06_SEQUENTIAL_MIGRATION_HISTORY.md",
+    "gateFEvaluation07Status": "notAuthorizedNotPerformed",
     "civ40Status": "optionalNotStarted",
     "civ41Status": "plannedNotStarted",
     "renewableSubsistenceMilestoneStatus": "completedPublished",
@@ -2403,8 +2416,26 @@
     "blocker05Evidence": [
       "docs/pebblelab/GATE_F_BLOCKER_05_FAMILY_SCHEMA35_VALIDATION.md"
     ],
-    "evaluation06Status": "notPerformed",
-    "nextAuthorizedAction": "NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-06",
+    "evaluation06Status": "evaluatedFailHistoricalImmutableEvidence",
+    "evaluation06Evidence": {
+      "evaluatedProductHead": "31f785ca9051be6b4f39ab97102f89410a776824",
+      "harnessCommit": "21523064810d10c30f10315397508431e34bb12a",
+      "finalEvidenceHead": "60abe393aed274db84d1f07d23aae59bf7a032f2",
+      "reviewArchiveSHA256": "441dbb02eb0589a90e2b75a06c1eee6dc254e5655350b2358df0b8a2bc92abb7",
+      "deterministicBlockerDigest": "1795926d8b9452dc35284aa214c63f58c074c7febd165c7ab9865929d7d531d2",
+      "blockerKind": "sequentialMigrationHistoricalArrivalValidation",
+      "verdict": "FAIL_HISTORICAL_IMMUTABLE_EVIDENCE"
+    },
+    "blocker06Status": "fixedLocalCorrectionCandidate",
+    "blocker06Fixed": true,
+    "blocker06Published": false,
+    "blocker06PublicationVerified": false,
+    "blocker06ProductCorrectionCommit": "647dade73afa4d8e044423f422292dbf0c08f43e",
+    "blocker06Evidence": [
+      "docs/pebblelab/GATE_F_BLOCKER_06_SEQUENTIAL_MIGRATION_HISTORY.md"
+    ],
+    "evaluation07Status": "notAuthorizedNotPerformed",
+    "nextAuthorizedAction": "SENIOR-REVIEW-MANUAL-PUBLICATION-V4-GATE-F-v1-BLOCKER-06",
       "requiredPhases": [
         "CIV-39"
       ],
