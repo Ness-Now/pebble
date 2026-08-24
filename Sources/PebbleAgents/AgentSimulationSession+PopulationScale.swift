@@ -968,6 +968,19 @@ extension AgentSimulationSession {
         }
     }
 
+    private static func settlementMigrationOrdinal(
+        for migrationID: AgentSettlementMigrationID
+    ) -> UInt64? {
+        let prefix = "settlement-migration-"
+        guard migrationID.rawValue.hasPrefix(prefix),
+              let ordinal = UInt64(migrationID.rawValue.dropFirst(prefix.count)),
+              ordinal > 0,
+              migrationID.rawValue == prefix + String(
+                  format: "%08llu", ordinal
+              ) else { return nil }
+        return ordinal
+    }
+
     static func validatePopulationScaleState(
         _ scale: AgentPopulationScaleState,
         registry: AgentPopulationRegistry,
@@ -979,6 +992,12 @@ extension AgentSimulationSession {
         let settlements = registry.settlements
         let transitionOrdinals = scale.fidelityTransitions.map(\.ordinal)
         let migrationIDs = scale.settlementMigrations.map(\.migrationID)
+        let migrationOrdinals = migrationIDs.compactMap {
+            settlementMigrationOrdinal(for: $0)
+        }
+        let expectedNextMigrationOrdinal: UInt64? = migrationOrdinals.last.map {
+            $0 < UInt64.max ? $0 + 1 : nil
+        } ?? 1
         guard settlements.count >= 2,
               settlements.count <= scale.configuration.maximumSettlements,
               Set(settlements.map(\.settlementID)).count == settlements.count,
@@ -1001,7 +1020,13 @@ extension AgentSimulationSession {
               transitionOrdinals.allSatisfy({
                   $0 < scale.nextFidelityTransitionOrdinal
               }),
-              Set(migrationIDs).count == migrationIDs.count else {
+              Set(migrationIDs).count == migrationIDs.count,
+              migrationIDs == migrationIDs.sorted(),
+              migrationOrdinals.count == migrationIDs.count,
+              zip(migrationOrdinals, migrationOrdinals.dropFirst())
+                .allSatisfy({ $0 < $1 }),
+              expectedNextMigrationOrdinal
+                == scale.nextSettlementMigrationOrdinal else {
             throw AgentCheckpointError.invalidBound("population scale")
         }
         guard registry.hasCommittedResidentCapacity() else {
@@ -1017,12 +1042,41 @@ extension AgentSimulationSession {
                 )
             }
         }
+        let migrationAgentIDs = Set(
+            scale.settlementMigrations.map(\.agentID)
+        ).sorted()
+        var latestMigrationIDByAgent: [AgentID: AgentSettlementMigrationID] = [:]
+        for agentID in migrationAgentIDs {
+            let retained = scale.settlementMigrations.filter {
+                $0.agentID == agentID
+            }
+            for (prior, later) in zip(retained, retained.dropFirst()) {
+                guard prior.status == .arrived,
+                      prior.destinationSettlementID
+                        == later.originSettlementID,
+                      prior.arrivedTick.map({ $0 <= later.startedTick }) == true,
+                      prior.arrivedEventID.map({
+                          $0 < later.startedEventID
+                      }) == true else {
+                    throw AgentCheckpointError.invalidReference(
+                        later.migrationID.rawValue
+                    )
+                }
+            }
+            latestMigrationIDByAgent[agentID] = retained.last?.migrationID
+        }
         for migration in scale.settlementMigrations {
             let referencesActive = agentIDs.contains(migration.agentID)
             let referencesDeparted = departedAgentIDs.contains(
                 migration.agentID
             ) && migration.status.isTerminal
+            let ownsCurrentAuthority = referencesActive
+                && latestMigrationIDByAgent[migration.agentID]
+                    == migration.migrationID
             let member = registry.members.first {
+                $0.agentID == migration.agentID
+            }
+            let fidelity = scale.fidelityRecords.first {
                 $0.agentID == migration.agentID
             }
             let origin = registry.settlement(
@@ -1057,13 +1111,20 @@ extension AgentSimulationSession {
                     || migration.arrivedEventID == nil,
                   migration.failureEventID?.simulationID == clock.simulationID
                     || migration.failureEventID == nil,
+                  migration.lastMovementEventID?.simulationID
+                    == clock.simulationID
+                    || migration.lastMovementEventID == nil,
+                  migration.lastMovementEventID.map({
+                      migration.startedEventID < $0
+                  }) ?? true,
                   migration.status == .inTransit
-                    ? (referencesActive
+                    ? (ownsCurrentAuthority
                         && member?.status == .migrating
                         && member?.settlementID
                             == migration.originSettlementID
                         && origin?.inTransitIDs.contains(migration.agentID)
                             == true
+                        && fidelity?.fidelity == .live
                         && migration.arrivedTick == nil
                         && migration.arrivedEventID == nil
                         && migration.failure == nil
@@ -1072,7 +1133,8 @@ extension AgentSimulationSession {
                     : true,
                   migration.status == .arrived
                     ? ((referencesDeparted
-                            || (member?.status != .migrating
+                            || !ownsCurrentAuthority
+                            || (member?.status == .resident
                                 && member?.settlementID
                                     == migration.destinationSettlementID
                                 && destination?.residentIDs.contains(
@@ -1080,15 +1142,34 @@ extension AgentSimulationSession {
                                 ) == true))
                         && migration.arrivedTick != nil
                         && migration.arrivedEventID != nil
+                        && migration.lastMovementEventID != nil
+                        && migration.arrivedTick.map({
+                            migration.startedTick <= $0
+                        }) == true
+                        && migration.arrivedEventID.map({ arrivedEventID in
+                            migration.startedEventID < arrivedEventID
+                                && (migration.lastMovementEventID.map {
+                                    $0 < arrivedEventID
+                                } ?? true)
+                        }) == true
+                        && migration.routeCursor == migration.route.count - 1
                         && migration.failure == nil
                         && migration.failedTick == nil
                         && migration.failureEventID == nil)
                     : true,
                   migration.status == .failed
                     ? (referencesDeparted
+                        && latestMigrationIDByAgent[migration.agentID]
+                            == migration.migrationID
                         && migration.failure == .memberDied
                         && migration.failedTick != nil
                         && migration.failureEventID != nil
+                        && migration.failedTick.map({
+                            migration.startedTick <= $0
+                        }) == true
+                        && migration.failureEventID.map({
+                            migration.startedEventID < $0
+                        }) == true
                         && migration.arrivedTick == nil
                         && migration.arrivedEventID == nil)
                     : true else {
