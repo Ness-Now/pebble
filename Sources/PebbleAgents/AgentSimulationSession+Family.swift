@@ -962,14 +962,12 @@ extension AgentSimulationSession {
               let lifecycle = lifecycleState, let kinship = kinshipState,
               let households = householdState else { return }
         do {
+            let effectiveSchemaVersion = durableState().schemaVersion
             try Self.validateFamilyState(
                 family, population: population, lifecycle: lifecycle,
                 kinship: kinship, households: households,
                 agents: Array(statesById.values), mortality: mortalityState,
-                schemaVersion: durableSchemaVersionOverride
-                    == AgentCheckpointSchema.familyVersion
-                    ? AgentCheckpointSchema.familyVersion
-                    : AgentCheckpointSchema.durableHouseConsentVersion,
+                schemaVersion: effectiveSchemaVersion,
                 clock: clock, causalLatestSequence: causalLedger.latestSequence,
                 causalDroppedEventCount: causalLedger.droppedEventCount,
                 causalEvents: causalLedger.events
@@ -993,6 +991,14 @@ extension AgentSimulationSession {
         causalDroppedEventCount: UInt64,
         causalEvents: [AgentCausalEvent]
     ) throws {
+        guard let familySchemaSemantics =
+            AgentCheckpointSchema.familyValidationSemantics(
+                for: schemaVersion
+            ) else {
+            throw AgentFamilyError.invalidState(
+                "bounds, ordering or counters"
+            )
+        }
         _ = try AgentFamilyConfiguration(
             maximumPendingProposals: family.configuration.maximumPendingProposals,
             maximumUnionHistory: family.configuration.maximumUnionHistory,
@@ -1057,21 +1063,7 @@ extension AgentSimulationSession {
         family.initializedEventID.simulationID == clock.simulationID,
         family.lastFamilyEventID.simulationID == clock.simulationID,
         family.initializedEventID.sequence <= family.lastFamilyEventID.sequence,
-        family.lastFamilyEventID.sequence.rawValue <= causalLatestSequence,
-        schemaVersion == AgentCheckpointSchema.familyVersion
-            || schemaVersion
-                == AgentCheckpointSchema.durableHouseConsentVersion
-            || schemaVersion == AgentCheckpointSchema.legacyEstateVersion
-            || schemaVersion == AgentCheckpointSchema.estateVersion
-            || schemaVersion
-                == AgentCheckpointSchema.renewableSubsistenceVersion
-            || schemaVersion
-                == AgentCheckpointSchema
-                    .independentEcologicalReceiptVersion
-            || schemaVersion == AgentCheckpointSchema.productionVersion
-            || schemaVersion == AgentCheckpointSchema.barterVersion
-            || schemaVersion == AgentCheckpointSchema.contractVersion
-            || schemaVersion == AgentCheckpointSchema.marketVersion else {
+        family.lastFamilyEventID.sequence.rawValue <= causalLatestSequence else {
             throw AgentFamilyError.invalidState("bounds, ordering or counters")
         }
         let proposalIDs = family.proposals.map(\.proposalID)
@@ -1481,7 +1473,7 @@ extension AgentSimulationSession {
                 }
                 var proofs = house.cofoundingInteractionProofs
                 if proofs == nil,
-                   schemaVersion == AgentCheckpointSchema.familyVersion,
+                   familySchemaSemantics == .legacyCausalProofFallback,
                    let event = foundationEvent, event.causes.count == 2 {
                     var legacyProofs: [AgentFamilyInteractionProof] = []
                     for causeID in event.causes {
@@ -1720,7 +1712,7 @@ extension AgentSimulationSession {
             case .explicitAdultJoin:
                 var consent = membership.explicitJoinConsent
                 if consent == nil,
-                   schemaVersion == AgentCheckpointSchema.familyVersion,
+                   familySchemaSemantics == .legacyCausalProofFallback,
                    let event = joinedEvent,
                    event.causes.count == 2,
                    case let .operation(_, detail) = event.payload,

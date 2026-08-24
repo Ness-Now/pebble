@@ -123,6 +123,13 @@ if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
     exit(failed > 0 ? 1 : 0)
 }
 
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
+    == "gate-f-blocker-05" {
+    runPebbleAgentsGateFBlocker05Smoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
 if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "markets" {
     runPebbleAgentsMarketSmoke()
     print("\n\(passed) passed, \(failed) failed")
@@ -230,6 +237,24 @@ if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "mortality" {
 
 if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "lifecycle" {
     runPebbleAgentsAgeMaturityReproductionSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "reproduction" {
+    runPebbleAgentsAgeMaturityReproductionSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "kinship" {
+    runPebbleAgentsDurableKinshipSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "households" {
+    runPebbleAgentsHouseholdMembershipSmoke()
     print("\n\(passed) passed, \(failed) failed")
     exit(failed > 0 ? 1 : 0)
 }
@@ -2504,6 +2529,7 @@ runPebbleAgentsPopulationMigrationSmoke()
 runPebbleAgentsPopulationScaleSmoke()
 runPebbleAgentsGateFBlocker01Smoke()
 runPebbleAgentsGateFBlocker03Smoke()
+runPebbleAgentsGateFBlocker05Smoke()
 runPebbleAgentsSettlementMetricsSmoke()
 runPebbleAgentsLocalEcologySmoke()
 runPebbleAgentsMortalityPopulationExitSmoke()

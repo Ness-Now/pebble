@@ -1,6 +1,11 @@
 import CryptoKit
 import Foundation
 
+public enum AgentFamilyCheckpointValidationSemantics: Equatable, Sendable {
+    case legacyCausalProofFallback
+    case strictDurableConsent
+}
+
 public enum AgentCheckpointSchema {
     public static let currentVersion = 1
     public static let populationVersion = 2
@@ -37,6 +42,27 @@ public enum AgentCheckpointSchema {
     public static let contractVersion = 33
     public static let marketVersion = 34
     public static let populationScaleVersion = 35
+
+    public static func familyValidationSemantics(
+        for version: Int
+    ) -> AgentFamilyCheckpointValidationSemantics? {
+        if version == familyVersion {
+            return .legacyCausalProofFallback
+        }
+        if version == durableHouseConsentVersion
+            || version == legacyEstateVersion
+            || version == estateVersion
+            || version == renewableSubsistenceVersion
+            || version == independentEcologicalReceiptVersion
+            || version == productionVersion
+            || version == barterVersion
+            || version == contractVersion
+            || version == marketVersion
+            || version == populationScaleVersion {
+            return .strictDurableConsent
+        }
+        return nil
+    }
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion

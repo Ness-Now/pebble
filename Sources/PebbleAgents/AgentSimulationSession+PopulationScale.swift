@@ -541,6 +541,10 @@ extension AgentSimulationSession {
         )
         registry.lastPopulationEventID = lastEventID
         populationRegistry = registry
+        try validateHouseholdCrossDomainIfEnabled()
+        try validateDependentCareCrossDomainIfEnabled()
+        try validateFamilyCrossDomainIfEnabled()
+        try validateEstateCrossDomainIfEnabled()
     }
 
     @discardableResult
