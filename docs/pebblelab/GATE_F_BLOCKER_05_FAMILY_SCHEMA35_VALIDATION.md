@@ -1,14 +1,17 @@
 # Gate F Blocker 05 — Family V1 × Durable Schema-35 Validation
 
-- Status: **FIXED — LOCAL CORRECTION CANDIDATE**
+- Status: **FIXED + PUBLISHED + REMOTE VERIFIED**
 - Gate F: **PLANNED — NOT ACQUIRED**
-- Evaluation 06: **NOT AUTHORIZED / NOT PERFORMED**
+- Evaluation 06: **NOT PERFORMED**
 - `CIV-40`: **OPTIONAL TOOLING — NOT STARTED**
 - `CIV-41`: **NOT STARTED**
 
 This record documents the targeted product correction for independent Gate F
-Evaluation 05. It does not alter the evaluation, acquire Gate F, authorize a
-new evaluation, start a CIV phase, publish a branch, or regenerate goldens.
+Evaluation 05 and its subsequent publication reconciliation. The original
+correction mission did not alter the evaluation, acquire Gate F, start a CIV
+phase, push or regenerate goldens. Senior review later approved manual
+fast-forward, publication completed and independent remote verification
+passed.
 
 ## Git identity and immutable history
 
@@ -22,6 +25,13 @@ new evaluation, start a CIV phase, publish a branch, or regenerate goldens.
   `937693d6030f8ba77f1363da7f4336647962ee9e`
 - product/test/runtime-proof commit:
   `b1f3fad3ec4959c1ecf43e91eac0d291d6f9acf4`
+- published canonical blocker HEAD:
+  `df1c042c0f8d4f45ad8928c9fb7d0bbe5558af8b`
+- final correction review archive SHA-256:
+  `b27904bceba21901e87cdf8d1e9aedea3db65e9828606db4c46d5d829be2f689`
+- senior review: **APPROVED FOR MANUAL FAST-FORWARD**
+- manual publication: **COMPLETED**
+- independent remote verification: **PASS**
 - Evaluation 05 harness commit
   `d4140fef049d0bc30a062019fccdd752ff802908` is not an ancestor
 - Evaluation 05 final evidence commit
@@ -29,7 +39,7 @@ new evaluation, start a CIV phase, publish a branch, or regenerate goldens.
 - push attempted: **NO**
 
 Gate F Evaluations 01–05 remain **FAIL — HISTORICAL IMMUTABLE EVIDENCE**.
-Blockers 01–04 remain **FIXED + PUBLISHED + REMOTE VERIFIED**.
+Blockers 01–05 are **FIXED + PUBLISHED + REMOTE VERIFIED**.
 
 Evaluation 05 immutable identifiers:
 
@@ -44,7 +54,7 @@ Evaluation 05 immutable identifiers:
 | blocker kind | `schema35FamilyValidationComposition` |
 
 These identifiers describe the failed historical evaluation, not the
-correction candidate's new passing digests.
+published correction's new passing digests.
 
 ## Root cause
 
@@ -254,9 +264,11 @@ Documentation/status surfaces are this report, `CODEX_START_HERE.md`,
 ## Boundary and non-claims
 
 - Gate F Evaluation 05 remains immutable FAIL evidence.
-- Blocker 05 is fixed only as a local correction candidate. It is not
-  published or remote verified.
-- Evaluation 06 is not authorized and was not performed.
+- Blocker 05 is fixed, published and independently remote verified at canonical
+  blocker HEAD `df1c042c0f8d4f45ad8928c9fb7d0bbe5558af8b`.
+- Evaluation 06 was not performed. The next authorized action after this
+  reconciliation is reviewed, published and remote verified is
+  `NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-06`.
 - Gate F remains planned and was not acquired.
 - `CIV-40` and `CIV-41` were not started.
 - Schema 35 and Observer schema 13 are unchanged.
