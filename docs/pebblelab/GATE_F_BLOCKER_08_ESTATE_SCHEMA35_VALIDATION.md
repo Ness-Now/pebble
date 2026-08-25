@@ -1,8 +1,22 @@
 # Gate F Blocker 08 — Estate effective schema-35 validation composition
 
-Status: **FIXED — LOCAL CORRECTION CANDIDATE**  
-Gate F: **PLANNED — NOT ACQUIRED**  
-Evaluation 09: **NOT AUTHORIZED / NOT PERFORMED**
+Status: **FIXED + PUBLISHED + REMOTE VERIFIED**
+
+Gate F: **PLANNED — NOT ACQUIRED**
+
+Evaluation 09: **NOT PERFORMED**
+
+Product/test/runtime commit:
+`518aaf0dddfcc9f63e133290bf6dd915f9eaa73a`
+
+Published canonical blocker HEAD:
+`4e3bd296203346e4716c0a186017aebc69dbe750`
+
+Final review archive SHA-256:
+`c11b2d267a1dad40f52ad1bfe327981eaea1aae3419db8c80b45ab033421926b`
+
+Senior review approved manual fast-forward, manual publication completed, and
+independent remote verification passed.
 
 ## Immutable Evaluation 08 evidence
 
@@ -166,14 +180,15 @@ cross-domain validator accepting a checkpoint schema argument.
 ## Program status and non-actions
 
 - Evaluations 01–08: **FAIL — HISTORICAL IMMUTABLE EVIDENCE**.
-- Blockers 01–07: **FIXED + PUBLISHED + REMOTE VERIFIED**.
-- Blocker 08: **FIXED — LOCAL CORRECTION CANDIDATE**.
+- Blockers 01–08: **FIXED + PUBLISHED + REMOTE VERIFIED**.
 - Gate F: **PLANNED — NOT ACQUIRED**.
-- next authorized action: senior review/publication of Blocker 08; Evaluation
-  09 remains unauthorized until that lifecycle is explicitly completed.
+- Evaluation 09: **NOT PERFORMED**.
+- next authorized action:
+  `NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-09`.
 - CIV-40: **OPTIONAL TOOLING — NOT STARTED**.
 - CIV-41: **NOT STARTED**.
 
 No Evaluation 08 commit was merged or cherry-picked. Evaluation 09 was not
 performed. Gate F was not acquired. CIV-40 and CIV-41 were not started. No
-golden was regenerated and Codex did not push.
+golden was regenerated and Codex did not push. Blocker 08 publication did not
+change checkpoint schema 35 or Observer schema 13.

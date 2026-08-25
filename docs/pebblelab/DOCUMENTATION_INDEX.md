@@ -50,7 +50,7 @@ These documents form the minimal permanent memory of the project:
 | [`GATE_F_BLOCKER_05_FAMILY_SCHEMA35_VALIDATION.md`](GATE_F_BLOCKER_05_FAMILY_SCHEMA35_VALIDATION.md) | Published, independently remote-verified Blocker 05 correction record; preserves Evaluation 05 historical FAIL and documents the canonical Family schema-25/26–35 compatibility policy, live/durable parity, strict malformed-state rejection and debug/optimized two-process schema-35 proof. |
 | [`GATE_F_BLOCKER_06_SEQUENTIAL_MIGRATION_HISTORY.md`](GATE_F_BLOCKER_06_SEQUENTIAL_MIGRATION_HISTORY.md) | Published, independently remote-verified Blocker 06 correction record; preserves Evaluation 06 historical FAIL and documents per-agent retained migration-chain continuity, latest-record current authority, bounded compaction, strict malformed-history rejection and debug/optimized two-process schema-35 proof. |
 | [`GATE_F_BLOCKER_07_FAMILY_BIRTH_TEMPORAL_AUTHORITY.md`](GATE_F_BLOCKER_07_FAMILY_BIRTH_TEMPORAL_AUTHORITY.md) | Published, independently remote-verified Blocker 07 correction record; preserves Evaluation 07 historical FAIL and documents causal same-tick birth/Family house authority, strict schema-35 temporal validation and byte-exact fresh-process proof. |
-| [`GATE_F_BLOCKER_08_ESTATE_SCHEMA35_VALIDATION.md`](GATE_F_BLOCKER_08_ESTATE_SCHEMA35_VALIDATION.md) | Local Blocker 08 correction candidate; preserves Evaluation 08 historical FAIL and documents canonical Estate schema-27/28–35 validation semantics, effective live/durable schema parity, strict malformed-state rejection and byte-exact debug/optimized fresh-process proof. |
+| [`GATE_F_BLOCKER_08_ESTATE_SCHEMA35_VALIDATION.md`](GATE_F_BLOCKER_08_ESTATE_SCHEMA35_VALIDATION.md) | Published, independently remote-verified Blocker 08 correction record; preserves Evaluation 08 historical FAIL and documents canonical Estate schema-27/28–35 validation semantics, effective live/durable schema parity, strict malformed-state rejection and byte-exact debug/optimized fresh-process proof. |
 | [`GATE_E_BLOCKER_01_EXACT_PRODUCTION_PROVENANCE.md`](GATE_E_BLOCKER_01_EXACT_PRODUCTION_PROVENANCE.md) | Published Blocker 01 product-correction record; preserves Evaluation 01 FAIL and documents exact asset-bound production provenance. |
 | [`GATE_E_BLOCKER_02_EVOLVED_PRODUCTION_IDENTITY.md`](GATE_E_BLOCKER_02_EVOLVED_PRODUCTION_IDENTITY.md) | Published Blocker 02 product-correction record; preserves Evaluation 02 FAIL and separates immutable production origin, durable current-identity continuity and exact current physical authority. |
 | [`GATE_E_BLOCKER_03_TERMINAL_MARKET_RESERVATION_AUTHORITY.md`](GATE_E_BLOCKER_03_TERMINAL_MARKET_RESERVATION_AUTHORITY.md) | Published Blocker 03 product-correction record; preserves Evaluation 03 FAIL and separates terminal market history from coherent live reservation authority. |
@@ -108,7 +108,7 @@ V4-GATE-E-v1 Blocker 03: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 04: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 04: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 05: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
-next authorized action: V4-GATE-F-v1-BLOCKER-08-SENIOR-REVIEW-AND-PUBLICATION
+next authorized action: NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-09
 CIV-39: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 V4-GATE-F-v1: PLANNED — NOT ACQUIRED
@@ -127,8 +127,8 @@ V4-GATE-F-v1 Blocker 06: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate F Evaluation 07: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-F-v1 Blocker 07: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate F Evaluation 08: FAIL — HISTORICAL IMMUTABLE EVIDENCE
-V4-GATE-F-v1 Blocker 08: FIXED — LOCAL CORRECTION CANDIDATE
-Gate F Evaluation 09: NOT AUTHORIZED / NOT PERFORMED
+V4-GATE-F-v1 Blocker 08: FIXED + PUBLISHED + REMOTE VERIFIED
+Gate F Evaluation 09: NOT PERFORMED
 CIV-40: OPTIONAL TOOLING — NOT STARTED
 CIV-41: NOT STARTED
 ```
@@ -353,12 +353,13 @@ blocker HEAD `279fb26bea8a817b767a0192d8f7b1cffdff1563`, and independent remote
 verification passed. The final review archive SHA-256 is
 `a5ba10ea140f4b2b6956519d1fc196709b1a5d100d77afcdbc32e7e86f42ad90`.
 Evaluation 08 is historical immutable FAIL evidence against baseline
-`414954dc936177f892252898e97e8bcf986cee4b`. Blocker 08 is **FIXED — LOCAL
-CORRECTION CANDIDATE** at product/test/runtime-proof commit
-`518aaf0dddfcc9f63e133290bf6dd915f9eaa73a`, documented in
+`414954dc936177f892252898e97e8bcf986cee4b`. Blocker 08 is **FIXED + PUBLISHED
++ REMOTE VERIFIED** at product/test/runtime-proof commit
+`518aaf0dddfcc9f63e133290bf6dd915f9eaa73a` and published canonical HEAD
+`4e3bd296203346e4716c0a186017aebc69dbe750`, documented in
 [`GATE_F_BLOCKER_08_ESTATE_SCHEMA35_VALIDATION.md`](GATE_F_BLOCKER_08_ESTATE_SCHEMA35_VALIDATION.md).
-Evaluation 09 is not authorized or performed. The next authorized action is
-Blocker 08 senior review and publication. `CIV-38` remains
+Evaluation 09 is not performed. The next authorized action is
+`NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-09`. `CIV-38` remains
 optional and not started; `CIV-40` remains optional tooling and not started.
 Currency is not a Gate E or CIV-39 prerequisite.
 

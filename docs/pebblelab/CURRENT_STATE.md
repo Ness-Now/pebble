@@ -159,16 +159,21 @@ Gate F correction history:
   `df56cf026bd75d6b28371e7b5948a77a97de2d35` and review archive SHA-256
   `dc86ee24d0eef1a34f8ae0373ea0f1250463b2cbbf22a9b252fe827d11642da1`.
   Its blocker kind is `schema35EstateValidationComposition`.
-- V4-GATE-F-v1 Blocker 08: **FIXED — LOCAL CORRECTION CANDIDATE** at
+- V4-GATE-F-v1 Blocker 08: **FIXED + PUBLISHED + REMOTE VERIFIED** at
   product/test/runtime-proof commit
   `518aaf0dddfcc9f63e133290bf6dd915f9eaa73a`. Estate checkpoint validation
   now has one canonical schema policy: schema 27 retains intended legacy
   successor-plan revalidation, schemas 28–35 require strict durable proof and
-  live validation uses the effective aggregate checkpoint schema. Schema 35
-  and Observer schema 13 are unchanged.
+  live validation uses the effective aggregate checkpoint schema. Senior review
+  approved manual fast-forward, publication completed at canonical HEAD
+  `4e3bd296203346e4716c0a186017aebc69dbe750`, and independent remote
+  verification passed. The final review archive SHA-256 is
+  `c11b2d267a1dad40f52ad1bfe327981eaea1aae3419db8c80b45ab033421926b`.
+  Schema 35 and Observer schema 13 are unchanged.
 - Gate F remains **PLANNED — NOT ACQUIRED**.
-- Gate F Evaluation 09 is **NOT AUTHORIZED / NOT PERFORMED**.
-- The next authorized action is Blocker 08 senior review and publication.
+- Gate F Evaluation 09 is **NOT PERFORMED**.
+- The next authorized action is
+  `NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-09`.
 
 Published Gate E history:
 
@@ -568,7 +573,7 @@ the Gate E acquisition are now published and independently remote verified.
 active CIV phase: none
 completed and published through: CIV-39 (CIV-38 remains optional and unstarted)
 next eligible phase: null; Gate F remains planned and not acquired
-next authorized action: NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-08
+next authorized action: NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-09
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -628,8 +633,8 @@ V4-GATE-F-v1 Blocker 06 status: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate F Evaluation 07 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-F-v1 Blocker 07 status: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate F Evaluation 08 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
-V4-GATE-F-v1 Blocker 08 status: FIXED — LOCAL CORRECTION CANDIDATE
-Gate F Evaluation 09 status: NOT AUTHORIZED / NOT PERFORMED
+V4-GATE-F-v1 Blocker 08 status: FIXED + PUBLISHED + REMOTE VERIFIED
+Gate F Evaluation 09 status: NOT PERFORMED
 CIV-40 status: OPTIONAL TOOLING — NOT STARTED
 CIV-41 status: NOT STARTED
 roadmap generation: V4
@@ -1003,12 +1008,15 @@ fast-forward, publication completed, and independent remote verification
 passed. The final review archive SHA-256 is
 `a5ba10ea140f4b2b6956519d1fc196709b1a5d100d77afcdbc32e7e86f42ad90`.
 Evaluation 08 is **FAIL — HISTORICAL IMMUTABLE EVIDENCE**. Blocker 08 is
-**FIXED — LOCAL CORRECTION CANDIDATE** at product/test/runtime-proof commit
-`518aaf0dddfcc9f63e133290bf6dd915f9eaa73a`, documented in
+**FIXED + PUBLISHED + REMOTE VERIFIED** at product/test/runtime-proof commit
+`518aaf0dddfcc9f63e133290bf6dd915f9eaa73a` and published canonical HEAD
+`4e3bd296203346e4716c0a186017aebc69dbe750`, documented in
 [`GATE_F_BLOCKER_08_ESTATE_SCHEMA35_VALIDATION.md`](GATE_F_BLOCKER_08_ESTATE_SCHEMA35_VALIDATION.md).
-Gate F remains **PLANNED — NOT ACQUIRED** and Evaluation 09 is not authorized
-or performed; the next authorized action is Blocker 08 senior review and
-publication.
+Senior review approved manual fast-forward, publication completed, independent
+remote verification passed, and the final review archive SHA-256 is
+`c11b2d267a1dad40f52ad1bfe327981eaea1aae3419db8c80b45ab033421926b`.
+Gate F remains **PLANNED — NOT ACQUIRED** and Evaluation 09 is not performed;
+the next authorized action is `NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-09`.
 `CIV-38` remains **OPTIONAL — NOT STARTED** and is not a prerequisite.
 `CIV-40` remains **OPTIONAL TOOLING — NOT STARTED**. Currency is not a Gate E
 or CIV-39 prerequisite.
