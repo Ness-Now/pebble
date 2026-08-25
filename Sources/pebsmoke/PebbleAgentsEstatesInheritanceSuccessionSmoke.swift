@@ -751,7 +751,7 @@ private func estateRestoreRefused(
     }
 }
 
-private func estateSchema27Checkpoint(
+func estateSchema27Checkpoint(
     _ checkpoint: AgentSessionCheckpoint,
     preserveExactCausalProof: Bool
 ) -> AgentSessionCheckpoint {

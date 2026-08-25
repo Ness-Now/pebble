@@ -6,6 +6,11 @@ public enum AgentFamilyCheckpointValidationSemantics: Equatable, Sendable {
     case strictDurableConsent
 }
 
+public enum AgentEstateCheckpointValidationSemantics: Equatable, Sendable {
+    case legacySuccessorPlanRevalidation
+    case strictDurableSuccessorPlan
+}
+
 public enum AgentCheckpointSchema {
     public static let currentVersion = 1
     public static let populationVersion = 2
@@ -60,6 +65,25 @@ public enum AgentCheckpointSchema {
             || version == marketVersion
             || version == populationScaleVersion {
             return .strictDurableConsent
+        }
+        return nil
+    }
+
+    public static func estateValidationSemantics(
+        for version: Int
+    ) -> AgentEstateCheckpointValidationSemantics? {
+        if version == legacyEstateVersion {
+            return .legacySuccessorPlanRevalidation
+        }
+        if version == estateVersion
+            || version == renewableSubsistenceVersion
+            || version == independentEcologicalReceiptVersion
+            || version == productionVersion
+            || version == barterVersion
+            || version == contractVersion
+            || version == marketVersion
+            || version == populationScaleVersion {
+            return .strictDurableSuccessorPlan
         }
         return nil
     }

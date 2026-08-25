@@ -118,6 +118,7 @@ extension AgentSimulationSession {
         )
         authority.rollingDigest = Self.estateStateDigest(authority)
         estateState = authority
+        try validateEstateCrossDomainIfEnabled()
     }
 
     @discardableResult
@@ -1103,6 +1104,7 @@ extension AgentSimulationSession {
             return
         }
         do {
+            let effectiveSchemaVersion = durableState().schemaVersion
             try Self.validateEstateState(
                 authority,
                 mortality: mortality,
@@ -1118,10 +1120,7 @@ extension AgentSimulationSession {
                 causalLedger: causalLedger,
                 simulationID: simulationID,
                 currentTick: tick,
-                schemaVersion: authority.estates.allSatisfy({
-                    $0.successorPlanProof != nil
-                }) ? AgentCheckpointSchema.estateVersion
-                    : AgentCheckpointSchema.legacyEstateVersion
+                schemaVersion: effectiveSchemaVersion
             )
         } catch let error as AgentEstateError {
             throw AgentSessionError.estate(error)
@@ -1189,28 +1188,21 @@ extension AgentSimulationSession {
         currentTick: Int,
         schemaVersion: Int
     ) throws {
-        guard schemaVersion == AgentCheckpointSchema.legacyEstateVersion
-                || schemaVersion == AgentCheckpointSchema.estateVersion
-                || schemaVersion
-                    == AgentCheckpointSchema.renewableSubsistenceVersion
-                || schemaVersion
-                    == AgentCheckpointSchema
-                        .independentEcologicalReceiptVersion
-                || schemaVersion == AgentCheckpointSchema.productionVersion
-                || schemaVersion == AgentCheckpointSchema.barterVersion
-                || schemaVersion == AgentCheckpointSchema.contractVersion
-                || schemaVersion == AgentCheckpointSchema.marketVersion else {
+        guard let estateSchemaSemantics =
+            AgentCheckpointSchema.estateValidationSemantics(
+                for: schemaVersion
+            ) else {
             throw AgentEstateError.invalidState("checkpoint schema")
         }
-        if schemaVersion >= AgentCheckpointSchema.estateVersion,
+        if estateSchemaSemantics == .strictDurableSuccessorPlan,
            authority.estates.contains(where: {
                $0.successorPlanProof == nil
            }) {
             throw AgentEstateError.invalidState(
-                "schema 28 requires successor plan proof"
+                "strict schema requires successor plan proof"
             )
         }
-        if schemaVersion >= AgentCheckpointSchema.estateVersion {
+        if estateSchemaSemantics == .strictDurableSuccessorPlan {
             guard mortality.historicalEvidenceVersion
                     == AgentCompactedDeathSummary.currentVersion,
                   let summaries = mortality.compactedDeathSummaries,
@@ -1439,8 +1431,8 @@ extension AgentSimulationSession {
                     + "\($0.guardianIDAtPlan?.rawValue ?? "none")"
             }
             if estate.successorPlanProof == nil {
-                guard schemaVersion
-                        == AgentCheckpointSchema.legacyEstateVersion else {
+                guard estateSchemaSemantics
+                        == .legacySuccessorPlanRevalidation else {
                     throw AgentEstateError.invalidState(
                         "legacy successor plan schema"
                     )
