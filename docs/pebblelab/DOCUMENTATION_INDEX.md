@@ -106,7 +106,7 @@ V4-GATE-E-v1 Blocker 03: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 04: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 04: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 05: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
-next authorized action: NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-07
+next authorized action: senior review and manual publication decision for Gate F Blocker 07
 CIV-39: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 V4-GATE-F-v1: PLANNED — NOT ACQUIRED
@@ -122,7 +122,9 @@ Gate F Evaluation 05: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-F-v1 Blocker 05: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate F Evaluation 06: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-F-v1 Blocker 06: FIXED + PUBLISHED + REMOTE VERIFIED
-Gate F Evaluation 07: NOT PERFORMED
+Gate F Evaluation 07: FAIL — HISTORICAL IMMUTABLE EVIDENCE
+V4-GATE-F-v1 Blocker 07: FIXED — LOCAL CORRECTION CANDIDATE
+Gate F Evaluation 08: NOT AUTHORIZED / NOT PERFORMED
 CIV-40: OPTIONAL TOOLING — NOT STARTED
 CIV-41: NOT STARTED
 ```
@@ -336,10 +338,16 @@ PUBLISHED + REMOTE VERIFIED** at product/test/runtime-proof commit
 `647dade73afa4d8e044423f422292dbf0c08f43e` and canonical blocker HEAD
 `fe5bca7074b8ac65c31e03299195c3d7cfe307b1`; its final review archive SHA-256
 is `ab2c496aa84af59cd1f3d72906cee55f8f8c7e381720165a5052a2b8d1807f6c`.
-Evaluation 07 is not performed. The next authorized action is
-`NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-07`. `CIV-38` remains optional and
-not started; `CIV-40` remains optional tooling and not started. Currency is
-not a Gate E or CIV-39 prerequisite.
+Evaluation 07 is historical immutable FAIL evidence against baseline
+`c95729fcc38dc9cf5d251601a52e875e2ac9d5d3`. Its same-tick birth/Family
+temporal-authority Blocker 07 is **FIXED — LOCAL CORRECTION CANDIDATE** at
+product/test/runtime-proof commit
+`61039c10763a478a55ea330ed4ad79881de0efb7`, documented in
+[`GATE_F_BLOCKER_07_FAMILY_BIRTH_TEMPORAL_AUTHORITY.md`](GATE_F_BLOCKER_07_FAMILY_BIRTH_TEMPORAL_AUTHORITY.md).
+Evaluation 08 is not authorized or performed. The next authorized action is
+senior review and manual publication decision for Blocker 07. `CIV-38` remains
+optional and not started; `CIV-40` remains optional tooling and not started.
+Currency is not a Gate E or CIV-39 prerequisite.
 
 ## Operational
 

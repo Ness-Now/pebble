@@ -136,10 +136,22 @@ Gate F correction history:
   canonical blocker HEAD `fe5bca7074b8ac65c31e03299195c3d7cfe307b1`, and
   independent remote verification passed. The final review archive SHA-256 is
   `ab2c496aa84af59cd1f3d72906cee55f8f8c7e381720165a5052a2b8d1807f6c`.
+- Gate F Evaluation 07: **FAIL — HISTORICAL IMMUTABLE EVIDENCE** against
+  baseline `c95729fcc38dc9cf5d251601a52e875e2ac9d5d3`, harness
+  `78f18936587a71a69b86f4726160e63396d7c62f`, final evidence
+  `826c81bc309ff14609f911cbb8471814e39695aa` and review archive SHA-256
+  `d430c62c574011591d17368b35a179a4bf2fd248fdde6ecc5b792c66a8a2a05e`.
+  Its blocker kind is `postBirthSameTickFamilyHouseTemporalAuthority`.
+- V4-GATE-F-v1 Blocker 07: **FIXED — LOCAL CORRECTION CANDIDATE** at product/
+  test/runtime-proof commit
+  `61039c10763a478a55ea330ed4ad79881de0efb7`. Historical shared-parent house
+  authority now uses the persisted population-born causal boundary and strict
+  same-tick house/membership sequence ordering. Schema 35 and Observer schema
+  13 are unchanged.
 - Gate F remains **PLANNED — NOT ACQUIRED**.
-- Gate F Evaluation 07 is **NOT PERFORMED**.
-- The next authorized action is
-  `NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-07`.
+- Gate F Evaluation 08 is **NOT AUTHORIZED / NOT PERFORMED**.
+- The next authorized action is senior review and manual publication decision
+  for Gate F Blocker 07.
 
 Published Gate E history:
 
@@ -539,7 +551,7 @@ the Gate E acquisition are now published and independently remote verified.
 active CIV phase: none
 completed and published through: CIV-39 (CIV-38 remains optional and unstarted)
 next eligible phase: null; Gate F remains planned and not acquired
-next authorized action: NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-07
+next authorized action: senior review and manual publication decision for Gate F Blocker 07
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -596,7 +608,9 @@ Gate F Evaluation 05 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-F-v1 Blocker 05 status: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate F Evaluation 06 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-F-v1 Blocker 06 status: FIXED + PUBLISHED + REMOTE VERIFIED
-Gate F Evaluation 07 status: NOT PERFORMED
+Gate F Evaluation 07 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
+V4-GATE-F-v1 Blocker 07 status: FIXED — LOCAL CORRECTION CANDIDATE
+Gate F Evaluation 08 status: NOT AUTHORIZED / NOT PERFORMED
 CIV-40 status: OPTIONAL TOOLING — NOT STARTED
 CIV-41 status: NOT STARTED
 roadmap generation: V4
@@ -962,8 +976,11 @@ Senior review approved manual fast-forward, publication completed at canonical
 blocker HEAD `fe5bca7074b8ac65c31e03299195c3d7cfe307b1`, and independent
 remote verification passed. The final review archive SHA-256 is
 `ab2c496aa84af59cd1f3d72906cee55f8f8c7e381720165a5052a2b8d1807f6c`.
-Evaluation 07 is **NOT PERFORMED**; the next authorized action is
-`NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-07`.
+Evaluation 07 is **FAIL — HISTORICAL IMMUTABLE EVIDENCE**. Its Blocker 07 is
+**FIXED — LOCAL CORRECTION CANDIDATE** at product/test/runtime-proof commit
+`61039c10763a478a55ea330ed4ad79881de0efb7`. Evaluation 08 is **NOT AUTHORIZED /
+NOT PERFORMED**; the next authorized action is senior review and manual
+publication decision for Blocker 07.
 `CIV-38` remains **OPTIONAL — NOT STARTED** and is not a prerequisite.
 `CIV-40` remains **OPTIONAL TOOLING — NOT STARTED**. Currency is not a Gate E
 or CIV-39 prerequisite.

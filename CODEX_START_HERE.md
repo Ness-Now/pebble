@@ -68,13 +68,16 @@ for the compact status. In particular:
 - Gate F Blocker 06 is **FIXED + PUBLISHED + REMOTE VERIFIED** at product/test/
   runtime commit `647dade73afa4d8e044423f422292dbf0c08f43e` and canonical HEAD
   `fe5bca7074b8ac65c31e03299195c3d7cfe307b1`.
+- Gate F Evaluation 07 is `FAIL — HISTORICAL IMMUTABLE EVIDENCE` against
+  baseline `c95729fcc38dc9cf5d251601a52e875e2ac9d5d3`.
+- Gate F Blocker 07 is **FIXED — LOCAL CORRECTION CANDIDATE** at product/test/
+  runtime-proof commit `61039c10763a478a55ea330ed4ad79881de0efb7`.
 - `CIV-40` is optional tooling and not started.
 - `CIV-41` is not started.
-- Gate F remains planned and not acquired; Evaluation 07 has not been
-  performed.
-- The next authorized action is
-  `NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-07`. Do not infer that optional
-  `CIV-40` is a prerequisite.
+- Gate F remains planned and not acquired; Evaluation 08 is not authorized and
+  has not been performed.
+- The next authorized action is senior review and manual publication decision
+  for Gate F Blocker 07. Do not infer that optional `CIV-40` is a prerequisite.
 
 Historical Gate B `FAIL` reports and the closure-candidate report are preserved
 as evidence of their own evaluations. They do not reopen Gate B.
