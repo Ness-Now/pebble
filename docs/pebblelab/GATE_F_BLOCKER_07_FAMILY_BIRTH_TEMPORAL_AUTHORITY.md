@@ -4,20 +4,31 @@
 
 Gate F Evaluations 01–07: **FAIL — HISTORICAL IMMUTABLE EVIDENCE**
 
-Gate F Blockers 01–06: **FIXED + PUBLISHED + REMOTE VERIFIED**
+Gate F Blockers 01–07: **FIXED + PUBLISHED + REMOTE VERIFIED**
 
-Gate F Blocker 07: **FIXED — LOCAL CORRECTION CANDIDATE**
+Gate F Blocker 07: **FIXED + PUBLISHED + REMOTE VERIFIED**
 
 Gate F: **PLANNED — NOT ACQUIRED**
 
-Evaluation 08: **NOT AUTHORIZED / NOT PERFORMED**
+Evaluation 08: **NOT PERFORMED**
 
 `CIV-40`: **OPTIONAL TOOLING — NOT STARTED**
 
 `CIV-41`: **NOT STARTED**
 
-This correction does not merge or rewrite Evaluation 07, acquire Gate F,
-start another evaluation or phase, push, or regenerate goldens.
+The correction did not merge or rewrite Evaluation 07, acquire Gate F, start
+another evaluation or phase, push, or regenerate goldens. Senior review
+approved manual fast-forward, publication completed, and independent remote
+verification passed.
+
+| Publication identity | Value |
+| --- | --- |
+| product/test/runtime-proof commit | `61039c10763a478a55ea330ed4ad79881de0efb7` |
+| published canonical blocker HEAD | `279fb26bea8a817b767a0192d8f7b1cffdff1563` |
+| final review archive SHA-256 | `a5ba10ea140f4b2b6956519d1fc196709b1a5d100d77afcdbc32e7e86f42ad90` |
+| senior review | **APPROVED FOR MANUAL FAST-FORWARD** |
+| manual publication | **COMPLETED** |
+| independent remote verification | **PASS** |
 
 ## Immutable Evaluation 07 identity
 
@@ -208,3 +219,6 @@ assertions**. The gate used the checked-in goldens read-only.
 `currentState` and `gates.F` duplicate the same Evaluation 01–07, Blocker
 01–07, Gate F acquisition/status and next-action state. The machine check must
 remain green before review delivery.
+
+The next authorized action after this reconciliation is reviewed, published
+and remotely verified is `NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-08`.
