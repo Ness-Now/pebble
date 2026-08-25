@@ -846,6 +846,7 @@ extension AgentSimulationSession {
     mutating func registerFamilyBirth(
         childID: AgentID,
         parentIDs: [AgentID],
+        authoritativeBirthEventID: AgentCausalEventID,
         causeEventID: AgentCausalEventID
     ) throws -> AgentCausalEventID? {
         guard var family = familyState else { return nil }
@@ -853,14 +854,19 @@ extension AgentSimulationSession {
         guard parents.count == 2, Set(parents).count == 2 else {
             throw AgentSessionError.family(.invalidState("birth parents"))
         }
-        guard let houseID = Self.sharedParentalHouseAtBirth(
-            parentIDs: parents, tick: tick, family: family
+        guard let houseID = Self.sharedParentalHouse(
+            parentIDs: parents, at: tick,
+            beforeEventID: authoritativeBirthEventID,
+            family: family
         ) else { return nil }
         guard family.houseMembershipPeriods.count
                 < family.configuration.maximumHouseMembershipHistory,
               family.houseMembershipPeriods.filter({
                   $0.houseID == houseID
-                      && Self.familyMembership($0, isActiveAt: tick)
+                      && Self.familyMembership(
+                          $0, isActiveAt: tick,
+                          beforeEventID: authoritativeBirthEventID
+                      )
               }).count < family.configuration.maximumMembersPerHouse else {
             throw AgentSessionError.family(.membershipCapacityReached)
         }
@@ -889,8 +895,9 @@ extension AgentSimulationSession {
 
     public func familyBirthEventCount(parentIDs: [AgentID]) -> Int {
         guard let family = familyState else { return 0 }
-        return Self.sharedParentalHouseAtBirth(
-            parentIDs: parentIDs, tick: tick, family: family
+        return Self.sharedParentalHouse(
+            parentIDs: parentIDs, at: tick,
+            beforeEventID: nil, family: family
         ) == nil ? 0 : 1
     }
 
@@ -1687,9 +1694,12 @@ extension AgentSimulationSession {
                           $0.agentID == membership.agentID
                               && $0.basis == .sharedParentHouseAtBirth
                       }).count == 1,
-                      sharedParentalHouseAtBirth(
+                      sharedParentalHouse(
                           parentIDs: parentage[0].canonicalParentIDs,
-                          tick: membership.joinedTick, family: family
+                          at: membership.joinedTick,
+                          beforeEventID:
+                            parentage[0].sourcePopulationBornEventID,
+                          family: family
                       ) == membership.houseID else {
                     throw AgentFamilyError.invalidState(
                         "child house membership"
@@ -1787,7 +1797,8 @@ extension AgentSimulationSession {
                           $0.houseID == membership.houseID
                               && $0.agentID == consent.acceptedByID
                               && familyMembership(
-                                  $0, isActiveAt: membership.joinedTick
+                                  $0, isActiveAt: membership.joinedTick,
+                                  beforeEventID: membership.joinedEventID
                               )
                       }),
                       familyMaturityMatches(
@@ -1855,9 +1866,11 @@ extension AgentSimulationSession {
                 $0.agentID == parentage.childID
                     && $0.basis == .sharedParentHouseAtBirth
             }
-            let expectedHouseID = sharedParentalHouseAtBirth(
+            let expectedHouseID = sharedParentalHouse(
                 parentIDs: parentage.canonicalParentIDs,
-                tick: parentage.birthTick, family: family
+                at: parentage.birthTick,
+                beforeEventID: parentage.sourcePopulationBornEventID,
+                family: family
             )
             guard birthMemberships.count == (expectedHouseID == nil ? 0 : 1),
                   birthMemberships.first?.houseID == expectedHouseID else {
@@ -2057,26 +2070,55 @@ extension AgentSimulationSession {
 
     private static func familyMembership(
         _ membership: AgentHouseMembershipPeriod,
-        isActiveAt tick: Int
+        isActiveAt tick: Int,
+        beforeEventID: AgentCausalEventID?
     ) -> Bool {
-        membership.joinedTick <= tick
-            && (membership.leftTick == nil || membership.leftTick! > tick)
+        guard membership.joinedTick <= tick else { return false }
+        if membership.joinedTick == tick, let beforeEventID,
+           membership.joinedEventID.sequence >= beforeEventID.sequence {
+            return false
+        }
+        guard let leftTick = membership.leftTick else { return true }
+        if leftTick > tick { return true }
+        if leftTick < tick { return false }
+        guard let beforeEventID, let leftEventID = membership.leftEventID else {
+            return false
+        }
+        return beforeEventID.sequence < leftEventID.sequence
     }
 
-    private static func sharedParentalHouseAtBirth(
+    private static func familyHouse(
+        _ house: AgentHouseRecord,
+        isFoundedAt tick: Int,
+        beforeEventID: AgentCausalEventID?
+    ) -> Bool {
+        guard house.foundationTick <= tick else { return false }
+        if house.foundationTick == tick, let beforeEventID {
+            return house.foundationEventID.sequence < beforeEventID.sequence
+        }
+        return true
+    }
+
+    private static func sharedParentalHouse(
         parentIDs: [AgentID],
-        tick: Int,
+        at tick: Int,
+        beforeEventID: AgentCausalEventID?,
         family: AgentFamilyState
     ) -> AgentHouseID? {
         let parents = parentIDs.sorted()
         guard parents.count == 2, Set(parents).count == 2 else { return nil }
         let foundedHouseIDs = Set(family.houses.compactMap {
-            $0.foundationTick <= tick ? $0.houseID : nil
+            familyHouse(
+                $0, isFoundedAt: tick, beforeEventID: beforeEventID
+            ) ? $0.houseID : nil
         })
         func activeHouseIDs(for parentID: AgentID) -> Set<AgentHouseID> {
             Set(family.houseMembershipPeriods.compactMap {
                 $0.agentID == parentID
-                    && familyMembership($0, isActiveAt: tick)
+                    && familyMembership(
+                        $0, isActiveAt: tick,
+                        beforeEventID: beforeEventID
+                    )
                     && foundedHouseIDs.contains($0.houseID)
                     ? $0.houseID : nil
             })

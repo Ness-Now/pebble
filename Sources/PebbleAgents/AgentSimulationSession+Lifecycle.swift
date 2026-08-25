@@ -576,6 +576,7 @@ extension AgentSimulationSession {
         let familyEventID = try registerFamilyBirth(
             childID: newbornID,
             parentIDs: plan.progenitorIDs,
+            authoritativeBirthEventID: born.eventID,
             causeEventID: kinshipEventID ?? born.eventID
         )
         let careEventID = try careBirth.flatMap { careBirth in
