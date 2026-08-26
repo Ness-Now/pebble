@@ -80,10 +80,13 @@ for the compact status. In particular:
   canonical HEAD `4e3bd296203346e4716c0a186017aebc69dbe750`.
 - `CIV-40` is optional tooling and not started.
 - `CIV-41` is not started.
-- Gate F remains planned and not acquired; Evaluation 09 has not been performed.
-- The next authorized action is
-  `NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-09`. Do not infer that optional
-  `CIV-40` is a prerequisite.
+- Gate F Evaluation 09 is frozen **FAIL — HISTORICAL IMMUTABLE EVIDENCE**.
+- Gate F Blocker 09 is **FIXED — LOCAL CORRECTION CANDIDATE** at product/test/
+  runtime commit `0607d9b291f3ed7a28eaa9ad887f4a2e7927e2c5`.
+- Gate F remains planned and not acquired; Evaluation 10 is not authorized and
+  was not performed.
+- The next authorized action is senior review and a manual publication decision
+  for Gate F Blocker 09. Do not infer that optional `CIV-40` is a prerequisite.
 
 Historical Gate B `FAIL` reports and the closure-candidate report are preserved
 as evidence of their own evaluations. They do not reopen Gate B.
