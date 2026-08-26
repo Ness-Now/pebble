@@ -1,31 +1,27 @@
 # Gate F Blocker 09 — Estate causal successor authority
 
-## Status
+## Status and history
 
-Gate F Evaluations 01–09: **FAIL — HISTORICAL IMMUTABLE EVIDENCE**
+Gate F Evaluations 01–09 remain **FAIL — HISTORICAL IMMUTABLE EVIDENCE**.
+Gate F Blockers 01–08 remain **FIXED + PUBLISHED + REMOTE VERIFIED**.
+Gate F Blocker 09 is **FIXED — LOCAL CORRECTION CANDIDATE; SENIOR REVIEW
+CORRECTION 01 APPLIED; NOT PUBLISHED**. Gate F remains **PLANNED — NOT
+ACQUIRED**. Evaluation 10 is **NOT AUTHORIZED / NOT PERFORMED**. `CIV-40` is
+**OPTIONAL TOOLING — NOT STARTED** and `CIV-41` is **NOT STARTED**.
 
-Gate F Blockers 01–08: **FIXED + PUBLISHED + REMOTE VERIFIED**
-
-Gate F Blocker 09: **FIXED — LOCAL CORRECTION CANDIDATE**
-
-Gate F: **PLANNED — NOT ACQUIRED**
-
-Evaluation 10: **NOT AUTHORIZED / NOT PERFORMED**
-
-`CIV-40`: **OPTIONAL TOOLING — NOT STARTED**
-
-`CIV-41`: **NOT STARTED**
-
-The product/test/runtime correction is
-`0607d9b291f3ed7a28eaa9ad887f4a2e7927e2c5`. It is rooted directly in the
-published canonical baseline
-`b8f3d8cb05d0fa42cefc8d3f06d2e05fb7b0f8cb`. No Evaluation 09 commit is an
-ancestor. This local candidate was not pushed, did not acquire Gate F, did not
-start Evaluation 10 or another phase, and did not regenerate goldens.
+The first reviewed candidate is preserved at product/test/runtime commit
+`0607d9b291f3ed7a28eaa9ad887f4a2e7927e2c5` and documentation commit
+`7f9a8ace5b5ddedf0f4ec96d6c654e9037e63169`. Its review ZIP SHA-256 is
+`aa7a6eabb8a74ca6fb61b388c44706cf95cb5868fd689db274a41405caff6672`.
+Senior Review Correction 01 product/test/runtime commit is
+`6a5ee92e89d14e1aff38d17c28d4e526eb51eb5f`; its evidence-reconciliation
+commit is recorded by the final Git history. The candidate is rooted directly
+in published canonical baseline
+`b8f3d8cb05d0fa42cefc8d3f06d2e05fb7b0f8cb`; no Evaluation 09 commit is an
+ancestor. It was not pushed, did not acquire Gate F, did not start Evaluation
+10 or another phase, and did not regenerate goldens.
 
 ## Immutable Evaluation 09 identity
-
-Evaluation 09 remains frozen **FAIL — HISTORICAL IMMUTABLE EVIDENCE**.
 
 | Identity | Value |
 | --- | --- |
@@ -38,170 +34,164 @@ Evaluation 09 remains frozen **FAIL — HISTORICAL IMMUTABLE EVIDENCE**.
 | control digest | `12cdc25b917ce0908b0e2685fbedf4bad1162cd7f190f5fc0ab6bc8ef364f346` |
 | attack digest | `328ff42c9d6b82555c8e950855a4a51caea93b4c0b932798cd7260599bb84d25` |
 
-The bounded correction audit also found the supported correction-time
-contradiction
-`prePlanPendingSuccessorMortalityFinalizationRefusal`. Because both defects
-were uncommitted contributors to immutable successor truth at the same
-persisted `estate.successorPlanEventID` boundary, senior review broadened
-Blocker 09 rather than creating a separate blocker.
+The bounded correction audit also found
+`prePlanPendingSuccessorMortalityFinalizationRefusal`. Both defects contribute
+to immutable successor truth at the persisted `estate.successorPlanEventID`
+boundary, so they were corrected together under Blocker 09.
 
-## Causal contract and correction
+## Causal contract
 
-For strict Estate schemas 28 through 35, the authoritative historical instant
-is `estate.successorPlanEventID`. Plan creation predicts and verifies that exact
-event sequence; later live validation and checkpoint restore use the persisted
-sequence. Schema 27 retains its published legacy successor-plan revalidation
-semantics. Unsupported future schemas still reject.
+For strict Estate schemas 28 through 35, the authoritative instant is
+`estate.successorPlanEventID`. Parentage-derived authority participates when
+Kinship `recordedEventID.sequence < successorPlanEventID.sequence`. Current
+Kinship remains current truth even when a later relationship is excluded from
+historical Estate truth.
 
-Parentage-derived parent, child and sibling authority participates only when
-the durable Kinship `recordedEventID.sequence` is strictly less than the
-successor-plan sequence. Current Kinship is unchanged: a relationship created
-later remains current truth but cannot become historical Estate authority.
+Mortality uses the first durable terminal authority. Embodied pending deaths
+use `mortalityMaterialExitPending`; finalized records carry
+`pendingMaterialExitEventID`, with `lethalHealthDepletion` as the immediate-
+death fallback. New compacted summaries retain the optional terminal event ID.
+Plan creation and validation use the same historical rule and do not depend on
+retained causal event bodies. Schema 27 retains its published legacy Estate
+revalidation policy; unsupported future schemas reject.
 
-Mortality historical eligibility uses the first durable terminal mortality
-authority. For embodied pending deaths this is
-`mortalityMaterialExitPending`; a finalized record carries its
-`pendingMaterialExitEventID`, or the `lethalHealthDepletion` event on immediate
-death paths. New compacted summaries retain this optional terminal event ID.
-Old summaries without it conservatively retain their published death-event
-boundary and their original digest bytes.
+## Senior Review Correction 01
 
-Estate plan creation and strict validation call the same historical mortality
-rule. They do not mutate immutable proofs when a candidate later dies, derive
-history from current active membership, require retained causal event bodies,
-or treat all same-tick transitions as simultaneous.
+Senior review correctly found that the original three-fixture compatibility
+matrix contained no live pending mortality transition. The exact published
+trajectory was reproduced through public APIs at tick 4:
 
-## Evaluation 09 correction matrix
+| Fact | Value |
+| --- | --- |
+| `mortalityMaterialExitPending` | sequence 98 |
+| Estate successor plan | sequence 121 |
+| stored successor row | `eligibleAtDeath = true` |
+| checkpoint | schema 35, 124,934 bytes, `1384b5fcdef05c607270015071917b0d92831277abfb05670bacd7e47dca4e41` |
+| durable state | 124,700 bytes, `9e552af00c8a88f7159c16fe20b0ea172e040a814c2147773953e0bd7868883e` |
+| published reader | PASS exact |
+| pre-SRC01 candidate | REJECT: `invalid estate state: successor mortality eligibility` |
 
-The independent correction harness uses supported reproduction, mortality,
-Estate and checkpoint APIs. It does not inject malformed state for the positive
-trajectories.
+The existing domain marker `AgentEstateSuccessorPlanProof.version` now makes
+the semantic distinction explicit:
 
-| Order | Tick | Birth | Parentage | Lethal | Estate opened | Successor plan | Death finalized | Historical result |
+- version 1 is the published legacy successor-plan representation. Genuine v1
+  proofs remain immutable and validate with published plan-time mortality
+  semantics;
+- version 2 is Blocker 09 causal successor authority. Every new runtime plan
+  emits v2. Parentage, terminal mortality and guardianship are reconstructed at
+  the successor-plan event boundary, and malformed v2 state remains rejected.
+
+The compatibility path is not a v2 bypass. A v2 proof with pending sequence 98
+before plan sequence 121 and `eligible=true` rejects; the corresponding v2
+positive with `eligible=false` passes. A v2 proof containing post-plan
+parentage also rejects. No new runtime path emits v1.
+
+Checkpoint canonical JSON, schema/domain-version checks and digests continue to
+provide deterministic integrity and semantic validation; they are not keyed
+authenticity against an actor who arbitrarily rewrites a complete checkpoint
+and recomputes every digest. Reconstructing a self-consistent legacy v1 archive
+is outside that established persistence-integrity threat model, so SRC01 adds
+no unrelated cryptographic anti-downgrade system.
+
+## Legacy continuation and compatibility
+
+The exact old v1 pending checkpoint restores and re-encodes byte-exact under
+SRC01. Its pending custody resolves and mortality finalizes exactly once. The
+old Estate proof remains immutable v1; the newly created Estate is v2. The
+continued checkpoint SHA-256 is
+`40f334513d161563b9a1e171afc87ab4059c17afbc76cddecca7e21ec0c5cfdc`.
+A second fresh restore and continuation yields
+`7d7e6c404c8e01190a1b5950c5d5185bbe8cfbb650a963cd7eb33b76fd6b6a8e`,
+with zero death/Estate replay and singular current authority.
+
+Five published-canonical schema-35 fixture classes pass with both corrected
+debug and optimized readers:
+
+| Old canonical fixture | Checkpoint SHA-256 | Corrected result |
+| --- | --- | --- |
+| mortality enabled, empty history | `c1e25dfc1d94195c6db3f4656f981fd3d1d0ea1aae21a6cb4e92e3dec493928e` | exact restore/re-encode/continue |
+| retained death + Estate + CIV-39 | `1f5868ab17175466c8179e5ecbf6d7e0134f7be2107c1c2c9cf6a202e9c5fc51` | exact restore/re-encode/continue |
+| compacted mortality + retained Estates | `0814b54770bd4103fb3ed083e280bed52a5525dbcfa882ac82b6e5724da54336` | exact restore/re-encode/continue |
+| pending before plan, legacy eligible | `1384b5fcdef05c607270015071917b0d92831277abfb05670bacd7e47dca4e41` | exact restore plus successful finalization |
+| post-plan sibling, immutable pre-birth proof | `644e4b04f5bb068800bdc96ecbf7cd03be7b596fa10fc405a173a5c0a8b47cbc` | exact; current `halfSibling`, zero historical rows |
+
+Old compacted summaries lacking `terminalEligibilityEventID` remain byte-exact
+and use their published death-event boundary. The more specific affected
+pending-before-plan compacted legacy shape is not publicly constructible: on
+the published baseline, finalizing that pending transition refuses on
+`successor mortality eligibility`, so it cannot reach finalized or compacted
+history. No causal sequence is fabricated.
+
+## Evaluation 09 and mortality matrices
+
+| Order | Tick | Birth | Parentage | Lethal | Estate opened | Plan | Death finalized | Historical result |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | same-tick control | 4 | 119 | 121 | 129 | 131 | 132 | 138 | sibling included |
-| same-tick attack-after-correction | 4 | 130 | 132 | 119 | 121 | 122 | 128 | later sibling excluded |
+| same-tick attack | 4 | 130 | 132 | 119 | 121 | 122 | 128 | later sibling excluded |
 
-The exact historical Evaluation 09 ordering (birth 128, parentage 130 before
-plan 141 in the control; plan 131, death finalization 137, later birth 139 and
-parentage 141 in the attack) is preserved as immutable evidence. The independent
-Blocker 09 fixture has different event identities because it was reimplemented
-from canonical product truth. Its equivalent causal distinction is exact:
-`121 < 132` in the control and `122 < 130 < 132` in the attack.
+The exact Evaluation 09 historical events remain birth/parentage 128/130 before
+plan 141 in the control, and plan 131, death finalization 137, later birth 139
+and parentage 141 in the attack. The independent fixture uses different IDs but
+the same public causal contract. Current `siblingRelation` is `halfSibling`, the
+later sibling has zero historical Estate rows, and the immutable proof does not
+change.
 
-After the attack birth, current `siblingRelation` is `halfSibling`; the later
-sibling has zero historical Estate rows. The immutable successor proof is
-unchanged, schema-35 checkpoint creation and restore pass exactly, and
-continuation succeeds. Previous-tick, same-tick-before, same-tick-after and
-later-tick half-sibling cases, plus equivalent full-sibling before/after cases,
-all pass.
-
-The exact Evaluation 09 identity/ordinal expectations remain conserved:
-decedent `agent_3` / population ordinal 3, later child `agent_4` / ordinal 4,
-next population ordinal 5, next fidelity transition ordinal 6, next migration
-ordinal 1, next household ordinal 3, next Family union ordinal 1 and next
-Family house ordinal 1.
-
-## Mortality eligibility matrix
-
-| Supported case | Causal order | Result |
+| Mortality case | Causal order | Historical result |
 | --- | --- | --- |
-| pending before plan | pending 98 < plan 121 | candidate ineligible; `secondaryParents`; beneficiary `agent_1` |
-| finalized before plan | death finalization 128 < plan 133 | candidate ineligible |
-| later-tick mortality after plan | plan 122 < pending 135 < death finalization 155 | historically eligible at plan; no retroactive change |
+| pending before plan | pending 98 < plan 121 | ineligible; `secondaryParents`; beneficiary `agent_1` |
+| finalized before plan | finalization 128 < plan 133 | ineligible |
+| later-tick mortality | plan 122 < pending 135 < finalization 155 | eligible at plan; no retroactive change |
 
-In the original adjacent failure, the pre-plan pending parent was recorded
-eligible and its later finalization refused with `successor mortality
-eligibility`. After correction, the proof records that parent ineligible,
-physical custody resolves at sequence 128, lethal publication occurs at 129,
-death finalization succeeds at 140, exactly two deaths and two Estates exist,
-and the earlier Estate proof remains immutable.
+Same-tick post-plan `mortalityMaterialExitPending` is not publicly reachable:
+`applyMortalitySurvivalBoundary` stages terminal pending state during tick
+advancement before manual death finalization and Estate planning for that tick.
+A post-plan canonical child is also unreachable because death finalization
+cancels active reproduction plans involving the decedent.
 
-A same-tick post-plan transition into `mortalityMaterialExitPending` is not a
-public ordering: `applyMortalitySurvivalBoundary` stages terminal pending state
-at tick advancement before manual death finalization and Estate planning for
-that tick. A post-plan canonical child is likewise unreachable through public
-reproduction: death finalization cancels active plans involving the decedent,
-and a dead parent cannot execute a supported birth.
+## Focused, fresh-process and compaction proof
 
-## Strict negatives and compaction
+The authoritative SRC01 selector passes **32/32** in debug and optimized.
+Stdout is byte-identical with SHA-256
+`c3fee0f27a48ca5aaa8966500674fe142b13cbed5a1065f7fd67fd9608bb1731`.
+The pre-SRC01 31/31 result remains historical evidence only.
 
-Strict schemas reject a proof that includes post-boundary parentage, omits a
-pre-boundary relationship, uses the wrong relationship basis, or has an
-incorrect beneficiary tier/list or foreign successor-plan identity. They also
-reject a pre-plan mortality-ineligible successor marked eligible, a genuinely
-eligible-at-plan successor marked ineligible, an incorrect life stage, foreign
-pending causal identity and impossible pending sequence ordering. Kinship and
-Mortality retain ownership of their malformed causal records.
-
-Event-body compaction does not change the result. Parentage uses durable
-`recordedEventID`; mortality uses pending/final durable IDs and the optional
-compacted terminal-eligibility ID. Relationships before the plan remain
-recognized, relationships and mortality transitions after it remain
-non-retroactive, and exact schema-35 restore succeeds without unbounded causal
-history.
-
-## Focused and fresh-process proof
-
-The dedicated `gate-f-blocker-09` selector passes **31/31** in both debug and
-optimized builds. Stdout is byte-identical with SHA-256
-`6585a363f705868c4183b3587436e7ab9e375ad61e87cd434c9fd251a1924ac0`.
-
-Twelve fresh OS processes pass: parentage and mortality each use a three-process
-write / fresh restore-and-transition / fresh restore-and-continue chain in
-debug and optimized configurations. Debug and optimized artifact trees are
-byte-identical where required.
+Twelve fresh OS processes pass: parentage and mortality each use a three-
+process chain in debug and optimized, and corresponding artifact trees are
+byte-identical.
 
 | Artifact | Bytes | SHA-256 |
 | --- | ---: | --- |
-| parentage pre-birth checkpoint | 119,009 | `e8fd4672f5d3e34be60c680b5274c679462226b9eb220e204cac4486e264e53b` |
-| parentage pre-birth durable | 118,785 | `089a073b7f39b69b204526caf2a5d3128958f767935f29e23d234a67a2660392` |
-| parentage post-birth checkpoint | 131,165 | `644e4b04f5bb068800bdc96ecbf7cd03be7b596fa10fc405a173a5c0a8b47cbc` |
-| parentage post-birth durable | 130,941 | `1aecd1636c4ea0119018b56b544e334ace06b921685ce5d260bb21e523351556` |
-| mortality pending checkpoint | 124,795 | `f96a084f7c8cb0df08628f67f283926534c7a7cd9da6ab4feed2ccd8e75107e7` |
-| mortality pending durable | 124,561 | `16c99f431a3eacdce4f11b2e23f379c9c14fa9a8a99253eda7f1dd86ab3fa23d` |
-| mortality finalized checkpoint | 135,234 | `9ff4d55c5916fdf7050a1ccb2b5995f0cb10a330cb2d76bec18310636a7e6d42` |
-| mortality finalized durable | 135,000 | `eac99e897e7bd18a816a60043ade25062b4252d4bad3e6878fc18a5778fa927b` |
+| parentage pre-birth checkpoint | 119,009 | `2f029c0fa179de7ac5d1739d80d8ac0da7c8ffa562c06c93e909fbdccb4cd662` |
+| parentage pre-birth durable | 118,785 | `36fbfeb987051cffbfc9f4b039f56d16dc326754396c6ae0e472c1c63553c21f` |
+| parentage post-birth checkpoint | 131,165 | `f5690d3ee1a077a0ef9ea251fb6635776d49b70b1e3bb3462dd5e7137cdcab25` |
+| parentage post-birth durable | 130,941 | `6354bd4788de0b669ed142fb82babacc7fc5c1ec587ef01165a14d073e12a2d5` |
+| mortality pending checkpoint | 124,795 | `be7689f945aced70cccea5226e4624a72e64684c6f4c1ed0b2bafa6433a55217` |
+| mortality pending durable | 124,561 | `985ea16488ece5e05e6a692e9d26859f3241679325b319b40f7043771799a1bf` |
+| mortality finalized checkpoint | 135,234 | `904d843ee6f1f3fb29477961f263fdfb44c3232aab963e4316a4004247da0bd1` |
+| mortality finalized durable | 135,000 | `c40d02249c3ae739837f27cfe86ba4473a8a19164eab0aab92e5253d6b07a63e` |
 
-Every checkpoint is schema 35. Observer is read-only schema 13 with zero
-mutations. Duplicate current authority, replayed deaths and replayed Estates
-are all zero. Continuation succeeds and identities and next ordinals are exact.
-
-## Published schema-35 backward compatibility
-
-A disposable detached worktree rooted exactly at published canonical
-`b8f3d8cb05d0fa42cefc8d3f06d2e05fb7b0f8cb` wrote three representative old
-schema-35 checkpoints. The corrected reader decoded, strictly restored and
-re-encoded the exact bytes, then continued without replay or duplicate current
-authority.
-
-| Old canonical fixture | Checkpoint bytes | Checkpoint SHA-256 | Result |
-| --- | ---: | --- | --- |
-| mortality enabled, no deaths | 35,733 | `c1e25dfc1d94195c6db3f4656f981fd3d1d0ea1aae21a6cb4e92e3dec493928e` | exact |
-| retained death + Estate + CIV-39 scale | 128,280 | `1f5868ab17175466c8179e5ecbf6d7e0134f7be2107c1c2c9cf6a202e9c5fc51` | exact |
-| two compacted deaths + three retained Estates | 238,258 | `0814b54770bd4103fb3ed083e280bed52a5525dbcfa882ac82b6e5724da54336` | exact |
-
-The new compacted-summary field is optional on decode. Its absence neither
-fabricates a causal sequence nor changes an old digest. Checkpoint schema
-therefore remains 35; Observer remains 13.
+All checkpoints are schema 35. Observer is schema 13 and read-only. Event-body
+compaction preserves parentage ordering through `recordedEventID` and mortality
+ordering through pending/final durable IDs and the optional compacted terminal
+ID. Replay, duplicate authority and ordinal reuse counters are zero.
 
 ## Bounded adjacent audit
 
 | Contributor | Classification | Contract evidence |
 | --- | --- | --- |
-| parentage child/sibling | event-causal and verified | `recordedEventID < successorPlanEventID` |
-| mortality eligibility | event-causal and verified | first durable terminal mortality event compared with plan |
-| guardian at plan | event-causal and verified | start/end event sequences already compared with plan |
-| `lifeStageAtPlan` | intentionally tick-boundary granular | lifecycle transitions publish at tick boundary before Estate planning |
-| active union / spouse | same-transaction exception verified | partner-death Family termination follows the immutable plan within mortality finalization; proof retains activation evidence and termination reason/tick validates the transaction |
+| parentage child/sibling | EVENT-CAUSAL AND VERIFIED | recorded event precedes plan |
+| mortality eligibility | EVENT-CAUSAL AND VERIFIED | first durable terminal event compared with plan |
+| guardian at plan | EVENT-CAUSAL AND VERIFIED | start/end event sequences already compared with plan |
+| `lifeStageAtPlan` | INTENTIONALLY TICK-GRANULAR | lifecycle publishes at tick boundary before Estate planning |
+| active union / spouse | SAME-TRANSACTION EXCEPTION — VERIFIED | partner-death Family termination follows immutable plan creation in the same mortality finalization transaction |
 
 No further reachable Estate historical-authority contradiction was found.
 
-## Regression and repository verification
+## Validation
 
 | Selector | Debug | Optimized |
 | --- | ---: | ---: |
-| Blocker 09 | 31/31 | 31/31 |
+| Blocker 09 SRC01 | 32/32 | 32/32 |
 | Blocker 08 | 28/28 | 28/28 |
 | Blocker 07 | 26/26 | 26/26 |
 | Blocker 06 | 28/28 | 28/28 |
@@ -211,25 +201,26 @@ No further reachable Estate historical-authority contradiction was found.
 | Blocker 02 | 27/27 | 27/27 |
 | Blocker 01 | 20/20 | 20/20 |
 
-Fresh owning selectors pass: Estate 88/88, Mortality 93/93, Kinship 79/79,
-lifecycle 80/80, reproduction 80/80, Family 83/83, households 71/71,
-dependent care 55/55, Childhood 62/62, CIV-39 69/69, population migration
-66/66, checkpoint/replay 49/49, persistence/reconciliation 19/19, Observer
-20/20, Material Rights 23/23, Gate E Blockers/E01–E04 27/27, 33/33, 25/25
-and 28/28, and candidate physical atomicity 3/3.
+Owning selectors pass: Estate 88/88, Mortality 93/93, Kinship 79/79,
+lifecycle 80/80, reproduction 80/80, Family 83/83, households 71/71, care
+55/55, Childhood 62/62, CIV-39 69/69, migration 66/66, checkpoint/replay
+49/49, persistence/reconciliation 19/19, Observer 20/20, Material Rights
+23/23, Gate E Blockers 01–04 27/27, 33/33, 25/25 and 28/28, and physical
+candidate atomicity 3/3.
 
-The first repository verifier attempt was interrupted by the accidental machine
-shutdown at approximately stage 3 and is not counted. After crash-state and
-stale-process inspection, `scripts/verify-pebblelab.sh` was rerun from stage 1.
-The authoritative run passes **all 35 stages, 4273/4273 assertions**. Goldens
-were read-only and were not regenerated.
+The quota-interrupted verifier invocation continued independently and produced
+a complete authoritative log with a normal terminal PASS. It was therefore
+preserved rather than rerun. `scripts/verify-pebblelab.sh` passes **35/35
+stages and 4274/4274 assertions**. No partial run is counted. Goldens were
+read-only and were not regenerated.
 
-## Compatibility and program state
+## Final compatibility state
 
-- checkpoint schema: **35**, unchanged and backward compatible;
+- checkpoint schema: **35**, unchanged;
 - Observer schema: **13**, unchanged and read-only;
 - `ROADMAP_MANIFEST.schemaVersion`: **3**, unchanged;
 - product correction: **YES**;
+- published: **NO**;
 - Gate F acquired: **NO**;
 - Evaluation 10 performed: **NO**;
 - `CIV-40` / `CIV-41` started: **NO / NO**;
@@ -237,5 +228,5 @@ were read-only and were not regenerated.
 - push attempted: **NO**.
 
 `currentState` and `gates.F` carry semantically identical Evaluation 09,
-Blocker 09, Gate F acquisition/status and next-action state. The next authorized
-action is senior review and a manual publication decision for Blocker 09.
+Blocker 09, Gate F and next-action state. The next authorized action is senior
+review and a manual publication decision for Blocker 09.
