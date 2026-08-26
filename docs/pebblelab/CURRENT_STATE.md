@@ -177,8 +177,8 @@ Gate F correction history:
   `d200882d8e36f5f43eff0c52e163beb638f05cfc` and review archive SHA-256
   `79086413fd117a8c33a78a16430aafdd72b0c7492ec941c09399a615b1202816`.
   Its blocker kind is `postDeathSameTickSiblingEstateAuthority`.
-- V4-GATE-F-v1 Blocker 09: **FIXED — LOCAL CORRECTION CANDIDATE; SENIOR REVIEW
-  CORRECTION 01 APPLIED; NOT PUBLISHED**. The initial product commit is
+- V4-GATE-F-v1 Blocker 09: **FIXED + PUBLISHED + REMOTE VERIFIED**, including
+  Senior Review Correction 01. The initial product commit is
   `0607d9b291f3ed7a28eaa9ad887f4a2e7927e2c5`; SRC01 product commit
   `6a5ee92e89d14e1aff38d17c28d4e526eb51eb5f` distinguishes immutable published
   successor-proof v1 semantics from causal v2 semantics emitted by new plans.
@@ -186,11 +186,14 @@ Gate F correction history:
   Mortality eligibility. The bounded audit also corrected
   `prePlanPendingSuccessorMortalityFinalizationRefusal`. Five affected old
   schema-35 fixture classes restore exactly, legacy pending-death continuation
-  succeeds, and Observer schema 13 is unchanged.
+  succeeds, and Observer schema 13 is unchanged. Manual publication and
+  independent remote verification completed at canonical HEAD
+  `482adc6617e258a73967e73c9d53cf1466c94f64`; the final review archive SHA-256
+  is `09136811d4e6680dc6373e2c728509b91e2557a34a0dd10a9eeb421bd1d446e9`.
 - Gate F remains **PLANNED — NOT ACQUIRED**.
-- Gate F Evaluation 10 is **NOT AUTHORIZED / NOT PERFORMED**.
-- The next authorized action is senior review and a manual publication decision
-  for Gate F Blocker 09.
+- Gate F Evaluation 10 is **NOT PERFORMED**.
+- The next authorized action is
+  `NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-10`.
 
 Published Gate E history:
 
@@ -590,7 +593,7 @@ the Gate E acquisition are now published and independently remote verified.
 active CIV phase: none
 completed and published through: CIV-39 (CIV-38 remains optional and unstarted)
 next eligible phase: null; Gate F remains planned and not acquired
-next authorized action: SENIOR-REVIEW-V4-GATE-F-v1-BLOCKER-09
+next authorized action: NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-10
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -652,8 +655,8 @@ V4-GATE-F-v1 Blocker 07 status: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate F Evaluation 08 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-F-v1 Blocker 08 status: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate F Evaluation 09 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
-V4-GATE-F-v1 Blocker 09 status: FIXED — LOCAL CORRECTION CANDIDATE; SENIOR REVIEW CORRECTION 01 APPLIED; NOT PUBLISHED
-Gate F Evaluation 10 status: NOT AUTHORIZED / NOT PERFORMED
+V4-GATE-F-v1 Blocker 09 status: FIXED + PUBLISHED + REMOTE VERIFIED
+Gate F Evaluation 10 status: NOT PERFORMED
 CIV-40 status: OPTIONAL TOOLING — NOT STARTED
 CIV-41 status: NOT STARTED
 roadmap generation: V4
@@ -1035,14 +1038,15 @@ Senior review approved manual fast-forward, publication completed, independent
 remote verification passed, and the final review archive SHA-256 is
 `c11b2d267a1dad40f52ad1bfe327981eaea1aae3419db8c80b45ab033421926b`.
 Evaluation 09 is **FAIL — HISTORICAL IMMUTABLE EVIDENCE**. Blocker 09 is
-**FIXED — LOCAL CORRECTION CANDIDATE; SENIOR REVIEW CORRECTION 01 APPLIED; NOT
-PUBLISHED** at initial product commit
+**FIXED + PUBLISHED + REMOTE VERIFIED**, including Senior Review Correction 01,
+at initial product commit
 `0607d9b291f3ed7a28eaa9ad887f4a2e7927e2c5` plus SRC01 product commit
-`6a5ee92e89d14e1aff38d17c28d4e526eb51eb5f`, documented in
+`6a5ee92e89d14e1aff38d17c28d4e526eb51eb5f` and published canonical HEAD
+`482adc6617e258a73967e73c9d53cf1466c94f64`, documented in
 [`GATE_F_BLOCKER_09_ESTATE_CAUSAL_SUCCESSOR_AUTHORITY.md`](GATE_F_BLOCKER_09_ESTATE_CAUSAL_SUCCESSOR_AUTHORITY.md).
-Gate F remains **PLANNED — NOT ACQUIRED** and Evaluation 10 is **NOT AUTHORIZED /
-NOT PERFORMED**; the next authorized action is senior review and a manual
-publication decision for Blocker 09.
+Gate F remains **PLANNED — NOT ACQUIRED** and Evaluation 10 is **NOT
+PERFORMED**; the next authorized action is
+`NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-10`.
 `CIV-38` remains **OPTIONAL — NOT STARTED** and is not a prerequisite.
 `CIV-40` remains **OPTIONAL TOOLING — NOT STARTED**. Currency is not a Gate E
 or CIV-39 prerequisite.

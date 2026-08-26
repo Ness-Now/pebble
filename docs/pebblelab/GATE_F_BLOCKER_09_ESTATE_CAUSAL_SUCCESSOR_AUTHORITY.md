@@ -4,9 +4,9 @@
 
 Gate F Evaluations 01–09 remain **FAIL — HISTORICAL IMMUTABLE EVIDENCE**.
 Gate F Blockers 01–08 remain **FIXED + PUBLISHED + REMOTE VERIFIED**.
-Gate F Blocker 09 is **FIXED — LOCAL CORRECTION CANDIDATE; SENIOR REVIEW
-CORRECTION 01 APPLIED; NOT PUBLISHED**. Gate F remains **PLANNED — NOT
-ACQUIRED**. Evaluation 10 is **NOT AUTHORIZED / NOT PERFORMED**. `CIV-40` is
+Gate F Blocker 09 is **FIXED + PUBLISHED + REMOTE VERIFIED**, including Senior
+Review Correction 01. Gate F remains **PLANNED — NOT ACQUIRED**. Evaluation 10
+is **NOT PERFORMED**. `CIV-40` is
 **OPTIONAL TOOLING — NOT STARTED** and `CIV-41` is **NOT STARTED**.
 
 The first reviewed candidate is preserved at product/test/runtime commit
@@ -18,8 +18,17 @@ Senior Review Correction 01 product/test/runtime commit is
 commit is recorded by the final Git history. The candidate is rooted directly
 in published canonical baseline
 `b8f3d8cb05d0fa42cefc8d3f06d2e05fb7b0f8cb`; no Evaluation 09 commit is an
-ancestor. It was not pushed, did not acquire Gate F, did not start Evaluation
-10 or another phase, and did not regenerate goldens.
+ancestor. During correction, Codex did not push, acquire Gate F, start
+Evaluation 10 or another phase, or regenerate goldens; publication was the
+subsequent manual action recorded below.
+
+Manual publication completed at final Blocker 09 HEAD
+`482adc6617e258a73967e73c9d53cf1466c94f64`. Independent GitHub verification
+confirmed `lab/pebblelab-v1` identical to that HEAD with ahead/behind `0/0` and
+the same merge base. The final Senior Review archive is
+`PebbleLab-GateF-Blocker09-SeniorReviewCorrection01-Review-482adc6.zip`, SHA-256
+`09136811d4e6680dc6373e2c728509b91e2557a34a0dd10a9eeb421bd1d446e9`,
+with 280/280 internal checksums, ZIP integrity and fresh extraction PASS.
 
 ## Immutable Evaluation 09 identity
 
@@ -220,7 +229,7 @@ read-only and were not regenerated.
 - Observer schema: **13**, unchanged and read-only;
 - `ROADMAP_MANIFEST.schemaVersion`: **3**, unchanged;
 - product correction: **YES**;
-- published: **NO**;
+- published and independently remote verified: **YES**;
 - Gate F acquired: **NO**;
 - Evaluation 10 performed: **NO**;
 - `CIV-40` / `CIV-41` started: **NO / NO**;
@@ -228,5 +237,5 @@ read-only and were not regenerated.
 - push attempted: **NO**.
 
 `currentState` and `gates.F` carry semantically identical Evaluation 09,
-Blocker 09, Gate F and next-action state. The next authorized action is senior
-review and a manual publication decision for Blocker 09.
+Blocker 09, Gate F and next-action state. The next authorized action is
+`NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-10`.

@@ -81,15 +81,14 @@ for the compact status. In particular:
 - `CIV-40` is optional tooling and not started.
 - `CIV-41` is not started.
 - Gate F Evaluation 09 is frozen **FAIL — HISTORICAL IMMUTABLE EVIDENCE**.
-- Gate F Blocker 09 is **FIXED — LOCAL CORRECTION CANDIDATE; SENIOR REVIEW
-  CORRECTION 01 APPLIED; NOT PUBLISHED**. The initial product candidate is
-  `0607d9b291f3ed7a28eaa9ad887f4a2e7927e2c5`; SRC01 product commit
-  `6a5ee92e89d14e1aff38d17c28d4e526eb51eb5f` adds explicit legacy-v1 versus
-  causal-v2 successor-proof semantics.
-- Gate F remains planned and not acquired; Evaluation 10 is not authorized and
-  was not performed.
-- The next authorized action is senior review and a manual publication decision
-  for Gate F Blocker 09. Do not infer that optional `CIV-40` is a prerequisite.
+- Gate F Blocker 09 is **FIXED + PUBLISHED + REMOTE VERIFIED**, including
+  Senior Review Correction 01, at canonical HEAD
+  `482adc6617e258a73967e73c9d53cf1466c94f64`. The final review archive SHA-256
+  is `09136811d4e6680dc6373e2c728509b91e2557a34a0dd10a9eeb421bd1d446e9`.
+- Gate F remains **PLANNED — NOT ACQUIRED**; Evaluation 10 was not performed.
+- The next authorized action is
+  `NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-10`. Do not infer that optional
+  `CIV-40` is a prerequisite.
 
 Historical Gate B `FAIL` reports and the closure-candidate report are preserved
 as evidence of their own evaluations. They do not reopen Gate B.
