@@ -1096,6 +1096,9 @@ extension AgentSimulationSession {
                         demographicAgeTicks:
                             compacted.demographicAgeTicks,
                         lifeStageAtDeath: compacted.lifeStage,
+                        terminalEligibilityEventID:
+                            compacted.pendingMaterialExitEventID
+                                ?? compacted.lethalDamageEventID,
                         deathEventID: compacted.deathEventID,
                         finalStateDigest: compacted.finalStateDigest
                     ))

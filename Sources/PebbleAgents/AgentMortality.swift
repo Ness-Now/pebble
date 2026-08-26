@@ -442,6 +442,10 @@ public struct AgentCompactedDeathSummary: Codable, Equatable, Sendable {
     public let deathTick: Int
     public let demographicAgeTicks: Int?
     public let lifeStageAtDeath: AgentLifeStage?
+    /// The first durable causal event at which this person had entered the
+    /// terminal mortality path. Historical schemas may omit it; in that case
+    /// `deathEventID` remains the conservative legacy boundary.
+    public let terminalEligibilityEventID: AgentCausalEventID?
     public let deathEventID: AgentCausalEventID
     public let finalStateDigest: String
     public let evidenceDigest: String
@@ -454,6 +458,7 @@ public struct AgentCompactedDeathSummary: Codable, Equatable, Sendable {
         deathTick: Int,
         demographicAgeTicks: Int?,
         lifeStageAtDeath: AgentLifeStage?,
+        terminalEligibilityEventID: AgentCausalEventID?,
         deathEventID: AgentCausalEventID,
         finalStateDigest: String
     ) {
@@ -465,6 +470,7 @@ public struct AgentCompactedDeathSummary: Codable, Equatable, Sendable {
         self.deathTick = deathTick
         self.demographicAgeTicks = demographicAgeTicks
         self.lifeStageAtDeath = lifeStageAtDeath
+        self.terminalEligibilityEventID = terminalEligibilityEventID
         self.deathEventID = deathEventID
         self.finalStateDigest = finalStateDigest
         evidenceDigest = Self.digest(
@@ -476,6 +482,7 @@ public struct AgentCompactedDeathSummary: Codable, Equatable, Sendable {
             deathTick: deathTick,
             demographicAgeTicks: demographicAgeTicks,
             lifeStageAtDeath: lifeStageAtDeath,
+            terminalEligibilityEventID: terminalEligibilityEventID,
             deathEventID: deathEventID,
             finalStateDigest: finalStateDigest
         )
@@ -490,10 +497,11 @@ public struct AgentCompactedDeathSummary: Codable, Equatable, Sendable {
         deathTick: Int,
         demographicAgeTicks: Int?,
         lifeStageAtDeath: AgentLifeStage?,
+        terminalEligibilityEventID: AgentCausalEventID?,
         deathEventID: AgentCausalEventID,
         finalStateDigest: String
     ) -> String {
-        AgentMortalityDigest.make([
+        var components = [
             "compacted-death-v\(version)",
             String(deathOrdinal),
             agentID.rawValue,
@@ -502,9 +510,13 @@ public struct AgentCompactedDeathSummary: Codable, Equatable, Sendable {
             String(deathTick),
             demographicAgeTicks.map(String.init) ?? "none",
             lifeStageAtDeath?.rawValue ?? "none",
-            deathEventID.rawValue,
-            finalStateDigest,
-        ].joined(separator: "|"))
+        ]
+        if let terminalEligibilityEventID {
+            components.append(terminalEligibilityEventID.rawValue)
+        }
+        components.append(deathEventID.rawValue)
+        components.append(finalStateDigest)
+        return AgentMortalityDigest.make(components.joined(separator: "|"))
     }
 }
 

@@ -2374,6 +2374,8 @@ extension AgentSimulationSession {
                             demographicAgeTicks:
                                 summary.demographicAgeTicks,
                             lifeStageAtDeath: summary.lifeStageAtDeath,
+                            terminalEligibilityEventID:
+                                summary.terminalEligibilityEventID,
                             deathEventID: summary.deathEventID,
                             finalStateDigest: summary.finalStateDigest
                         )
@@ -2384,6 +2386,10 @@ extension AgentSimulationSession {
                           (summary.demographicAgeTicks ?? 0) >= 0,
                           summary.deathEventID.simulationID
                             == state.clock.simulationID,
+                          summary.terminalEligibilityEventID.map({
+                              $0.simulationID == state.clock.simulationID
+                                && $0.sequence < summary.deathEventID.sequence
+                          }) ?? true,
                           !summary.finalStateDigest.isEmpty,
                           summary.evidenceDigest == expectedEvidenceDigest
                     else {

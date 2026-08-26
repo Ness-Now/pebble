@@ -577,11 +577,23 @@ extension AgentSimulationSession {
             $0.status == .active && $0.partnerIDs.contains(decedentID)
         })
         let partnerID = activeUnion?.partnerIDs.first { $0 != decedentID }
+        try prevalidateCausalAppend(count: 2)
+        let predictedPlanSequenceRaw = causalLedger.latestSequence
+            .addingReportingOverflow(2)
+        guard !predictedPlanSequenceRaw.overflow,
+              let predictedPlanSequence = AgentCausalSequence(
+                rawValue: predictedPlanSequenceRaw.partialValue
+              ) else {
+            throw AgentSessionError.estate(.invalidState(
+                "successor plan causal boundary"
+            ))
+        }
         let plan = try estateBeneficiaryPlan(
             decedentID: decedentID,
             activeUnion: activeUnion,
             lethalAgentIDs: lethalAgentIDs,
-            deathTick: deathTick
+            deathTick: deathTick,
+            successorPlanSequence: predictedPlanSequence
         )
         guard plan.eligibilityRows.count
                 <= authority.configuration.maximumBeneficiariesPerEstate * 4
@@ -650,6 +662,11 @@ extension AgentSimulationSession {
                 + "tier=\(plan.tier.rawValue) beneficiaries="
                 + "\(plan.beneficiaries.count)"
         )
+        guard planEvent.sequence == predictedPlanSequence else {
+            throw AgentSessionError.estate(.invalidState(
+                "successor plan causal boundary"
+            ))
+        }
         for index in assets.indices {
             let event = try requiredEstateEvent(
                 kind: assets[index].status == .blocked
@@ -1510,6 +1527,7 @@ extension AgentSimulationSession {
                     Self.estateRelationshipsForValidation(
                         decedentID: estate.decedentID,
                         deathTick: estate.deathTick,
+                        successorPlanEventID: estate.successorPlanEventID,
                         family: family,
                         kinship: kinship
                     )
@@ -1573,6 +1591,8 @@ extension AgentSimulationSession {
                     let historical = try Self.estateHistoricalEligibility(
                         agentID: row.agentID,
                         at: estate.deathTick,
+                        successorPlanSequence:
+                            estate.successorPlanEventID.sequence,
                         activeIDs: activeIDs,
                         lifecycle: lifecycle,
                         mortality: mortality
@@ -2272,7 +2292,8 @@ extension AgentSimulationSession {
         decedentID: AgentID,
         activeUnion: AgentUnionRecord?,
         lethalAgentIDs: Set<AgentID>,
-        deathTick: Int
+        deathTick: Int,
+        successorPlanSequence: AgentCausalSequence
     ) throws -> (
         tier: AgentEstateBeneficiaryTier,
         beneficiaries: [AgentEstateBeneficiary],
@@ -2324,6 +2345,7 @@ extension AgentSimulationSession {
             let historical = try Self.estateHistoricalEligibility(
                 agentID: id,
                 at: deathTick,
+                successorPlanSequence: successorPlanSequence,
                 activeIDs: activeIDs,
                 lifecycle: lifecycle,
                 mortality: mortality
@@ -2517,6 +2539,7 @@ extension AgentSimulationSession {
     private static func estateRelationshipsForValidation(
         decedentID: AgentID,
         deathTick: Int,
+        successorPlanEventID: AgentCausalEventID,
         family: AgentFamilyState,
         kinship: AgentKinshipState
     ) -> [
@@ -2541,10 +2564,14 @@ extension AgentSimulationSession {
             ))
         }
         let parentageByChild = Dictionary(uniqueKeysWithValues:
-            kinship.parentageRecords.map { ($0.childID, $0) }
+            kinship.parentageRecords.filter {
+                $0.recordedEventID.sequence < successorPlanEventID.sequence
+            }.map { ($0.childID, $0) }
         )
         for record in kinship.parentageRecords
             where record.birthTick <= deathTick
+                && record.recordedEventID.sequence
+                    < successorPlanEventID.sequence
                 && record.canonicalParentIDs.contains(decedentID) {
             candidates.append((
                 record.childID,
@@ -2561,7 +2588,9 @@ extension AgentSimulationSession {
             let decedentParents = Set(record.canonicalParentIDs)
             for other in kinship.parentageRecords
                 where other.childID != decedentID
-                    && other.birthTick <= deathTick {
+                    && other.birthTick <= deathTick
+                    && other.recordedEventID.sequence
+                        < successorPlanEventID.sequence {
                 let common = decedentParents.intersection(
                     other.canonicalParentIDs
                 ).count
@@ -2590,6 +2619,7 @@ extension AgentSimulationSession {
     private static func estateHistoricalEligibility(
         agentID: AgentID,
         at boundaryTick: Int,
+        successorPlanSequence: AgentCausalSequence,
         activeIDs: Set<AgentID>,
         lifecycle: AgentLifecycleState,
         mortality: AgentMortalityState
@@ -2598,9 +2628,36 @@ extension AgentSimulationSession {
         let compacted = (mortality.compactedDeathSummaries ?? []).filter {
             $0.agentID == agentID
         }
-        guard retained.count + compacted.count <= 1 else {
+        let pending = mortality.pendingTransitions.filter {
+            $0.agentID == agentID
+        }
+        guard retained.count + compacted.count + pending.count <= 1 else {
             throw AgentEstateError.invalidState(
                 "contradictory successor mortality evidence"
+            )
+        }
+        if let transition = pending.first {
+            guard let member = lifecycle.members.first(where: {
+                $0.agentID == agentID
+            }) else {
+                throw AgentEstateError.invalidState(
+                    "pending successor lifecycle evidence"
+                )
+            }
+            let age: Int
+            do {
+                age = try member.age(at: boundaryTick)
+            } catch {
+                throw AgentEstateError.invalidState(
+                    "successor lifecycle boundary"
+                )
+            }
+            return EstateHistoricalEligibility(
+                eligible: transition.pendingEventID.sequence
+                    >= successorPlanSequence,
+                lifeStage: estateLifeStage(
+                    age: age, lifecycle: lifecycle
+                )
             )
         }
         if let death = retained.first {
@@ -2615,6 +2672,10 @@ extension AgentSimulationSession {
                 ageAtDeath: ageAtDeath,
                 stageAtDeath: stageAtDeath,
                 boundaryTick: boundaryTick,
+                terminalEligibilitySequence:
+                    (death.pendingMaterialExitEventID
+                        ?? death.lethalDamageEventID).sequence,
+                successorPlanSequence: successorPlanSequence,
                 lifecycle: lifecycle
             )
         }
@@ -2630,6 +2691,10 @@ extension AgentSimulationSession {
                 ageAtDeath: ageAtDeath,
                 stageAtDeath: stageAtDeath,
                 boundaryTick: boundaryTick,
+                terminalEligibilitySequence:
+                    (death.terminalEligibilityEventID
+                        ?? death.deathEventID).sequence,
+                successorPlanSequence: successorPlanSequence,
                 lifecycle: lifecycle
             )
         }
@@ -2660,6 +2725,8 @@ extension AgentSimulationSession {
         ageAtDeath: Int,
         stageAtDeath: AgentLifeStage,
         boundaryTick: Int,
+        terminalEligibilitySequence: AgentCausalSequence,
+        successorPlanSequence: AgentCausalSequence,
         lifecycle: AgentLifecycleState
     ) throws -> EstateHistoricalEligibility {
         guard ageAtDeath >= 0 else {
@@ -2674,7 +2741,7 @@ extension AgentSimulationSession {
                 "successor mortality life stage"
             )
         }
-        if deathTick <= boundaryTick {
+        if terminalEligibilitySequence < successorPlanSequence {
             return EstateHistoricalEligibility(
                 eligible: false,
                 lifeStage: stageAtDeath
