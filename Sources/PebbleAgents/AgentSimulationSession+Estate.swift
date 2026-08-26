@@ -1,4 +1,7 @@
 extension AgentSimulationSession {
+    private static let legacyPublishedEstateSuccessorPlanProofVersion = 1
+    private static let causalEstateSuccessorPlanProofVersion = 2
+
     public var estatesEnabled: Bool { estateState != nil }
 
     public func estateSnapshot() -> AgentEstateSnapshot {
@@ -593,7 +596,9 @@ extension AgentSimulationSession {
             activeUnion: activeUnion,
             lethalAgentIDs: lethalAgentIDs,
             deathTick: deathTick,
-            successorPlanSequence: predictedPlanSequence
+            successorPlanSequence: predictedPlanSequence,
+            successorPlanProofVersion:
+                Self.causalEstateSuccessorPlanProofVersion
         )
         guard plan.eligibilityRows.count
                 <= authority.configuration.maximumBeneficiariesPerEstate * 4
@@ -637,7 +642,7 @@ extension AgentSimulationSession {
                 + "decedent=\(decedentID.rawValue)"
         )
         let planDigest = Self.estateSuccessorPlanDigest(
-            version: 1,
+            version: Self.causalEstateSuccessorPlanProofVersion,
             estateID: estateID,
             decedentID: decedentID,
             deathID: deathID,
@@ -750,7 +755,7 @@ extension AgentSimulationSession {
             openingEventID: opened.eventID,
             successorPlanEventID: planEvent.eventID,
             successorPlanProof: AgentEstateSuccessorPlanProof(
-                version: 1,
+                version: Self.causalEstateSuccessorPlanProofVersion,
                 estateID: estateID,
                 decedentID: decedentID,
                 deathID: deathID,
@@ -1492,7 +1497,10 @@ extension AgentSimulationSession {
                 }
             } else {
                 guard let proof = estate.successorPlanProof,
-                      proof.version == 1,
+                      proof.version
+                        == Self.legacyPublishedEstateSuccessorPlanProofVersion
+                        || proof.version
+                            == Self.causalEstateSuccessorPlanProofVersion,
                       proof.estateID == estate.estateID,
                       proof.decedentID == estate.decedentID,
                       proof.deathID == estate.deathID,
@@ -1593,6 +1601,7 @@ extension AgentSimulationSession {
                         at: estate.deathTick,
                         successorPlanSequence:
                             estate.successorPlanEventID.sequence,
+                        successorPlanProofVersion: proof.version,
                         activeIDs: activeIDs,
                         lifecycle: lifecycle,
                         mortality: mortality
@@ -2293,7 +2302,8 @@ extension AgentSimulationSession {
         activeUnion: AgentUnionRecord?,
         lethalAgentIDs: Set<AgentID>,
         deathTick: Int,
-        successorPlanSequence: AgentCausalSequence
+        successorPlanSequence: AgentCausalSequence,
+        successorPlanProofVersion: Int
     ) throws -> (
         tier: AgentEstateBeneficiaryTier,
         beneficiaries: [AgentEstateBeneficiary],
@@ -2346,6 +2356,7 @@ extension AgentSimulationSession {
                 agentID: id,
                 at: deathTick,
                 successorPlanSequence: successorPlanSequence,
+                successorPlanProofVersion: successorPlanProofVersion,
                 activeIDs: activeIDs,
                 lifecycle: lifecycle,
                 mortality: mortality
@@ -2620,6 +2631,7 @@ extension AgentSimulationSession {
         agentID: AgentID,
         at boundaryTick: Int,
         successorPlanSequence: AgentCausalSequence,
+        successorPlanProofVersion: Int,
         activeIDs: Set<AgentID>,
         lifecycle: AgentLifecycleState,
         mortality: AgentMortalityState
@@ -2653,8 +2665,10 @@ extension AgentSimulationSession {
                 )
             }
             return EstateHistoricalEligibility(
-                eligible: transition.pendingEventID.sequence
-                    >= successorPlanSequence,
+                eligible: successorPlanProofVersion
+                    == legacyPublishedEstateSuccessorPlanProofVersion
+                    || transition.pendingEventID.sequence
+                        >= successorPlanSequence,
                 lifeStage: estateLifeStage(
                     age: age, lifecycle: lifecycle
                 )
@@ -2673,8 +2687,11 @@ extension AgentSimulationSession {
                 stageAtDeath: stageAtDeath,
                 boundaryTick: boundaryTick,
                 terminalEligibilitySequence:
-                    (death.pendingMaterialExitEventID
-                        ?? death.lethalDamageEventID).sequence,
+                    (successorPlanProofVersion
+                        == legacyPublishedEstateSuccessorPlanProofVersion
+                        ? death.deathEventID
+                        : death.pendingMaterialExitEventID
+                            ?? death.lethalDamageEventID).sequence,
                 successorPlanSequence: successorPlanSequence,
                 lifecycle: lifecycle
             )
@@ -2692,8 +2709,11 @@ extension AgentSimulationSession {
                 stageAtDeath: stageAtDeath,
                 boundaryTick: boundaryTick,
                 terminalEligibilitySequence:
-                    (death.terminalEligibilityEventID
-                        ?? death.deathEventID).sequence,
+                    (successorPlanProofVersion
+                        == legacyPublishedEstateSuccessorPlanProofVersion
+                        ? death.deathEventID
+                        : death.terminalEligibilityEventID
+                            ?? death.deathEventID).sequence,
                 successorPlanSequence: successorPlanSequence,
                 lifecycle: lifecycle
             )

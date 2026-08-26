@@ -814,6 +814,10 @@ private struct GateFB09CompatibilityReport: Codable, Equatable {
     let deathCount: Int
     let estateCount: Int
     let compactedDeathCount: Int
+    let pendingFinalizationCount: Int
+    let legacyProofVersions: [Int]
+    let continuedCheckpointPath: String
+    let continuedCheckpointSHA256: String
     let replayedDeaths: Int
     let replayedEstates: Int
     let duplicateCurrentAuthority: Int
@@ -842,6 +846,10 @@ private func gateFB09CompatibilityReaderIfRequested() -> Bool {
     let estatesBefore = session.estateSnapshot().totalEstateCount
     let compacted = session.mortalitySnapshot().compactedDeathSummaries?
         .count ?? 0
+    let pendingIDs = session.pendingMortalityTransitions()
+        .map(\.agentID).sorted()
+    let originalProofs = session.estateSnapshot().estates
+        .compactMap(\.successorPlanProof)
     let observerBytes = try! session.durableStateBytes()
     let observer = session.observerSnapshot(
         worldBinding: try! AgentObserverWorldBinding(
@@ -852,12 +860,28 @@ private func gateFB09CompatibilityReaderIfRequested() -> Bool {
     )
     let observerMutations = (try! session.durableStateBytes())
         == observerBytes ? 0 : 1
-    _ = try! session.advanceTick()
+    if pendingIDs.isEmpty {
+        _ = try! session.advanceTick()
+    } else {
+        for agentID in pendingIDs {
+            _ = gateFB09ResolveEmptyCustody(&session, agentID: agentID)
+            _ = try! session.finalizePendingMortality(for: agentID)
+        }
+    }
     let continued = try! session.makeCheckpoint()
+    let continuedBytes = try! AgentCheckpointCodec.encode(continued)
+    let continuedURL = URL(fileURLWithPath: output)
+        .deletingLastPathComponent()
+        .appendingPathComponent("continued_checkpoint_v35.json")
+    try! continuedBytes.write(to: continuedURL, options: .atomic)
     let replayedDeaths = session.mortalitySnapshot().totalDeathCount
-        - deathsBefore
+        - deathsBefore - pendingIDs.count
     let replayedEstates = session.estateSnapshot().totalEstateCount
-        - estatesBefore
+        - estatesBefore - pendingIDs.count
+    let legacyProofsImmutable = originalProofs.allSatisfy {
+        session.estateSnapshot().estates.compactMap(\.successorPlanProof)
+            .contains($0)
+    }
     let exactCheckpoint = (try? AgentCheckpointCodec.encode(checkpoint))
         == checkpointBytes
     let report = GateFB09CompatibilityReport(
@@ -871,6 +895,12 @@ private func gateFB09CompatibilityReaderIfRequested() -> Bool {
         durableSHA256: AgentCheckpointDigest.sha256(durableBytes).rawValue,
         deathCount: deathsBefore, estateCount: estatesBefore,
         compactedDeathCount: compacted,
+        pendingFinalizationCount: pendingIDs.count,
+        legacyProofVersions: originalProofs.map(\.version),
+        continuedCheckpointPath: continuedURL.path,
+        continuedCheckpointSHA256: AgentCheckpointDigest.sha256(
+            continuedBytes
+        ).rawValue,
         replayedDeaths: replayedDeaths, replayedEstates: replayedEstates,
         duplicateCurrentAuthority:
             gateFB09CurrentAuthorityIsSingular(session) ? 0 : 1,
@@ -881,6 +911,11 @@ private func gateFB09CompatibilityReaderIfRequested() -> Bool {
             "observer_schema_13": observer.header.schemaVersion == 13,
             "observer_read_only": observerMutations == 0,
             "continuation_schema_35": continued.schemaVersion == 35,
+            "pending_finalization_succeeds": pendingIDs.isEmpty
+                || !session.pendingMortalityTransitions().contains {
+                    pendingIDs.contains($0.agentID)
+                },
+            "legacy_proof_immutable": legacyProofsImmutable,
             "zero_death_replay": replayedDeaths == 0,
             "zero_estate_replay": replayedEstates == 0,
             "singular_current_authority":
@@ -1705,6 +1740,8 @@ func runPebbleAgentsGateFBlocker09Smoke() {
     )
     let mortalityNegativeCheckpoint = try! mortalityNegative.session
         .makeCheckpoint()
+    check("new successor plans use causal proof version 2",
+          mortalityNegative.childEstate.successorPlanProof?.version == 2)
     let pendingParentID = mortalityNegative.pendingParent
     let validParentID = AgentID(rawValue: "agent_1")!
     let wrongEligible = gateFB09MutatedCheckpoint(
@@ -1731,7 +1768,7 @@ func runPebbleAgentsGateFBlocker09Smoke() {
         authority["estates"] = estates
         durable["estateState"] = authority
     }
-    check("strict proof rejects eligible pre-plan pending successor",
+    check("strict version-2 proof rejects eligible pre-plan pending successor",
           gateFB09RestoreError(wrongEligible)?.contains(
             "successor mortality eligibility"
           ) == true)

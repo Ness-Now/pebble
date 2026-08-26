@@ -1630,7 +1630,7 @@ func runPebbleAgentsEstatesInheritanceSuccessionSmoke() {
             && Set(estate.beneficiaries.map(\.basis))
                 == [.activeUnionPartnerAtDeath, .canonicalChild])
     check("schema 28 successor plan carries exact bounded eligibility proof",
-          estate.successorPlanProof?.version == 1
+          estate.successorPlanProof?.version == 2
             && estate.successorPlanProof?.selectedTier
                 == .primaryPartnerAndChildren
             && estate.successorPlanProof?.eligibilityRows.filter(
