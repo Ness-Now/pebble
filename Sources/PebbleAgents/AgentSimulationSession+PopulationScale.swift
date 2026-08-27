@@ -590,6 +590,10 @@ extension AgentSimulationSession {
                 .admission(.migrationAlreadyActive)
             )
         }
+        // Mortality owns the terminal boundary. A migration already in flight
+        // may later encounter mortality, but a persisted terminal transition
+        // must not acquire a new current migration authority.
+        try prevalidateSettlementMigrationMortalityAdmission(agentID: agentID)
         // The active migration record is the durable destination-slot claim.
         // Establish it before any causal, membership, fidelity or ordinal
         // publication. Restore derives the same accounting from schema 35.

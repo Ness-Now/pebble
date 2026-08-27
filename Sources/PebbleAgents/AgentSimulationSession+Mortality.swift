@@ -249,6 +249,18 @@ extension AgentSimulationSession {
         } ?? []
     }
 
+    func prevalidateSettlementMigrationMortalityAdmission(
+        agentID: AgentID
+    ) throws {
+        guard mortalityState?.pendingTransitions.contains(where: {
+            $0.agentID == agentID
+        }) != true else {
+            throw AgentSessionError.mortality(
+                .pendingMaterialExit(agentID.rawValue)
+            )
+        }
+    }
+
     mutating func applyMortalitySurvivalBoundary(
         at mortalityTick: Int
     ) throws -> [String: AgentMemoryEntry] {
