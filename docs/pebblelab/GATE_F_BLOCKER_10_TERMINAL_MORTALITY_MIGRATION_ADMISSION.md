@@ -3,12 +3,17 @@
 ## Status and lineage
 
 Gate F Evaluations 01–10 remain **FAIL — HISTORICAL IMMUTABLE
-EVIDENCE**. Gate F Blockers 01–09 remain **FIXED + PUBLISHED + REMOTE
-VERIFIED**. Gate F Blocker 10 is **FIXED — LOCAL CORRECTION CANDIDATE — NOT
-PUBLISHED** at product/test/runtime commit
-`470223bae3af44da29fd8830169ed14371dd3403`. Gate F remains **PLANNED — NOT
-ACQUIRED**. Evaluation 11 is **NOT AUTHORIZED / NOT PERFORMED**. `CIV-40` is
-**OPTIONAL TOOLING — NOT STARTED** and `CIV-41` is **NOT STARTED**.
+EVIDENCE**. Gate F Blockers 01–10 are **FIXED + PUBLISHED + REMOTE VERIFIED**.
+Gate F Blocker 10 was corrected at product/test/runtime commit
+`470223bae3af44da29fd8830169ed14371dd3403`; its documentation/evidence commit
+and published canonical HEAD is `104c919c3017cb73739c8839b47e5a011616e007`.
+Independent remote verification confirms canonical branch equality, ahead 0,
+behind 0 and exact merge base at that HEAD. The final published review archive
+`PebbleLab-GateF-Blocker10-Review-104c919.zip` has SHA-256
+`3e214e0f9dc0bc1cd1c885d6ff178fa0fe67ffd103741d88bc0e9618ee2a218d`;
+123/123 internal checksums, ZIP integrity and fresh extraction pass. Gate F
+remains **PLANNED — NOT ACQUIRED**. Evaluation 11 is **NOT PERFORMED**.
+`CIV-40` is **OPTIONAL TOOLING — NOT STARTED** and `CIV-41` is **NOT STARTED**.
 
 The correction branch is rooted directly in published canonical baseline
 `32c75984c56158bf9fde4918f6428e46cc7c1fa4`. Its merge base is that exact SHA.
@@ -199,9 +204,11 @@ Blockers 01–04 at 27/33/25/28 and Gate E Evaluation 05 at 21 assertions.
 **4274 passed, 0 failed** in the shared smoke suite and deterministic canonical
 scenario comparisons. Goldens were read-only and were not regenerated.
 
-## Non-claims and next action
+## Publication, non-claims and next action
 
-This local correction does not publish Blocker 10, acquire Gate F, authorize or
-perform Evaluation 11, start `CIV-40` or `CIV-41`, change checkpoint schema 35
-or Observer schema 13, change Estate proof semantics, or regenerate goldens.
-The next action is **senior review + manual publication of Blocker 10**.
+Manual publication and independent remote verification of Blocker 10 are
+complete at canonical HEAD `104c919c3017cb73739c8839b47e5a011616e007`.
+This publication does not acquire Gate F, perform Evaluation 11, start
+`CIV-40` or `CIV-41`, change checkpoint schema 35 or Observer schema 13, change
+Estate proof semantics, or regenerate goldens. The next authorized action is
+`NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-11`.
