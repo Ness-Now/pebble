@@ -190,10 +190,25 @@ Gate F correction history:
   independent remote verification completed at canonical HEAD
   `482adc6617e258a73967e73c9d53cf1466c94f64`; the final review archive SHA-256
   is `09136811d4e6680dc6373e2c728509b91e2557a34a0dd10a9eeb421bd1d446e9`.
+- Gate F Evaluation 10: **FAIL — HISTORICAL IMMUTABLE EVIDENCE** against exact
+  canonical baseline `32c75984c56158bf9fde4918f6428e46cc7c1fa4`. Its independent
+  evidence commits are `0884ae7651853d94fae34f6cea0eae318c6709f7`,
+  `36df11af2d535e15f091d0c2b7835785797eaf4f`,
+  `b4792545dd0b585e3ad9739dcf2c950fa249d594`,
+  `a8c9604c06a567d8b3921d6ce2031cbcc971d46b` and final evidence HEAD
+  `626ca8785f4e54d0e1f9c5ae8aec56dff22f7ed9`. Its blocker kind is
+  `terminalMortalityPendingMigrationAdmission`; review archive SHA-256 is
+  `39104a2b01f2bbe393f3437faee1daa2892f81505827ad9911ab28a823430d49`.
+- V4-GATE-F-v1 Blocker 10: **FIXED — LOCAL CORRECTION CANDIDATE — NOT
+  PUBLISHED** at product/test/runtime commit
+  `470223bae3af44da29fd8830169ed14371dd3403`. The central settlement-migration
+  admission boundary now refuses new authority for a persisted
+  `mortalityMaterialExitPending` actor without publication or identity/ordinal
+  consumption, while migration-before-mortality remains supported. Checkpoint
+  schema 35 and Observer schema 13 are unchanged.
 - Gate F remains **PLANNED — NOT ACQUIRED**.
-- Gate F Evaluation 10 is **NOT PERFORMED**.
-- The next authorized action is
-  `NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-10`.
+- Gate F Evaluation 11 is **NOT AUTHORIZED / NOT PERFORMED**.
+- The next action is **senior review + manual publication of Blocker 10**.
 
 Published Gate E history:
 
@@ -593,7 +608,7 @@ the Gate E acquisition are now published and independently remote verified.
 active CIV phase: none
 completed and published through: CIV-39 (CIV-38 remains optional and unstarted)
 next eligible phase: null; Gate F remains planned and not acquired
-next authorized action: NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-10
+next action: senior review + manual publication of Gate F Blocker 10
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -656,7 +671,9 @@ Gate F Evaluation 08 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-F-v1 Blocker 08 status: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate F Evaluation 09 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-F-v1 Blocker 09 status: FIXED + PUBLISHED + REMOTE VERIFIED
-Gate F Evaluation 10 status: NOT PERFORMED
+Gate F Evaluation 10 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
+V4-GATE-F-v1 Blocker 10 status: FIXED — LOCAL CORRECTION CANDIDATE — NOT PUBLISHED
+Gate F Evaluation 11 status: NOT AUTHORIZED / NOT PERFORMED
 CIV-40 status: OPTIONAL TOOLING — NOT STARTED
 CIV-41 status: NOT STARTED
 roadmap generation: V4
@@ -1044,9 +1061,14 @@ at initial product commit
 `6a5ee92e89d14e1aff38d17c28d4e526eb51eb5f` and published canonical HEAD
 `482adc6617e258a73967e73c9d53cf1466c94f64`, documented in
 [`GATE_F_BLOCKER_09_ESTATE_CAUSAL_SUCCESSOR_AUTHORITY.md`](GATE_F_BLOCKER_09_ESTATE_CAUSAL_SUCCESSOR_AUTHORITY.md).
-Gate F remains **PLANNED — NOT ACQUIRED** and Evaluation 10 is **NOT
-PERFORMED**; the next authorized action is
-`NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-10`.
+Evaluation 10 is **FAIL — HISTORICAL IMMUTABLE EVIDENCE**. Its
+`terminalMortalityPendingMigrationAdmission` Blocker 10 is **FIXED — LOCAL
+CORRECTION CANDIDATE — NOT PUBLISHED** at product/test/runtime commit
+`470223bae3af44da29fd8830169ed14371dd3403`, documented in
+[`GATE_F_BLOCKER_10_TERMINAL_MORTALITY_MIGRATION_ADMISSION.md`](GATE_F_BLOCKER_10_TERMINAL_MORTALITY_MIGRATION_ADMISSION.md).
+Gate F remains **PLANNED — NOT ACQUIRED** and Evaluation 11 is **NOT AUTHORIZED
+/ NOT PERFORMED**. The next action is senior review and manual publication of
+Blocker 10.
 `CIV-38` remains **OPTIONAL — NOT STARTED** and is not a prerequisite.
 `CIV-40` remains **OPTIONAL TOOLING — NOT STARTED**. Currency is not a Gate E
 or CIV-39 prerequisite.

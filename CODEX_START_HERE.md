@@ -85,10 +85,17 @@ for the compact status. In particular:
   Senior Review Correction 01, at canonical HEAD
   `482adc6617e258a73967e73c9d53cf1466c94f64`. The final review archive SHA-256
   is `09136811d4e6680dc6373e2c728509b91e2557a34a0dd10a9eeb421bd1d446e9`.
-- Gate F remains **PLANNED — NOT ACQUIRED**; Evaluation 10 was not performed.
-- The next authorized action is
-  `NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-10`. Do not infer that optional
-  `CIV-40` is a prerequisite.
+- Gate F Evaluation 10 is **FAIL — HISTORICAL IMMUTABLE EVIDENCE** against
+  exact baseline `32c75984c56158bf9fde4918f6428e46cc7c1fa4`. Its final evidence
+  HEAD is `626ca8785f4e54d0e1f9c5ae8aec56dff22f7ed9`, blocker kind is
+  `terminalMortalityPendingMigrationAdmission`, and review archive SHA-256 is
+  `39104a2b01f2bbe393f3437faee1daa2892f81505827ad9911ab28a823430d49`.
+- Gate F Blocker 10 is **FIXED — LOCAL CORRECTION CANDIDATE — NOT PUBLISHED**
+  at product/test/runtime commit
+  `470223bae3af44da29fd8830169ed14371dd3403`.
+- Gate F remains **PLANNED — NOT ACQUIRED**; Evaluation 11 is **NOT AUTHORIZED /
+  NOT PERFORMED**. The next action is senior review and manual publication of
+  Blocker 10. Optional `CIV-40` remains unstarted and is not a prerequisite.
 
 Historical Gate B `FAIL` reports and the closure-candidate report are preserved
 as evidence of their own evaluations. They do not reopen Gate B.
