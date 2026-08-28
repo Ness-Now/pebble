@@ -249,16 +249,25 @@ extension AgentSimulationSession {
         } ?? []
     }
 
+    func prevalidateNewCurrentAuthorityMortalityAdmission(
+        agentIDs: [AgentID]
+    ) throws {
+        let pendingAgentIDs = Set(
+            mortalityState?.pendingTransitions.map(\.agentID) ?? []
+        )
+        guard let agentID = agentIDs.sorted().first(where: pendingAgentIDs.contains)
+        else { return }
+        throw AgentSessionError.mortality(
+            .pendingMaterialExit(agentID.rawValue)
+        )
+    }
+
     func prevalidateSettlementMigrationMortalityAdmission(
         agentID: AgentID
     ) throws {
-        guard mortalityState?.pendingTransitions.contains(where: {
-            $0.agentID == agentID
-        }) != true else {
-            throw AgentSessionError.mortality(
-                .pendingMaterialExit(agentID.rawValue)
-            )
-        }
+        try prevalidateNewCurrentAuthorityMortalityAdmission(
+            agentIDs: [agentID]
+        )
     }
 
     mutating func applyMortalitySurvivalBoundary(

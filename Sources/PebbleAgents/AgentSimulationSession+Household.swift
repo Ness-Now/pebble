@@ -188,6 +188,9 @@ extension AgentSimulationSession {
         guard residents.allSatisfy({ statesById[$0.agentID.rawValue] != nil }) else {
             throw AgentSessionError.household(.invalidState("resident without AgentState"))
         }
+        try prevalidateNewCurrentAuthorityMortalityAdmission(
+            agentIDs: residents.map(\.agentID)
+        )
         var groups: [AgentSettlementID: [AgentPosition: [AgentID]]] = [:]
         for member in residents {
             groups[member.settlementID, default: [:]][
@@ -638,6 +641,7 @@ extension AgentSimulationSession {
                 throw AgentSessionError.household(.invalidMembership(agentID))
             }
         }
+        try prevalidateNewCurrentAuthorityMortalityAdmission(agentIDs: members)
         return members
     }
 
@@ -1014,6 +1018,9 @@ extension AgentSimulationSession {
         state: inout AgentHouseholdState,
         createMembership: Bool
     ) throws -> AgentHouseholdRecord {
+        try prevalidateNewCurrentAuthorityMortalityAdmission(
+            agentIDs: [agentID]
+        )
         try prevalidateNewHouseholdCapacity(state)
         let ordinal = state.nextHouseholdOrdinal
         let householdID = AgentHouseholdID(rawValue: "household_\(ordinal.rawValue)")!
