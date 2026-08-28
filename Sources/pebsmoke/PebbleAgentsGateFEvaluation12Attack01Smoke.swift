@@ -2,6 +2,7 @@ import Foundation
 import PebbleAgents
 
 private let gateFE12A1Origin = AgentPosition(x: 0, y: 64, z: 0)
+private let gateFE12A1MainReception = AgentPosition(x: 0, y: 64, z: 2)
 private let gateFE12A1East = AgentPosition(x: 8, y: 64, z: 0)
 private let gateFE12A1EastID = AgentSettlementID(rawValue: "settlement-east")!
 private let gateFE12A1Decedent = AgentID(rawValue: "agent_3")!
@@ -23,7 +24,7 @@ private let gateFE12A1ForagePositions = [
     AgentPosition(x: 1, y: 64, z: 0),
     AgentPosition(x: 3, y: 64, z: 0),
     AgentPosition(x: 5, y: 64, z: 0),
-    AgentPosition(x: -1, y: 64, z: 0),
+    AgentPosition(x: 6, y: 64, z: 1),
     AgentPosition(x: 0, y: 64, z: 1),
     AgentPosition(x: 0, y: 64, z: -1),
     AgentPosition(x: 2, y: 64, z: 1),
@@ -105,7 +106,7 @@ private func gateFE12A1Session(_ simulationID: String) -> AgentSimulationSession
     session.setSurvivalEnabled(true)
     try! session.initializePopulationRegistry(
         settlementAnchor: gateFE12A1Origin,
-        receptionPosition: gateFE12A1Origin,
+        receptionPosition: gateFE12A1MainReception,
         configuration: try! AgentPopulationConfiguration(
             maximumActivePopulation: 7,
             maximumMigrationRecords: 16
@@ -228,13 +229,17 @@ private func gateFE12A1Session(_ simulationID: String) -> AgentSimulationSession
 private func gateFE12A1Forage(
     _ session: inout AgentSimulationSession,
     ordinal: Int,
-    quantity: Int
+    quantity: Int,
+    habitatOrdinal: Int? = nil
 ) {
     let id = AgentID(rawValue: "agent_\(ordinal)")!
-    let habitat = gateFE12A1Habitats[ordinal]
+    let selectedHabitatOrdinal = habitatOrdinal ?? ordinal
+    let habitat = gateFE12A1Habitats[selectedHabitatOrdinal]
+    let purpose = habitatOrdinal == nil ? "" : "-journey"
     let intents = (0..<quantity).map { item in
         AgentForageIntent(
-            forageID: "e12-a1-forage-\(id.rawValue)-t\(session.tick)-\(item)",
+            forageID: "e12-a1-forage-\(id.rawValue)\(purpose)-t"
+                + "\(session.tick)-\(item)",
             patchID: habitat.patchID, agentID: id, tick: session.tick,
             target: habitat.foragePosition, observedAtTick: session.tick,
             expectedHabitatFingerprint: habitat.habitatFingerprint
@@ -270,7 +275,7 @@ private func gateFE12A1FeedAdults(_ session: inout AgentSimulationSession) {
     }
     if session.tick == 9 {
         for ordinal in 0...1 {
-            gateFE12A1Forage(&session, ordinal: ordinal, quantity: 1)
+            gateFE12A1Forage(&session, ordinal: ordinal, quantity: 4)
         }
     }
     for ordinal in (session.tick == 9 ? 0...1 : 0...2) {
@@ -285,7 +290,7 @@ private func gateFE12A1Birth(
     let plan = session.pendingBirthSitePlan()!
     let record = try! session.applyBirthSiteObservation(AgentBirthSiteObservation(
         planID: plan.planID, observedTick: session.tick,
-        position: AgentPosition(x: 1, y: 64, z: 4),
+        position: AgentPosition(x: 1, y: 64, z: 1),
         candidateIndex: 0, worldFingerprint: fingerprint
     ))
     precondition(
@@ -294,6 +299,36 @@ private func gateFE12A1Birth(
             + "plan=\(plan) reproduction=\(session.reproductionSnapshot())"
     )
     return record!
+}
+
+private func gateFE12A1ProvideChildFood(
+    _ session: inout AgentSimulationSession,
+    caregiverID: AgentID,
+    dependentID: AgentID
+) -> UInt64 {
+    guard let engagement = session.dependentCareSnapshot().activeEngagements.first(where: {
+        $0.caregiverID == caregiverID && $0.dependentID == dependentID
+            && $0.kind == .provideFood
+    }) else {
+        fatalError(
+            "missing public nourishment engagement caregiver=\(caregiverID.rawValue) "
+                + "dependent=\(dependentID.rawValue) tick=\(session.tick)"
+        )
+    }
+    let ordinal: Int
+    switch caregiverID.rawValue {
+    case "agent_0": ordinal = 0
+    case "agent_1": ordinal = 1
+    default: fatalError("unexpected caregiver \(caregiverID.rawValue)")
+    }
+    gateFE12A1Forage(&session, ordinal: ordinal, quantity: 1)
+    let result = try! session.provideDependentNourishment(AgentCareProvisionIntent(
+        provisionID: "e12-a1-care-food-\(dependentID.rawValue)-t\(session.tick)",
+        needID: engagement.needID, caregiverID: caregiverID,
+        dependentID: dependentID, tick: session.tick
+    ))
+    precondition(result.succeeded && result.consumedByDependent == 1)
+    return session.durableState().dependentCareState!.lastCareEventID.sequence.rawValue
 }
 
 @discardableResult
@@ -394,9 +429,11 @@ private struct GateFE12A1CausalEvidence: Codable, Equatable {
     let mortalityPending: UInt64
     let estatePlan: UInt64
     let deathFinal: UInt64
+    let postPlanCareProvision: UInt64
     let postPlanGuardianStart: UInt64
     let postPlanBirthAttemptPlan: UInt64
     let postPlanBirthRefusal: UInt64
+    let postPlanJourneyProvision: UInt64
     let returnMigrationArrival: UInt64?
 }
 
@@ -458,12 +495,23 @@ private func gateFE12A1MigrationRoute(
     from: AgentPosition,
     to: AgentPosition
 ) -> [AgentPosition] {
-    if from.x <= to.x {
-        return (from.x...to.x).map { AgentPosition(x: $0, y: 64, z: 0) }
+    var route = [from]
+    var cursor = from
+    while cursor.z != to.z {
+        cursor = AgentPosition(
+            x: cursor.x, y: cursor.y,
+            z: cursor.z + (cursor.z < to.z ? 1 : -1)
+        )
+        route.append(cursor)
     }
-    return stride(from: from.x, through: to.x, by: -1).map {
-        AgentPosition(x: $0, y: 64, z: 0)
+    while cursor.x != to.x {
+        cursor = AgentPosition(
+            x: cursor.x + (cursor.x < to.x ? 1 : -1),
+            y: cursor.y, z: cursor.z
+        )
+        route.append(cursor)
     }
+    return route
 }
 
 private func gateFE12A1MigrationPerception(
@@ -575,7 +623,7 @@ private func gateFE12A1BuildFixture(_ simulationID: String) -> GateFE12A1Fixture
         destinationSettlementID: session.populationSnapshot().settlement!.settlementID,
         verifiedRoute: gateFE12A1MigrationRoute(
             from: try! session.state(for: gateFE12A1Migrant).position,
-            to: gateFE12A1Origin
+            to: gateFE12A1MainReception
         )
     )
 
@@ -601,6 +649,10 @@ private func gateFE12A1BuildFixture(_ simulationID: String) -> GateFE12A1Fixture
         $0.decedentID == gateFE12A1Decedent
     }!
     let proof = estate.successorPlanProof!
+    let postPlanCareProvision = gateFE12A1ProvideChildFood(
+        &session, caregiverID: prePlanGuardian.guardianID,
+        dependentID: gateFE12A1PrePlanSibling
+    )
     let replacementGuardian = [
         AgentID(rawValue: "agent_0")!, AgentID(rawValue: "agent_1")!,
     ].first { $0 != prePlanGuardian.guardianID }!
@@ -631,7 +683,18 @@ private func gateFE12A1BuildFixture(_ simulationID: String) -> GateFE12A1Fixture
     }!
     precondition(refusedPlanAfter.terminalEventID != nil)
 
-    session.setSurvivalEnabled(false)
+    gateFE12A1Forage(
+        &session, ordinal: 2, quantity: 4, habitatOrdinal: 3
+    )
+    gateFE12A1Consume(&session, ordinal: 2)
+    let provisionedMigrant = try! session.state(for: gateFE12A1Migrant)
+    precondition(
+        provisionedMigrant.resourceInventory.count(of: .foodRaw) == 3
+            && provisionedMigrant.needs.hunger < 0.01
+    )
+    let postPlanJourneyProvision = session.causalLedgerSnapshot().summary
+        .latestSequence
+
     let firstParentage = session.kinshipSnapshot().parentageRecords.first {
         $0.childID == gateFE12A1Decedent
     }!
@@ -642,7 +705,9 @@ private func gateFE12A1BuildFixture(_ simulationID: String) -> GateFE12A1Fixture
     let familyHouse = session.familySnapshot().houses.first!
     let latestSensitiveSequence = [
         proof.successorPlanEventID.sequence.rawValue,
+        postPlanCareProvision,
         refusedPlanAfter.terminalEventID!.sequence.rawValue,
+        postPlanJourneyProvision,
         postPlanGuardian.startedEventID.sequence.rawValue,
         returnMigration.startedEventID.sequence.rawValue,
     ].max()!
@@ -667,10 +732,12 @@ private func gateFE12A1BuildFixture(_ simulationID: String) -> GateFE12A1Fixture
         mortalityPending: pending.pendingEventID.sequence.rawValue,
         estatePlan: proof.successorPlanEventID.sequence.rawValue,
         deathFinal: death.deathEventID.sequence.rawValue,
+        postPlanCareProvision: postPlanCareProvision,
         postPlanGuardianStart: postPlanGuardian.startedEventID.sequence.rawValue,
         postPlanBirthAttemptPlan: refusedPlan.createdEventID.sequence.rawValue,
         postPlanBirthRefusal:
             refusedPlanAfter.terminalEventID!.sequence.rawValue,
+        postPlanJourneyProvision: postPlanJourneyProvision,
         returnMigrationArrival: nil
     )
     return GateFE12A1Fixture(session: session, proof: proof, causal: causal)
@@ -731,8 +798,9 @@ private func gateFE12A1Report(
         causal.prePlanGuardianStart, causal.outboundMigrationStart,
         causal.outboundMigrationArrival, causal.returnMigrationStart,
         causal.mortalityPending, causal.estatePlan, causal.deathFinal,
+        causal.postPlanCareProvision,
         causal.postPlanGuardianStart, causal.postPlanBirthAttemptPlan,
-        causal.postPlanBirthRefusal,
+        causal.postPlanBirthRefusal, causal.postPlanJourneyProvision,
     ]
     let retainedSensitive = ledger.events.filter {
         sensitiveSequences.contains($0.eventID.sequence.rawValue)
@@ -772,8 +840,12 @@ private func gateFE12A1Report(
                 != currentGuardian?.guardianID.rawValue
             && causal.prePlanGuardianStart < causal.estatePlan
             && causal.estatePlan < causal.postPlanGuardianStart,
+        "post_plan_care_is_causal_and_material": causal.estatePlan
+            < causal.postPlanCareProvision
+            && causal.postPlanCareProvision < causal.postPlanGuardianStart,
         "migration_spans_plan_and_restart": causal.returnMigrationStart
-            < causal.estatePlan,
+            < causal.estatePlan
+            && causal.postPlanBirthRefusal < causal.postPlanJourneyProvision,
         "sensitive_event_bodies_compacted": retainedSensitive == 0,
         "bounded_causal_ledger": ledger.events.count <= 32
             && ledger.summary.droppedEventCount > 0,
@@ -904,10 +976,44 @@ private func gateFE12A1FreshProcessIfRequested() -> Bool {
         let observerMutations = (try! session.durableStateBytes())
             == observerBytes ? 0 : 1
         var iterations = 0
+        var postRestoreCareProvisions = 0
         while session.populationScaleSnapshot().settlementMigrations.contains(
             where: { $0.status == .inTransit }
         ) && iterations < 16 {
+            let preMigration = session.populationScaleSnapshot()
+                .settlementMigrations.first { $0.status == .inTransit }!
+            let preActors = [0, 1, 2, 4].map { ordinal -> String in
+                let state = try! session.state(
+                    for: AgentID(rawValue: "agent_\(ordinal)")!
+                )
+                return "agent_\(ordinal):p\(state.position.x),\(state.position.z)"
+                    + ":h\(state.needs.hunger):f"
+                    + "\(state.resourceInventory.count(of: .foodRaw)):a"
+                    + "\(state.lastAction?.name ?? "none")"
+            }.joined(separator: ",")
+            FileHandle.standardError.write(Data((
+                "GATE_F_E12_A1_FRESH_PRE tick=\(session.tick) "
+                    + "cursor=\(preMigration.routeCursor) \(preActors)\n"
+            ).utf8))
             gateFE12A1Advance(&session)
+            if let engagement = session.dependentCareSnapshot()
+                .activeEngagements.first(where: {
+                    $0.dependentID == gateFE12A1PrePlanSibling
+                        && $0.kind == .provideFood
+                }) {
+                _ = gateFE12A1ProvideChildFood(
+                    &session, caregiverID: engagement.caregiverID,
+                    dependentID: gateFE12A1PrePlanSibling
+                )
+                postRestoreCareProvisions += 1
+            }
+            for ordinal in 0...2 {
+                let adultID = AgentID(rawValue: "agent_\(ordinal)")!
+                if try! session.state(for: adultID)
+                    .resourceInventory.count(of: .foodRaw) > 0 {
+                    gateFE12A1Consume(&session, ordinal: ordinal)
+                }
+            }
             iterations += 1
         }
         let arrival = session.populationScaleSnapshot().settlementMigrations.first {
@@ -927,9 +1033,11 @@ private func gateFE12A1FreshProcessIfRequested() -> Bool {
             mortalityPending: previous.causal.mortalityPending,
             estatePlan: previous.causal.estatePlan,
             deathFinal: previous.causal.deathFinal,
+            postPlanCareProvision: previous.causal.postPlanCareProvision,
             postPlanGuardianStart: previous.causal.postPlanGuardianStart,
             postPlanBirthAttemptPlan: previous.causal.postPlanBirthAttemptPlan,
             postPlanBirthRefusal: previous.causal.postPlanBirthRefusal,
+            postPlanJourneyProvision: previous.causal.postPlanJourneyProvision,
             returnMigrationArrival: arrival
         )
         var report = gateFE12A1Report(
@@ -949,6 +1057,8 @@ private func gateFE12A1FreshProcessIfRequested() -> Bool {
         assertions["migration_arrives_after_plan"] = causal.estatePlan < arrival
             && report.activeMigrationCount == 0
             && report.completedMigrationCount == 2
+        assertions["post_restore_care_continues_materially"] =
+            postRestoreCareProvisions > 0
         report = GateFE12A1Report(
             schemaVersion: report.schemaVersion, phase: report.phase,
             tick: report.tick, checkpointSchema: report.checkpointSchema,
@@ -1077,8 +1187,10 @@ func runPebbleAgentsGateFEvaluation12Attack01Smoke() {
             + "pending=\(report.causal.mortalityPending) "
             + "plan=\(report.causal.estatePlan) "
             + "death=\(report.causal.deathFinal) "
+            + "careAfter=\(report.causal.postPlanCareProvision) "
             + "guardianAfter=\(report.causal.postPlanGuardianStart) "
             + "postBirthRefusal=\(report.causal.postPlanBirthRefusal)"
+            + " journeyProvision=\(report.causal.postPlanJourneyProvision)"
     )
     print(
         "GATE_F_E12_ATTACK_01_AUTHORITY "
