@@ -53,6 +53,7 @@ These documents form the minimal permanent memory of the project:
 | [`GATE_F_BLOCKER_08_ESTATE_SCHEMA35_VALIDATION.md`](GATE_F_BLOCKER_08_ESTATE_SCHEMA35_VALIDATION.md) | Published, independently remote-verified Blocker 08 correction record; preserves Evaluation 08 historical FAIL and documents canonical Estate schema-27/28–35 validation semantics, effective live/durable schema parity, strict malformed-state rejection and byte-exact debug/optimized fresh-process proof. |
 | [`GATE_F_BLOCKER_09_ESTATE_CAUSAL_SUCCESSOR_AUTHORITY.md`](GATE_F_BLOCKER_09_ESTATE_CAUSAL_SUCCESSOR_AUTHORITY.md) | Published, independently remote-verified Blocker 09 correction including Senior Review Correction 01; preserves Evaluation 09 historical FAIL, separates published successor-proof v1 compatibility from strict causal v2 authority, and records affected old schema-35 continuation, full validation and publication identity. |
 | [`GATE_F_BLOCKER_10_TERMINAL_MORTALITY_MIGRATION_ADMISSION.md`](GATE_F_BLOCKER_10_TERMINAL_MORTALITY_MIGRATION_ADMISSION.md) | Published, independently remote-verified Blocker 10 correction; preserves Evaluation 10 historical FAIL and documents the Mortality-owned admission exclusion, exact atomic refusal, inverse-order control, public-path audit, debug/optimized fresh-process proof, schema 35 and Observer 13. Does not acquire Gate F. |
+| [`GATE_F_BLOCKER_11_TERMINAL_MORTALITY_HOUSEHOLD_ACQUISITION.md`](GATE_F_BLOCKER_11_TERMINAL_MORTALITY_HOUSEHOLD_ACQUISITION.md) | Local, unpublished Blocker 11 correction candidate; preserves Evaluation 11 historical FAIL and documents Mortality-owned refusal of new Household/current-residence authority, atomic identity conservation, inverse-order cleanup, fresh-process proof, schema 35 and Observer 13. Does not acquire Gate F. |
 | [`GATE_E_BLOCKER_01_EXACT_PRODUCTION_PROVENANCE.md`](GATE_E_BLOCKER_01_EXACT_PRODUCTION_PROVENANCE.md) | Published Blocker 01 product-correction record; preserves Evaluation 01 FAIL and documents exact asset-bound production provenance. |
 | [`GATE_E_BLOCKER_02_EVOLVED_PRODUCTION_IDENTITY.md`](GATE_E_BLOCKER_02_EVOLVED_PRODUCTION_IDENTITY.md) | Published Blocker 02 product-correction record; preserves Evaluation 02 FAIL and separates immutable production origin, durable current-identity continuity and exact current physical authority. |
 | [`GATE_E_BLOCKER_03_TERMINAL_MARKET_RESERVATION_AUTHORITY.md`](GATE_E_BLOCKER_03_TERMINAL_MARKET_RESERVATION_AUTHORITY.md) | Published Blocker 03 product-correction record; preserves Evaluation 03 FAIL and separates terminal market history from coherent live reservation authority. |
@@ -110,7 +111,7 @@ V4-GATE-E-v1 Blocker 03: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 04: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 04: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 05: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
-next authorized action: NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-11
+next authorized action: SENIOR REVIEW + MANUAL PUBLICATION OF BLOCKER11
 CIV-39: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 V4-GATE-F-v1: PLANNED — NOT ACQUIRED
@@ -134,7 +135,9 @@ Gate F Evaluation 09: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-F-v1 Blocker 09: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate F Evaluation 10: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-F-v1 Blocker 10: FIXED + PUBLISHED + REMOTE VERIFIED
-Gate F Evaluation 11: NOT PERFORMED
+Gate F Evaluation 11: FAIL — HISTORICAL IMMUTABLE EVIDENCE
+V4-GATE-F-v1 Blocker 11: FIXED — LOCAL CORRECTION CANDIDATE — NOT PUBLISHED
+Gate F Evaluation 12: NOT AUTHORIZED — NOT PERFORMED
 CIV-40: OPTIONAL TOOLING — NOT STARTED
 CIV-41: NOT STARTED
 ```
@@ -380,8 +383,14 @@ VERIFIED** at product/test/runtime commit
 [`GATE_F_BLOCKER_10_TERMINAL_MORTALITY_MIGRATION_ADMISSION.md`](GATE_F_BLOCKER_10_TERMINAL_MORTALITY_MIGRATION_ADMISSION.md).
 Its final review archive SHA-256 is
 `3e214e0f9dc0bc1cd1c885d6ff178fa0fe67ffd103741d88bc0e9618ee2a218d`.
-Evaluation 11 is not performed. The next authorized action is
-`NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-11`.
+Evaluation 11 is historical immutable FAIL evidence against baseline
+`35993c5652d79a8244f6a6e7f70709a2136a7939`. Blocker 11
+`terminalMortalityPendingHouseholdAcquisition` is **FIXED — LOCAL CORRECTION
+CANDIDATE — NOT PUBLISHED** at product/test/runtime commit
+`7d33d5f584089ad44ffcb0c64fcb00bb4d41779f`, documented in
+[`GATE_F_BLOCKER_11_TERMINAL_MORTALITY_HOUSEHOLD_ACQUISITION.md`](GATE_F_BLOCKER_11_TERMINAL_MORTALITY_HOUSEHOLD_ACQUISITION.md).
+Evaluation 12 is not authorized or performed. The next action is senior review
+and manual publication of Blocker 11.
 `CIV-38` remains
 optional and not started; `CIV-40` remains optional tooling and not started.
 Currency is not a Gate E or CIV-39 prerequisite.
