@@ -101,15 +101,17 @@ for the compact status. In particular:
   `2df178d6524f0c89465fb4508c39e7dc2e362fbf`, blocker kind is
   `terminalMortalityPendingHouseholdAcquisition`, and review archive SHA-256 is
   `a7802f7fa4141edd54d9b7ce67dd7962530253769ae570fe62001c2d5b1c9f3f`.
-- Gate F Blocker 11 is **FIXED — LOCAL CORRECTION CANDIDATE — NOT PUBLISHED**
-  at product/test/runtime commit
-  `7d33d5f584089ad44ffcb0c64fcb00bb4d41779f`. The persisted Mortality owner
-  now refuses incompatible new Household/current-residence authority before
-  publication or identity consumption while Household-before-Mortality cleanup
-  remains supported.
-- Gate F remains **PLANNED — NOT ACQUIRED**; Evaluation 12 is **NOT AUTHORIZED
-  — NOT PERFORMED**. The next action is **SENIOR REVIEW + MANUAL PUBLICATION OF
-  BLOCKER11**. Optional `CIV-40` remains unstarted and is not a prerequisite.
+- Gate F Blocker 11 is **FIXED + PUBLISHED + REMOTE VERIFIED** at product/test/
+  runtime commit `7d33d5f584089ad44ffcb0c64fcb00bb4d41779f` and canonical HEAD
+  `ab3302ee0c1fdcd90a40ba12dee555f3f445b793`. Its final review archive SHA-256
+  is `024f8197be6a5ec4608e5e7deb02196083bf95e15912ceed6dec73bff057c094`.
+  The persisted Mortality owner refuses incompatible new Household/current-
+  residence authority before publication or identity consumption while
+  Household-before-Mortality cleanup remains supported.
+- Gate F remains **PLANNED — NOT ACQUIRED**; Evaluation 12 is **NOT
+  PERFORMED**. The next authorized action is
+  `NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-12`. Optional `CIV-40` remains
+  unstarted and is not a prerequisite.
 
 Historical Gate B `FAIL` reports and the closure-candidate report are preserved
 as evidence of their own evaluations. They do not reopen Gate B.

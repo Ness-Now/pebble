@@ -2,12 +2,11 @@
 
 ## Status
 
-`V4-GATE-F-v1 Blocker 11: FIXED — LOCAL CORRECTION CANDIDATE — NOT PUBLISHED`
+`V4-GATE-F-v1 Blocker 11: FIXED + PUBLISHED + REMOTE VERIFIED`
 
 Gate F Evaluation 11 remains **FAIL — HISTORICAL IMMUTABLE EVIDENCE**. Gate F
-remains **PLANNED — NOT ACQUIRED**. Evaluation 12 is **NOT AUTHORIZED — NOT
-PERFORMED**. Senior review and manual publication are required before any new
-evaluation campaign.
+remains **PLANNED — NOT ACQUIRED**. Evaluation 12 is **NOT PERFORMED**. The next
+authorized action is `NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-12`.
 
 ## Identity and topology
 
@@ -20,6 +19,11 @@ independently fetched remote: 35993c5652d79a8244f6a6e7f70709a2136a7939
 correction branch: codex/gate-f-blocker-11-terminal-mortality-household-acquisition
 merge base: 35993c5652d79a8244f6a6e7f70709a2136a7939
 product/test/runtime commit: 7d33d5f584089ad44ffcb0c64fcb00bb4d41779f
+documentation/evidence commit and published canonical HEAD: ab3302ee0c1fdcd90a40ba12dee555f3f445b793
+published review archive: PebbleLab-GateF-Blocker11-Review-ab3302e.zip
+published review archive SHA-256: 024f8197be6a5ec4608e5e7deb02196083bf95e15912ceed6dec73bff057c094
+published review archive internal checksums: 132/132 PASS
+independent remote publication verification: PASS
 Evaluation 11 harness/fresh-process commit: 650b4930d1474584eb947ebc2ea531ca10e2a965 — NOT_ANCESTOR
 Evaluation 11 final evidence/docs HEAD: 2df178d6524f0c89465fb4508c39e7dc2e362fbf — NOT_ANCESTOR
 Evaluation 11 review archive SHA-256: a7802f7fa4141edd54d9b7ce67dd7962530253769ae570fe62001c2d5b1c9f3f
@@ -279,16 +283,17 @@ a test failure. Its complete retained log proves the normal terminal PASS.
 ## Program state and non-claims
 
 - Gate F Evaluations 01–11: **FAIL — HISTORICAL IMMUTABLE EVIDENCE**.
-- Gate F Blockers 01–10: **FIXED + PUBLISHED + REMOTE VERIFIED**.
-- Gate F Blocker 11: **FIXED — LOCAL CORRECTION CANDIDATE — NOT PUBLISHED**.
+- Gate F Blockers 01–11: **FIXED + PUBLISHED + REMOTE VERIFIED**.
+- Gate F Blocker 11: **FIXED + PUBLISHED + REMOTE VERIFIED**.
 - Gate F: **PLANNED — NOT ACQUIRED**.
-- Evaluation 12: **NOT AUTHORIZED — NOT PERFORMED**.
+- Evaluation 12: **NOT PERFORMED**.
 - `CIV-38`: **OPTIONAL — NOT STARTED**.
 - `CIV-39`: **COMPLETE + PUBLISHED**.
 - `CIV-40`: **OPTIONAL TOOLING — NOT STARTED**.
 - `CIV-41`: **NOT STARTED**.
 - `ROADMAP_MANIFEST.schemaVersion`: **3**.
 
-This local correction does not publish itself, acquire Gate F or authorize
-Evaluation 12. The next action is **SENIOR REVIEW + MANUAL PUBLICATION OF
-BLOCKER11**.
+Manual publication and independent remote verification completed at canonical
+HEAD `ab3302ee0c1fdcd90a40ba12dee555f3f445b793`. This correction does not
+acquire Gate F and does not perform Evaluation 12. The next authorized action
+is `NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-12`.

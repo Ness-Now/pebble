@@ -214,15 +214,18 @@ Gate F correction history:
   `2df178d6524f0c89465fb4508c39e7dc2e362fbf`, blocker kind is
   `terminalMortalityPendingHouseholdAcquisition`, and review archive SHA-256 is
   `a7802f7fa4141edd54d9b7ce67dd7962530253769ae570fe62001c2d5b1c9f3f`.
-- V4-GATE-F-v1 Blocker 11: **FIXED — LOCAL CORRECTION CANDIDATE — NOT
-  PUBLISHED** at product/test/runtime commit
-  `7d33d5f584089ad44ffcb0c64fcb00bb4d41779f`. Persisted pending Mortality now
-  refuses new Household/current-residence acquisition atomically; the valid
-  Household-before-Mortality cleanup order remains supported. Checkpoint schema
-  35 and Observer schema 13 are unchanged.
+- V4-GATE-F-v1 Blocker 11: **FIXED + PUBLISHED + REMOTE VERIFIED** at
+  product/test/runtime commit `7d33d5f584089ad44ffcb0c64fcb00bb4d41779f`
+  and canonical HEAD `ab3302ee0c1fdcd90a40ba12dee555f3f445b793`. Its
+  final review archive SHA-256 is
+  `024f8197be6a5ec4608e5e7deb02196083bf95e15912ceed6dec73bff057c094`.
+  Persisted pending Mortality refuses new Household/current-residence
+  acquisition atomically; the valid Household-before-Mortality cleanup order
+  remains supported. Checkpoint schema 35 and Observer schema 13 are unchanged.
 - Gate F remains **PLANNED — NOT ACQUIRED**.
-- Gate F Evaluation 12 is **NOT AUTHORIZED — NOT PERFORMED**.
-- The next action is **SENIOR REVIEW + MANUAL PUBLICATION OF BLOCKER11**.
+- Gate F Evaluation 12 is **NOT PERFORMED**.
+- The next authorized action is
+  `NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-12`.
 
 Published Gate E history:
 
@@ -622,7 +625,7 @@ the Gate E acquisition are now published and independently remote verified.
 active CIV phase: none
 completed and published through: CIV-39 (CIV-38 remains optional and unstarted)
 next eligible phase: null; Gate F remains planned and not acquired
-next authorized action: SENIOR REVIEW + MANUAL PUBLICATION OF BLOCKER11
+next authorized action: NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-12
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -688,8 +691,8 @@ V4-GATE-F-v1 Blocker 09 status: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate F Evaluation 10 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-F-v1 Blocker 10 status: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate F Evaluation 11 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
-V4-GATE-F-v1 Blocker 11 status: FIXED — LOCAL CORRECTION CANDIDATE — NOT PUBLISHED
-Gate F Evaluation 12 status: NOT AUTHORIZED — NOT PERFORMED
+V4-GATE-F-v1 Blocker 11 status: FIXED + PUBLISHED + REMOTE VERIFIED
+Gate F Evaluation 12 status: NOT PERFORMED
 CIV-40 status: OPTIONAL TOOLING — NOT STARTED
 CIV-41 status: NOT STARTED
 roadmap generation: V4
@@ -1087,13 +1090,16 @@ The final review archive SHA-256 is
 `3e214e0f9dc0bc1cd1c885d6ff178fa0fe67ffd103741d88bc0e9618ee2a218d`.
 Evaluation 11 is **FAIL — HISTORICAL IMMUTABLE EVIDENCE** against baseline
 `35993c5652d79a8244f6a6e7f70709a2136a7939`. Its
-`terminalMortalityPendingHouseholdAcquisition` Blocker 11 is **FIXED — LOCAL
-CORRECTION CANDIDATE — NOT PUBLISHED** at product/test/runtime commit
-`7d33d5f584089ad44ffcb0c64fcb00bb4d41779f`, documented in
+`terminalMortalityPendingHouseholdAcquisition` Blocker 11 is **FIXED +
+PUBLISHED + REMOTE VERIFIED** at product/test/runtime commit
+`7d33d5f584089ad44ffcb0c64fcb00bb4d41779f` and canonical HEAD
+`ab3302ee0c1fdcd90a40ba12dee555f3f445b793`, documented in
 [`GATE_F_BLOCKER_11_TERMINAL_MORTALITY_HOUSEHOLD_ACQUISITION.md`](GATE_F_BLOCKER_11_TERMINAL_MORTALITY_HOUSEHOLD_ACQUISITION.md).
-Gate F remains **PLANNED — NOT ACQUIRED** and Evaluation 12 is **NOT AUTHORIZED
-— NOT PERFORMED**. The next action is **SENIOR REVIEW + MANUAL PUBLICATION OF
-BLOCKER11**.
+Its final review archive SHA-256 is
+`024f8197be6a5ec4608e5e7deb02196083bf95e15912ceed6dec73bff057c094`.
+Gate F remains **PLANNED — NOT ACQUIRED** and Evaluation 12 is **NOT
+PERFORMED**. The next authorized action is
+`NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-12`.
 `CIV-38` remains **OPTIONAL — NOT STARTED** and is not a prerequisite.
 `CIV-40` remains **OPTIONAL TOOLING — NOT STARTED**. Currency is not a Gate E
 or CIV-39 prerequisite.
