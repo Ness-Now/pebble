@@ -647,6 +647,69 @@ private func gateFB11FreshProcessIfRequested() -> Bool {
     return true
 }
 
+// Evaluation 12 Attack 07 composes the published B10 and B11 guards over a
+// schema-35 restart. This bridge only builds supported public pebsmoke seeds;
+// refusal and cleanup are exercised by the independent Attack 07 harness.
+func gateFE12A7BuildSeed(
+    _ simulationID: String,
+    inverse: Bool
+) -> GateFE12A7Seed {
+    if !inverse {
+        let session = gateFB11StagePending(simulationID)
+        let pending = session.pendingMortalityTransitions().first {
+            $0.agentID == gateFB11TerminalID
+        }!
+        let membership = session.durableState().householdState!
+            .membershipPeriods.first {
+                $0.agentID == gateFB11TerminalID && $0.leftTick == nil
+            }!
+        return GateFE12A7Seed(
+            session: session, scenario: "pending-before-new-authority",
+            causal: [
+                "existingHousehold": membership.joinedEventID.sequence.rawValue,
+                "mortalityPending": pending.pendingEventID.sequence.rawValue,
+            ]
+        )
+    }
+
+    var session = gateFB11Session(simulationID)
+    _ = try! session.createSingletonHousehold(
+        for: gateFB11TerminalID, residenceAnchor: gateFB11NewHome,
+        reason: .formedHousehold
+    )
+    let membership = session.durableState().householdState!
+        .membershipPeriods.first {
+            $0.agentID == gateFB11TerminalID && $0.leftTick == nil
+        }!
+    let migration = try! session.beginSettlementMigration(
+        agentID: gateFB11TerminalID,
+        destinationSettlementID: gateFB11EastID,
+        verifiedRoute: gateFB11Route(
+            from: try! session.state(for: gateFB11TerminalID).position
+        )
+    )
+    for _ in 0..<8 where !session.pendingMortalityTransitions().contains(
+        where: { $0.agentID == gateFB11TerminalID }
+    ) {
+        _ = try! session.advanceTick()
+    }
+    let pending = session.pendingMortalityTransitions().first {
+        $0.agentID == gateFB11TerminalID
+    }!
+    precondition(
+        membership.joinedEventID.sequence < migration.startedEventID.sequence
+            && migration.startedEventID.sequence < pending.pendingEventID.sequence
+    )
+    return GateFE12A7Seed(
+        session: session, scenario: "authority-before-pending",
+        causal: [
+            "householdEstablished": membership.joinedEventID.sequence.rawValue,
+            "migrationStarted": migration.startedEventID.sequence.rawValue,
+            "mortalityPending": pending.pendingEventID.sequence.rawValue,
+        ]
+    )
+}
+
 func runPebbleAgentsGateFBlocker11Smoke() {
     section("Gate F Blocker 11 terminal mortality household admission")
     if gateFB11FreshProcessIfRequested() { return }
