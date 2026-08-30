@@ -903,6 +903,111 @@ private func gateFE12A1WriteJSON<T: Encodable>(_ value: T, to url: URL) {
     try! encoder.encode(value).write(to: url, options: .atomic)
 }
 
+// Evaluation 12 Attack 05 continues the already-supported composed public
+// trajectory from Attack 01 into a later multigeneration family history. This
+// bridge exposes no product internals: it only packages the independent
+// pebsmoke fixture and its public care/ecology continuation helpers.
+func gateFE12A5BuildSeed(_ simulationID: String) -> GateFE12A5Seed {
+    let fixture = gateFE12A1BuildFixture(simulationID)
+    return GateFE12A5Seed(
+        session: fixture.session,
+        successorProofSHA256: gateFE12A1ProofDigest(fixture.proof),
+        seedCausal: [
+            "firstBirth": fixture.causal.firstBirth,
+            "fullSiblingBirth": fixture.causal.prePlanSiblingBirth,
+            "migrationOut": fixture.causal.outboundMigrationStart,
+            "migrationReturn": fixture.causal.returnMigrationStart,
+            "mortalityPending": fixture.causal.mortalityPending,
+            "estatePlan": fixture.causal.estatePlan,
+            "death": fixture.causal.deathFinal,
+        ]
+    )
+}
+
+func gateFE12A5AdvanceSupported(_ session: inout AgentSimulationSession) {
+    gateFE12A1Advance(&session)
+    let activeIDs = Set(session.expectedActiveAgentIDs())
+    let engagements = session.dependentCareSnapshot().activeEngagements
+        .filter { $0.kind == .provideFood }
+        .sorted {
+            ($0.caregiverID, $0.dependentID, $0.engagementID)
+                < ($1.caregiverID, $1.dependentID, $1.engagementID)
+        }
+    let caregiverIDs = Set(engagements.map(\.caregiverID))
+    let provisionerIDs = activeIDs.union(caregiverIDs).sorted()
+    for caregiverID in provisionerIDs {
+        guard let ordinal = Int(
+            caregiverID.rawValue.split(separator: "_").last ?? ""
+        ), ordinal < gateFE12A1Habitats.count else { continue }
+        let state = try! session.state(for: caregiverID)
+        let available = state.resourceInventory.count(of: .foodRaw)
+        let inTransit = session.populationScaleSnapshot().settlementMigrations
+            .contains {
+                $0.agentID == caregiverID && $0.status == .inTransit
+            }
+        // The seed already provisions the public return journey. Match the
+        // owning restore-arrive fixture: consume carried food while available,
+        // but do not invent an off-route forage opportunity mid-migration.
+        let adultConsumption = ordinal <= 2 && state.needs.hunger >= 0.25
+            && (!inTransit || available > 0) ? 1 : 0
+        let careCount = engagements.filter {
+            $0.caregiverID == caregiverID
+        }.count
+        let required = adultConsumption + careCount
+        if required > available {
+            let needed = required - available
+            let patches = session.localEcologySnapshot().patches
+            let adjacentHabitatOrdinal = gateFE12A1Habitats.firstIndex {
+                let habitat = $0
+                return abs(habitat.foragePosition.x - state.position.x)
+                    + abs(habitat.foragePosition.y - state.position.y)
+                    + abs(habitat.foragePosition.z - state.position.z) == 1
+                    && patches.contains {
+                        $0.habitatFingerprint == habitat.habitatFingerprint
+                            && $0.status == .available
+                            && $0.currentYield >= needed
+                    }
+            }
+            precondition(
+                adjacentHabitatOrdinal != nil,
+                "Attack 05 has no public adjacent forage yield for "
+                    + "\(caregiverID.rawValue) at \(state.position) "
+                    + "needed=\(needed) patches=\(patches)"
+            )
+            gateFE12A1Forage(
+                &session, ordinal: ordinal, quantity: needed,
+                habitatOrdinal: adjacentHabitatOrdinal!
+            )
+        }
+        if adultConsumption == 1 {
+            gateFE12A1Consume(&session, ordinal: ordinal)
+        }
+        for engagement in engagements where engagement.caregiverID == caregiverID {
+            do {
+                let result = try session.provideDependentNourishment(
+                    AgentCareProvisionIntent(
+                        provisionID: "e12-a5-care-\(engagement.dependentID.rawValue)"
+                            + "-t\(session.tick)",
+                        needID: engagement.needID,
+                        caregiverID: caregiverID,
+                        dependentID: engagement.dependentID,
+                        tick: session.tick
+                    )
+                )
+                precondition(result.succeeded && result.consumedByDependent == 1)
+            } catch {
+                let dependent = try! session.state(for: engagement.dependentID)
+                preconditionFailure(
+                    "Attack 05 public care failed tick=\(session.tick) "
+                        + "caregiver=\(caregiverID.rawValue)@\(state.position) "
+                        + "dependent=\(engagement.dependentID.rawValue)"
+                        + "@\(dependent.position) error=\(error)"
+                )
+            }
+        }
+    }
+}
+
 private func gateFE12A1FreshProcessIfRequested() -> Bool {
     let environment = ProcessInfo.processInfo.environment
     guard let phase = environment["PEBBLELAB_GATE_F_E12_A1_PHASE"] else {
