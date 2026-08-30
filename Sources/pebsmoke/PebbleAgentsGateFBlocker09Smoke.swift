@@ -1457,6 +1457,144 @@ private func gateFB09FreshProcessIfRequested() -> Bool {
     return true
 }
 
+// Evaluation 12 Attack 06 composes the published B09 causal boundary with
+// current Household, guardianship, CIV-39 fidelity, and migration authority.
+// The bridge remains pebsmoke-only and uses the same public operations as the
+// owning blocker fixture; it exposes no product mutation shortcut.
+func gateFE12A6BuildTrajectory(
+    _ simulationID: String,
+    birthBeforeEstatePlan: Bool
+) -> GateFE12A6Trajectory {
+    var fixture = gateFB09BoundaryFixture(simulationID)
+    let parent0 = AgentID(rawValue: "agent_0")!
+    let migrant = AgentID(rawValue: "agent_1")!
+    let parent2 = AgentID(rawValue: "agent_2")!
+    let decedent = fixture.firstBirth.newbornID
+    let laterPlan = fixture.laterPlan
+    let boundaryTick = fixture.session.tick
+    let pending = fixture.session.pendingMortalityTransitions().first {
+        $0.agentID == decedent
+    }!
+    let targetHousehold = try! fixture.session.currentMembership(
+        of: parent0
+    )!.householdID
+    precondition(
+        try! fixture.session.currentMembership(of: parent2)!.householdID
+            != targetHousehold
+    )
+
+    func moveHousehold(
+        _ session: inout AgentSimulationSession
+    ) -> UInt64 {
+        try! session.moveMembers(memberIDs: [parent2], to: targetHousehold)
+        return session.householdSnapshot().membershipPeriods.first {
+            $0.agentID == parent2 && $0.leftTick == nil
+        }!.joinedEventID.sequence.rawValue
+    }
+
+    func publishBirth(
+        _ session: inout AgentSimulationSession
+    ) -> (AgentBirthRecord, AgentParentageRecord, UInt64) {
+        let birth = gateFB09Birth(
+            &session, plan: laterPlan,
+            fingerprint: birthBeforeEstatePlan ? 120_601 : 120_602
+        )
+        let parentage = gateFB09Parentage(
+            session, childID: birth.newbornID
+        )
+        let current = try! session.currentGuardian(for: birth.newbornID)!
+        let replacement = [parent0, parent2].first {
+            $0 != current.guardianID
+                && (try! session.currentMembership(of: $0)!.householdID)
+                    == current.householdID
+        }!
+        try! session.reassignGuardian(
+            dependentID: birth.newbornID, to: replacement
+        )
+        let reassigned = try! session.currentGuardian(for: birth.newbornID)!
+        precondition(reassigned.guardianID == replacement)
+        return (
+            birth, parentage,
+            reassigned.startedEventID.sequence.rawValue
+        )
+    }
+
+    func finalizeEstate(
+        _ session: inout AgentSimulationSession
+    ) -> (
+        AgentMortalityPhysicalCustodyResolution,
+        AgentMortalityRecord,
+        AgentEstateRecord
+    ) {
+        let custody = gateFB09ResolveEmptyCustody(
+            &session, agentID: decedent
+        )
+        let death = try! session.finalizePendingMortality(for: decedent)
+        return (
+            custody, death,
+            gateFB09Estate(session, decedentID: decedent)
+        )
+    }
+
+    let householdSequence: UInt64
+    let birth: AgentBirthRecord
+    let parentage: AgentParentageRecord
+    let guardianSequence: UInt64
+    let custody: AgentMortalityPhysicalCustodyResolution
+    let death: AgentMortalityRecord
+    let estate: AgentEstateRecord
+    if birthBeforeEstatePlan {
+        householdSequence = moveHousehold(&fixture.session)
+        (birth, parentage, guardianSequence) = publishBirth(&fixture.session)
+        (custody, death, estate) = finalizeEstate(&fixture.session)
+    } else {
+        (custody, death, estate) = finalizeEstate(&fixture.session)
+        householdSequence = moveHousehold(&fixture.session)
+        (birth, parentage, guardianSequence) = publishBirth(&fixture.session)
+    }
+    let migrantPosition = try! fixture.session.state(for: migrant).position
+    let destination = AgentPosition(x: 16, y: 64, z: 0)
+    var migrationRoute = [migrantPosition]
+    var cursor = migrantPosition
+    while cursor.z != destination.z {
+        cursor = AgentPosition(
+            x: cursor.x, y: cursor.y,
+            z: cursor.z + (cursor.z < destination.z ? 1 : -1)
+        )
+        migrationRoute.append(cursor)
+    }
+    while cursor.x != destination.x {
+        cursor = AgentPosition(
+            x: cursor.x + (cursor.x < destination.x ? 1 : -1),
+            y: cursor.y, z: cursor.z
+        )
+        migrationRoute.append(cursor)
+    }
+    let migration = try! fixture.session.beginSettlementMigration(
+        agentID: migrant, destinationSettlementID: gateFB09EastID,
+        verifiedRoute: migrationRoute
+    )
+    precondition(fixture.session.tick == boundaryTick)
+    return GateFE12A6Trajectory(
+        session: fixture.session,
+        order: birthBeforeEstatePlan ? "birth-before-plan" : "plan-before-birth",
+        decedentID: decedent, laterSiblingID: birth.newbornID,
+        successorProof: estate.successorPlanProof!,
+        causal: [
+            "mortalityPending": pending.pendingEventID.sequence.rawValue,
+            "householdMove": householdSequence,
+            "populationBorn": birth.populationBornEventID.sequence.rawValue,
+            "parentage": parentage.recordedEventID.sequence.rawValue,
+            "guardianReassigned": guardianSequence,
+            "physicalCustody": custody.eventID.sequence.rawValue,
+            "lethalDamage": death.lethalDamageEventID.sequence.rawValue,
+            "deathFinal": death.deathEventID.sequence.rawValue,
+            "estatePlan": estate.successorPlanEventID.sequence.rawValue,
+            "migrationStart": migration.startedEventID.sequence.rawValue,
+        ]
+    )
+}
+
 func runPebbleAgentsGateFBlocker09Smoke() {
     section("Gate F Blocker 09 — Estate / Kinship causal successor authority")
     if gateFB09CompatibilityReaderIfRequested() { return }
