@@ -108,10 +108,15 @@ for the compact status. In particular:
   The persisted Mortality owner refuses incompatible new Household/current-
   residence authority before publication or identity consumption while
   Household-before-Mortality cleanup remains supported.
-- Gate F remains **PLANNED — NOT ACQUIRED**; Evaluation 12 is **NOT
-  PERFORMED**. The next authorized action is
-  `NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-12`. Optional `CIV-40` remains
-  unstarted and is not a prerequisite.
+- Gate F Evaluation 12 is **PASS — LOCAL CANDIDATE — SENIOR REVIEW REQUIRED**
+  against exact baseline `8733517720487cd7832a57b6d1ddf4b82fe56102`.
+  All seven primary attacks, the full Blocker 11→01 matrix, owning coverage,
+  the 35-stage verifier and the canonical 24/64/128 scale campaign passed.
+  Its evidence is recorded in
+  `docs/pebblelab/GATE_F_EVALUATION_12_REPORT.md` and `.json`.
+- Gate F remains **PLANNED — NOT ACQUIRED**. No later phase is authorized;
+  independent senior review of Evaluation 12 is required. Optional `CIV-40`
+  remains unstarted and is not a prerequisite.
 
 Historical Gate B `FAIL` reports and the closure-candidate report are preserved
 as evidence of their own evaluations. They do not reopen Gate B.

@@ -222,10 +222,14 @@ Gate F correction history:
   Persisted pending Mortality refuses new Household/current-residence
   acquisition atomically; the valid Household-before-Mortality cleanup order
   remains supported. Checkpoint schema 35 and Observer schema 13 are unchanged.
+- Gate F Evaluation 12 is **PASS — LOCAL CANDIDATE — SENIOR REVIEW REQUIRED**
+  against exact baseline `8733517720487cd7832a57b6d1ddf4b82fe56102`.
+  Its seven primary attacks, complete B11→B01 regression matrix, owning
+  coverage, 35-stage verifier and canonical 24/64/128 scale campaign passed.
+  Evidence is in `GATE_F_EVALUATION_12_REPORT.md` and `.json`.
 - Gate F remains **PLANNED — NOT ACQUIRED**.
-- Gate F Evaluation 12 is **NOT PERFORMED**.
-- The next authorized action is
-  `NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-12`.
+- No later phase is authorized. The required next action is independent senior
+  review of the local Evaluation 12 candidate.
 
 Published Gate E history:
 
@@ -625,7 +629,7 @@ the Gate E acquisition are now published and independently remote verified.
 active CIV phase: none
 completed and published through: CIV-39 (CIV-38 remains optional and unstarted)
 next eligible phase: null; Gate F remains planned and not acquired
-next authorized action: NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-12
+next authorized action: INDEPENDENT SENIOR REVIEW OF GATE F EVALUATION 12
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -692,7 +696,7 @@ Gate F Evaluation 10 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-F-v1 Blocker 10 status: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate F Evaluation 11 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-F-v1 Blocker 11 status: FIXED + PUBLISHED + REMOTE VERIFIED
-Gate F Evaluation 12 status: NOT PERFORMED
+Gate F Evaluation 12 status: PASS — LOCAL CANDIDATE — SENIOR REVIEW REQUIRED
 CIV-40 status: OPTIONAL TOOLING — NOT STARTED
 CIV-41 status: NOT STARTED
 roadmap generation: V4
@@ -1097,9 +1101,11 @@ PUBLISHED + REMOTE VERIFIED** at product/test/runtime commit
 [`GATE_F_BLOCKER_11_TERMINAL_MORTALITY_HOUSEHOLD_ACQUISITION.md`](GATE_F_BLOCKER_11_TERMINAL_MORTALITY_HOUSEHOLD_ACQUISITION.md).
 Its final review archive SHA-256 is
 `024f8197be6a5ec4608e5e7deb02196083bf95e15912ceed6dec73bff057c094`.
-Gate F remains **PLANNED — NOT ACQUIRED** and Evaluation 12 is **NOT
-PERFORMED**. The next authorized action is
-`NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-12`.
+Gate F Evaluation 12 is **PASS — LOCAL CANDIDATE — SENIOR REVIEW REQUIRED**
+against baseline `8733517720487cd7832a57b6d1ddf4b82fe56102`, as recorded in
+[`GATE_F_EVALUATION_12_REPORT.md`](GATE_F_EVALUATION_12_REPORT.md) and its JSON
+companion. Gate F remains **PLANNED — NOT ACQUIRED**. No later phase is
+authorized; independent senior review is the required next action.
 `CIV-38` remains **OPTIONAL — NOT STARTED** and is not a prerequisite.
 `CIV-40` remains **OPTIONAL TOOLING — NOT STARTED**. Currency is not a Gate E
 or CIV-39 prerequisite.
