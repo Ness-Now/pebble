@@ -137,8 +137,8 @@ Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
 active CIV phase: none
 completed and published through: CIV-39 (CIV-38 remains optional and unstarted)
-next eligible phase: null; Gate F remains planned and not acquired
-next authorized action: INDEPENDENT SENIOR REVIEW OF GATE F EVALUATION 12
+next eligible phase: CIV-41 — NOT STARTED
+next authorized action after Gate F acquisition publication and independent remote verification: CIV-41
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
@@ -182,7 +182,8 @@ V4-GATE-E-v1: ACQUIRED AND PUBLISHED
 V4-GATE-E-v1 acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f76744f83
 CIV-39: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
-V4-GATE-F-v1: PLANNED — NOT ACQUIRED
+V4-GATE-F-v1 local status: ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH
+V4-GATE-F-v1 status after manual push and independent remote SHA verification: ACQUIRED AND PUBLISHED
 Gate F Evaluation 01: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-F-v1 Blocker 01: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate F Evaluation 02: FAIL — HISTORICAL IMMUTABLE EVIDENCE
@@ -205,9 +206,10 @@ Gate F Evaluation 10: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 Gate F Blocker 10: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate F Evaluation 11: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 Gate F Blocker 11: FIXED + PUBLISHED + REMOTE VERIFIED
-Gate F Evaluation 12: PASS — LOCAL CANDIDATE — SENIOR REVIEW REQUIRED
+Gate F Evaluation 12: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 CIV-40: OPTIONAL TOOLING — NOT STARTED
-CIV-41: NOT STARTED
+CIV-41: NOT STARTED — NEXT ELIGIBLE REQUIRED PHASE
+V4-GATE-G-v1: PLANNED
 ```
 
 The `CIV-33` completion is published on the canonical branch at
@@ -602,10 +604,15 @@ and independently remote verified at product/test/runtime commit
 `7d33d5f584089ad44ffcb0c64fcb00bb4d41779f` and canonical HEAD
 `ab3302ee0c1fdcd90a40ba12dee555f3f445b793`; final review archive SHA-256 is
 `024f8197be6a5ec4608e5e7deb02196083bf95e15912ceed6dec73bff057c094`.
-Evaluation 12 is **PASS — LOCAL CANDIDATE — SENIOR REVIEW REQUIRED** against
-baseline `8733517720487cd7832a57b6d1ddf4b82fe56102`. Gate F remains planned
-and not acquired. Independent senior review is required; no later phase is
-authorized. `CIV-40` remains optional tooling and not started.
+Evaluation 12 is **PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE** against
+baseline `8733517720487cd7832a57b6d1ddf4b82fe56102`. Its evidence is accepted
+at published HEAD `b31a7e53cfcf7a5c3ab6419f3cb5c0c309f04112`, with review archive SHA-256
+`ca7e70799220b58c3b090716a2adf19e8abb2609d465b7139d25f7f59988af4c`.
+Gate F is locally **ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH** and
+becomes **ACQUIRED AND PUBLISHED** only after manual push and independent
+remote SHA verification. `CIV-40` remains optional tooling and not started;
+`CIV-41` is not started and becomes the next authorized action after that
+publication. Gate G remains planned.
 
 | Phase | Requirement | Outcome |
 | --- | --- | --- |
@@ -1399,10 +1406,11 @@ Evaluation 05 product correction: NO
 Evaluation 05 verdict: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 Gate E status: ACQUIRED AND PUBLISHED
 Gate E acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f76744f83
-next authorized action: INDEPENDENT SENIOR REVIEW OF GATE F EVALUATION 12
+next authorized action after Gate F acquisition publication and independent remote verification: CIV-41
 CIV-39 status: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
-Gate F status: PLANNED — NOT ACQUIRED
+Gate F local status: ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH
+Gate F status after manual push and independent remote SHA verification: ACQUIRED AND PUBLISHED
 Gate F Evaluation 01 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 Gate F Blocker 01 status: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate F Evaluation 02 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
@@ -1425,8 +1433,10 @@ Gate F Evaluation 10 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 Gate F Blocker 10 status: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate F Evaluation 11 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 Gate F Blocker 11 status: FIXED + PUBLISHED + REMOTE VERIFIED
-Gate F Evaluation 12 status: PASS — LOCAL CANDIDATE — SENIOR REVIEW REQUIRED
+Gate F Evaluation 12 status: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 CIV-40 status: OPTIONAL TOOLING — NOT STARTED
+CIV-41 status: NOT STARTED — NEXT ELIGIBLE REQUIRED PHASE
+V4-GATE-G-v1 status: PLANNED
 ```
 
 Blocker 01 binds exact production origin to the exact rights-tracked asset and
@@ -1657,11 +1667,15 @@ PUBLISHED + REMOTE VERIFIED** at product/test/runtime commit
 `7d33d5f584089ad44ffcb0c64fcb00bb4d41779f` and canonical HEAD
 `ab3302ee0c1fdcd90a40ba12dee555f3f445b793`; final review archive SHA-256 is
 `024f8197be6a5ec4608e5e7deb02196083bf95e15912ceed6dec73bff057c094`.
-Evaluation 12 is **PASS — LOCAL CANDIDATE — SENIOR REVIEW REQUIRED** against
-baseline `8733517720487cd7832a57b6d1ddf4b82fe56102`. Gate F remains planned
-and not acquired. Independent senior review is required; no later phase is
-authorized. CIV-40 remains optional tooling and is not a prerequisite; CIV-41
-is not started.
+Evaluation 12 is **PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE** against
+baseline `8733517720487cd7832a57b6d1ddf4b82fe56102`, accepted at published
+evidence HEAD `b31a7e53cfcf7a5c3ab6419f3cb5c0c309f04112` with review archive SHA-256
+`ca7e70799220b58c3b090716a2adf19e8abb2609d465b7139d25f7f59988af4c`.
+Gate F is locally **ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH** and
+becomes **ACQUIRED AND PUBLISHED** only after manual push and independent
+remote SHA verification. CIV-40 remains optional tooling and is not a
+prerequisite; CIV-41 is not started and is the next eligible required phase
+after acquisition publication. Gate G remains planned.
 
 ## Wave 5 — Knowledge, language and culture
 
@@ -1819,7 +1833,7 @@ keeps incarnation physical and produces verifiable long-duration history.
 | `V4-GATE-C-v1` | acquired | `CIV-26`–`CIV-28` |
 | `V4-GATE-D-v1` | acquired and published | `CIV-29`–`CIV-33`, renewable subsistence milestone and Blockers 01–10 published; Evaluations 01–10 remain historical FAIL evidence; Evaluation 11 PASS is senior-review approved |
 | `V4-GATE-E-v1` | acquired and published | `CIV-34`–`CIV-37`; `CIV-38` optional and currency not required; Evaluations 01–04 historical FAIL; Blockers 01–04 fixed/published/remote-verified; Evaluation 05 PASS senior-review-approved published evidence |
-| `V4-GATE-F-v1` | planned, not acquired | required `CIV-39` complete/published/remote-verified; Evaluations 01–11 historical FAIL; Blockers 01–11 fixed/published/remote-verified; Evaluation 12 local PASS candidate pending senior review; `CIV-40` optional tooling and not started |
+| `V4-GATE-F-v1` | acquired publication candidate, awaiting user push; acquired and published after manual push plus independent remote SHA verification | required `CIV-39` complete/published/remote-verified; Evaluations 01–11 historical FAIL; Blockers 01–11 fixed/published/remote-verified; Evaluation 12 senior-review-approved published PASS evidence; `CIV-40` optional tooling and not started |
 | `V4-GATE-G-v1` | planned | `CIV-41`–`CIV-47` |
 | `V4-GATE-H-v1` | planned | `CIV-48`–`CIV-52` |
 | `V4-GATE-I-v1` | planned | `CIV-53`–`CIV-56` |

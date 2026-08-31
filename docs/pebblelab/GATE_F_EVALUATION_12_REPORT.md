@@ -2,16 +2,19 @@
 
 ## Verdict
 
-`Gate F Evaluation 12: PASS — LOCAL CANDIDATE — SENIOR REVIEW REQUIRED`
+`Gate F Evaluation 12: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE`
 
-Gate F remains **PLANNED — NOT ACQUIRED**. Evaluation 12 found no reachable
-material product contradiction in the seven required primary attacks. It made
-no product correction, did not start `CIV-40` or `CIV-41`, did not push, and
-did not regenerate goldens.
+Senior review approved Evaluation 12 and its evidence is published at canonical
+HEAD `b31a7e53cfcf7a5c3ab6419f3cb5c0c309f04112`. Evaluation 12 found no
+reachable material product contradiction in the seven required primary
+attacks. It made no product correction, did not start `CIV-40` or `CIV-41`,
+did not push, and did not regenerate goldens.
 
-This is local evaluation evidence, not Gate F acquisition and not
-authorization for a later program phase. The next action is independent senior
-review of this Evaluation 12 candidate.
+The accepted review archive is
+`PebbleLab-GateF-Evaluation12-Review-b31a7e5.zip`, SHA-256
+`ca7e70799220b58c3b090716a2adf19e8abb2609d465b7139d25f7f59988af4c`.
+Remote evidence publication is **VERIFIED**. This report reconciliation does
+not claim that the containing Gate F acquisition commit is remotely published.
 
 ## Independent identity
 
@@ -36,9 +39,8 @@ state were verified before evaluation work. The branch was created directly
 from the required baseline. No historical evaluation commit was merged,
 cherry-picked, rebased, squashed, or inherited.
 
-The evidence/docs commit and final HEAD are `null` in the committed JSON report
-because a Git commit cannot contain its own object ID. Their materialized value
-is recorded in the review archive and final handoff.
+The accepted evidence/docs commit and published final evidence HEAD are
+`b31a7e53cfcf7a5c3ab6419f3cb5c0c309f04112`.
 
 ## Evaluation 12 harness identities
 
@@ -384,16 +386,20 @@ harness/setup and revalidated from scratch. Product semantics were unchanged.
 
 - Gate F Evaluations 01–11: **FAIL — HISTORICAL IMMUTABLE EVIDENCE**.
 - Gate F Blockers 01–11: **FIXED + PUBLISHED + REMOTE VERIFIED**.
-- Gate F Evaluation 12: **PASS — LOCAL CANDIDATE — SENIOR REVIEW REQUIRED**.
-- Gate F: **PLANNED — NOT ACQUIRED**.
+- Gate F Evaluation 12: **PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE**.
+- Gate F local acquisition status:
+  **ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH**.
+- Gate F after manual push and independent remote SHA verification:
+  **ACQUIRED AND PUBLISHED**.
 - `CIV-38`: **OPTIONAL — NOT STARTED**.
 - `CIV-39`: **COMPLETE + PUBLISHED**.
 - `CIV-40`: **OPTIONAL TOOLING — NOT STARTED**.
-- `CIV-41`: **NOT STARTED**.
+- `CIV-41`: **NOT STARTED — NEXT ELIGIBLE REQUIRED PHASE**.
+- `V4-GATE-G-v1`: **PLANNED**.
 - checkpoint schema: **35**.
 - Observer schema: **13**, read-only.
 - `ROADMAP_MANIFEST.schemaVersion`: **3**.
 
-No later phase is authorized by this local candidate. The required next action
-is senior review of Evaluation 12; only an explicit senior decision may change
-Gate F or program authorization.
+The next authorized action after manual publication of the Gate F acquisition
+commit and independent remote SHA verification is `CIV-41`. This acquisition
+mission does not start `CIV-41` and does not authorize or perform Evaluation 13.

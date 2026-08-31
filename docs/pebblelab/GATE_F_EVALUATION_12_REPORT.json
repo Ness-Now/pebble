@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "mission": "NEW-INDEPENDENT-V4-GATE-F-v1-EVALUATION-12",
-  "verdict": "PASS_LOCAL_CANDIDATE_SENIOR_REVIEW_REQUIRED",
+  "verdict": "PASS_SENIOR_REVIEW_APPROVED_PUBLISHED_EVIDENCE",
   "identity": {
     "repository": "Ness-Now/pebble",
     "canonicalBranch": "origin/lab/pebblelab-v1",
@@ -20,8 +20,8 @@
       "7f54e699381009ac2c0d8787623f861473af5c43",
       "2b4a10f8f4d9b4743b835b292526aa0da14071d2"
     ],
-    "evidenceDocumentationCommit": null,
-    "finalEvidenceHead": null,
+    "evidenceDocumentationCommit": "b31a7e53cfcf7a5c3ab6419f3cb5c0c309f04112",
+    "finalEvidenceHead": "b31a7e53cfcf7a5c3ab6419f3cb5c0c309f04112",
     "productCorrectionMade": false,
     "productSourceChangeCount": 0,
     "pushAttempted": false,
@@ -182,14 +182,39 @@
   },
   "renderedEvidence": "NOT_RUN_SUPPLEMENTARY_ONLY",
   "programState": {
-    "evaluation12": "PASS_LOCAL_CANDIDATE_SENIOR_REVIEW_REQUIRED",
-    "gateF": "PLANNED_NOT_ACQUIRED",
-    "nextAction": "INDEPENDENT-SENIOR-REVIEW-V4-GATE-F-v1-EVALUATION-12",
-    "laterPhaseAuthorized": false,
+    "evaluation12": "PASS_SENIOR_REVIEW_APPROVED_PUBLISHED_EVIDENCE",
+    "seniorReview": "APPROVED",
+    "remoteEvidencePublication": "VERIFIED",
+    "gateF": "ACQUIRED_PUBLICATION_CANDIDATE_AWAITING_USER_PUSH",
+    "gateFAfterManualPushAndIndependentRemoteSHAVerification": "ACQUIRED_AND_PUBLISHED",
+    "nextActionAfterAcquisitionPublication": "CIV-41",
+    "evaluation13Authorized": false,
+    "evaluation13Performed": false,
     "civ38": "OPTIONAL_NOT_STARTED",
     "civ39": "COMPLETE_PUBLISHED",
     "civ40": "OPTIONAL_TOOLING_NOT_STARTED",
-    "civ41": "NOT_STARTED",
+    "civ41": "NOT_STARTED_NEXT_ELIGIBLE_REQUIRED_PHASE",
+    "gateG": "PLANNED",
     "roadmapManifestSchemaVersion": 3
+  },
+  "seniorReview": {
+    "status": "APPROVED",
+    "acceptedEvidenceHead": "b31a7e53cfcf7a5c3ab6419f3cb5c0c309f04112",
+    "remoteEvidencePublication": "VERIFIED"
+  },
+  "reviewArchive": {
+    "filename": "PebbleLab-GateF-Evaluation12-Review-b31a7e5.zip",
+    "sha256": "ca7e70799220b58c3b090716a2adf19e8abb2609d465b7139d25f7f59988af4c",
+    "sizeBytes": 1531451,
+    "zipIntegrity": "PASS",
+    "memberCount": 469,
+    "actualFileCount": 385,
+    "internalChecksumEntries": 384,
+    "internalChecksumsPassed": 384,
+    "freshExtractionChecksumsPassed": 384,
+    "absolutePathCount": 0,
+    "traversalCount": 0,
+    "zipSymlinkCount": 0,
+    "freshExtractionSymlinkCount": 0
   }
 }

@@ -16,6 +16,10 @@ SHA of the documentation commit that contains it.
   **ACQUIRED AND PUBLISHED** under contract `V4-GATE-E-v1`, independently
   remote verified at canonical HEAD
   `076a616a97a229e921a5c36eebdfd12f76744f83`.
+- Gate F — Durable Scaled World:
+  **ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH** under contract
+  `V4-GATE-F-v1`. After manual push and independent remote SHA verification,
+  its status becomes **ACQUIRED AND PUBLISHED**.
 - `CIV-00` through `CIV-37`: **COMPLETE AND PUBLISHED** in their bounded
   contracts.
 - `CIV-37 — Physical Markets and Local Price Discovery V1`:
@@ -222,14 +226,20 @@ Gate F correction history:
   Persisted pending Mortality refuses new Household/current-residence
   acquisition atomically; the valid Household-before-Mortality cleanup order
   remains supported. Checkpoint schema 35 and Observer schema 13 are unchanged.
-- Gate F Evaluation 12 is **PASS — LOCAL CANDIDATE — SENIOR REVIEW REQUIRED**
+- Gate F Evaluation 12 is **PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE**
   against exact baseline `8733517720487cd7832a57b6d1ddf4b82fe56102`.
   Its seven primary attacks, complete B11→B01 regression matrix, owning
   coverage, 35-stage verifier and canonical 24/64/128 scale campaign passed.
-  Evidence is in `GATE_F_EVALUATION_12_REPORT.md` and `.json`.
-- Gate F remains **PLANNED — NOT ACQUIRED**.
-- No later phase is authorized. The required next action is independent senior
-  review of the local Evaluation 12 candidate.
+  Senior review approved the evidence published at canonical HEAD
+  `b31a7e53cfcf7a5c3ab6419f3cb5c0c309f04112`; its accepted review archive
+  SHA-256 is
+  `ca7e70799220b58c3b090716a2adf19e8abb2609d465b7139d25f7f59988af4c`.
+- Gate F local acquisition status is
+  **ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH**. The containing
+  acquisition commit does not claim its own remote publication.
+- After manual push and independent remote SHA verification, Gate F becomes
+  **ACQUIRED AND PUBLISHED**. The next eligible required phase is `CIV-41`;
+  this mission does not start it.
 
 Published Gate E history:
 
@@ -628,8 +638,8 @@ the Gate E acquisition are now published and independently remote verified.
 ```text
 active CIV phase: none
 completed and published through: CIV-39 (CIV-38 remains optional and unstarted)
-next eligible phase: null; Gate F remains planned and not acquired
-next authorized action: INDEPENDENT SENIOR REVIEW OF GATE F EVALUATION 12
+next eligible phase: CIV-41 — NOT STARTED
+next authorized action after Gate F acquisition publication and independent remote verification: CIV-41
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -673,7 +683,8 @@ V4-GATE-E-v1 status: ACQUIRED AND PUBLISHED
 V4-GATE-E-v1 acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f76744f83
 CIV-39 status: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
-V4-GATE-F-v1 status: PLANNED — NOT ACQUIRED
+V4-GATE-F-v1 local status: ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH
+V4-GATE-F-v1 status after manual push and independent remote SHA verification: ACQUIRED AND PUBLISHED
 Gate F Evaluation 01 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-F-v1 Blocker 01 status: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate F Evaluation 02 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
@@ -696,9 +707,10 @@ Gate F Evaluation 10 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-F-v1 Blocker 10 status: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate F Evaluation 11 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-F-v1 Blocker 11 status: FIXED + PUBLISHED + REMOTE VERIFIED
-Gate F Evaluation 12 status: PASS — LOCAL CANDIDATE — SENIOR REVIEW REQUIRED
+Gate F Evaluation 12 status: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 CIV-40 status: OPTIONAL TOOLING — NOT STARTED
-CIV-41 status: NOT STARTED
+CIV-41 status: NOT STARTED — NEXT ELIGIBLE REQUIRED PHASE
+V4-GATE-G-v1 status: PLANNED
 roadmap generation: V4
 ```
 
@@ -1101,11 +1113,16 @@ PUBLISHED + REMOTE VERIFIED** at product/test/runtime commit
 [`GATE_F_BLOCKER_11_TERMINAL_MORTALITY_HOUSEHOLD_ACQUISITION.md`](GATE_F_BLOCKER_11_TERMINAL_MORTALITY_HOUSEHOLD_ACQUISITION.md).
 Its final review archive SHA-256 is
 `024f8197be6a5ec4608e5e7deb02196083bf95e15912ceed6dec73bff057c094`.
-Gate F Evaluation 12 is **PASS — LOCAL CANDIDATE — SENIOR REVIEW REQUIRED**
+Gate F Evaluation 12 is **PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE**
 against baseline `8733517720487cd7832a57b6d1ddf4b82fe56102`, as recorded in
 [`GATE_F_EVALUATION_12_REPORT.md`](GATE_F_EVALUATION_12_REPORT.md) and its JSON
-companion. Gate F remains **PLANNED — NOT ACQUIRED**. No later phase is
-authorized; independent senior review is the required next action.
+companion. The accepted published evidence HEAD is
+`b31a7e53cfcf7a5c3ab6419f3cb5c0c309f04112`, with review archive SHA-256
+`ca7e70799220b58c3b090716a2adf19e8abb2609d465b7139d25f7f59988af4c`.
+Gate F is locally **ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH** and
+becomes **ACQUIRED AND PUBLISHED** only after manual push and independent
+remote SHA verification. `CIV-41` is not started and is the next eligible
+required phase after acquisition publication; Gate G remains planned.
 `CIV-38` remains **OPTIONAL — NOT STARTED** and is not a prerequisite.
 `CIV-40` remains **OPTIONAL TOOLING — NOT STARTED**. Currency is not a Gate E
 or CIV-39 prerequisite.

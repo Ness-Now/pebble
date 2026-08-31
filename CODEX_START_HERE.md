@@ -108,15 +108,18 @@ for the compact status. In particular:
   The persisted Mortality owner refuses incompatible new Household/current-
   residence authority before publication or identity consumption while
   Household-before-Mortality cleanup remains supported.
-- Gate F Evaluation 12 is **PASS — LOCAL CANDIDATE — SENIOR REVIEW REQUIRED**
+- Gate F Evaluation 12 is **PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE**
   against exact baseline `8733517720487cd7832a57b6d1ddf4b82fe56102`.
   All seven primary attacks, the full Blocker 11→01 matrix, owning coverage,
   the 35-stage verifier and the canonical 24/64/128 scale campaign passed.
-  Its evidence is recorded in
-  `docs/pebblelab/GATE_F_EVALUATION_12_REPORT.md` and `.json`.
-- Gate F remains **PLANNED — NOT ACQUIRED**. No later phase is authorized;
-  independent senior review of Evaluation 12 is required. Optional `CIV-40`
-  remains unstarted and is not a prerequisite.
+  Senior review approved its evidence published at canonical HEAD
+  `b31a7e53cfcf7a5c3ab6419f3cb5c0c309f04112`; the accepted archive SHA-256 is
+  `ca7e70799220b58c3b090716a2adf19e8abb2609d465b7139d25f7f59988af4c`.
+- Gate F is locally **ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH**.
+  After manual push and independent remote SHA verification it becomes
+  **ACQUIRED AND PUBLISHED**. Optional `CIV-40` remains unstarted and is not a
+  prerequisite. `CIV-41` is not started and is the next eligible required
+  phase after acquisition publication; Gate G remains planned.
 
 Historical Gate B `FAIL` reports and the closure-candidate report are preserved
 as evidence of their own evaluations. They do not reopen Gate B.

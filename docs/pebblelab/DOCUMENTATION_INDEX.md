@@ -54,7 +54,7 @@ These documents form the minimal permanent memory of the project:
 | [`GATE_F_BLOCKER_09_ESTATE_CAUSAL_SUCCESSOR_AUTHORITY.md`](GATE_F_BLOCKER_09_ESTATE_CAUSAL_SUCCESSOR_AUTHORITY.md) | Published, independently remote-verified Blocker 09 correction including Senior Review Correction 01; preserves Evaluation 09 historical FAIL, separates published successor-proof v1 compatibility from strict causal v2 authority, and records affected old schema-35 continuation, full validation and publication identity. |
 | [`GATE_F_BLOCKER_10_TERMINAL_MORTALITY_MIGRATION_ADMISSION.md`](GATE_F_BLOCKER_10_TERMINAL_MORTALITY_MIGRATION_ADMISSION.md) | Published, independently remote-verified Blocker 10 correction; preserves Evaluation 10 historical FAIL and documents the Mortality-owned admission exclusion, exact atomic refusal, inverse-order control, public-path audit, debug/optimized fresh-process proof, schema 35 and Observer 13. Does not acquire Gate F. |
 | [`GATE_F_BLOCKER_11_TERMINAL_MORTALITY_HOUSEHOLD_ACQUISITION.md`](GATE_F_BLOCKER_11_TERMINAL_MORTALITY_HOUSEHOLD_ACQUISITION.md) | Published, independently remote-verified Blocker 11 correction; preserves Evaluation 11 historical FAIL and documents Mortality-owned refusal of new Household/current-residence authority, atomic identity conservation, inverse-order cleanup, fresh-process proof, schema 35 and Observer 13. Does not acquire Gate F. |
-| [`GATE_F_EVALUATION_12_REPORT.md`](GATE_F_EVALUATION_12_REPORT.md) | Independent Gate F Evaluation 12 local PASS candidate: seven primary falsification attacks, full B11→B01 regressions, owning coverage, canonical verifier, 24/64/128 scale and fresh-process evidence. Senior review is required; Gate F is not acquired. |
+| [`GATE_F_EVALUATION_12_REPORT.md`](GATE_F_EVALUATION_12_REPORT.md) | Accepted independent Gate F Evaluation 12 PASS evidence: seven primary falsification attacks, full B11→B01 regressions, owning coverage, canonical verifier, 24/64/128 scale and fresh-process evidence. Senior review approved and remote evidence publication verified. |
 | [`GATE_F_EVALUATION_12_REPORT.json`](GATE_F_EVALUATION_12_REPORT.json) | Machine-readable Evaluation 12 identity, complete 27-commit independence matrix, causal evidence, authority/ordinal accounting, validation, scale and program state. |
 | [`GATE_E_BLOCKER_01_EXACT_PRODUCTION_PROVENANCE.md`](GATE_E_BLOCKER_01_EXACT_PRODUCTION_PROVENANCE.md) | Published Blocker 01 product-correction record; preserves Evaluation 01 FAIL and documents exact asset-bound production provenance. |
 | [`GATE_E_BLOCKER_02_EVOLVED_PRODUCTION_IDENTITY.md`](GATE_E_BLOCKER_02_EVOLVED_PRODUCTION_IDENTITY.md) | Published Blocker 02 product-correction record; preserves Evaluation 02 FAIL and separates immutable production origin, durable current-identity continuity and exact current physical authority. |
@@ -103,7 +103,7 @@ V4-GATE-E-v1: ACQUIRED AND PUBLISHED
 V4-GATE-E-v1 acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f76744f83
 active phase: none
 completed through: CIV-39 (CIV-38 optional and unstarted)
-next eligible phase: null; Gate F remains planned and not acquired
+next eligible phase: CIV-41 — NOT STARTED
 Gate E Evaluation 01: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 01: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 02: FAIL — HISTORICAL IMMUTABLE EVIDENCE
@@ -113,10 +113,11 @@ V4-GATE-E-v1 Blocker 03: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 04: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 04: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 05: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
-next authorized action: INDEPENDENT SENIOR REVIEW OF GATE F EVALUATION 12
+next authorized action after Gate F acquisition publication and independent remote verification: CIV-41
 CIV-39: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
-V4-GATE-F-v1: PLANNED — NOT ACQUIRED
+V4-GATE-F-v1 local status: ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH
+V4-GATE-F-v1 status after manual push and independent remote SHA verification: ACQUIRED AND PUBLISHED
 Gate F Evaluation 01: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-F-v1 Blocker 01: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate F Evaluation 02: FAIL — HISTORICAL IMMUTABLE EVIDENCE
@@ -139,9 +140,10 @@ Gate F Evaluation 10: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-F-v1 Blocker 10: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate F Evaluation 11: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-F-v1 Blocker 11: FIXED + PUBLISHED + REMOTE VERIFIED
-Gate F Evaluation 12: PASS — LOCAL CANDIDATE — SENIOR REVIEW REQUIRED
+Gate F Evaluation 12: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 CIV-40: OPTIONAL TOOLING — NOT STARTED
-CIV-41: NOT STARTED
+CIV-41: NOT STARTED — NEXT ELIGIBLE REQUIRED PHASE
+V4-GATE-G-v1: PLANNED
 ```
 
 The `CIV-33` completion is published on the canonical branch at
@@ -394,9 +396,14 @@ VERIFIED** at product/test/runtime commit
 [`GATE_F_BLOCKER_11_TERMINAL_MORTALITY_HOUSEHOLD_ACQUISITION.md`](GATE_F_BLOCKER_11_TERMINAL_MORTALITY_HOUSEHOLD_ACQUISITION.md).
 Its final review archive SHA-256 is
 `024f8197be6a5ec4608e5e7deb02196083bf95e15912ceed6dec73bff057c094`.
-Evaluation 12 is a **PASS — LOCAL CANDIDATE — SENIOR REVIEW REQUIRED** against
-baseline `8733517720487cd7832a57b6d1ddf4b82fe56102`. Gate F remains planned and
-not acquired; no later phase is authorized before independent senior review.
+Evaluation 12 is **PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE** against
+baseline `8733517720487cd7832a57b6d1ddf4b82fe56102`, accepted at evidence HEAD
+`b31a7e53cfcf7a5c3ab6419f3cb5c0c309f04112` with review archive SHA-256
+`ca7e70799220b58c3b090716a2adf19e8abb2609d465b7139d25f7f59988af4c`.
+Gate F is locally **ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH** and
+becomes **ACQUIRED AND PUBLISHED** only after manual push and independent
+remote SHA verification. `CIV-41` is the next eligible required phase after
+that publication and remains not started; Gate G remains planned.
 `CIV-38` remains
 optional and not started; `CIV-40` remains optional tooling and not started.
 Currency is not a Gate E or CIV-39 prerequisite.
