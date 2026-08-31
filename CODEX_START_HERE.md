@@ -115,11 +115,10 @@ for the compact status. In particular:
   Senior review approved its evidence published at canonical HEAD
   `b31a7e53cfcf7a5c3ab6419f3cb5c0c309f04112`; the accepted archive SHA-256 is
   `ca7e70799220b58c3b090716a2adf19e8abb2609d465b7139d25f7f59988af4c`.
-- Gate F is locally **ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH**.
-  After manual push and independent remote SHA verification it becomes
-  **ACQUIRED AND PUBLISHED**. Optional `CIV-40` remains unstarted and is not a
-  prerequisite. `CIV-41` is not started and is the next eligible required
-  phase after acquisition publication; Gate G remains planned.
+- Gate F is **ACQUIRED AND PUBLISHED — REMOTE VERIFIED** at canonical HEAD
+  `14475f4ad5dde9e1063a830ba7e38390cfb4d045`. Optional `CIV-40` remains
+  unstarted and is not a prerequisite. `CIV-41` is not started and is the next
+  eligible required phase and authorized action; Gate G remains planned.
 
 Historical Gate B `FAIL` reports and the closure-candidate report are preserved
 as evidence of their own evaluations. They do not reopen Gate B.

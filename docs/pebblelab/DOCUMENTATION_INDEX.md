@@ -113,11 +113,11 @@ V4-GATE-E-v1 Blocker 03: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 04: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 04: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 05: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
-next authorized action after Gate F acquisition publication and independent remote verification: CIV-41
+next authorized action: CIV-41
 CIV-39: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
-V4-GATE-F-v1 local status: ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH
-V4-GATE-F-v1 status after manual push and independent remote SHA verification: ACQUIRED AND PUBLISHED
+V4-GATE-F-v1: ACQUIRED AND PUBLISHED — REMOTE VERIFIED
+V4-GATE-F-v1 acquisition published canonical HEAD: 14475f4ad5dde9e1063a830ba7e38390cfb4d045
 Gate F Evaluation 01: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-F-v1 Blocker 01: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate F Evaluation 02: FAIL — HISTORICAL IMMUTABLE EVIDENCE
@@ -400,10 +400,10 @@ Evaluation 12 is **PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE** agai
 baseline `8733517720487cd7832a57b6d1ddf4b82fe56102`, accepted at evidence HEAD
 `b31a7e53cfcf7a5c3ab6419f3cb5c0c309f04112` with review archive SHA-256
 `ca7e70799220b58c3b090716a2adf19e8abb2609d465b7139d25f7f59988af4c`.
-Gate F is locally **ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH** and
-becomes **ACQUIRED AND PUBLISHED** only after manual push and independent
-remote SHA verification. `CIV-41` is the next eligible required phase after
-that publication and remains not started; Gate G remains planned.
+Gate F is **ACQUIRED AND PUBLISHED — REMOTE VERIFIED** at acquisition
+canonical HEAD `14475f4ad5dde9e1063a830ba7e38390cfb4d045`. `CIV-41` remains not
+started and is the next eligible required phase and authorized action; Gate G
+remains planned.
 `CIV-38` remains
 optional and not started; `CIV-40` remains optional tooling and not started.
 Currency is not a Gate E or CIV-39 prerequisite.

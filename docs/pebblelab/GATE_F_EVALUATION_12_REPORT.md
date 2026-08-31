@@ -14,7 +14,9 @@ The accepted review archive is
 `PebbleLab-GateF-Evaluation12-Review-b31a7e5.zip`, SHA-256
 `ca7e70799220b58c3b090716a2adf19e8abb2609d465b7139d25f7f59988af4c`.
 Remote evidence publication is **VERIFIED**. This report reconciliation does
-not claim that the containing Gate F acquisition commit is remotely published.
+not alter the accepted Evaluation 12 evidence identity. The Gate F acquisition
+commit was subsequently manually pushed and independently remote verified at
+canonical HEAD `14475f4ad5dde9e1063a830ba7e38390cfb4d045`.
 
 ## Independent identity
 
@@ -387,10 +389,9 @@ harness/setup and revalidated from scratch. Product semantics were unchanged.
 - Gate F Evaluations 01–11: **FAIL — HISTORICAL IMMUTABLE EVIDENCE**.
 - Gate F Blockers 01–11: **FIXED + PUBLISHED + REMOTE VERIFIED**.
 - Gate F Evaluation 12: **PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE**.
-- Gate F local acquisition status:
-  **ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH**.
-- Gate F after manual push and independent remote SHA verification:
-  **ACQUIRED AND PUBLISHED**.
+- Gate F: **ACQUIRED AND PUBLISHED — REMOTE VERIFIED**.
+- Gate F acquisition published canonical HEAD:
+  `14475f4ad5dde9e1063a830ba7e38390cfb4d045`.
 - `CIV-38`: **OPTIONAL — NOT STARTED**.
 - `CIV-39`: **COMPLETE + PUBLISHED**.
 - `CIV-40`: **OPTIONAL TOOLING — NOT STARTED**.
@@ -400,6 +401,5 @@ harness/setup and revalidated from scratch. Product semantics were unchanged.
 - Observer schema: **13**, read-only.
 - `ROADMAP_MANIFEST.schemaVersion`: **3**.
 
-The next authorized action after manual publication of the Gate F acquisition
-commit and independent remote SHA verification is `CIV-41`. This acquisition
-mission does not start `CIV-41` and does not authorize or perform Evaluation 13.
+The next authorized action is `CIV-41`. This reconciliation does not start
+`CIV-41` and does not authorize or perform Evaluation 13.
