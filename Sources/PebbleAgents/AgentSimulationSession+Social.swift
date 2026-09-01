@@ -420,7 +420,7 @@ extension AgentSimulationSession {
                 ),
                 summary: "direct natural fact actor=\(observerID.rawValue) resource=\(observation.resource.rawValue)"
             )
-            socialFacts.append(AgentSocialFact(
+            let fact = AgentSocialFact(
                 factID: factID,
                 observerID: observerID,
                 resource: observation.resource,
@@ -430,7 +430,16 @@ extension AgentSimulationSession {
                 observedAtTick: factTick,
                 expiresAtTick: factTick + configuration.socialConfiguration.claimLifetimeTicks,
                 directObservationEventID: event.eventID
-            ))
+            )
+            socialFacts.append(fact)
+            try recordKnowledgeDirectResourceObservation(
+                observerID: observerID,
+                position: observation.target,
+                resource: observation.resource,
+                fingerprint: fingerprint,
+                authority: .validatedWorldObservation,
+                authorityEventID: event.eventID
+            )
             enforceFactBound(for: observerID)
         }
     }
@@ -471,6 +480,15 @@ extension AgentSimulationSession {
     public mutating func applySocialVerification(
         _ observation: AgentSocialVerificationObservation
     ) throws -> AgentSocialVerificationResult {
+        var candidate = self
+        let result = try candidate.applySocialVerificationInPlace(observation)
+        self = candidate
+        return result
+    }
+
+    private mutating func applySocialVerificationInPlace(
+        _ observation: AgentSocialVerificationObservation
+    ) throws -> AgentSocialVerificationResult {
         guard socialEnabled else { throw AgentSessionError.social(.socialDisabled) }
         guard let index = socialBeliefs.firstIndex(where: {
             $0.beliefID == observation.beliefID
@@ -484,7 +502,9 @@ extension AgentSimulationSession {
         manhattanDistance(state.position, observation.position) <= 1 else {
             throw AgentSessionError.social(.invalidVerification(observation.beliefID.rawValue))
         }
-        try prevalidateCausalAppend(count: observation.chunkReady ? 3 : 1)
+        try prevalidateCausalAppend(
+            count: observation.chunkReady ? (knowledgeGraphEnabled ? 6 : 3) : 1
+        )
         let belief = socialBeliefs[index]
         let result: AgentSocialVerificationResult
         if !observation.chunkReady {
@@ -542,6 +562,17 @@ extension AgentSimulationSession {
             requestedDelta: requestedDelta,
             result: result,
             verificationEventID: verificationEvent.eventID
+        )
+        try recordKnowledgeDirectResourceObservation(
+            observerID: observation.verifierID,
+            position: observation.position,
+            resource: observation.observedResource,
+            fingerprint: observation.observedBlockFingerprint,
+            authority: .validatedSocialVerification,
+            authorityEventID: verificationEvent.eventID,
+            interpretation: result == .contradicted
+                ? .revisedByContradictoryObservation
+                : .directlyObserved
         )
         activeSocialVerificationByAgentId.removeValue(forKey: observation.verifierID.rawValue)
         return result
@@ -632,7 +663,7 @@ extension AgentSimulationSession {
             fact.expiresAtTick,
             tick + configuration.socialConfiguration.messageLifetimeTicks
         )
-        socialMessages.append(AgentSocialMessage(
+        let message = AgentSocialMessage(
             messageID: messageID,
             senderID: intent.senderID,
             recipientID: intent.recipientID,
@@ -643,7 +674,8 @@ extension AgentSimulationSession {
             sentEventID: sent.eventID,
             receivedEventID: received.eventID,
             status: .received
-        ))
+        )
+        socialMessages.append(message)
         socialBeliefs.append(AgentSocialBelief(
             beliefID: beliefID,
             ownerID: intent.recipientID,
@@ -662,6 +694,7 @@ extension AgentSimulationSession {
         lastSocialShareTickByAgentId[intent.senderID.rawValue] = tick
         enforceMessageBound()
         enforceBeliefBound(for: intent.recipientID)
+        try recordKnowledgeSourceClaim(message: message)
         return true
     }
 

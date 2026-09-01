@@ -113,7 +113,8 @@ public struct AgentSocialFactID: RawRepresentable, Codable, Hashable, Comparable
     public static func < (lhs: Self, rhs: Self) -> Bool { lhs.rawValue < rhs.rawValue }
 }
 
-public struct AgentSocialMessageID: RawRepresentable, Codable, Hashable, Comparable {
+public struct AgentSocialMessageID:
+    RawRepresentable, Codable, Hashable, Comparable, Sendable {
     public let rawValue: String
     public init?(rawValue: String) {
         guard isValidSocialIdentifier(rawValue) else { return nil }

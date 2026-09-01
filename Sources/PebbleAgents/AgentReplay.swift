@@ -35,6 +35,8 @@ public enum AgentReplaySchema {
     public static let barterVersion = 32
     public static let contractVersion = 33
     public static let marketVersion = 34
+    public static let populationScaleVersion = 35
+    public static let knowledgeVersion = 36
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -57,6 +59,8 @@ public enum AgentReplaySchema {
             || version == barterVersion
             || version == contractVersion
             || version == marketVersion
+            || version == populationScaleVersion
+            || version == knowledgeVersion
     }
 }
 
@@ -199,6 +203,7 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case marketDecision
     case marketTrade
     case marketWithdrawal
+    case knowledgeFeature
 }
 
 public enum AgentReplayOperation: Codable {
@@ -217,6 +222,7 @@ public enum AgentReplayOperation: Codable {
     case setSurvivalEnabled(Bool)
     case setBuildAutoEnabled(Bool)
     case setSocialEnabled(Bool)
+    case setKnowledgeGraphEnabled(Bool, configuration: AgentKnowledgeConfiguration)
     case setPhysicalEnabled(Bool)
     case setCooperationEnabled(Bool)
     case createConstructionProject(AgentConstructionProject)
@@ -490,6 +496,7 @@ public enum AgentReplayOperation: Codable {
         case .setSurvivalEnabled: return .survivalFeature
         case .setBuildAutoEnabled: return .constructionFeature
         case .setSocialEnabled: return .socialFeature
+        case .setKnowledgeGraphEnabled: return .knowledgeFeature
         case .setPhysicalEnabled: return .physicalFeature
         case .setCooperationEnabled: return .cooperationFeature
         case .createConstructionProject: return .constructionProjectCreation
@@ -1016,6 +1023,12 @@ public struct AgentReplayRecorder {
         simulationID = checkpoint.simulationID
         initialTick = checkpoint.tick.rawValue
         schemaVersion = checkpoint.schemaVersion
+            == AgentCheckpointSchema.knowledgeVersion
+            ? AgentReplaySchema.knowledgeVersion
+            : checkpoint.schemaVersion
+            == AgentCheckpointSchema.populationScaleVersion
+            ? AgentReplaySchema.populationScaleVersion
+            : checkpoint.schemaVersion
             == AgentCheckpointSchema.marketVersion
             ? AgentReplaySchema.marketVersion
             : checkpoint.schemaVersion
@@ -1324,6 +1337,16 @@ public struct AgentReplayRecorder {
             }
             schemaVersion = AgentReplaySchema.marketVersion
         }
+        if case let .setKnowledgeGraphEnabled(enabled, _) = operation,
+           enabled,
+           schemaVersion < AgentReplaySchema.knowledgeVersion {
+            guard records.isEmpty else {
+                throw AgentReplayError.invalidJournal(
+                    "knowledge activation must be the first v36 replay operation"
+                )
+            }
+            schemaVersion = AgentReplaySchema.knowledgeVersion
+        }
         guard session.simulationID == simulationID else { throw AgentReplayError.currentStateMismatch }
         let preDigest = try session.durableStateDigest()
         let tickBefore = session.tick
@@ -1573,6 +1596,10 @@ public enum AgentSessionReplayer {
                 && checkpoint.schemaVersion <= AgentCheckpointSchema.barterVersion)
             || (manifest.schemaVersion == AgentReplaySchema.marketVersion
                 && checkpoint.schemaVersion <= AgentCheckpointSchema.contractVersion)
+            || (manifest.schemaVersion == AgentReplaySchema.populationScaleVersion
+                && checkpoint.schemaVersion <= AgentCheckpointSchema.marketVersion)
+            || (manifest.schemaVersion == AgentReplaySchema.knowledgeVersion
+                && checkpoint.schemaVersion <= AgentCheckpointSchema.populationScaleVersion)
         guard manifest.baseCheckpointID == checkpoint.checkpointID,
               manifest.baseCheckpointDigest == checkpoint.semanticDigest,
               manifest.simulationID == checkpoint.simulationID,
@@ -1670,6 +1697,10 @@ extension AgentSimulationSession {
             try candidate.setBuildAutoEnabled(enabled)
         case let .setSocialEnabled(enabled):
             try candidate.setSocialEnabled(enabled)
+        case let .setKnowledgeGraphEnabled(enabled, configuration):
+            try candidate.setKnowledgeGraphEnabled(
+                enabled, configuration: configuration
+            )
         case let .setPhysicalEnabled(enabled):
             try candidate.setPhysicalEnabled(enabled)
         case let .setCooperationEnabled(enabled):

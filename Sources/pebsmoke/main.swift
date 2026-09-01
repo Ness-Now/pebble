@@ -27,6 +27,26 @@ func checkD(_ name: String, _ got: Double, _ want: Double, tol: Double = 1e-12) 
 func section(_ name: String) { print("\n— \(name)") }
 
 if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
+    == "civ-41-restart-write" {
+    runPebbleAgentsKnowledgeRestartWriteSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
+    == "civ-41-restart-read" {
+    runPebbleAgentsKnowledgeRestartReadSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "civ-41" {
+    runPebbleAgentsKnowledgeSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
     == "safe-entity-placement" {
     registerAllBlocks()
     registerAllItems()
@@ -2617,6 +2637,7 @@ runPebbleAgentsResourceSmoke()
 runPebbleAgentsVerticalSmoke()
 runPebbleAgentsCausalitySmoke()
 runPebbleAgentsSocialSmoke()
+runPebbleAgentsKnowledgeSmoke()
 runPebbleAgentsPhysicalChannelSmoke()
 runPebbleAgentsCooperationSmoke()
 runPebbleAgentsPersistenceReplaySmoke()

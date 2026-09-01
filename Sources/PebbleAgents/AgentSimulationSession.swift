@@ -39,6 +39,7 @@ public struct AgentSimulationSession {
     var activeSocialVerificationByAgentId: [String: AgentSocialBeliefID]
     var lastSocialShareTickByAgentId: [String: Int]
     var socialEvictionCounts: AgentSocialEvictionCounts
+    public internal(set) var knowledgeGraphState: AgentKnowledgeGraphState?
     public internal(set) var physicalEnabled: Bool
     var physicalSignals: [AgentPhysicalSignal]
     var physicalPerceptions: [AgentPhysicalPerception]
@@ -139,6 +140,7 @@ public struct AgentSimulationSession {
         activeSocialVerificationByAgentId = [:]
         lastSocialShareTickByAgentId = [:]
         socialEvictionCounts = AgentSocialEvictionCounts()
+        knowledgeGraphState = nil
         physicalEnabled = false
         physicalSignals = []
         physicalPerceptions = []

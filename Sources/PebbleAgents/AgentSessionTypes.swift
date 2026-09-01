@@ -69,6 +69,7 @@ public enum AgentSessionError: Error, Equatable {
     case constructionClearInvalid(String)
     case constructionEventLimitReached
     case social(AgentSocialError)
+    case knowledge(AgentKnowledgeError)
     case physical(AgentPhysicalChannelError)
     case cooperation(AgentCooperationError)
     case population(AgentPopulationError)

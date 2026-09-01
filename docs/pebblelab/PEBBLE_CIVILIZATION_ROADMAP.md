@@ -135,10 +135,10 @@ CIV-38: OPTIONAL — NOT STARTED
 Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
-active CIV phase: none
+active CIV phase: CIV-41 — LOCAL IMPLEMENTATION/REVIEW CANDIDATE — NOT PUBLISHED
 completed and published through: CIV-39 (CIV-38 remains optional and unstarted)
-next eligible phase: CIV-41 — NOT STARTED
-next authorized action: CIV-41
+next eligible action: independent senior review of CIV-41 local candidate
+next authorized action: CIV-41 independent senior review / publication decision
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
@@ -208,7 +208,8 @@ Gate F Evaluation 11: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 Gate F Blocker 11: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate F Evaluation 12: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 CIV-40: OPTIONAL TOOLING — NOT STARTED
-CIV-41: NOT STARTED — NEXT ELIGIBLE REQUIRED PHASE
+CIV-41: LOCAL IMPLEMENTATION/REVIEW CANDIDATE — NOT PUBLISHED
+CIV-42: NOT STARTED
 V4-GATE-G-v1: PLANNED
 ```
 
@@ -609,9 +610,12 @@ baseline `8733517720487cd7832a57b6d1ddf4b82fe56102`. Its evidence is accepted
 at published HEAD `b31a7e53cfcf7a5c3ab6419f3cb5c0c309f04112`, with review archive SHA-256
 `ca7e70799220b58c3b090716a2adf19e8abb2609d465b7139d25f7f59988af4c`.
 Gate F is **ACQUIRED AND PUBLISHED — REMOTE VERIFIED** at acquisition
-canonical HEAD `14475f4ad5dde9e1063a830ba7e38390cfb4d045`. `CIV-40` remains
-optional tooling and not started; `CIV-41` is not started and is the next
-eligible required phase and authorized action. Gate G remains planned.
+canonical HEAD `14475f4ad5dde9e1063a830ba7e38390cfb4d045`. `CIV-40` remains optional
+tooling and not started. `CIV-41` now has a **LOCAL IMPLEMENTATION/REVIEW
+CANDIDATE — NOT PUBLISHED** from exact canonical baseline
+`96030494c9bed8e356faae16dbd3c66dc9b4b652`; independent senior review and any
+publication remain external. `CIV-42` is not started and Gate G remains
+planned.
 
 | Phase | Requirement | Outcome |
 | --- | --- | --- |
@@ -1405,7 +1409,7 @@ Evaluation 05 product correction: NO
 Evaluation 05 verdict: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 Gate E status: ACQUIRED AND PUBLISHED
 Gate E acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f76744f83
-next authorized action: CIV-41
+next authorized action: CIV-41 independent senior review / publication decision
 CIV-39 status: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 Gate F status: ACQUIRED AND PUBLISHED — REMOTE VERIFIED
@@ -1434,7 +1438,8 @@ Gate F Evaluation 11 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 Gate F Blocker 11 status: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate F Evaluation 12 status: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 CIV-40 status: OPTIONAL TOOLING — NOT STARTED
-CIV-41 status: NOT STARTED — NEXT ELIGIBLE REQUIRED PHASE
+CIV-41 status: LOCAL IMPLEMENTATION/REVIEW CANDIDATE — NOT PUBLISHED
+CIV-42 status: NOT STARTED
 V4-GATE-G-v1 status: PLANNED
 ```
 
@@ -1672,8 +1677,10 @@ evidence HEAD `b31a7e53cfcf7a5c3ab6419f3cb5c0c309f04112` with review archive SHA
 `ca7e70799220b58c3b090716a2adf19e8abb2609d465b7139d25f7f59988af4c`.
 Gate F is **ACQUIRED AND PUBLISHED — REMOTE VERIFIED** at acquisition
 canonical HEAD `14475f4ad5dde9e1063a830ba7e38390cfb4d045`. CIV-40 remains optional
-tooling and is not a prerequisite; CIV-41 is not started and is the next
-eligible required phase and authorized action. Gate G remains planned.
+tooling and is not a prerequisite. CIV-41 now has a **LOCAL IMPLEMENTATION/
+REVIEW CANDIDATE — NOT PUBLISHED** from exact canonical baseline
+`96030494c9bed8e356faae16dbd3c66dc9b4b652`; CIV-42 is not started and Gate G
+remains planned.
 
 ## Wave 5 — Knowledge, language and culture
 
@@ -1691,6 +1698,10 @@ Truth, claims, understanding, belief, tradition and utterance remain distinct.
 Language is learned from physical signals. Long-distance information requires
 a carrier. Written knowledge is material and destructible. Culture remains
 distributed across individuals.
+
+Local candidate status: `CIV-41` is implemented and validated locally but is
+not senior-review-approved or published. Published progression remains through
+`CIV-39`; `CIV-42` has not started and Gate G has not been evaluated.
 
 Observable slices:
 

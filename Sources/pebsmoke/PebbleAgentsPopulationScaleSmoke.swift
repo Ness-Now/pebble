@@ -182,6 +182,16 @@ private func civ39Session(
     return session
 }
 
+func civ39PublishedSchema35CompatibilityCheckpoint() -> AgentSessionCheckpoint {
+    let session = civ39Session(
+        id: "civ41-schema35-compatibility",
+        population: 24
+    )
+    let checkpoint = try! session.makeCheckpoint()
+    precondition(checkpoint.schemaVersion == AgentCheckpointSchema.populationScaleVersion)
+    return checkpoint
+}
+
 private func civ39FinalizeLethalTick(
     _ session: inout AgentSimulationSession
 ) throws {

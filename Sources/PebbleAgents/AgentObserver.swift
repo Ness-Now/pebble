@@ -575,6 +575,9 @@ public struct AgentObserverSnapshot: Codable, Equatable, Sendable {
     /// Read-only CIV-39 settlements, tier assignments, bounded transition
     /// evidence, and non-authoritative work counters.
     public let populationScale: AgentPopulationScaleSnapshot?
+    /// Read-only structured cognitive state. Evidence authority and attributed
+    /// claims remain distinct; this projection cannot add or revise belief.
+    public let knowledge: AgentKnowledgeSnapshot?
     public let truncation: AgentObserverTruncation
 }
 
@@ -681,6 +684,8 @@ extension AgentSimulationSession {
         let markets = marketSnapshot()
         let population = populationSnapshot()
         let populationScale = populationScaleSnapshot()
+        let knowledge = knowledgeSnapshot()
+        let knowledgeWasInitialized = knowledgeGraphState != nil
         let textLimit = configuration.maximumPresentationTextLength
 
         let materialTransitionByEventID = Dictionary(
@@ -887,6 +892,9 @@ extension AgentSimulationSession {
         let populationScaleGeneration = populationScale.enabled
             ? "population-scale:" + populationScale.digest
             : "population-scale:none"
+        let knowledgeGeneration = knowledgeWasInitialized
+            ? "knowledge:" + knowledge.digest
+            : "knowledge:none"
         let generationSource = [
             "observer-v1", simulationID.rawValue, worldBinding.worldID,
             worldBinding.storageIdentity, String(tick),
@@ -910,6 +918,7 @@ extension AgentSimulationSession {
             contractGeneration,
             marketGeneration,
             populationScaleGeneration,
+            knowledgeGeneration,
         ].joined(separator: "|")
         let familyAuthority = observerFamilyAuthority(family)
         let estateAuthority = observerEstateAuthority(
@@ -932,7 +941,8 @@ extension AgentSimulationSession {
         )
         return AgentObserverSnapshot(
             header: AgentObserverSnapshotHeader(
-                schemaVersion: populationScale.enabled ? 13
+                schemaVersion: knowledgeWasInitialized ? 14
+                    : populationScale.enabled ? 13
                     : markets.enabled ? 11 : contracts.enabled ? 10
                     : barter.enabled ? 9 : production.enabled ? 8
                     : renewableSubsistence.isEmpty ? (estates.enabled ? 6
@@ -959,6 +969,7 @@ extension AgentSimulationSession {
             contracts: contracts.enabled ? contracts : nil,
             markets: markets.enabled ? markets : nil,
             populationScale: populationScale.enabled ? populationScale : nil,
+            knowledge: knowledgeWasInitialized ? knowledge : nil,
             truncation: truncation
         )
     }

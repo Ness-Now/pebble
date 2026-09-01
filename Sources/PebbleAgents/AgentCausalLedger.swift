@@ -275,6 +275,11 @@ public enum AgentCausalEventKind: String, Codable, CaseIterable, Sendable {
     case marketListingClosed
     case marketTradeCompleted
     case marketWithdrawalCompleted
+    case knowledgeGraphInitialized
+    case knowledgeEvidenceAcquired
+    case knowledgeClaimReceived
+    case knowledgeUnderstandingFormed
+    case knowledgeBeliefRevised
 }
 
 public enum AgentCausalOrigin: String, Codable, Sendable {
@@ -312,6 +317,7 @@ public enum AgentCausalOrigin: String, Codable, Sendable {
     case barterTransition
     case contractTransition
     case marketTransition
+    case knowledgeTransition
 }
 
 public enum AgentCausalPayload: Codable, Equatable, Sendable {
@@ -338,6 +344,12 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
     )
     case trust(relationID: String, before: Int, delta: Int, after: Int)
     case socialClear(facts: Int, messages: Int, beliefs: Int, trustRelations: Int)
+    case knowledge(
+        recordID: String,
+        propositionID: String?,
+        status: String,
+        reason: String
+    )
     case physicalSignal(
         signalID: String,
         senderID: String,
@@ -648,6 +660,8 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
             return "trust|\(relationID)|\(before)|\(delta)|\(after)"
         case let .socialClear(facts, messages, beliefs, trustRelations):
             return "socialClear|\(facts)|\(messages)|\(beliefs)|\(trustRelations)"
+        case let .knowledge(recordID, propositionID, status, reason):
+            return "knowledge|\(recordID)|\(propositionID ?? "none")|\(status)|\(reason)"
         case let .physicalSignal(
             signalID, senderID, recipientID, factID, source, pointed, modalities
         ):
@@ -905,6 +919,11 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
              (.socialVerification, .socialVerification),
              (.trustChanged, .trust),
              (.socialStateCleared, .socialClear),
+             (.knowledgeGraphInitialized, .knowledge),
+             (.knowledgeEvidenceAcquired, .knowledge),
+             (.knowledgeClaimReceived, .knowledge),
+             (.knowledgeUnderstandingFormed, .knowledge),
+             (.knowledgeBeliefRevised, .knowledge),
              (.physicalSignalEmitted, .physicalSignal),
              (.physicalSignalPerceived, .physicalPerception),
              (.physicalSignalDecoded, .physicalPerception),
