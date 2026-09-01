@@ -123,9 +123,9 @@ for the compact status. In particular:
 - Gate F is **ACQUIRED AND PUBLISHED — REMOTE VERIFIED** at canonical HEAD
   `14475f4ad5dde9e1063a830ba7e38390cfb4d045`. Optional `CIV-40` remains
   unstarted and is not a prerequisite. Published progression is complete
-  through `CIV-41`; `CIV-42 — Learned Proto-Language V1` is not started and is
-  the next eligible required phase and authorized action. Gate G remains
-  planned and unevaluated.
+  through `CIV-41`; `CIV-42 — Learned Language Foundations V1` is not started
+  and is the next eligible required phase and authorized action. Gate G
+  remains planned and unevaluated.
 
 Historical Gate B `FAIL` reports and the closure-candidate report are preserved
 as evidence of their own evaluations. They do not reopen Gate B.

@@ -104,7 +104,7 @@ V4-GATE-E-v1: ACQUIRED AND PUBLISHED
 V4-GATE-E-v1 acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f76744f83
 active phase: none
 completed through: CIV-41 (CIV-38 and CIV-40 optional and unstarted)
-next eligible phase: CIV-42 — Learned Proto-Language V1 — NOT STARTED
+next eligible phase: CIV-42 — Learned Language Foundations V1 — NOT STARTED
 Gate E Evaluation 01: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 01: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 02: FAIL — HISTORICAL IMMUTABLE EVIDENCE
@@ -411,9 +411,9 @@ candidate `1ce9506824775c1b59eaf5c358f0e8d4edd4eab7` received a blocking senior
 review finding; Senior Review Correction 01 at the published product HEAD
 fixed the departed-cognition lifecycle composition before independent
 re-review passed, manual publication completed and the exact remote was
-verified. `CIV-42 — Learned Proto-Language V1` remains not started and is the
-next eligible required phase and authorized action; Gate G remains planned and
-unevaluated.
+verified. `CIV-42 — Learned Language Foundations V1` remains not started and
+is the next eligible required phase and authorized action; Gate G remains
+planned and unevaluated.
 `CIV-38` remains
 optional and not started; `CIV-40` remains optional tooling and not started.
 Currency is not a Gate E or CIV-39 prerequisite.

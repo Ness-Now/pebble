@@ -156,18 +156,100 @@ WorldTruth
 != Utterance
 ```
 
+The generic epistemic authority established by CIV-41 remains the sole generic
+owner of the epistemic state it already owns: evidence, attributed source
+claims, individual understandings, beliefs, belief revisions and their related
+historical epistemic records. It does not own domain capability, recognized
+rights or physical truth:
+
+```text
+belief that a technique exists
+!= practical skill or mastery
+
+belief that someone owns an object
+!= recognized ownership
+```
+
+Specialized authorities continue to own techniques, skills, capabilities,
+rights and World facts. Later phases must compose with CIV-41 rather than add a
+second generic belief or knowledge graph.
+
 Knowledge can be observed, taught, practiced, distorted, forgotten, hidden,
-stolen, written or rediscovered. Theory never grants practical mastery.
+stolen, written or rediscovered. Theory never grants practical mastery. These
+boundaries also remain distinct:
 
-Communication grows from physical signals, gestures and learned local
-associations toward proto-language, composition, messengers, writing and
-books. Meaning is learned and may diverge into dialects. Long-distance
-information requires a physical or social carrier.
+```text
+semantic sense or referent
+!= proposition
+!= belief
+!= lexical form
 
-Books and archives are material objects with authorship, script, copies,
-errors, location and custody. Their loss can destroy knowledge. Culture is a
-distributed pattern across individuals, not an enum or global bonus; it can
-diverge, mix, disappear and re-emerge.
+semantic communication
+!= surface realization
+```
+
+A universal concept graph does not follow from these distinctions.
+
+A communication may be causally and semantically complete without prose. When
+surface realization is useful, all of these paths remain legitimate:
+
+```text
+NO_RENDERING
+deterministic or compositional surface realization
+optional LLM-assisted realization or interpretation
+```
+
+Deterministic or compositional realization is a normal path even when an LLM
+is available. No mandatory intermediate type, template engine, grammar or
+catalogue follows from this contract.
+
+The standard initial language path uses language-independent semantic
+foundations and a seeded Language Pack, with French as the default/reference
+seed. Shared linguistic seed/prior data composes with sparse individual
+lexical state, exposure, learning and historical evolution. French is neither
+cognition nor epistemic, World or gameplay authority, and it is not a
+mandatory architecture dependency. Other seeded languages, mixed populations
+and a fully emergent from-zero experimental path remain possible; the latter
+is optional rather than a gate prerequisite.
+
+Historical evolution may produce proper names, toponyms, nicknames, slang,
+jargon, sociolects, political, religious or technical vocabulary, semantic
+drift, borrowings and regional usage. These examples do not mandate a separate
+engine or authority for each category.
+
+External linguistic or semantic resources are versioned, provenance-bearing,
+licensed and replaceable seeds/priors. Their redistribution must be reviewed
+and their use must remain reproducible offline. Such a prior is not a Pebble
+World fact, physical affordance, Minecraft/Pebble gameplay mechanic, cultural
+meaning or personal association. No external dataset becomes authoritative
+merely by being imported.
+
+Long-distance information requires a physical or social carrier. Oral
+transmission preserves speaker attribution into the recipient's CIV-41
+acquisition or revision; wording never replaces epistemic provenance. A
+written artifact is a persistent material information carrier, but its content
+is not World truth. It may be false, incomplete, obsolete, propagandistic or
+contradictory. Books and archives have authorship, copies, location and
+custody; loss can remove durable access without rewriting the underlying
+history. Summaries, indexes and other derived projections are never silent
+replacements for that history.
+
+Culture is distributed across individuals, interactions, artifacts,
+organizations or institutions, and history. Collective trends and prevalence
+are derived projections rather than a universal cultural authority. Exposure,
+adoption or rejection, use, transmission, variation, competition and decline
+may share generic mechanisms when useful without creating a central culture
+brain, universal cultural graph or universal trait authority.
+
+Stable entity identity is separate from a socially used label. A self-name,
+nickname, hostile label, administrative label and historical name may coexist
+without replacing technical identity, organizational authority or real
+membership.
+
+Language, culture and social relations remain sparse, bounded, causal and
+event-driven; they never imply an all-pairs matrix. `LIVE`, `NEAR` and
+`DORMANT` fidelity changes processing cadence and cost, not identity or durable
+relevant state.
 
 ## Families, organizations and institutions
 
@@ -214,8 +296,8 @@ incarnation are separate modes.
 
 The civilization must remain viable with LLM support disabled.
 
-An optional provider may verbalize, summarize, negotiate or propose structured
-content:
+An optional provider may interpret, verbalize, summarize, negotiate or propose
+structured content:
 
 ```text
 authoritative structured state
@@ -225,9 +307,20 @@ authoritative structured state
 -> deterministic validation
 ```
 
-An LLM never owns perception, transactions, cognitive state, material truth or
-the World. Providers are replaceable, gated and non-authoritative. Natural
-language is a window onto a coherent history, not a substitute for one.
+Knowledge authorization occurs before retrieval or inference; unavailable
+knowledge is not globally retrieved and filtered afterward. An LLM never owns
+perception, transactions, cognitive state, material truth or the World and has
+no direct authoritative mutation channel. Pebble validates structured
+proposals against applicable identifiers, revisions, authorization, rights,
+resources, physical feasibility and domain rules.
+
+Providers are replaceable, gated and non-authoritative. When nondeterministic
+external inference produces an accepted persistent effect, Pebble captures
+that effect and its causal input in replayable form. Historical replay reuses
+that capture and never reruns the inference. Provider-off correctness remains
+required, and no particular model, runtime, quantization, embedding, vector
+database, context size, prompt or hardware is part of the durable architecture.
+Natural language is a window onto a coherent history, not a substitute for one.
 
 ## Non-goals
 

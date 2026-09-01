@@ -137,7 +137,7 @@ Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
 active CIV phase: none
 completed and published through: CIV-41 (CIV-38 and CIV-40 remain optional and unstarted)
-next eligible action: CIV-42 — Learned Proto-Language V1 — NOT STARTED
+next eligible action: CIV-42 — Learned Language Foundations V1 — NOT STARTED
 next authorized action: CIV-42
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
@@ -622,7 +622,7 @@ the published product HEAD makes finalized mortality terminalize current
 cognition and retains self-contained terminal belief evidence under a
 deterministic bound without promoting dead-source claims. Independent
 re-review passed, manual publication completed and the exact remote is
-verified. `CIV-42 — Learned Proto-Language V1` is not started and is the next
+verified. `CIV-42 — Learned Language Foundations V1` is not started and is the next
 eligible required phase. Gate G remains planned and unevaluated.
 
 | Phase | Requirement | Outcome |
@@ -1696,7 +1696,7 @@ next eligible required phase. Gate G remains planned and unevaluated.
 | Phase | Requirement | Outcome |
 | --- | --- | --- |
 | `CIV-41` | required | Structured Knowledge and Belief Graph V1 |
-| `CIV-42` | required | Learned Proto-Language V1 |
+| `CIV-42` | required | Learned Language Foundations V1 |
 | `CIV-43` | required | Oral Transmission and Distortion V1 |
 | `CIV-44` | required | Compositional and Long-Distance Communication V1 |
 | `CIV-45` | required | Writing and Literacy V1 |
@@ -1704,9 +1704,58 @@ next eligible required phase. Gate G remains planned and unevaluated.
 | `CIV-47` | required | Distributed Culture, Norms and Ritual Practices V1 |
 
 Truth, claims, understanding, belief, tradition and utterance remain distinct.
-Language is learned from physical signals. Long-distance information requires
-a carrier. Written knowledge is material and destructible. Culture remains
-distributed across individuals.
+CIV-41 keeps sole generic authority over the evidence, source claims,
+understandings, beliefs, belief revisions and related historical epistemic
+records that it already owns. A belief about a technique, right or World fact
+does not confer the corresponding skill, recognized right or physical truth;
+later phases compose with CIV-41 rather than add another generic belief or
+knowledge graph.
+
+`CIV-42 — Learned Language Foundations V1` establishes a
+language-independent semantic foundation that can communicate correctly
+without prose. Its standard path uses a seeded Language Pack, French as the
+default/reference initial seed, shared linguistic seed/prior data, sparse
+individual lexical state, learning through exposure and historical linguistic
+evolution. French is not cognition, epistemic, World or gameplay authority and
+is not a mandatory architecture dependency. Other seeded languages, mixed
+populations and a fully emergent from-zero language remain possible; the last
+is optional/experimental and is not required by Gate G.
+
+Semantic communication and surface realization are separate contracts. When
+rendering is useful, `NO_RENDERING`, deterministic/compositional realization
+and optional LLM-assisted realization or interpretation are supported paths.
+Deterministic/compositional realization remains normal even when a provider is
+available. CIV-42 does not prescribe an intermediate runtime type, template
+engine, grammar, catalogue or universal concept graph.
+
+External linguistic or semantic resources are replaceable,
+provenance-bearing, versioned and licensed seed/priors with redistribution
+review and offline reproducibility. They never define a Pebble World fact,
+physical affordance, Minecraft/Pebble gameplay mechanic, cultural meaning or
+personal association. This roadmap selects no dataset.
+
+`CIV-43` preserves the chain from speaker epistemic state, through transmitted
+semantic content, to recipient-attributed CIV-41 acquisition or revision.
+Surface wording never replaces that provenance. `CIV-44` composes semantic
+communication and causal long-distance transport with source, author and
+destination provenance; it remains correct without mandatory prose and keeps
+deterministic/compositional rendering normal while LLM assistance is optional.
+
+`CIV-45` treats a written artifact as a persistent material information
+carrier, not a truth authority. Its content may be false, incomplete, obsolete,
+propagandistic or contradictory; the exact content representation remains open
+until CIV-45. `CIV-46` adds durable access, provenance, historical continuity
+and bounded retrieval/indexing. Summaries, indexes and derived projections do
+not become authorities or silently replace the underlying history.
+
+`CIV-47` keeps culture distributed across individuals, interactions,
+artifacts, organizations or institutions, and history. Collective prevalence
+and trends are derived projections. Exposure, adoption or rejection, use,
+transmission, variation, competition and decline may share mechanisms where
+useful, but no culture brain, universal cultural graph or universal cultural
+trait authority owns every domain. Stable entity identity likewise remains
+separate from simultaneous social labels and from real organizational
+membership.
 
 Published status: `CIV-41` is complete and published at independently
 remote-verified canonical product HEAD
@@ -1720,9 +1769,16 @@ next eligible required phase. Gate G has not been evaluated.
 
 Observable slices:
 
+- after `CIV-42`: a seeded French reference path supports learned semantic
+  communication and deterministic provider-off realization without requiring
+  prose or a from-zero language;
 - after `CIV-43`: one claim changes across an oral transmission chain;
+- after `CIV-44`: the same semantic content travels through a causal
+  long-distance carrier with source and destination provenance;
+- after `CIV-45`: a physical written artifact can persist a false or
+  contradictory account without changing World truth;
 - after `CIV-46`: a physical text preserves information, then loss of its
-  copies removes access;
+  copies removes access while bounded indexes remain non-authoritative;
 - after `CIV-47`: two settlements exhibit causally traceable cultural
   divergence.
 
@@ -1732,7 +1788,9 @@ Required phases: `CIV-41` through `CIV-47`.
 
 The gate proves multi-person and multi-generation transmission, dialect
 divergence, survivable and losable traditions, material written preservation
-and reconstructible cultural history.
+and reconstructible cultural history. It requires neither a fully emergent
+from-zero language nor an LLM; the seeded language and deterministic
+provider-off paths are valid gate paths.
 
 ## Wave 6 — Organizations, land and law
 
@@ -1830,6 +1888,15 @@ situation. It must have a deterministic/provider-off path. LLM integration,
 local models and inference budgeting are optional capabilities and never gate
 the world’s ability to live.
 
+Knowledge authorization precedes retrieval or inference. An LLM may interpret,
+verbalize, summarize or propose structured content, but it has no direct
+authoritative mutation channel; Pebble validates proposals against current
+epistemic, domain and physical authority. Any accepted persistent effect from
+nondeterministic inference is captured in replayable form, and replay never
+reruns the historical inference. No model, runtime, quantization, embedding,
+vector database, token context, prompt or hardware is selected by this
+roadmap.
+
 Observable slices:
 
 - after `CIV-60`: observe a real intervention and divergent interpretations;
@@ -1873,6 +1940,10 @@ Every wave preserves:
 - material conservation;
 - local information and provenance;
 - durable histories with bounds, indexing and compaction;
+- sparse, bounded, causal and event-driven language, culture and social state,
+  with no implicit all-pairs matrix;
+- fidelity tiers that change processing cadence and cost rather than identity
+  or durable relevant state;
 - read-only observability without a second truth;
 - measured CPU, RAM, disk and collection budgets;
 - provider-off operation;

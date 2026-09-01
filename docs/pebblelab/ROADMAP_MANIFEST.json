@@ -2984,7 +2984,11 @@
         "CIV-46",
         "CIV-47"
       ],
-      "optionalPhases": []
+      "optionalPhases": [],
+      "fullyEmergentFromZeroLanguageRequired": false,
+      "seededLanguagePathAllowed": true,
+      "llmRequired": false,
+      "providerOffPathRequired": true
     },
     "H": {
       "contractId": "V4-GATE-H-v1",
@@ -3038,7 +3042,14 @@
         "CIV-62",
         "CIV-64"
       ],
-      "llmRequired": false
+      "llmRequired": false,
+      "providerOffPathRequired": true,
+      "knowledgeAuthorizationBeforeRetrievalInference": true,
+      "llmDirectAuthorityMutationAllowed": false,
+      "structuredProposalsRequirePebbleValidation": true,
+      "acceptedNondeterministicEffectsCapturedForReplay": true,
+      "replayRerunsHistoricalInference": false,
+      "technologySelection": "open"
     }
   },
   "phases": [
@@ -3442,6 +3453,21 @@
       "implementationBaseline": "96030494c9bed8e356faae16dbd3c66dc9b4b652",
       "checkpointSchema": 36,
       "observerSchema": 14,
+      "authorityBoundary": "soleGenericEpistemicStateAlreadyOwned",
+      "genericEpistemicState": [
+        "evidence",
+        "sourceClaims",
+        "understandings",
+        "beliefs",
+        "beliefRevisions",
+        "relatedHistoricalEpistemicRecords"
+      ],
+      "doesNotOwn": [
+        "domainCapabilities",
+        "recognizedRights",
+        "practicalSkills",
+        "physicalTruth"
+      ],
       "wave": "wave-5-knowledge-language-culture",
       "requiredForCanonicalProgression": true,
       "dependsOn": [
@@ -3450,10 +3476,43 @@
     },
     {
       "id": "CIV-42",
-      "title": "Learned Proto-Language V1",
+      "title": "Learned Language Foundations V1",
       "status": "notStartedNextEligibleRequiredPhase",
       "wave": "wave-5-knowledge-language-culture",
       "requiredForCanonicalProgression": true,
+      "standardPath": {
+        "languageIndependentSemanticFoundations": true,
+        "semanticCommunicationRequiresSurfaceRealization": false,
+        "seededLanguagePack": true,
+        "defaultReferenceSeed": "French",
+        "sharedLinguisticSeedPriorData": true,
+        "individualLexicalState": "sparse",
+        "learningThroughExposure": true,
+        "historicalLinguisticEvolution": true
+      },
+      "renderingPaths": [
+        "noRendering",
+        "deterministicCompositional",
+        "optionalLLMAssisted"
+      ],
+      "fullyEmergentFromZeroLanguage": "optionalExperimental",
+      "gateGRequiresFullyEmergentFromZeroLanguage": false,
+      "externalLinguisticPriors": {
+        "authoritative": false,
+        "requirements": [
+          "provenance",
+          "version",
+          "license",
+          "redistributionReview",
+          "offlineReproducibility",
+          "replaceability"
+        ],
+        "selectedDataset": null
+      },
+      "stateShape": "sparseBoundedCausalEventDrivenNoImplicitAllPairs",
+      "fidelitySemantics": "changesCadenceAndCostNotIdentityOrDurableRelevantState",
+      "universalConceptGraph": false,
+      "implementationForm": "open",
       "dependsOn": [
         "CIV-41"
       ]
@@ -3464,6 +3523,9 @@
       "status": "planned",
       "wave": "wave-5-knowledge-language-culture",
       "requiredForCanonicalProgression": true,
+      "epistemicTransmission": "speakerStateToSemanticContentToRecipientAttributedAcquisitionOrRevision",
+      "surfaceWordingOwnsProvenance": false,
+      "implementationForm": "open",
       "dependsOn": [
         "CIV-42"
       ]
@@ -3474,6 +3536,15 @@
       "status": "planned",
       "wave": "wave-5-knowledge-language-culture",
       "requiredForCanonicalProgression": true,
+      "semanticCommunicationRequiresProse": false,
+      "longDistanceTransport": "causalWithSourceAuthorDestinationProvenance",
+      "renderingPaths": [
+        "noRendering",
+        "deterministicCompositional",
+        "optionalLLMAssisted"
+      ],
+      "llmRequired": false,
+      "implementationForm": "open",
       "dependsOn": [
         "CIV-43"
       ]
@@ -3484,6 +3555,16 @@
       "status": "planned",
       "wave": "wave-5-knowledge-language-culture",
       "requiredForCanonicalProgression": true,
+      "writtenArtifact": "persistentMaterialInformationCarrier",
+      "writtenContentIsWorldTruth": false,
+      "writtenContentMayBe": [
+        "false",
+        "incomplete",
+        "obsolete",
+        "propagandistic",
+        "contradictory"
+      ],
+      "contentRepresentation": "openUntilCIV45",
       "dependsOn": [
         "CIV-44"
       ]
@@ -3494,6 +3575,11 @@
       "status": "planned",
       "wave": "wave-5-knowledge-language-culture",
       "requiredForCanonicalProgression": true,
+      "durableInformationAccess": true,
+      "provenanceAndHistoricalContinuity": true,
+      "retrievalAndIndexing": "bounded",
+      "summariesIndexesAndDerivedProjectionsAuthoritative": false,
+      "derivedProjectionsMayReplaceUnderlyingHistory": false,
       "dependsOn": [
         "CIV-45"
       ]
@@ -3504,6 +3590,17 @@
       "status": "planned",
       "wave": "wave-5-knowledge-language-culture",
       "requiredForCanonicalProgression": true,
+      "cultureDistribution": [
+        "individuals",
+        "interactions",
+        "artifacts",
+        "organizationsInstitutions",
+        "history"
+      ],
+      "collectivePrevalenceAndTrends": "derivedProjections",
+      "universalCultureAuthority": false,
+      "stableIdentityDistinctFromSocialLabels": true,
+      "stateShape": "sparseBoundedCausalEventDrivenNoImplicitAllPairs",
       "dependsOn": [
         "CIV-46"
       ]

@@ -249,7 +249,8 @@ Gate F correction history:
 - Gate F is **ACQUIRED AND PUBLISHED — REMOTE VERIFIED** at acquisition
   canonical HEAD `14475f4ad5dde9e1063a830ba7e38390cfb4d045`.
 - The next eligible required phase and authorized action is `CIV-42 — Learned
-  Proto-Language V1`; it is not started. Gate G remains planned and unevaluated.
+  Language Foundations V1`; it is not started. Gate G remains planned and
+  unevaluated.
 
 Published Gate E history:
 
@@ -648,7 +649,7 @@ the Gate E acquisition are now published and independently remote verified.
 ```text
 active CIV phase: none
 completed and published through: CIV-41 (CIV-38 and CIV-40 remain optional and unstarted)
-next eligible action: CIV-42 — Learned Proto-Language V1 — NOT STARTED
+next eligible action: CIV-42 — Learned Language Foundations V1 — NOT STARTED
 next authorized action: CIV-42
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
@@ -1144,7 +1145,7 @@ mortality remove dead-owner current knowledge authority and retain separately
 bounded, self-contained terminal belief evidence. Dead-source claims held by
 living recipients remain attributed claims and never become direct evidence or
 shared truth. Independent re-review passed, manual publication completed and
-the exact remote is verified. `CIV-42 — Learned Proto-Language V1` is not
+the exact remote is verified. `CIV-42 — Learned Language Foundations V1` is not
 started and is the next eligible required phase. Gate G remains planned and
 unevaluated.
 `CIV-38` remains **OPTIONAL — NOT STARTED** and is not a prerequisite.
