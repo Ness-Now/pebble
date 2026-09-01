@@ -79,7 +79,12 @@ for the compact status. In particular:
   runtime commit `518aaf0dddfcc9f63e133290bf6dd915f9eaa73a` and published
   canonical HEAD `4e3bd296203346e4716c0a186017aebc69dbe750`.
 - `CIV-40` is optional tooling and not started.
-- `CIV-41` is not started.
+- `CIV-41 — Structured Knowledge and Belief Graph V1` is **COMPLETE AND
+  PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical product
+  HEAD `87190af6d7b51b57d600d6f39da4ccda71e3f162`. The initial candidate
+  `1ce9506824775c1b59eaf5c358f0e8d4edd4eab7` did not pass unchanged; Senior
+  Review Correction 01 composed current cognition with finalized mortality
+  before approval and publication.
 - Gate F Evaluation 09 is frozen **FAIL — HISTORICAL IMMUTABLE EVIDENCE**.
 - Gate F Blocker 09 is **FIXED + PUBLISHED + REMOTE VERIFIED**, including
   Senior Review Correction 01, at canonical HEAD
@@ -117,8 +122,10 @@ for the compact status. In particular:
   `ca7e70799220b58c3b090716a2adf19e8abb2609d465b7139d25f7f59988af4c`.
 - Gate F is **ACQUIRED AND PUBLISHED — REMOTE VERIFIED** at canonical HEAD
   `14475f4ad5dde9e1063a830ba7e38390cfb4d045`. Optional `CIV-40` remains
-  unstarted and is not a prerequisite. `CIV-41` is not started and is the next
-  eligible required phase and authorized action; Gate G remains planned.
+  unstarted and is not a prerequisite. Published progression is complete
+  through `CIV-41`; `CIV-42 — Learned Proto-Language V1` is not started and is
+  the next eligible required phase and authorized action. Gate G remains
+  planned and unevaluated.
 
 Historical Gate B `FAIL` reports and the closure-candidate report are preserved
 as evidence of their own evaluations. They do not reopen Gate B.

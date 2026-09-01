@@ -135,10 +135,10 @@ CIV-38: OPTIONAL — NOT STARTED
 Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
-active CIV phase: CIV-41 — LOCAL IMPLEMENTATION/REVIEW CANDIDATE — NOT PUBLISHED
-completed and published through: CIV-39 (CIV-38 remains optional and unstarted)
-next eligible action: independent senior review of CIV-41 local candidate
-next authorized action: CIV-41 independent senior review / publication decision
+active CIV phase: none
+completed and published through: CIV-41 (CIV-38 and CIV-40 remain optional and unstarted)
+next eligible action: CIV-42 — Learned Proto-Language V1 — NOT STARTED
+next authorized action: CIV-42
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
@@ -208,8 +208,9 @@ Gate F Evaluation 11: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 Gate F Blocker 11: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate F Evaluation 12: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 CIV-40: OPTIONAL TOOLING — NOT STARTED
-CIV-41: LOCAL IMPLEMENTATION/REVIEW CANDIDATE — NOT PUBLISHED
-CIV-42: NOT STARTED
+CIV-41: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+CIV-41 published canonical product HEAD: 87190af6d7b51b57d600d6f39da4ccda71e3f162
+CIV-42: NOT STARTED — NEXT ELIGIBLE REQUIRED PHASE
 V4-GATE-G-v1: PLANNED
 ```
 
@@ -611,16 +612,18 @@ at published HEAD `b31a7e53cfcf7a5c3ab6419f3cb5c0c309f04112`, with review archiv
 `ca7e70799220b58c3b090716a2adf19e8abb2609d465b7139d25f7f59988af4c`.
 Gate F is **ACQUIRED AND PUBLISHED — REMOTE VERIFIED** at acquisition
 canonical HEAD `14475f4ad5dde9e1063a830ba7e38390cfb4d045`. `CIV-40` remains optional
-tooling and not started. `CIV-41` now has a **LOCAL IMPLEMENTATION/REVIEW
-CANDIDATE — NOT PUBLISHED** from exact canonical baseline
-`96030494c9bed8e356faae16dbd3c66dc9b4b652`. Senior review identified a
-departed-cognition lifecycle blocker in candidate
-`1ce9506824775c1b59eaf5c358f0e8d4edd4eab7`; Senior Review Correction 01 is
-implemented locally above that unchanged commit and is pending independent
-re-review. It makes finalized mortality terminalize current cognition and
-retains self-contained terminal belief evidence under a deterministic bound
-without promoting dead-source claims. No approval or publication is claimed.
-`CIV-42` is not started and Gate G remains planned.
+tooling and not started. `CIV-41` is **COMPLETE AND PUBLISHED — SENIOR REVIEW
+APPROVED — REMOTE VERIFIED** at canonical product HEAD
+`87190af6d7b51b57d600d6f39da4ccda71e3f162`, from exact implementation
+baseline `96030494c9bed8e356faae16dbd3c66dc9b4b652`. Senior review identified a
+departed-cognition lifecycle blocker in original candidate
+`1ce9506824775c1b59eaf5c358f0e8d4edd4eab7`; Senior Review Correction 01 at
+the published product HEAD makes finalized mortality terminalize current
+cognition and retains self-contained terminal belief evidence under a
+deterministic bound without promoting dead-source claims. Independent
+re-review passed, manual publication completed and the exact remote is
+verified. `CIV-42 — Learned Proto-Language V1` is not started and is the next
+eligible required phase. Gate G remains planned and unevaluated.
 
 | Phase | Requirement | Outcome |
 | --- | --- | --- |
@@ -1414,7 +1417,7 @@ Evaluation 05 product correction: NO
 Evaluation 05 verdict: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 Gate E status: ACQUIRED AND PUBLISHED
 Gate E acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f76744f83
-next authorized action: CIV-41 independent senior review / publication decision
+next authorized action: CIV-42
 CIV-39 status: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 Gate F status: ACQUIRED AND PUBLISHED — REMOTE VERIFIED
@@ -1443,8 +1446,9 @@ Gate F Evaluation 11 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 Gate F Blocker 11 status: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate F Evaluation 12 status: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 CIV-40 status: OPTIONAL TOOLING — NOT STARTED
-CIV-41 status: LOCAL IMPLEMENTATION/REVIEW CANDIDATE — NOT PUBLISHED
-CIV-42 status: NOT STARTED
+CIV-41 status: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+CIV-41 published canonical product HEAD: 87190af6d7b51b57d600d6f39da4ccda71e3f162
+CIV-42 status: NOT STARTED — NEXT ELIGIBLE REQUIRED PHASE
 V4-GATE-G-v1 status: PLANNED
 ```
 
@@ -1682,10 +1686,10 @@ evidence HEAD `b31a7e53cfcf7a5c3ab6419f3cb5c0c309f04112` with review archive SHA
 `ca7e70799220b58c3b090716a2adf19e8abb2609d465b7139d25f7f59988af4c`.
 Gate F is **ACQUIRED AND PUBLISHED — REMOTE VERIFIED** at acquisition
 canonical HEAD `14475f4ad5dde9e1063a830ba7e38390cfb4d045`. CIV-40 remains optional
-tooling and is not a prerequisite. CIV-41 now has a **LOCAL IMPLEMENTATION/
-REVIEW CANDIDATE — NOT PUBLISHED** from exact canonical baseline
-`96030494c9bed8e356faae16dbd3c66dc9b4b652`; CIV-42 is not started and Gate G
-remains planned.
+tooling and is not a prerequisite. CIV-41 is **COMPLETE AND PUBLISHED — SENIOR
+REVIEW APPROVED — REMOTE VERIFIED** at canonical product HEAD
+`87190af6d7b51b57d600d6f39da4ccda71e3f162`; CIV-42 is not started and is the
+next eligible required phase. Gate G remains planned and unevaluated.
 
 ## Wave 5 — Knowledge, language and culture
 
@@ -1704,12 +1708,15 @@ Language is learned from physical signals. Long-distance information requires
 a carrier. Written knowledge is material and destructible. Culture remains
 distributed across individuals.
 
-Local candidate status: `CIV-41` is implemented and validated locally but is
-not senior-review-approved or published. Senior Review Correction 01 composes
-current cognition with finalized mortality and separately bounded terminal
-belief evidence; it remains pending independent re-review. Published
-progression remains through `CIV-39`; `CIV-42` has not started and Gate G has
-not been evaluated.
+Published status: `CIV-41` is complete and published at independently
+remote-verified canonical product HEAD
+`87190af6d7b51b57d600d6f39da4ccda71e3f162`. Original candidate
+`1ce9506824775c1b59eaf5c358f0e8d4edd4eab7` did not pass unchanged: independent
+senior review found a departed-cognition lifecycle blocker, and Senior Review
+Correction 01 composed current cognition with finalized mortality and
+separately bounded terminal belief evidence before independent re-review passed.
+Published progression is through `CIV-41`; `CIV-42` has not started and is the
+next eligible required phase. Gate G has not been evaluated.
 
 Observable slices:
 

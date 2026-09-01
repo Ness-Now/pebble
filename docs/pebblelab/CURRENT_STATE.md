@@ -43,17 +43,17 @@ SHA of the documentation commit that contains it.
 - `CIV-40 — Training and Evaluation Bridge V1`:
   **OPTIONAL TOOLING — NOT STARTED**.
 - `CIV-41 — Structured Knowledge and Belief Graph V1`:
-  **LOCAL IMPLEMENTATION/REVIEW CANDIDATE — NOT PUBLISHED** on branch
-  `codex/civ-41-structured-knowledge-belief-graph-v1`, implemented from exact
-  published baseline `96030494c9bed8e356faae16dbd3c66dc9b4b652`. Independent
-  senior review found a lifecycle-composition blocker in reviewed candidate
-  `1ce9506824775c1b59eaf5c358f0e8d4edd4eab7`. Senior Review Correction 01 is
-  implemented locally above that unchanged commit and is pending independent
-  re-review. It gives finalized mortality explicit ownership of terminalizing
-  current cognition, retains self-contained historical belief evidence under a
+  **COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at
+  canonical product HEAD `87190af6d7b51b57d600d6f39da4ccda71e3f162`, implemented
+  from exact published baseline `96030494c9bed8e356faae16dbd3c66dc9b4b652`.
+  Independent senior review found a lifecycle-composition blocker in original
+  candidate `1ce9506824775c1b59eaf5c358f0e8d4edd4eab7`; that finding remains
+  historical evidence. Senior Review Correction 01 at the published product
+  HEAD gives finalized mortality explicit ownership of terminalizing current
+  cognition, retains self-contained historical belief evidence under a
   deterministic bound and preserves living dead-source claims without
-  promoting their authority. No senior approval or publication is claimed.
-  This does not advance the published program beyond `CIV-39`.
+  promoting their authority. Independent re-review passed, manual publication
+  completed and that exact remote is verified.
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
 
 Gate F correction history:
@@ -248,8 +248,8 @@ Gate F correction history:
   `ca7e70799220b58c3b090716a2adf19e8abb2609d465b7139d25f7f59988af4c`.
 - Gate F is **ACQUIRED AND PUBLISHED — REMOTE VERIFIED** at acquisition
   canonical HEAD `14475f4ad5dde9e1063a830ba7e38390cfb4d045`.
-- The next eligible required phase and authorized action is `CIV-41`; this
-  reconciliation does not start it.
+- The next eligible required phase and authorized action is `CIV-42 — Learned
+  Proto-Language V1`; it is not started. Gate G remains planned and unevaluated.
 
 Published Gate E history:
 
@@ -646,10 +646,10 @@ the Gate E acquisition are now published and independently remote verified.
 ## Current program position
 
 ```text
-active CIV phase: CIV-41 — LOCAL IMPLEMENTATION/REVIEW CANDIDATE — NOT PUBLISHED
-completed and published through: CIV-39 (CIV-38 remains optional and unstarted)
-next eligible action: independent senior review of CIV-41 local candidate
-next authorized action: CIV-41 independent senior review / publication decision
+active CIV phase: none
+completed and published through: CIV-41 (CIV-38 and CIV-40 remain optional and unstarted)
+next eligible action: CIV-42 — Learned Proto-Language V1 — NOT STARTED
+next authorized action: CIV-42
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -719,9 +719,10 @@ Gate F Evaluation 11 status: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-F-v1 Blocker 11 status: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate F Evaluation 12 status: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 CIV-40 status: OPTIONAL TOOLING — NOT STARTED
-CIV-41 status: LOCAL IMPLEMENTATION/REVIEW CANDIDATE — NOT PUBLISHED
-CIV-41 Senior Review Correction 01: LOCAL CORRECTION — PENDING INDEPENDENT RE-REVIEW
-CIV-42 status: NOT STARTED
+CIV-41 status: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+CIV-41 published canonical product HEAD: 87190af6d7b51b57d600d6f39da4ccda71e3f162
+CIV-41 Senior Review Correction 01: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+CIV-42 status: NOT STARTED — NEXT ELIGIBLE REQUIRED PHASE
 V4-GATE-G-v1 status: PLANNED
 roadmap generation: V4
 ```
@@ -1132,17 +1133,20 @@ companion. The accepted published evidence HEAD is
 `b31a7e53cfcf7a5c3ab6419f3cb5c0c309f04112`, with review archive SHA-256
 `ca7e70799220b58c3b090716a2adf19e8abb2609d465b7139d25f7f59988af4c`.
 Gate F is **ACQUIRED AND PUBLISHED — REMOTE VERIFIED** at acquisition
-canonical HEAD `14475f4ad5dde9e1063a830ba7e38390cfb4d045`. `CIV-41` now has a
-**LOCAL IMPLEMENTATION/REVIEW CANDIDATE — NOT PUBLISHED** from exact canonical
-baseline `96030494c9bed8e356faae16dbd3c66dc9b4b652`; independent senior review
-found a departed-cognition lifecycle blocker in reviewed candidate
-`1ce9506824775c1b59eaf5c358f0e8d4edd4eab7`. Senior Review Correction 01 is a
-local correction above that unchanged commit: finalized mortality removes
-dead-owner current knowledge authority and retains separately bounded,
-self-contained terminal belief evidence. Dead-source claims held by living
-recipients remain attributed claims and never become direct evidence or shared
-truth. Independent re-review and any publication remain external. `CIV-42` is
-not started and Gate G remains planned.
+canonical HEAD `14475f4ad5dde9e1063a830ba7e38390cfb4d045`. `CIV-41` is
+**COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at
+canonical product HEAD `87190af6d7b51b57d600d6f39da4ccda71e3f162`, from exact
+implementation baseline `96030494c9bed8e356faae16dbd3c66dc9b4b652`.
+Independent senior review found a departed-cognition lifecycle blocker in
+original candidate `1ce9506824775c1b59eaf5c358f0e8d4edd4eab7`; Senior Review
+Correction 01 fixed it at the published product HEAD by making finalized
+mortality remove dead-owner current knowledge authority and retain separately
+bounded, self-contained terminal belief evidence. Dead-source claims held by
+living recipients remain attributed claims and never become direct evidence or
+shared truth. Independent re-review passed, manual publication completed and
+the exact remote is verified. `CIV-42 — Learned Proto-Language V1` is not
+started and is the next eligible required phase. Gate G remains planned and
+unevaluated.
 `CIV-38` remains **OPTIONAL — NOT STARTED** and is not a prerequisite.
 `CIV-40` remains **OPTIONAL TOOLING — NOT STARTED**. Currency is not a Gate E
 or CIV-39 prerequisite.

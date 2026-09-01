@@ -1,24 +1,58 @@
 # CIV-41 — Structured Knowledge and Belief Graph V1
 
-## Verdict and baseline
+## Published verdict and baseline
 
-`CIV-41` is implemented in its bounded V1 contract as a **local
-implementation/review candidate**. Senior Review Correction 01 addresses the
-reviewed candidate's departed-inhabitant lifecycle blocker and is pending
-independent re-review. Neither the correction nor the phase is published or
-senior-review-approved. The exact fetched canonical baseline was:
+`CIV-41` is **COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE
+VERIFIED** in its bounded V1 contract at canonical product HEAD
+`87190af6d7b51b57d600d6f39da4ccda71e3f162`. Independent senior review found
+a departed-inhabitant lifecycle blocker in original candidate
+`1ce9506824775c1b59eaf5c358f0e8d4edd4eab7`; Senior Review Correction 01 fixed
+that blocker without rewriting the reviewed commit. Independent re-review
+passed, manual fast-forward publication completed and the exact remote is
+verified. The exact implementation baseline was:
 
 ```text
 repository: Ness-Now/pebble
 canonical branch: origin/lab/pebblelab-v1
 baseline: 96030494c9bed8e356faae16dbd3c66dc9b4b652
-candidate branch: codex/civ-41-structured-knowledge-belief-graph-v1
-remote publication: NO
+original candidate branch: codex/civ-41-structured-knowledge-belief-graph-v1
+original reviewed candidate: 1ce9506824775c1b59eaf5c358f0e8d4edd4eab7
+Senior Review Correction 01 / published product HEAD: 87190af6d7b51b57d600d6f39da4ccda71e3f162
+senior review verdict after Correction 01: PASS
+remote publication: VERIFIED
 ```
 
 This report intentionally does not self-reference its containing commit.
-`CIV-40` remains optional and unstarted. `CIV-42` remains unstarted. Gate G
-remains planned; no Gate G evaluation or acquisition was performed.
+`CIV-40` remains optional and unstarted. `CIV-42 — Learned Proto-Language V1`
+remains unstarted and is the next eligible required phase. Gate G remains
+planned; no Gate G evaluation or acquisition was performed.
+
+## Review and publication history
+
+The historical sequence is preserved explicitly:
+
+1. initial CIV-41 candidate `1ce9506824775c1b59eaf5c358f0e8d4edd4eab7`;
+2. independent senior review found the departed-cognition lifecycle blocker;
+3. Senior Review Correction 01 produced
+   `87190af6d7b51b57d600d6f39da4ccda71e3f162`;
+4. independent re-review passed;
+5. manual fast-forward publication completed;
+6. the exact canonical remote was independently verified.
+
+The final candidate review package identities reported to senior review were:
+
+```text
+CIV-41-CORRECTION-01-87190af6.zip
+reported SHA-256: 0a74f49edc1814b78999f0649b314dd211fb5e141b25a6f66d64f3b811db488c
+CIV-41-CORRECTION-01-87190af6-REVIEW_HANDOFF.txt
+reported SHA-256: 98d868c11f3c7e2ca7af1881590b12d3ec20ea15effdffe199fae0f0dbb66871
+```
+
+Independent senior review fully inspected the plain UTF-8 handoff, including
+the complete canonical-to-final Git patch and raw validation outputs. The
+binary transport SHA-256 values above are package identities as reported; the
+review runtime could not materialize the binary archive and did not
+independently recompute those values.
 
 ## Behavioral contract
 
@@ -231,11 +265,11 @@ The focused debug and optimized commands each pass 47/47 main assertions plus
 for Senior Review Correction 01 pass 19/19 main assertions plus 3/3 writer and
 4/4 separate-process reader assertions in both debug and optimized builds.
 Focused owning selectors pass mortality 93/93, checkpoint/replay 49/49,
-Observer 20/20 and population scaling 69/69. Applicable Gate F selectors pass
+Observer 20/20 and CIV-39 69/69. Applicable Gate F selectors pass
 dynamic fidelity 29/29, Family 27/27, Estate validation 28/28, Estate/Kinship
 causality 32/32, terminal-migration admission 20/20 and terminal-household
 admission 27/27. The canonical suite retains the existing social-information
-coverage. On this local candidate the complete aggregate is 4,340/4,340
+coverage. On the published product line the complete aggregate is 4,340/4,340
 assertions and the canonical repository gate passes 35/35 steps:
 
 ```bash
@@ -259,5 +293,4 @@ regenerated and `PEBBLE_REGOLD` was not used.
   aptitude, development or cultural status.
 - No LLM, provider, API or network dependency was added.
 - Gate G was not evaluated or acquired.
-- This local candidate is not a claim of senior approval or remote
-  publication.
+- CIV-41 publication does not start CIV-42 or authorize Gate G evaluation.
