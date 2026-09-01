@@ -984,6 +984,7 @@ extension AgentSimulationSession {
                 deathEventID: deathEvent.eventID,
                 at: mortalityTick
             )
+            terminateLanguageForFinalizedDeath(agentID: item.agentID)
             try bindEstateToFinalizedDeath(
                 deathID: deathID,
                 deathEventID: deathEvent.eventID
@@ -1212,6 +1213,7 @@ extension AgentSimulationSession {
         try validateEstateCrossDomainIfEnabled()
         try validateEcologicalObservationStateIfEnabled()
         try validateKnowledgeGraphStateIfEnabled()
+        try validateLanguageStateIfInitialized()
     }
 
     private func conservationSnapshotWith(

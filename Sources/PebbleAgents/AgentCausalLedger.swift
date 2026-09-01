@@ -280,6 +280,9 @@ public enum AgentCausalEventKind: String, Codable, CaseIterable, Sendable {
     case knowledgeClaimReceived
     case knowledgeUnderstandingFormed
     case knowledgeBeliefRevised
+    case languageInitialized
+    case languagePriorSeeded
+    case languageSemanticCommunicated
 }
 
 public enum AgentCausalOrigin: String, Codable, Sendable {
@@ -318,6 +321,7 @@ public enum AgentCausalOrigin: String, Codable, Sendable {
     case contractTransition
     case marketTransition
     case knowledgeTransition
+    case languageTransition
 }
 
 public enum AgentCausalPayload: Codable, Equatable, Sendable {
@@ -345,6 +349,12 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
     case trust(relationID: String, before: Int, delta: Int, after: Int)
     case socialClear(facts: Int, messages: Int, beliefs: Int, trustRelations: Int)
     case knowledge(
+        recordID: String,
+        propositionID: String?,
+        status: String,
+        reason: String
+    )
+    case language(
         recordID: String,
         propositionID: String?,
         status: String,
@@ -662,6 +672,8 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
             return "socialClear|\(facts)|\(messages)|\(beliefs)|\(trustRelations)"
         case let .knowledge(recordID, propositionID, status, reason):
             return "knowledge|\(recordID)|\(propositionID ?? "none")|\(status)|\(reason)"
+        case let .language(recordID, propositionID, status, reason):
+            return "language|\(recordID)|\(propositionID ?? "none")|\(status)|\(reason)"
         case let .physicalSignal(
             signalID, senderID, recipientID, factID, source, pointed, modalities
         ):
@@ -924,6 +936,9 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
              (.knowledgeClaimReceived, .knowledge),
              (.knowledgeUnderstandingFormed, .knowledge),
              (.knowledgeBeliefRevised, .knowledge),
+             (.languageInitialized, .language),
+             (.languagePriorSeeded, .language),
+             (.languageSemanticCommunicated, .language),
              (.physicalSignalEmitted, .physicalSignal),
              (.physicalSignalPerceived, .physicalPerception),
              (.physicalSignalDecoded, .physicalPerception),

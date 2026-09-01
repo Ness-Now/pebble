@@ -37,6 +37,7 @@ public enum AgentReplaySchema {
     public static let marketVersion = 34
     public static let populationScaleVersion = 35
     public static let knowledgeVersion = 36
+    public static let languageVersion = 37
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -61,6 +62,7 @@ public enum AgentReplaySchema {
             || version == marketVersion
             || version == populationScaleVersion
             || version == knowledgeVersion
+            || version == languageVersion
     }
 }
 
@@ -204,6 +206,9 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case marketTrade
     case marketWithdrawal
     case knowledgeFeature
+    case languageFeature
+    case languagePrior
+    case languageCommunication
 }
 
 public enum AgentReplayOperation: Codable {
@@ -223,6 +228,21 @@ public enum AgentReplayOperation: Codable {
     case setBuildAutoEnabled(Bool)
     case setSocialEnabled(Bool)
     case setKnowledgeGraphEnabled(Bool, configuration: AgentKnowledgeConfiguration)
+    case setLanguageEnabled(
+        Bool,
+        configuration: AgentLanguageConfiguration,
+        pack: AgentLanguagePack
+    )
+    case seedLanguagePrior(
+        agentID: AgentID,
+        senseIDs: [AgentLanguageSenseID]
+    )
+    case communicateLanguageSemanticContent(
+        speakerID: AgentID,
+        recipientID: AgentID,
+        propositionID: AgentKnowledgePropositionID,
+        renderingMode: AgentLanguageRenderingMode
+    )
     case setPhysicalEnabled(Bool)
     case setCooperationEnabled(Bool)
     case createConstructionProject(AgentConstructionProject)
@@ -497,6 +517,10 @@ public enum AgentReplayOperation: Codable {
         case .setBuildAutoEnabled: return .constructionFeature
         case .setSocialEnabled: return .socialFeature
         case .setKnowledgeGraphEnabled: return .knowledgeFeature
+        case .setLanguageEnabled: return .languageFeature
+        case .seedLanguagePrior: return .languagePrior
+        case .communicateLanguageSemanticContent:
+            return .languageCommunication
         case .setPhysicalEnabled: return .physicalFeature
         case .setCooperationEnabled: return .cooperationFeature
         case .createConstructionProject: return .constructionProjectCreation
@@ -637,6 +661,15 @@ public enum AgentReplayOperation: Codable {
         case let .completeConstructionProject(projectID, tick): raw = "\(projectID):completion:\(tick)"
         case let .clearConstructionProject(projectID): raw = "\(projectID):clear"
         case let .applySocialVerification(observation): raw = "social-verification:\(observation.beliefID.rawValue)"
+        case let .seedLanguagePrior(agentID, senseIDs):
+            raw = "language-seed:\(agentID.rawValue):"
+                + senseIDs.sorted().map(\.rawValue).joined(separator: ",")
+        case let .communicateLanguageSemanticContent(
+            speakerID, recipientID, propositionID, renderingMode
+        ):
+            raw = "language-communicate:\(speakerID.rawValue):"
+                + "\(recipientID.rawValue):\(propositionID.rawValue):"
+                + renderingMode.rawValue
         case let .applyBirthSiteObservation(observation):
             raw = "birth-site:\(observation.planID.rawValue):\(observation.observedTick)"
         case let .proposeUnion(receipt): raw = receipt.receiptID
@@ -1023,6 +1056,9 @@ public struct AgentReplayRecorder {
         simulationID = checkpoint.simulationID
         initialTick = checkpoint.tick.rawValue
         schemaVersion = checkpoint.schemaVersion
+            == AgentCheckpointSchema.languageVersion
+            ? AgentReplaySchema.languageVersion
+            : checkpoint.schemaVersion
             == AgentCheckpointSchema.knowledgeVersion
             ? AgentReplaySchema.knowledgeVersion
             : checkpoint.schemaVersion
@@ -1347,6 +1383,16 @@ public struct AgentReplayRecorder {
             }
             schemaVersion = AgentReplaySchema.knowledgeVersion
         }
+        if case let .setLanguageEnabled(enabled, _, _) = operation,
+           enabled,
+           schemaVersion < AgentReplaySchema.languageVersion {
+            guard records.isEmpty else {
+                throw AgentReplayError.invalidJournal(
+                    "language activation must be the first v37 replay operation"
+                )
+            }
+            schemaVersion = AgentReplaySchema.languageVersion
+        }
         guard session.simulationID == simulationID else { throw AgentReplayError.currentStateMismatch }
         let preDigest = try session.durableStateDigest()
         let tickBefore = session.tick
@@ -1600,6 +1646,8 @@ public enum AgentSessionReplayer {
                 && checkpoint.schemaVersion <= AgentCheckpointSchema.marketVersion)
             || (manifest.schemaVersion == AgentReplaySchema.knowledgeVersion
                 && checkpoint.schemaVersion <= AgentCheckpointSchema.populationScaleVersion)
+            || (manifest.schemaVersion == AgentReplaySchema.languageVersion
+                && checkpoint.schemaVersion <= AgentCheckpointSchema.knowledgeVersion)
         guard manifest.baseCheckpointID == checkpoint.checkpointID,
               manifest.baseCheckpointDigest == checkpoint.semanticDigest,
               manifest.simulationID == checkpoint.simulationID,
@@ -1700,6 +1748,23 @@ extension AgentSimulationSession {
         case let .setKnowledgeGraphEnabled(enabled, configuration):
             try candidate.setKnowledgeGraphEnabled(
                 enabled, configuration: configuration
+            )
+        case let .setLanguageEnabled(enabled, configuration, pack):
+            try candidate.setLanguageEnabled(
+                enabled, configuration: configuration, pack: pack
+            )
+        case let .seedLanguagePrior(agentID, senseIDs):
+            try candidate.seedLanguagePrior(
+                for: agentID, senseIDs: senseIDs
+            )
+        case let .communicateLanguageSemanticContent(
+            speakerID, recipientID, propositionID, renderingMode
+        ):
+            _ = try candidate.communicateLanguageSemanticContent(
+                speakerID: speakerID,
+                recipientID: recipientID,
+                propositionID: propositionID,
+                renderingMode: renderingMode
             )
         case let .setPhysicalEnabled(enabled):
             try candidate.setPhysicalEnabled(enabled)
