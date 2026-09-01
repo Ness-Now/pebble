@@ -978,6 +978,12 @@ extension AgentSimulationSession {
                 ),
                 summary: "agent death finalized agent=\(item.agentID.rawValue) death=\(deathID.rawValue)"
             )
+            try terminateKnowledgeForFinalizedDeath(
+                agentID: item.agentID,
+                deathID: deathID,
+                deathEventID: deathEvent.eventID,
+                at: mortalityTick
+            )
             try bindEstateToFinalizedDeath(
                 deathID: deathID,
                 deathEventID: deathEvent.eventID
@@ -1205,6 +1211,7 @@ extension AgentSimulationSession {
         try validateDependentCareCrossDomainIfEnabled()
         try validateEstateCrossDomainIfEnabled()
         try validateEcologicalObservationStateIfEnabled()
+        try validateKnowledgeGraphStateIfEnabled()
     }
 
     private func conservationSnapshotWith(

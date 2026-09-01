@@ -20,6 +20,11 @@ public struct AgentKnowledgeConfiguration: Codable, Equatable, Sendable {
     public let maximumBeliefsPerAgent: Int
     public let maximumRevisionsPerAgent: Int
 
+    /// Departed beliefs are immutable historical evidence, not current
+    /// cognition. Reusing the global current-belief bound keeps the V1 graph
+    /// shape compatible while ensuring generational history is finite.
+    public var maximumDepartedBeliefs: Int { maximumBeliefs }
+
     public init(
         maximumPropositions: Int = 4_096,
         maximumEvidence: Int = 4_096,
@@ -317,6 +322,69 @@ public struct AgentKnowledgeBeliefRevision: Codable, Equatable, Sendable {
     public let revisionEventID: AgentCausalEventID
 }
 
+public enum AgentKnowledgeDepartedBeliefBasis:
+    Codable, Equatable, Sendable {
+    case evidence(
+        evidenceID: AgentKnowledgeEvidenceID,
+        authority: AgentKnowledgeEvidenceAuthority,
+        authorityEventID: AgentCausalEventID,
+        acquisitionEventID: AgentCausalEventID
+    )
+    case sourceClaim(
+        claimID: AgentKnowledgeClaimID,
+        sourceAgentID: AgentID,
+        sourceEvidenceID: AgentKnowledgeEvidenceID,
+        sourceEvidenceAuthority: AgentKnowledgeEvidenceAuthority,
+        sourceEvidenceAuthorityEventID: AgentCausalEventID,
+        sourceEvidenceAcquisitionEventID: AgentCausalEventID,
+        socialMessageID: AgentSocialMessageID,
+        sentEventID: AgentCausalEventID,
+        receivedEventID: AgentCausalEventID,
+        acquisitionEventID: AgentCausalEventID
+    )
+
+    var canonicalText: String {
+        switch self {
+        case let .evidence(evidenceID, authority, authorityEventID, acquisitionEventID):
+            return "evidence:\(evidenceID.rawValue):\(authority.rawValue):"
+                + "\(authorityEventID.rawValue):\(acquisitionEventID.rawValue)"
+        case let .sourceClaim(
+            claimID, sourceAgentID, sourceEvidenceID,
+            sourceEvidenceAuthority, sourceEvidenceAuthorityEventID,
+            sourceEvidenceAcquisitionEventID, socialMessageID,
+            sentEventID, receivedEventID, acquisitionEventID
+        ):
+            return "claim:\(claimID.rawValue):\(sourceAgentID.rawValue):"
+                + "\(sourceEvidenceID.rawValue):\(sourceEvidenceAuthority.rawValue):"
+                + "\(sourceEvidenceAuthorityEventID.rawValue):"
+                + "\(sourceEvidenceAcquisitionEventID.rawValue):"
+                + "\(socialMessageID.rawValue):\(sentEventID.rawValue):"
+                + "\(receivedEventID.rawValue):\(acquisitionEventID.rawValue)"
+        }
+    }
+}
+
+/// A self-contained, immutable terminal account of one belief at the
+/// authoritative mortality boundary. It preserves what the departed owner
+/// believed and why without pinning live understandings, claims, or evidence.
+public struct AgentKnowledgeDepartedBelief: Codable, Equatable, Sendable {
+    public let beliefID: AgentKnowledgeBeliefID
+    public let ownerID: AgentID
+    public let deathID: AgentDeathID
+    public let proposition: AgentKnowledgeProposition
+    public let stance: AgentKnowledgeBeliefStance
+    public let basisUnderstandingID: AgentKnowledgeUnderstandingID
+    public let interpretation: AgentKnowledgeInterpretation
+    public let understandingFormedEventID: AgentCausalEventID
+    public let basis: AgentKnowledgeDepartedBeliefBasis
+    public let formedAtTick: Int
+    public let updatedAtTick: Int
+    public let revisionCount: Int
+    public let lastRevisionEventID: AgentCausalEventID
+    public let departedAtTick: Int
+    public let deathEventID: AgentCausalEventID
+}
+
 public struct AgentKnowledgeEvictionCounts: Codable, Equatable, Sendable {
     public internal(set) var propositions = 0
     public internal(set) var evidence = 0
@@ -336,6 +404,10 @@ public struct AgentKnowledgeGraphState: Codable, Equatable, Sendable {
     public internal(set) var beliefs: [AgentKnowledgeBelief]
     public internal(set) var revisions: [AgentKnowledgeBeliefRevision]
     public internal(set) var evictionCounts: AgentKnowledgeEvictionCounts
+    /// Optional only for byte-compatible decoding of the reviewed pre-
+    /// correction schema-36 candidate. New graphs always initialize it.
+    public internal(set) var departedBeliefs: [AgentKnowledgeDepartedBelief]?
+    public internal(set) var departedBeliefEvictionCount: Int?
 
     init(configuration: AgentKnowledgeConfiguration) {
         enabled = true
@@ -347,6 +419,8 @@ public struct AgentKnowledgeGraphState: Codable, Equatable, Sendable {
         beliefs = []
         revisions = []
         evictionCounts = AgentKnowledgeEvictionCounts()
+        departedBeliefs = []
+        departedBeliefEvictionCount = 0
     }
 }
 
@@ -368,6 +442,8 @@ public struct AgentKnowledgeSnapshot: Codable, Equatable, Sendable {
     public let understandings: [AgentKnowledgeUnderstanding]
     public let beliefs: [AgentKnowledgeBelief]
     public let revisions: [AgentKnowledgeBeliefRevision]
+    public let departedBeliefs: [AgentKnowledgeDepartedBelief]
+    public let departedBeliefEvictionCount: Int
     public let disagreements: [AgentKnowledgeDisagreement]
     public let evictionCounts: AgentKnowledgeEvictionCounts
     public let digest: String
@@ -380,6 +456,8 @@ public struct AgentKnowledgeSummary: Codable, Equatable, Sendable {
     public let sourceClaimCount: Int
     public let understandingCount: Int
     public let currentBeliefCount: Int
+    public let departedBeliefCount: Int
+    public let departedBeliefEvictionCount: Int
     public let disagreementCount: Int
     public let revisionCount: Int
     public let evictionCounts: AgentKnowledgeEvictionCounts

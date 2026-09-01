@@ -47,6 +47,27 @@ if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "civ-41" {
 }
 
 if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
+    == "civ-41-correction-01-restart-write" {
+    runPebbleAgentsKnowledgeLifecycleRestartWriteSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
+    == "civ-41-correction-01-restart-read" {
+    runPebbleAgentsKnowledgeLifecycleRestartReadSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
+    == "civ-41-correction-01" {
+    runPebbleAgentsKnowledgeLifecycleSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
     == "safe-entity-placement" {
     registerAllBlocks()
     registerAllItems()
@@ -2638,6 +2659,7 @@ runPebbleAgentsVerticalSmoke()
 runPebbleAgentsCausalitySmoke()
 runPebbleAgentsSocialSmoke()
 runPebbleAgentsKnowledgeSmoke()
+runPebbleAgentsKnowledgeLifecycleSmoke()
 runPebbleAgentsPhysicalChannelSmoke()
 runPebbleAgentsCooperationSmoke()
 runPebbleAgentsPersistenceReplaySmoke()

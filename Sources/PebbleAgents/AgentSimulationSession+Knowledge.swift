@@ -55,7 +55,8 @@ extension AgentSimulationSession {
                 tick: tick,
                 configuration: nil,
                 propositions: [], evidence: [], claims: [], understandings: [],
-                beliefs: [], revisions: [], disagreements: [],
+                beliefs: [], revisions: [], departedBeliefs: [],
+                departedBeliefEvictionCount: 0, disagreements: [],
                 evictionCounts: AgentKnowledgeEvictionCounts(),
                 digest: AgentKnowledgeDigest.make("knowledge:none")
             )
@@ -72,6 +73,13 @@ extension AgentSimulationSession {
                 return $0.revisedAtTick < $1.revisedAtTick
             }
             return $0.revisionID < $1.revisionID
+        }
+        let departedBeliefs = (state.departedBeliefs ?? []).sorted {
+            if $0.departedAtTick != $1.departedAtTick {
+                return $0.departedAtTick < $1.departedAtTick
+            }
+            if $0.deathID != $1.deathID { return $0.deathID < $1.deathID }
+            return $0.beliefID < $1.beliefID
         }
         let grouped = Dictionary(grouping: beliefs, by: \.questionKey)
         let disagreements: [AgentKnowledgeDisagreement] = grouped.keys.sorted().compactMap { key in
@@ -108,6 +116,10 @@ extension AgentSimulationSession {
             revisions.map {
                 "r|\($0.revisionID.rawValue)|\($0.beliefID.rawValue)|\($0.previousPropositionID?.rawValue ?? "none")|\($0.propositionID.rawValue)|\($0.triggerUnderstandingID.rawValue)|\($0.revisionEventID.rawValue)"
             }.joined(separator: ";"),
+            departedBeliefs.map {
+                "d|\($0.beliefID.rawValue)|\($0.ownerID.rawValue)|\($0.deathID.rawValue)|\($0.proposition.propositionID.rawValue)|\($0.stance.rawValue)|\($0.basisUnderstandingID.rawValue)|\($0.interpretation.rawValue)|\($0.basis.canonicalText)|\($0.revisionCount)|\($0.lastRevisionEventID.rawValue)|\($0.departedAtTick)|\($0.deathEventID.rawValue)"
+            }.joined(separator: ";"),
+            "departedEvicted=\(state.departedBeliefEvictionCount ?? 0)",
             "evicted=\(state.evictionCounts.propositions),\(state.evictionCounts.evidence),\(state.evictionCounts.claims),\(state.evictionCounts.understandings),\(state.evictionCounts.revisions)",
         ].joined(separator: "|")
         return AgentKnowledgeSnapshot(
@@ -120,6 +132,9 @@ extension AgentSimulationSession {
             understandings: understandings,
             beliefs: beliefs,
             revisions: revisions,
+            departedBeliefs: departedBeliefs,
+            departedBeliefEvictionCount:
+                state.departedBeliefEvictionCount ?? 0,
             disagreements: disagreements,
             evictionCounts: state.evictionCounts,
             digest: AgentKnowledgeDigest.make(canonical)
@@ -135,6 +150,9 @@ extension AgentSimulationSession {
             sourceClaimCount: snapshot.claims.count,
             understandingCount: snapshot.understandings.count,
             currentBeliefCount: snapshot.beliefs.count,
+            departedBeliefCount: snapshot.departedBeliefs.count,
+            departedBeliefEvictionCount:
+                snapshot.departedBeliefEvictionCount,
             disagreementCount: snapshot.disagreements.count,
             revisionCount: snapshot.revisions.count,
             evictionCounts: snapshot.evictionCounts,
@@ -412,6 +430,147 @@ extension AgentSimulationSession {
         ))
     }
 
+    /// Composes CIV-41 with the existing mortality authority. The death event
+    /// is the terminal causal boundary; CIV-41 neither detects nor finalizes
+    /// death itself.
+    mutating func terminateKnowledgeForFinalizedDeath(
+        agentID: AgentID,
+        deathID: AgentDeathID,
+        deathEventID: AgentCausalEventID,
+        at deathTick: Int
+    ) throws {
+        guard var state = knowledgeGraphState else { return }
+        let propositionsByID = Dictionary(uniqueKeysWithValues:
+            state.propositions.map { ($0.propositionID, $0) }
+        )
+        let understandingsByID = Dictionary(uniqueKeysWithValues:
+            state.understandings.map { ($0.understandingID, $0) }
+        )
+        let evidenceByID = Dictionary(uniqueKeysWithValues:
+            state.evidence.map { ($0.evidenceID, $0) }
+        )
+        let claimsByID = Dictionary(uniqueKeysWithValues:
+            state.claims.map { ($0.claimID, $0) }
+        )
+        let currentBeliefs = state.beliefs.filter {
+            $0.ownerID == agentID
+        }.sorted { $0.beliefID < $1.beliefID }
+        var departed = state.departedBeliefs ?? []
+        for belief in currentBeliefs {
+            guard let proposition = propositionsByID[belief.propositionID],
+                  let understanding = understandingsByID[
+                      belief.basisUnderstandingID
+                  ], understanding.ownerID == agentID else {
+                throw AgentSessionError.knowledge(.invalidState(
+                    "terminal belief provenance \(belief.beliefID.rawValue)"
+                ))
+            }
+            let historicalBasis: AgentKnowledgeDepartedBeliefBasis
+            switch understanding.basis {
+            case let .evidence(evidenceID):
+                guard let evidence = evidenceByID[evidenceID],
+                      evidence.observerID == agentID else {
+                    throw AgentSessionError.knowledge(.invalidState(
+                        "terminal direct evidence \(belief.beliefID.rawValue)"
+                    ))
+                }
+                historicalBasis = .evidence(
+                    evidenceID: evidence.evidenceID,
+                    authority: evidence.authority,
+                    authorityEventID: evidence.authorityEventID,
+                    acquisitionEventID: evidence.acquisitionEventID
+                )
+            case let .sourceClaim(claimID):
+                guard let claim = claimsByID[claimID],
+                      claim.recipientID == agentID,
+                      let sourceEvidence = evidenceByID[
+                          claim.sourceEvidenceID
+                      ] else {
+                    throw AgentSessionError.knowledge(.invalidState(
+                        "terminal source claim \(belief.beliefID.rawValue)"
+                    ))
+                }
+                historicalBasis = .sourceClaim(
+                    claimID: claim.claimID,
+                    sourceAgentID: claim.sourceAgentID,
+                    sourceEvidenceID: claim.sourceEvidenceID,
+                    sourceEvidenceAuthority: sourceEvidence.authority,
+                    sourceEvidenceAuthorityEventID:
+                        sourceEvidence.authorityEventID,
+                    sourceEvidenceAcquisitionEventID:
+                        sourceEvidence.acquisitionEventID,
+                    socialMessageID: claim.socialMessageID,
+                    sentEventID: claim.sentEventID,
+                    receivedEventID: claim.receivedEventID,
+                    acquisitionEventID: claim.acquisitionEventID
+                )
+            }
+            guard !departed.contains(where: {
+                $0.beliefID == belief.beliefID && $0.deathID == deathID
+            }) else {
+                throw AgentSessionError.knowledge(.invalidState(
+                    "duplicate terminal belief \(belief.beliefID.rawValue)"
+                ))
+            }
+            departed.append(AgentKnowledgeDepartedBelief(
+                beliefID: belief.beliefID,
+                ownerID: agentID,
+                deathID: deathID,
+                proposition: proposition,
+                stance: belief.stance,
+                basisUnderstandingID: belief.basisUnderstandingID,
+                interpretation: understanding.interpretation,
+                understandingFormedEventID: understanding.formedEventID,
+                basis: historicalBasis,
+                formedAtTick: belief.formedAtTick,
+                updatedAtTick: belief.updatedAtTick,
+                revisionCount: belief.revisionCount,
+                lastRevisionEventID: belief.lastRevisionEventID,
+                departedAtTick: deathTick,
+                deathEventID: deathEventID
+            ))
+        }
+
+        state.beliefs.removeAll { $0.ownerID == agentID }
+        state.revisions.removeAll { $0.ownerID == agentID }
+        state.understandings.removeAll { $0.ownerID == agentID }
+        state.claims.removeAll { $0.recipientID == agentID }
+
+        // A dead source's evidence remains only when a living understanding or
+        // attributed claim still requires it. Its observer identity and
+        // authority never change.
+        var retainedEvidenceIDs = Set(state.claims.map(\.sourceEvidenceID))
+        retainedEvidenceIDs.formUnion(state.understandings.compactMap {
+            if case let .evidence(id) = $0.basis { return id }
+            return nil
+        })
+        let activeAgentIDs = Set(statesById.values.map(\.agentID))
+        state.evidence.removeAll {
+            !activeAgentIDs.contains($0.observerID)
+                && !retainedEvidenceIDs.contains($0.evidenceID)
+        }
+
+        departed.sort {
+            if $0.departedAtTick != $1.departedAtTick {
+                return $0.departedAtTick < $1.departedAtTick
+            }
+            if $0.deathID != $1.deathID { return $0.deathID < $1.deathID }
+            return $0.beliefID < $1.beliefID
+        }
+        let historicalExcess = max(
+            0, departed.count - state.configuration.maximumDepartedBeliefs
+        )
+        if historicalExcess > 0 {
+            departed.removeFirst(historicalExcess)
+            state.departedBeliefEvictionCount =
+                (state.departedBeliefEvictionCount ?? 0) + historicalExcess
+        }
+        state.departedBeliefs = departed
+        try compactKnowledgeState(&state)
+        try validateKnowledgeGraphState(state)
+        knowledgeGraphState = state
+    }
+
     private mutating func requiredKnowledgeEvent(
         kind: AgentCausalEventKind,
         actorID: AgentID?,
@@ -654,6 +813,7 @@ extension AgentSimulationSession {
               unique(state.understandings.map(\.understandingID)),
               unique(state.beliefs.map(\.beliefID)),
               unique(state.revisions.map(\.revisionID)),
+              unique((state.departedBeliefs ?? []).map(\.beliefID)),
               unique(state.beliefs.map {
                   "\($0.ownerID.rawValue)|\($0.questionKey)"
               }) else {
@@ -709,6 +869,46 @@ extension AgentSimulationSession {
             return payloadRecordID == recordID
                 && payloadPropositionID == propositionID.rawValue
         }
+        func retainedEvidenceAuthorityMatches(
+            _ eventID: AgentCausalEventID,
+            authority: AgentKnowledgeEvidenceAuthority,
+            observerID: AgentID
+        ) throws -> Bool {
+            guard let event = try retainedCausalEvent(eventID) else {
+                return true
+            }
+            switch authority {
+            case .validatedWorldObservation:
+                return event.kind == .resourceFactGrounded
+                    && event.actorID == observerID
+            case .validatedSocialVerification:
+                return event.kind == .socialVerification
+                    && event.actorID == observerID
+            case .canonicalCivilizationState:
+                return event.origin != .knowledgeTransition
+            }
+        }
+        let departedEventIDs = (state.departedBeliefs ?? []).flatMap { record in
+            let basis: [AgentCausalEventID]
+            switch record.basis {
+            case let .evidence(_, _, authorityEventID, acquisitionEventID):
+                basis = [authorityEventID, acquisitionEventID]
+            case let .sourceClaim(
+                _, _, _, _, sourceAuthorityEventID,
+                sourceAcquisitionEventID, _, sentEventID,
+                receivedEventID, acquisitionEventID
+            ):
+                basis = [
+                    sourceAuthorityEventID, sourceAcquisitionEventID,
+                    sentEventID, receivedEventID, acquisitionEventID,
+                ]
+            }
+            return basis + [
+                record.understandingFormedEventID,
+                record.lastRevisionEventID,
+                record.deathEventID,
+            ]
+        }
         let allEventIDs = state.evidence.flatMap {
             [$0.authorityEventID, $0.acquisitionEventID]
         } + state.claims.flatMap {
@@ -716,6 +916,7 @@ extension AgentSimulationSession {
         } + state.understandings.map(\.formedEventID)
             + state.beliefs.map(\.lastRevisionEventID)
             + state.revisions.map(\.revisionEventID)
+            + departedEventIDs
         guard allEventIDs.allSatisfy({
             $0.simulationID == simulationID
                 && $0.sequence.rawValue <= causalLedger.latestSequence
@@ -740,18 +941,11 @@ extension AgentSimulationSession {
                     recordID: record.evidenceID.rawValue,
                     propositionID: record.propositionID
                   ) else { return false }
-            let authorityEvent = try retainedCausalEvent(record.authorityEventID)
-            guard let authorityEvent else { return true }
-            switch record.authority {
-            case .validatedWorldObservation:
-                return authorityEvent.kind == .resourceFactGrounded
-                    && authorityEvent.actorID == record.observerID
-            case .validatedSocialVerification:
-                return authorityEvent.kind == .socialVerification
-                    && authorityEvent.actorID == record.observerID
-            case .canonicalCivilizationState:
-                return authorityEvent.origin != .knowledgeTransition
-            }
+            return try retainedEvidenceAuthorityMatches(
+                record.authorityEventID,
+                authority: record.authority,
+                observerID: record.observerID
+            )
         }), try state.claims.allSatisfy({ record throws -> Bool in
             guard propositionByID[record.propositionID] != nil,
                   let sourceEvidence = evidenceByID[record.sourceEvidenceID],
@@ -863,6 +1057,170 @@ extension AgentSimulationSession {
                 recordID: record.beliefID.rawValue,
                 propositionID: record.propositionID
             )
+        }), try (state.departedBeliefs ?? []).allSatisfy({
+            record throws -> Bool in
+            guard AgentKnowledgeProposition(
+                subject: record.proposition.subject,
+                predicate: record.proposition.predicate,
+                value: record.proposition.value
+            ) == record.proposition,
+            statesById[record.ownerID.rawValue] == nil,
+            record.proposition.questionKey
+                == "\(record.proposition.subject.canonicalText)|"
+                    + record.proposition.predicate.rawValue,
+            record.formedAtTick >= 0,
+            record.formedAtTick <= record.updatedAtTick,
+            record.updatedAtTick <= record.departedAtTick,
+            record.departedAtTick <= tick,
+            record.revisionCount >= 1,
+            record.understandingFormedEventID.sequence
+                < record.lastRevisionEventID.sequence,
+            record.lastRevisionEventID.sequence < record.deathEventID.sequence
+            else { return false }
+            switch record.basis {
+            case let .evidence(
+                evidenceID, authority, authorityEventID, acquisitionEventID
+            ):
+                guard authorityEventID.sequence < acquisitionEventID.sequence,
+                      acquisitionEventID.sequence
+                        < record.understandingFormedEventID.sequence else {
+                    return false
+                }
+                guard try retainedEvidenceAuthorityMatches(
+                    authorityEventID,
+                    authority: authority,
+                    observerID: record.ownerID
+                ) else { return false }
+                if let acquisition = try retainedCausalEvent(
+                    acquisitionEventID
+                ) {
+                    guard acquisition.kind == .knowledgeEvidenceAcquired,
+                          acquisition.origin == .knowledgeTransition,
+                          acquisition.actorID == record.ownerID,
+                          acquisition.subjectID == record.ownerID,
+                          case let .knowledge(
+                            recordID, propositionID, status, _
+                          ) = acquisition.payload,
+                          recordID == evidenceID.rawValue,
+                          propositionID
+                            == record.proposition.propositionID.rawValue,
+                          status == authority.rawValue else { return false }
+                }
+            case let .sourceClaim(
+                claimID, sourceAgentID, sourceEvidenceID,
+                sourceEvidenceAuthority, sourceAuthorityEventID,
+                sourceAcquisitionEventID, socialMessageID,
+                sentEventID, receivedEventID, acquisitionEventID
+            ):
+                guard sourceAgentID != record.ownerID,
+                      sourceAuthorityEventID.sequence
+                        < sourceAcquisitionEventID.sequence,
+                      sourceAcquisitionEventID.sequence < sentEventID.sequence,
+                      sentEventID.sequence < receivedEventID.sequence,
+                      receivedEventID.sequence < acquisitionEventID.sequence,
+                      acquisitionEventID.sequence
+                        < record.understandingFormedEventID.sequence else {
+                    return false
+                }
+                if let sourceAcquisition = try retainedCausalEvent(
+                    sourceAcquisitionEventID
+                ) {
+                    guard sourceAcquisition.kind == .knowledgeEvidenceAcquired,
+                          sourceAcquisition.origin == .knowledgeTransition,
+                          sourceAcquisition.actorID == sourceAgentID,
+                          sourceAcquisition.subjectID == sourceAgentID,
+                          case let .knowledge(
+                            recordID, propositionID, status, _
+                          ) = sourceAcquisition.payload,
+                          recordID == sourceEvidenceID.rawValue,
+                          propositionID
+                            == record.proposition.propositionID.rawValue,
+                          status == sourceEvidenceAuthority.rawValue else {
+                        return false
+                    }
+                }
+                guard try retainedEvidenceAuthorityMatches(
+                    sourceAuthorityEventID,
+                    authority: sourceEvidenceAuthority,
+                    observerID: sourceAgentID
+                ) else { return false }
+                let socialEvents: [(
+                    AgentCausalEventID, AgentCausalEventKind, String
+                )] = [
+                    (sentEventID, .socialMessageSent, "sent"),
+                    (receivedEventID, .socialMessageReceived, "received"),
+                ]
+                for (eventID, kind, status) in socialEvents {
+                    if let event = try retainedCausalEvent(eventID) {
+                        guard event.kind == kind,
+                              event.actorID == sourceAgentID,
+                              event.subjectID == record.ownerID,
+                              case let .socialMessage(
+                                messageID, _, eventStatus
+                              ) = event.payload,
+                              messageID == socialMessageID.rawValue,
+                              eventStatus == status else { return false }
+                    }
+                }
+                if let acquisition = try retainedCausalEvent(
+                    acquisitionEventID
+                ) {
+                    guard acquisition.kind == .knowledgeClaimReceived,
+                          acquisition.origin == .knowledgeTransition,
+                          acquisition.actorID == sourceAgentID,
+                          acquisition.subjectID == record.ownerID,
+                          case let .knowledge(
+                            recordID, propositionID, _, _
+                          ) = acquisition.payload,
+                          recordID == claimID.rawValue,
+                          propositionID
+                            == record.proposition.propositionID.rawValue else {
+                        return false
+                    }
+                }
+            }
+            if let understandingEvent = try retainedCausalEvent(
+                record.understandingFormedEventID
+            ) {
+                guard understandingEvent.kind == .knowledgeUnderstandingFormed,
+                      understandingEvent.origin == .knowledgeTransition,
+                      understandingEvent.actorID == record.ownerID,
+                      understandingEvent.subjectID == record.ownerID,
+                      case let .knowledge(
+                        recordID, propositionID, status, _
+                      ) = understandingEvent.payload,
+                      recordID == record.basisUnderstandingID.rawValue,
+                      propositionID == record.proposition.propositionID.rawValue,
+                      status == record.interpretation.rawValue else {
+                    return false
+                }
+            }
+            if let revisionEvent = try retainedCausalEvent(
+                record.lastRevisionEventID
+            ) {
+                guard revisionEvent.kind == .knowledgeBeliefRevised,
+                      revisionEvent.origin == .knowledgeTransition,
+                      revisionEvent.actorID == record.ownerID,
+                      revisionEvent.subjectID == record.ownerID,
+                      case let .knowledge(
+                        recordID, propositionID, status, _
+                      ) = revisionEvent.payload,
+                      recordID == record.beliefID.rawValue,
+                      propositionID == record.proposition.propositionID.rawValue,
+                      status == record.stance.rawValue else { return false }
+            }
+            guard let deathEvent = try retainedCausalEvent(record.deathEventID)
+            else { return true }
+            guard deathEvent.kind == .agentDeathFinalized,
+                  deathEvent.origin == .mortalityTransition,
+                  deathEvent.actorID == record.ownerID,
+                  deathEvent.subjectID == record.ownerID,
+                  case let .mortalityDeath(
+                    deathID, agentID, _, deathTick, _, _, _, _, _, _, _, _, _, _
+                  ) = deathEvent.payload else { return false }
+            return deathID == record.deathID.rawValue
+                && agentID == record.ownerID.rawValue
+                && deathTick == record.departedAtTick
         }) else {
             throw AgentSessionError.knowledge(.invalidState("graph relationship"))
         }
@@ -872,6 +1230,9 @@ extension AgentSimulationSession {
               state.understandings.count <= configuration.maximumUnderstandings,
               state.beliefs.count <= configuration.maximumBeliefs,
               state.revisions.count <= configuration.maximumRevisions,
+              (state.departedBeliefs ?? []).count
+                <= configuration.maximumDepartedBeliefs,
+              (state.departedBeliefEvictionCount ?? 0) >= 0,
               [
                   state.evictionCounts.propositions,
                   state.evictionCounts.evidence,
@@ -880,6 +1241,24 @@ extension AgentSimulationSession {
                   state.evictionCounts.revisions,
               ].allSatisfy({ $0 >= 0 }) else {
             throw AgentSessionError.knowledge(.invalidState("global bound"))
+        }
+        let activeAgentIDs = Set(statesById.values.map(\.agentID))
+        let departedBeliefIDs = Set(
+            (state.departedBeliefs ?? []).map(\.beliefID)
+        )
+        guard departedBeliefIDs.isDisjoint(with: state.beliefs.map(\.beliefID)),
+        state.claims.allSatisfy({
+            activeAgentIDs.contains($0.recipientID)
+        }), state.understandings.allSatisfy({
+            activeAgentIDs.contains($0.ownerID)
+        }), state.beliefs.allSatisfy({
+            activeAgentIDs.contains($0.ownerID)
+        }), state.revisions.allSatisfy({
+            activeAgentIDs.contains($0.ownerID)
+        }) else {
+            throw AgentSessionError.knowledge(
+                .invalidState("current cognition requires active owner")
+            )
         }
         let owners = Set(
             state.evidence.map(\.observerID)

@@ -613,9 +613,14 @@ Gate F is **ACQUIRED AND PUBLISHED — REMOTE VERIFIED** at acquisition
 canonical HEAD `14475f4ad5dde9e1063a830ba7e38390cfb4d045`. `CIV-40` remains optional
 tooling and not started. `CIV-41` now has a **LOCAL IMPLEMENTATION/REVIEW
 CANDIDATE — NOT PUBLISHED** from exact canonical baseline
-`96030494c9bed8e356faae16dbd3c66dc9b4b652`; independent senior review and any
-publication remain external. `CIV-42` is not started and Gate G remains
-planned.
+`96030494c9bed8e356faae16dbd3c66dc9b4b652`. Senior review identified a
+departed-cognition lifecycle blocker in candidate
+`1ce9506824775c1b59eaf5c358f0e8d4edd4eab7`; Senior Review Correction 01 is
+implemented locally above that unchanged commit and is pending independent
+re-review. It makes finalized mortality terminalize current cognition and
+retains self-contained terminal belief evidence under a deterministic bound
+without promoting dead-source claims. No approval or publication is claimed.
+`CIV-42` is not started and Gate G remains planned.
 
 | Phase | Requirement | Outcome |
 | --- | --- | --- |
@@ -1700,8 +1705,11 @@ a carrier. Written knowledge is material and destructible. Culture remains
 distributed across individuals.
 
 Local candidate status: `CIV-41` is implemented and validated locally but is
-not senior-review-approved or published. Published progression remains through
-`CIV-39`; `CIV-42` has not started and Gate G has not been evaluated.
+not senior-review-approved or published. Senior Review Correction 01 composes
+current cognition with finalized mortality and separately bounded terminal
+belief evidence; it remains pending independent re-review. Published
+progression remains through `CIV-39`; `CIV-42` has not started and Gate G has
+not been evaluated.
 
 Observable slices:
 

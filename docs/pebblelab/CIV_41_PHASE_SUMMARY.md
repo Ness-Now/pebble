@@ -3,8 +3,10 @@
 ## Verdict and baseline
 
 `CIV-41` is implemented in its bounded V1 contract as a **local
-implementation/review candidate**. It is not published and has not received
-independent senior review. The exact fetched canonical baseline was:
+implementation/review candidate**. Senior Review Correction 01 addresses the
+reviewed candidate's departed-inhabitant lifecycle blocker and is pending
+independent re-review. Neither the correction nor the phase is published or
+senior-review-approved. The exact fetched canonical baseline was:
 
 ```text
 repository: Ness-Now/pebble
@@ -45,6 +47,7 @@ The V1 graph supports:
 - owner-specific understandings whose basis is exactly evidence or a source
   claim;
 - owner-specific current beliefs and bounded causal revision history;
+- immutable, separately bounded terminal belief evidence for departed owners;
 - deterministic disagreement projection for different current positions on
   the same structured question.
 
@@ -68,6 +71,15 @@ cognition or communication kernel:
 5. the existing validated social-verification observation may produce new
    direct evidence and a causal revision for that recipient only.
 
+Senior Review Correction 01 composes this path with the existing mortality
+authority. Only a finalized `agentDeathFinalized` transition terminalizes
+cognition. It removes the departed owner from current beliefs, understandings,
+recipient claims and revisions, then records a self-contained final account of
+each current belief. That account preserves its original structured
+proposition, stance, understanding, evidence-or-claim basis and finalized-death
+boundary without retaining those live graph rows. Mortality remains the sole
+death detector and population-exit owner; CIV-41 adds no lifecycle engine.
+
 The existing no-forwarding rule remains intact. A received claim cannot be
 forwarded. There is no long-distance carrier, automatic household/family/
 settlement sharing, popularity rule or social convergence rule. Observer is a
@@ -82,7 +94,8 @@ repetition cannot reclassify it as a direct observation.
 
 Checkpoint schema advances from 35 to 36 only when a knowledge graph state has
 been initialized. Schema 36 stores the bounded graph, configuration, current
-beliefs, retained provenance, bounded revisions and explicit eviction counts.
+beliefs, retained provenance, bounded revisions, departed-belief history and
+explicit eviction counts.
 Restore validates identities, graph relationships, owner/question uniqueness,
 same-simulation/prior causal boundaries, exact retained causal event kinds and
 payload identities, live provenance closure and every global/per-agent bound
@@ -99,12 +112,20 @@ knowledge acquisition and revision replay through the existing typed
 from the same base reproduces exact durable bytes and record counts; restore
 does not append lifecycle or cognitive transitions.
 
+Senior Review Correction 01 does not advance the schema again. The reviewed
+schema-36 candidate had not been published, and the new optional history fields
+decode its pre-correction shape as empty without fabricating terminal evidence.
+A post-death schema-36 checkpoint retains terminal history, dead-source claim
+attribution and the absence of dead-owner current cognition across exact
+fresh-process re-encoding.
+
 Observer schema advances from 13 to 14 when a CIV-41 graph has been
 initialized. Its read-only snapshot exposes proposition/question identity,
 evidence authority, claim source/recipient, understanding owner and basis,
-current belief stance, revision cause and disagreement. An explicitly disabled
-graph retains and exposes its durable state without accepting new transitions.
-Capturing it changes no graph or causal state.
+current belief stance, revision cause, disagreement, terminal belief evidence
+and terminal-history eviction count. An explicitly disabled graph retains and
+exposes its durable state without accepting new transitions. Capturing it
+changes no graph or causal state.
 
 ## Bounds and compaction
 
@@ -121,8 +142,15 @@ Compaction is deterministic:
 - evidence not required by retained understanding, retained claim or an
   unexpired direct social fact compacts oldest first;
 - unreferenced propositions compact by stable proposition ID;
-- current beliefs never compact, and their complete understanding/claim/
-  evidence chain is pinned;
+- current beliefs never compact while their owner remains active, and their
+  complete understanding/claim/evidence chain is pinned;
+- finalized death removes that current authority and converts each final belief
+  to one self-contained terminal record; terminal records pin no live graph
+  rows;
+- terminal records compact oldest finalized-death tick, then stable death and
+  belief identity, to at most the configured global belief bound;
+- a living recipient's attributed claim may retain a dead source's original
+  evidence, but the source identity and evidence authority remain unchanged;
 - if current authority cannot fit, the new candidate transition fails before
   publication rather than dropping or reclassifying that authority; focused
   proof compares the entire durable session bytes before and after refusal.
@@ -164,6 +192,25 @@ restores and re-encodes the same bytes. Its compact machine-readable evidence
 lines begin `CIV41_DECISIVE`, `CIV41_BOUNDS`, `CIV41_SCALE`, `CIV41_RESTART`,
 `CIV41_REPLAY`, `CIV41_RESTART_WRITE` and `CIV41_RESTART_READ`.
 
+Senior Review Correction 01 adds a second focused product scenario. One
+directly informed source and one claim-informed recipient each die through the
+existing mortality path in separate decisive cases. The proof establishes that
+dead-owner current cognition is absent, terminal direct evidence remains
+direct only for its historical owner, terminal hearsay remains attributed
+hearsay, a living recipient's claim survives its source's death without
+promotion, and unrelated living/remote beliefs do not change. When that last
+recipient later dies through the same mortality path, the now-unneeded live
+source evidence is released while both self-contained terminal accounts remain
+correctly attributed. The scenario also proves
+exact schema-36 fresh-process restart, repeatable exact-once mortality replay,
+read-only Observer 14 projection and 17 real reproduction/knowledge/death
+cycles against a 16-row terminal-history bound. The seventeenth terminal row
+evicts deterministically while a living founder still acquires a new current
+belief; reversing founder registration produces the same knowledge and
+mortality snapshots. Its evidence lines begin `CIV41_CORRECTION_DEATH`,
+`CIV41_CORRECTION_REPLAY`, `CIV41_CORRECTION_CHURN`,
+`CIV41_CORRECTION_RESTART_WRITE` and `CIV41_CORRECTION_RESTART_READ`.
+
 ## Validation contract
 
 The focused deterministic command is:
@@ -172,13 +219,24 @@ The focused deterministic command is:
 scripts/verify-pebblelab-civ41.sh
 ```
 
+Senior Review Correction 01 has its own debug/optimized and two-process
+restart wrapper:
+
+```bash
+scripts/verify-pebblelab-civ41-correction-01.sh
+```
+
 The focused debug and optimized commands each pass 47/47 main assertions plus
 3/3 writer and 5/5 separate-process reader assertions. Focused owning selectors
-pass checkpoint/replay 49/49, Observer 20/20 and population scaling 69/69; the
-schema-36 compatibility updates pass the Gate F Family and Estate selectors
-27/27, 28/28 and 32/32. The canonical suite retains the existing
-social-information coverage. On this local candidate the complete aggregate is
-4,321/4,321 assertions and the canonical repository gate passes 35/35 steps:
+for Senior Review Correction 01 pass 19/19 main assertions plus 3/3 writer and
+4/4 separate-process reader assertions in both debug and optimized builds.
+Focused owning selectors pass mortality 93/93, checkpoint/replay 49/49,
+Observer 20/20 and population scaling 69/69. Applicable Gate F selectors pass
+dynamic fidelity 29/29, Family 27/27, Estate validation 28/28, Estate/Kinship
+causality 32/32, terminal-migration admission 20/20 and terminal-household
+admission 27/27. The canonical suite retains the existing social-information
+coverage. On this local candidate the complete aggregate is 4,340/4,340
+assertions and the canonical repository gate passes 35/35 steps:
 
 ```bash
 scripts/verify-pebblelab.sh

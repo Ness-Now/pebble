@@ -46,8 +46,14 @@ SHA of the documentation commit that contains it.
   **LOCAL IMPLEMENTATION/REVIEW CANDIDATE — NOT PUBLISHED** on branch
   `codex/civ-41-structured-knowledge-belief-graph-v1`, implemented from exact
   published baseline `96030494c9bed8e356faae16dbd3c66dc9b4b652`. Independent
-  senior review and any publication remain external. This does not advance the
-  published program beyond `CIV-39`.
+  senior review found a lifecycle-composition blocker in reviewed candidate
+  `1ce9506824775c1b59eaf5c358f0e8d4edd4eab7`. Senior Review Correction 01 is
+  implemented locally above that unchanged commit and is pending independent
+  re-review. It gives finalized mortality explicit ownership of terminalizing
+  current cognition, retains self-contained historical belief evidence under a
+  deterministic bound and preserves living dead-source claims without
+  promoting their authority. No senior approval or publication is claimed.
+  This does not advance the published program beyond `CIV-39`.
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
 
 Gate F correction history:
@@ -714,6 +720,7 @@ V4-GATE-F-v1 Blocker 11 status: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate F Evaluation 12 status: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 CIV-40 status: OPTIONAL TOOLING — NOT STARTED
 CIV-41 status: LOCAL IMPLEMENTATION/REVIEW CANDIDATE — NOT PUBLISHED
+CIV-41 Senior Review Correction 01: LOCAL CORRECTION — PENDING INDEPENDENT RE-REVIEW
 CIV-42 status: NOT STARTED
 V4-GATE-G-v1 status: PLANNED
 roadmap generation: V4
@@ -1128,8 +1135,14 @@ Gate F is **ACQUIRED AND PUBLISHED — REMOTE VERIFIED** at acquisition
 canonical HEAD `14475f4ad5dde9e1063a830ba7e38390cfb4d045`. `CIV-41` now has a
 **LOCAL IMPLEMENTATION/REVIEW CANDIDATE — NOT PUBLISHED** from exact canonical
 baseline `96030494c9bed8e356faae16dbd3c66dc9b4b652`; independent senior review
-and any publication remain external. `CIV-42` is not started and Gate G remains
-planned.
+found a departed-cognition lifecycle blocker in reviewed candidate
+`1ce9506824775c1b59eaf5c358f0e8d4edd4eab7`. Senior Review Correction 01 is a
+local correction above that unchanged commit: finalized mortality removes
+dead-owner current knowledge authority and retains separately bounded,
+self-contained terminal belief evidence. Dead-source claims held by living
+recipients remain attributed claims and never become direct evidence or shared
+truth. Independent re-review and any publication remain external. `CIV-42` is
+not started and Gate G remains planned.
 `CIV-38` remains **OPTIONAL — NOT STARTED** and is not a prerequisite.
 `CIV-40` remains **OPTIONAL TOOLING — NOT STARTED**. Currency is not a Gate E
 or CIV-39 prerequisite.
