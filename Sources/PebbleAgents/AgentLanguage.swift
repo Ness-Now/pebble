@@ -292,21 +292,12 @@ public struct AgentLanguageLexicalUse:
     public let form: String
 }
 
-/// A bounded historical receipt of the exact CIV-41 belief revision used as
-/// semantic authority for one retained communication. It is validation-only:
-/// CIV-41 remains the owner of live beliefs, propositions and revisions.
-public struct AgentLanguageSemanticAuthorityReceipt:
+/// Language owns only a stable reference to CIV-41's bounded historical
+/// authority. No proposition, stance, understanding or revision snapshot is
+/// duplicated into CIV-42.
+public struct AgentLanguageSemanticAuthorityReference:
     Codable, Equatable, Sendable {
-    public let sourceBeliefID: AgentKnowledgeBeliefID
-    public let sourceOwnerID: AgentID
-    public let proposition: AgentKnowledgeProposition
-    public let stance: AgentKnowledgeBeliefStance
-    public let basisUnderstandingID: AgentKnowledgeUnderstandingID
-    public let beliefFormedAtTick: Int
-    public let beliefUpdatedAtTick: Int
-    public let beliefRevisionCount: Int
-    public let sourceBeliefRevisionEventID: AgentCausalEventID
-    public let digest: String
+    public let authorityID: AgentKnowledgeHistoricalBeliefAuthorityID
 }
 
 /// Exact, bounded grant set for one Language Pack prior operation. Receipts
@@ -333,7 +324,7 @@ public struct AgentLanguageExposureReceipt:
     public let sourceBeliefID: AgentKnowledgeBeliefID
     public let sourceBeliefRevisionEventID: AgentCausalEventID
     public let sourcePropositionID: AgentKnowledgePropositionID
-    public let semanticAuthorityDigest: String
+    public let semanticAuthorityID: AgentKnowledgeHistoricalBeliefAuthorityID
     public let semanticContentDigest: String
     public let lexicalUses: [AgentLanguageLexicalUse]
     public let exposedAssociationIDs: [AgentLanguageAssociationID]
@@ -381,7 +372,7 @@ public struct AgentLanguageCommunication:
     public let recipientID: AgentID
     public let sourceBeliefID: AgentKnowledgeBeliefID
     public let sourceBeliefRevisionEventID: AgentCausalEventID
-    public let semanticAuthority: AgentLanguageSemanticAuthorityReceipt
+    public let semanticAuthority: AgentLanguageSemanticAuthorityReference
     public let semanticContent: AgentLanguageSemanticContent
     public let rendering: AgentLanguageSurfaceRealization
     public let lexicalUses: [AgentLanguageLexicalUse]
@@ -390,6 +381,15 @@ public struct AgentLanguageCommunication:
     public let communicatedAtTick: Int
     public let communicationEventID: AgentCausalEventID
     public let provenanceDigest: String
+}
+
+/// Exact retained causal commitment to the complete current language proof
+/// set. It is refreshed on every proof-set mutation and before this event can
+/// leave the bounded causal ledger.
+public struct AgentLanguageProvenanceBoundary:
+    Codable, Equatable, Sendable {
+    public let eventID: AgentCausalEventID
+    public let digest: String
 }
 
 public struct AgentLanguageRealization: Codable, Equatable, Sendable {
@@ -408,6 +408,8 @@ public struct AgentLanguageGraphState: Codable, Equatable, Sendable {
     public internal(set) var priorSeedReceipts:
         [AgentLanguagePriorSeedReceipt]
     public internal(set) var exposureReceipts: [AgentLanguageExposureReceipt]
+    public internal(set) var provenanceBoundary:
+        AgentLanguageProvenanceBoundary?
     public internal(set) var evictedCommunicationCount: Int
     public internal(set) var retiredLexicalAssociationCount: Int
     public internal(set) var nextCommunicationOrdinal: UInt64
@@ -423,6 +425,7 @@ public struct AgentLanguageGraphState: Codable, Equatable, Sendable {
         communications = []
         priorSeedReceipts = []
         exposureReceipts = []
+        provenanceBoundary = nil
         evictedCommunicationCount = 0
         retiredLexicalAssociationCount = 0
         nextCommunicationOrdinal = 1
@@ -438,6 +441,7 @@ public struct AgentLanguageSnapshot: Codable, Equatable, Sendable {
     public let communications: [AgentLanguageCommunication]
     public let priorSeedReceipts: [AgentLanguagePriorSeedReceipt]
     public let exposureReceipts: [AgentLanguageExposureReceipt]
+    public let provenanceBoundary: AgentLanguageProvenanceBoundary?
     public let evictedCommunicationCount: Int
     public let retiredLexicalAssociationCount: Int
     public let digest: String

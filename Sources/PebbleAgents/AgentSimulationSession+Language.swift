@@ -60,6 +60,7 @@ extension AgentSimulationSession {
                 communications: [],
                 priorSeedReceipts: [],
                 exposureReceipts: [],
+                provenanceBoundary: nil,
                 evictedCommunicationCount: 0,
                 retiredLexicalAssociationCount: 0,
                 digest: AgentLanguageDigest.make("language:none")
@@ -94,6 +95,9 @@ extension AgentSimulationSession {
                 .joined(separator: ";"),
             exposureReceipts.map { exposureReceiptCanonicalText($0) }
                 .joined(separator: ";"),
+            "provenanceBoundary=" + (state.provenanceBoundary.map {
+                "\($0.eventID.rawValue):\($0.digest)"
+            } ?? "none"),
             "evicted=\(state.evictedCommunicationCount)",
             "retired=\(state.retiredLexicalAssociationCount)",
             "next=\(state.nextCommunicationOrdinal)",
@@ -107,6 +111,7 @@ extension AgentSimulationSession {
             communications: communications,
             priorSeedReceipts: priorSeedReceipts,
             exposureReceipts: exposureReceipts,
+            provenanceBoundary: state.provenanceBoundary,
             evictedCommunicationCount: state.evictedCommunicationCount,
             retiredLexicalAssociationCount:
                 state.retiredLexicalAssociationCount,
@@ -229,6 +234,9 @@ extension AgentSimulationSession {
             ))
         }
         candidate.languageState = state
+        try candidate.commitLanguageProvenanceBoundary(
+            causes: [event.eventID]
+        )
         try candidate.validateLanguageStateIfInitialized()
         self = candidate
     }
@@ -291,10 +299,6 @@ extension AgentSimulationSession {
             ownerID: speakerID,
             propositionID: propositionID
         )
-        let semanticAuthority = languageSemanticAuthorityReceipt(
-            belief: sourceBelief,
-            proposition: sourceProposition
-        )
         let lexicalUses: [AgentLanguageLexicalUse]
         let surface: AgentLanguageSurfaceRealization
         switch renderingMode {
@@ -347,6 +351,21 @@ extension AgentSimulationSession {
 
         var candidate = self
         try candidate.prevalidateCausalAppend(count: 1)
+        let historicalAuthority = try candidate
+            .retainKnowledgeHistoricalBeliefAuthority(
+                belief: sourceBelief,
+                proposition: sourceProposition
+            )
+        guard let historicalBoundary = candidate.knowledgeGraphState?
+            .historicalBeliefAuthorityBoundary else {
+            throw AgentSessionError.language(
+                .invalidState("missing CIV-41 historical authority boundary")
+            )
+        }
+        let semanticAuthority = AgentLanguageSemanticAuthorityReference(
+            authorityID: historicalAuthority.authorityID
+        )
+        state = candidate.languageState ?? state
         if state.communications.count >= state.configuration.maximumCommunicationRecords {
             let evicted = state.communications.sorted {
                 if $0.communicatedAtTick != $1.communicatedAtTick {
@@ -379,7 +398,7 @@ extension AgentSimulationSession {
             sourceBeliefID: sourceBelief.beliefID,
             sourceBeliefRevisionEventID: sourceBelief.lastRevisionEventID,
             sourcePropositionID: propositionID,
-            semanticAuthorityDigest: semanticAuthority.digest,
+            semanticAuthorityID: semanticAuthority.authorityID,
             semanticContentDigest: content.digest,
             lexicalUses: orderedLexicalUses,
             exposedAssociationIDs: exposedAssociationIDs,
@@ -389,7 +408,7 @@ extension AgentSimulationSession {
             kind: .languageSemanticCommunicated,
             actorID: speakerID,
             subjectID: recipientID,
-            causes: [sourceBelief.lastRevisionEventID],
+            causes: [historicalBoundary.eventID],
             recordID: communicationID.rawValue,
             propositionID: propositionID,
             status: renderingMode.rawValue,
@@ -406,7 +425,7 @@ extension AgentSimulationSession {
                 sourceBeliefRevisionEventID:
                     sourceBelief.lastRevisionEventID,
                 sourcePropositionID: propositionID,
-                semanticAuthorityDigest: semanticAuthority.digest,
+                semanticAuthorityID: semanticAuthority.authorityID,
                 semanticContentDigest: content.digest,
                 lexicalUses: orderedLexicalUses,
                 exposedAssociationIDs: exposedAssociationIDs,
@@ -494,6 +513,10 @@ extension AgentSimulationSession {
         state.nextCommunicationOrdinal += 1
         compactLanguageProvenanceReceipts(&state)
         candidate.languageState = state
+        try candidate.commitLanguageProvenanceBoundary(
+            causes: [event.eventID]
+        )
+        try candidate.validateKnowledgeGraphStateIfEnabled()
         try candidate.validateLanguageStateIfInitialized()
         self = candidate
         return communication
@@ -502,7 +525,10 @@ extension AgentSimulationSession {
     /// Mortality remains the sole lifecycle owner. CIV-42 only retires the
     /// departed person's current lexical competence inside that transaction;
     /// bounded communication history remains immutable historical evidence.
-    mutating func terminateLanguageForFinalizedDeath(agentID: AgentID) {
+    mutating func terminateLanguageForFinalizedDeath(
+        agentID: AgentID,
+        deathEventID: AgentCausalEventID
+    ) throws {
         guard var state = languageState else { return }
         let before = state.lexicalAssociations.count
         state.lexicalAssociations.removeAll { $0.ownerID == agentID }
@@ -514,6 +540,7 @@ extension AgentSimulationSession {
             state.retiredLexicalAssociationCount = Int.max
         }
         languageState = state
+        try commitLanguageProvenanceBoundary(causes: [deathEventID])
     }
 
     private func languageBeliefAndSemanticContent(
@@ -658,34 +685,6 @@ extension AgentSimulationSession {
         )!
     }
 
-    private func languageSemanticAuthorityReceipt(
-        belief: AgentKnowledgeBelief,
-        proposition: AgentKnowledgeProposition
-    ) -> AgentLanguageSemanticAuthorityReceipt {
-        AgentLanguageSemanticAuthorityReceipt(
-            sourceBeliefID: belief.beliefID,
-            sourceOwnerID: belief.ownerID,
-            proposition: proposition,
-            stance: belief.stance,
-            basisUnderstandingID: belief.basisUnderstandingID,
-            beliefFormedAtTick: belief.formedAtTick,
-            beliefUpdatedAtTick: belief.updatedAtTick,
-            beliefRevisionCount: belief.revisionCount,
-            sourceBeliefRevisionEventID: belief.lastRevisionEventID,
-            digest: languageSemanticAuthorityDigest(
-                sourceBeliefID: belief.beliefID,
-                sourceOwnerID: belief.ownerID,
-                proposition: proposition,
-                stance: belief.stance,
-                basisUnderstandingID: belief.basisUnderstandingID,
-                beliefFormedAtTick: belief.formedAtTick,
-                beliefUpdatedAtTick: belief.updatedAtTick,
-                beliefRevisionCount: belief.revisionCount,
-                sourceBeliefRevisionEventID: belief.lastRevisionEventID
-            )
-        )
-    }
-
     private func compactLanguageProvenanceReceipts(
         _ state: inout AgentLanguageGraphState
     ) {
@@ -706,6 +705,42 @@ extension AgentSimulationSession {
         state.exposureReceipts.removeAll {
             !retainedCommunicationIDs.contains($0.communicationID)
         }
+    }
+
+    mutating func commitLanguageProvenanceBoundary(
+        causes: [AgentCausalEventID]
+    ) throws {
+        guard var state = languageState else { return }
+        let proofCount = state.communications.count
+            + state.priorSeedReceipts.count
+            + state.exposureReceipts.count
+        guard proofCount > 0 else {
+            state.provenanceBoundary = nil
+            languageState = state
+            return
+        }
+        let digest = languageProvenanceBoundaryDigest(state)
+        var boundaryCauses = causes
+        if let previous = state.provenanceBoundary?.eventID {
+            boundaryCauses.append(previous)
+        }
+        let event = try requiredLanguageEvent(
+            kind: .languageInitialized,
+            actorID: nil,
+            subjectID: nil,
+            causes: Array(Set(boundaryCauses)).sorted(),
+            recordID: state.pack.packID.rawValue,
+            propositionID: nil,
+            status: "provenanceBoundary",
+            reason: digest,
+            summary: "language provenance retention boundary"
+        )
+        state = languageState ?? state
+        state.provenanceBoundary = AgentLanguageProvenanceBoundary(
+            eventID: event.eventID,
+            digest: digest
+        )
+        languageState = state
     }
 
     private func ensureLanguageAssociationCapacity(
@@ -834,156 +869,39 @@ extension AgentSimulationSession {
             return nil
         }
 
-        func validateSemanticAuthority(
-            _ receipt: AgentLanguageSemanticAuthorityReceipt,
-            communicatedAtTick: Int
-        ) throws {
-            let canonicalProposition = AgentKnowledgeProposition(
-                subject: receipt.proposition.subject,
-                predicate: receipt.proposition.predicate,
-                value: receipt.proposition.value
-            )
-            let canonicalBeliefID = AgentKnowledgeBeliefID(
-                rawValue: "belief-" + AgentKnowledgeDigest.make(
-                    "\(receipt.sourceOwnerID.rawValue)|"
-                        + receipt.proposition.questionKey
-                )
-            )!
-            let expectedDigest = languageSemanticAuthorityDigest(
-                sourceBeliefID: receipt.sourceBeliefID,
-                sourceOwnerID: receipt.sourceOwnerID,
-                proposition: receipt.proposition,
-                stance: receipt.stance,
-                basisUnderstandingID: receipt.basisUnderstandingID,
-                beliefFormedAtTick: receipt.beliefFormedAtTick,
-                beliefUpdatedAtTick: receipt.beliefUpdatedAtTick,
-                beliefRevisionCount: receipt.beliefRevisionCount,
-                sourceBeliefRevisionEventID:
-                    receipt.sourceBeliefRevisionEventID
-            )
-            guard canonicalProposition == receipt.proposition,
-                  canonicalBeliefID == receipt.sourceBeliefID,
-                  receipt.stance == .accepted,
-                  receipt.beliefFormedAtTick >= 0,
-                  receipt.beliefFormedAtTick
-                    <= receipt.beliefUpdatedAtTick,
-                  receipt.beliefUpdatedAtTick <= communicatedAtTick,
-                  receipt.beliefRevisionCount >= 1,
-                  receipt.sourceBeliefRevisionEventID.simulationID
-                    == simulationID,
-                  receipt.digest == expectedDigest else {
-                throw AgentSessionError.language(
-                    .invalidState("CIV-41 semantic authority receipt")
-                )
+        let historicalAuthorityByID = Dictionary(uniqueKeysWithValues:
+            (knowledge.historicalBeliefAuthorities ?? []).map {
+                ($0.authorityID, $0)
             }
-            if let retainedProposition = knowledge.propositions.first(where: {
-                $0.propositionID == receipt.proposition.propositionID
-            }), retainedProposition != receipt.proposition {
-                throw AgentSessionError.language(
-                    .invalidState("CIV-41 proposition mismatch")
-                )
-            }
-            if let revision = knowledge.revisions.first(where: {
-                $0.revisionEventID == receipt.sourceBeliefRevisionEventID
-            }) {
-                guard revision.beliefID == receipt.sourceBeliefID,
-                      revision.ownerID == receipt.sourceOwnerID,
-                      revision.questionKey == receipt.proposition.questionKey,
-                      revision.propositionID
-                        == receipt.proposition.propositionID,
-                      revision.stance == receipt.stance,
-                      revision.triggerUnderstandingID
-                        == receipt.basisUnderstandingID,
-                      revision.revisedAtTick
-                        == receipt.beliefUpdatedAtTick else {
+        )
+        func validateProvenanceBoundary() throws {
+            let proofCount = state.communications.count
+                + state.priorSeedReceipts.count
+                + state.exposureReceipts.count
+            if proofCount == 0 {
+                guard state.provenanceBoundary == nil else {
                     throw AgentSessionError.language(
-                        .invalidState("CIV-41 retained revision mismatch")
+                        .invalidState("empty language provenance boundary")
                     )
                 }
-            }
-            if let currentBelief = knowledge.beliefs.first(where: {
-                $0.beliefID == receipt.sourceBeliefID
-            }) {
-                guard currentBelief.ownerID == receipt.sourceOwnerID,
-                      currentBelief.questionKey
-                        == receipt.proposition.questionKey,
-                      currentBelief.formedAtTick
-                        == receipt.beliefFormedAtTick,
-                      currentBelief.revisionCount
-                        >= receipt.beliefRevisionCount,
-                      currentBelief.lastRevisionEventID.sequence
-                        >= receipt.sourceBeliefRevisionEventID.sequence else {
-                    throw AgentSessionError.language(
-                        .invalidState("CIV-41 retained belief mismatch")
-                    )
-                }
-                if currentBelief.lastRevisionEventID
-                    == receipt.sourceBeliefRevisionEventID {
-                    guard currentBelief.propositionID
-                            == receipt.proposition.propositionID,
-                          currentBelief.stance == receipt.stance,
-                          currentBelief.basisUnderstandingID
-                            == receipt.basisUnderstandingID,
-                          currentBelief.updatedAtTick
-                            == receipt.beliefUpdatedAtTick,
-                          currentBelief.revisionCount
-                            == receipt.beliefRevisionCount else {
-                        throw AgentSessionError.language(
-                            .invalidState("CIV-41 exact belief mismatch")
-                        )
-                    }
-                }
-            } else if let departed = (knowledge.departedBeliefs ?? []).first(
-                where: { $0.beliefID == receipt.sourceBeliefID }
-            ) {
-                guard departed.ownerID == receipt.sourceOwnerID,
-                      departed.proposition.questionKey
-                        == receipt.proposition.questionKey,
-                      departed.formedAtTick == receipt.beliefFormedAtTick,
-                      departed.revisionCount >= receipt.beliefRevisionCount,
-                      departed.lastRevisionEventID.sequence
-                        >= receipt.sourceBeliefRevisionEventID.sequence else {
-                    throw AgentSessionError.language(
-                        .invalidState("CIV-41 departed belief mismatch")
-                    )
-                }
-                if departed.lastRevisionEventID
-                    == receipt.sourceBeliefRevisionEventID {
-                    guard departed.proposition == receipt.proposition,
-                          departed.stance == receipt.stance,
-                          departed.basisUnderstandingID
-                            == receipt.basisUnderstandingID,
-                          departed.updatedAtTick
-                            == receipt.beliefUpdatedAtTick,
-                          departed.revisionCount
-                            == receipt.beliefRevisionCount else {
-                        throw AgentSessionError.language(
-                            .invalidState("CIV-41 exact departed belief mismatch")
-                        )
-                    }
-                }
-            } else if activeAgentIDs.contains(receipt.sourceOwnerID) {
-                throw AgentSessionError.language(
-                    .invalidState("missing retained CIV-41 belief")
-                )
-            }
-            if let event = try retainedEvent(
-                receipt.sourceBeliefRevisionEventID
-            ) {
-                guard event.kind == .knowledgeBeliefRevised,
-                      event.origin == .knowledgeTransition,
-                      event.actorID == receipt.sourceOwnerID,
-                      event.subjectID == receipt.sourceOwnerID,
-                      case let .knowledge(
-                        recordID, propositionID, status, _
+            } else {
+                guard let boundary = state.provenanceBoundary,
+                      boundary.digest
+                        == languageProvenanceBoundaryDigest(state),
+                      let event = retainedEvents[boundary.eventID],
+                      event.kind == .languageInitialized,
+                      event.origin == .languageTransition,
+                      event.actorID == nil,
+                      event.subjectID == nil,
+                      case let .language(
+                        recordID, propositionID, status, reason
                       ) = event.payload,
-                      recordID == receipt.sourceBeliefID.rawValue,
-                      propositionID
-                        == receipt.proposition.propositionID.rawValue,
-                      status == AgentKnowledgeBeliefStance.accepted.rawValue
-                else {
+                      recordID == state.pack.packID.rawValue,
+                      propositionID == nil,
+                      status == "provenanceBoundary",
+                      reason == boundary.digest else {
                     throw AgentSessionError.language(
-                        .invalidState("CIV-41 source authority event")
+                        .invalidState("language provenance boundary")
                     )
                 }
             }
@@ -1056,13 +974,24 @@ extension AgentSimulationSession {
                 sourceBeliefRevisionEventID:
                     receipt.sourceBeliefRevisionEventID,
                 sourcePropositionID: receipt.sourcePropositionID,
-                semanticAuthorityDigest: receipt.semanticAuthorityDigest,
+                semanticAuthorityID: receipt.semanticAuthorityID,
                 semanticContentDigest: receipt.semanticContentDigest,
                 lexicalUses: receipt.lexicalUses,
                 exposedAssociationIDs: receipt.exposedAssociationIDs,
                 communicatedAtTick: receipt.communicatedAtTick
             )
             guard receipt.speakerID != receipt.recipientID,
+                  let historicalAuthority = historicalAuthorityByID[
+                    receipt.semanticAuthorityID
+                  ],
+                  historicalAuthority.beliefID == receipt.sourceBeliefID,
+                  historicalAuthority.ownerID == receipt.speakerID,
+                  historicalAuthority.sourceBeliefRevisionEventID
+                    == receipt.sourceBeliefRevisionEventID,
+                  historicalAuthority.proposition.propositionID
+                    == receipt.sourcePropositionID,
+                  historicalAuthority.beliefUpdatedAtTick
+                    <= receipt.communicatedAtTick,
                   !receipt.lexicalUses.isEmpty,
                   receipt.lexicalUses
                     == receipt.lexicalUses.sorted(by: { $0.role < $1.role }),
@@ -1092,8 +1021,8 @@ extension AgentSimulationSession {
                         == receipt.sourceBeliefRevisionEventID,
                       communication.semanticContent.sourcePropositionID
                         == receipt.sourcePropositionID,
-                      communication.semanticAuthority.digest
-                        == receipt.semanticAuthorityDigest,
+                      communication.semanticAuthority.authorityID
+                        == receipt.semanticAuthorityID,
                       communication.semanticContent.digest
                         == receipt.semanticContentDigest,
                       communication.lexicalUses == receipt.lexicalUses,
@@ -1114,8 +1043,10 @@ extension AgentSimulationSession {
                       event.origin == .languageTransition,
                       event.actorID == receipt.speakerID,
                       event.subjectID == receipt.recipientID,
-                      event.causes
-                        == [receipt.sourceBeliefRevisionEventID],
+                      event.causes.count == 1,
+                      event.causes[0].simulationID == simulationID,
+                      event.causes[0].sequence
+                        < receipt.communicationEventID.sequence,
                       case let .language(
                         recordID, propositionID, status, reason
                       ) = event.payload,
@@ -1290,6 +1221,13 @@ extension AgentSimulationSession {
         }
 
         for communication in state.communications {
+            guard let historicalAuthority = historicalAuthorityByID[
+                communication.semanticAuthority.authorityID
+            ] else {
+                throw AgentSessionError.language(
+                    .invalidState("missing CIV-41 historical authority")
+                )
+            }
             let rebuiltContent = AgentLanguageSemanticContent(
                 sourcePropositionID:
                     communication.semanticContent.sourcePropositionID,
@@ -1297,11 +1235,7 @@ extension AgentSimulationSession {
                 senses: communication.semanticContent.senses
             )
             let expectedSemanticContent = try languageSemanticContent(
-                for: communication.semanticAuthority.proposition
-            )
-            try validateSemanticAuthority(
-                communication.semanticAuthority,
-                communicatedAtTick: communication.communicatedAtTick
+                for: historicalAuthority.proposition
             )
             let expectedProvenanceDigest = languageExposureDigest(
                 communicationID: communication.communicationID,
@@ -1312,8 +1246,8 @@ extension AgentSimulationSession {
                     communication.sourceBeliefRevisionEventID,
                 sourcePropositionID:
                     communication.semanticContent.sourcePropositionID,
-                semanticAuthorityDigest:
-                    communication.semanticAuthority.digest,
+                semanticAuthorityID:
+                    communication.semanticAuthority.authorityID,
                 semanticContentDigest: communication.semanticContent.digest,
                 lexicalUses: communication.lexicalUses,
                 exposedAssociationIDs:
@@ -1322,12 +1256,15 @@ extension AgentSimulationSession {
             )
             guard rebuiltContent == communication.semanticContent,
                   expectedSemanticContent == communication.semanticContent,
-                  communication.semanticAuthority.sourceBeliefID
+                  historicalAuthority.beliefID
                     == communication.sourceBeliefID,
-                  communication.semanticAuthority.sourceOwnerID
-                    == communication.speakerID,
-                  communication.semanticAuthority.sourceBeliefRevisionEventID
+                  historicalAuthority.ownerID == communication.speakerID,
+                  historicalAuthority.sourceBeliefRevisionEventID
                     == communication.sourceBeliefRevisionEventID,
+                  historicalAuthority.proposition.propositionID
+                    == communication.semanticContent.sourcePropositionID,
+                  historicalAuthority.beliefUpdatedAtTick
+                    <= communication.communicatedAtTick,
                   communication.speakerID != communication.recipientID,
                   AgentID(rawValue: communication.speakerID.rawValue) != nil,
                   AgentID(rawValue: communication.recipientID.rawValue) != nil,
@@ -1399,8 +1336,10 @@ extension AgentSimulationSession {
                       event.origin == .languageTransition,
                       event.actorID == communication.speakerID,
                       event.subjectID == communication.recipientID,
-                      event.causes
-                        == [communication.sourceBeliefRevisionEventID],
+                      event.causes.count == 1,
+                      event.causes[0].simulationID == simulationID,
+                      event.causes[0].sequence
+                        < communication.communicationEventID.sequence,
                       case let .language(
                         recordID, propositionID, status, reason
                       ) = event.payload,
@@ -1418,6 +1357,7 @@ extension AgentSimulationSession {
                 }
             }
         }
+        try validateProvenanceBoundary()
     }
 }
 
@@ -1435,7 +1375,7 @@ private func communicationCanonicalText(
         + "\(communication.speakerID.rawValue)|\(communication.recipientID.rawValue)|"
         + "\(communication.sourceBeliefID.rawValue)|"
         + "\(communication.sourceBeliefRevisionEventID.rawValue)|"
-        + "\(communication.semanticAuthority.digest)|"
+        + "\(communication.semanticAuthority.authorityID.rawValue)|"
         + "\(communication.semanticContent.digest)|\(rendering)|"
         + communication.lexicalUses.map {
             "\($0.role.rawValue):\($0.senseID.rawValue):\($0.form)"
@@ -1473,34 +1413,6 @@ private func associationCanonicalText(
     return fields.joined(separator: "|")
 }
 
-private func languageSemanticAuthorityDigest(
-    sourceBeliefID: AgentKnowledgeBeliefID,
-    sourceOwnerID: AgentID,
-    proposition: AgentKnowledgeProposition,
-    stance: AgentKnowledgeBeliefStance,
-    basisUnderstandingID: AgentKnowledgeUnderstandingID,
-    beliefFormedAtTick: Int,
-    beliefUpdatedAtTick: Int,
-    beliefRevisionCount: Int,
-    sourceBeliefRevisionEventID: AgentCausalEventID
-) -> String {
-    AgentLanguageDigest.make([
-        "semantic-authority",
-        sourceBeliefID.rawValue,
-        sourceOwnerID.rawValue,
-        proposition.propositionID.rawValue,
-        proposition.subject.canonicalText,
-        proposition.predicate.rawValue,
-        proposition.value.canonicalText,
-        stance.rawValue,
-        basisUnderstandingID.rawValue,
-        String(beliefFormedAtTick),
-        String(beliefUpdatedAtTick),
-        String(beliefRevisionCount),
-        sourceBeliefRevisionEventID.rawValue,
-    ].joined(separator: "|"))
-}
-
 private func languagePriorSeedDigest(
     ownerID: AgentID,
     packID: AgentLanguagePackID,
@@ -1523,7 +1435,7 @@ private func languageExposureDigest(
     sourceBeliefID: AgentKnowledgeBeliefID,
     sourceBeliefRevisionEventID: AgentCausalEventID,
     sourcePropositionID: AgentKnowledgePropositionID,
-    semanticAuthorityDigest: String,
+    semanticAuthorityID: AgentKnowledgeHistoricalBeliefAuthorityID,
     semanticContentDigest: String,
     lexicalUses: [AgentLanguageLexicalUse],
     exposedAssociationIDs: [AgentLanguageAssociationID],
@@ -1537,7 +1449,7 @@ private func languageExposureDigest(
         sourceBeliefID.rawValue,
         sourceBeliefRevisionEventID.rawValue,
         sourcePropositionID.rawValue,
-        semanticAuthorityDigest,
+        semanticAuthorityID.rawValue,
         semanticContentDigest,
         lexicalUses.map {
             "\($0.role.rawValue):\($0.senseID.rawValue):\($0.form)"
@@ -1573,7 +1485,7 @@ private func exposureReceiptCanonicalText(
         receipt.sourceBeliefID.rawValue,
         receipt.sourceBeliefRevisionEventID.rawValue,
         receipt.sourcePropositionID.rawValue,
-        receipt.semanticAuthorityDigest,
+        receipt.semanticAuthorityID.rawValue,
         receipt.semanticContentDigest,
         receipt.lexicalUses.map {
             "\($0.role.rawValue):\($0.senseID.rawValue):\($0.form)"
@@ -1583,4 +1495,22 @@ private func exposureReceiptCanonicalText(
         receipt.communicationEventID.rawValue,
         receipt.digest,
     ].joined(separator: "|")
+}
+
+func languageProvenanceBoundaryDigest(
+    _ state: AgentLanguageGraphState
+) -> String {
+    let communications = state.communications.sorted {
+        $0.communicationID < $1.communicationID
+    }.map(communicationCanonicalText).joined(separator: ";")
+    let seeds = state.priorSeedReceipts.sorted {
+        $0.seedID < $1.seedID
+    }.map(priorSeedReceiptCanonicalText).joined(separator: ";")
+    let exposures = state.exposureReceipts.sorted {
+        $0.communicationID < $1.communicationID
+    }.map(exposureReceiptCanonicalText).joined(separator: ";")
+    return AgentLanguageDigest.make(
+        "language-provenance-boundary-v1|communications=\(communications)"
+            + "|seeds=\(seeds)|exposures=\(exposures)"
+    )
 }

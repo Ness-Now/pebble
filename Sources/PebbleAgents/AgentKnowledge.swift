@@ -149,6 +149,18 @@ public struct AgentKnowledgeRevisionID:
     public static func < (lhs: Self, rhs: Self) -> Bool { lhs.rawValue < rhs.rawValue }
 }
 
+public struct AgentKnowledgeHistoricalBeliefAuthorityID:
+    RawRepresentable, Codable, Hashable, Comparable, Sendable {
+    public let rawValue: String
+    public init?(rawValue: String) {
+        guard isValidKnowledgeIdentifier(rawValue) else { return nil }
+        self.rawValue = rawValue
+    }
+    public static func < (lhs: Self, rhs: Self) -> Bool {
+        lhs.rawValue < rhs.rawValue
+    }
+}
+
 public enum AgentKnowledgeEntityKind: String, Codable, CaseIterable, Sendable {
     case agent
     case settlement
@@ -322,6 +334,33 @@ public struct AgentKnowledgeBeliefRevision: Codable, Equatable, Sendable {
     public let revisionEventID: AgentCausalEventID
 }
 
+/// CIV-41-owned bounded historical proof that one exact accepted belief
+/// revision existed. Other domains may retain this ID, but never the belief
+/// snapshot itself. The current causal authority boundary authenticates the
+/// complete retained set after original revision events leave the FIFO suffix.
+public struct AgentKnowledgeHistoricalBeliefAuthority:
+    Codable, Equatable, Sendable {
+    public let authorityID: AgentKnowledgeHistoricalBeliefAuthorityID
+    public let beliefID: AgentKnowledgeBeliefID
+    public let ownerID: AgentID
+    public let proposition: AgentKnowledgeProposition
+    public let stance: AgentKnowledgeBeliefStance
+    public let basisUnderstandingID: AgentKnowledgeUnderstandingID
+    public let beliefFormedAtTick: Int
+    public let beliefUpdatedAtTick: Int
+    public let beliefRevisionCount: Int
+    public let sourceBeliefRevisionEventID: AgentCausalEventID
+    public let digest: String
+}
+
+/// One exact retained causal event commits the entire bounded historical
+/// authority set. It is refreshed before leaving the causal FIFO window.
+public struct AgentKnowledgeHistoricalAuthorityBoundary:
+    Codable, Equatable, Sendable {
+    public let eventID: AgentCausalEventID
+    public let digest: String
+}
+
 public enum AgentKnowledgeDepartedBeliefBasis:
     Codable, Equatable, Sendable {
     case evidence(
@@ -408,6 +447,13 @@ public struct AgentKnowledgeGraphState: Codable, Equatable, Sendable {
     /// correction schema-36 candidate. New graphs always initialize it.
     public internal(set) var departedBeliefs: [AgentKnowledgeDepartedBelief]?
     public internal(set) var departedBeliefEvictionCount: Int?
+    /// Optional so published schema-36 checkpoints remain byte-compatible.
+    /// CIV-42 initializes these only when it requests historical authority.
+    public internal(set) var historicalBeliefAuthorities:
+        [AgentKnowledgeHistoricalBeliefAuthority]?
+    public internal(set) var historicalBeliefAuthorityBoundary:
+        AgentKnowledgeHistoricalAuthorityBoundary?
+    public internal(set) var historicalBeliefAuthorityEvictionCount: Int?
 
     init(configuration: AgentKnowledgeConfiguration) {
         enabled = true
@@ -421,6 +467,9 @@ public struct AgentKnowledgeGraphState: Codable, Equatable, Sendable {
         evictionCounts = AgentKnowledgeEvictionCounts()
         departedBeliefs = []
         departedBeliefEvictionCount = 0
+        historicalBeliefAuthorities = nil
+        historicalBeliefAuthorityBoundary = nil
+        historicalBeliefAuthorityEvictionCount = nil
     }
 }
 
@@ -444,6 +493,11 @@ public struct AgentKnowledgeSnapshot: Codable, Equatable, Sendable {
     public let revisions: [AgentKnowledgeBeliefRevision]
     public let departedBeliefs: [AgentKnowledgeDepartedBelief]
     public let departedBeliefEvictionCount: Int
+    public let historicalBeliefAuthorities:
+        [AgentKnowledgeHistoricalBeliefAuthority]
+    public let historicalBeliefAuthorityBoundary:
+        AgentKnowledgeHistoricalAuthorityBoundary?
+    public let historicalBeliefAuthorityEvictionCount: Int
     public let disagreements: [AgentKnowledgeDisagreement]
     public let evictionCounts: AgentKnowledgeEvictionCounts
     public let digest: String

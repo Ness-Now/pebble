@@ -56,7 +56,11 @@ extension AgentSimulationSession {
                 configuration: nil,
                 propositions: [], evidence: [], claims: [], understandings: [],
                 beliefs: [], revisions: [], departedBeliefs: [],
-                departedBeliefEvictionCount: 0, disagreements: [],
+                departedBeliefEvictionCount: 0,
+                historicalBeliefAuthorities: [],
+                historicalBeliefAuthorityBoundary: nil,
+                historicalBeliefAuthorityEvictionCount: 0,
+                disagreements: [],
                 evictionCounts: AgentKnowledgeEvictionCounts(),
                 digest: AgentKnowledgeDigest.make("knowledge:none")
             )
@@ -81,6 +85,10 @@ extension AgentSimulationSession {
             if $0.deathID != $1.deathID { return $0.deathID < $1.deathID }
             return $0.beliefID < $1.beliefID
         }
+        let historicalAuthorities =
+            (state.historicalBeliefAuthorities ?? []).sorted {
+                $0.authorityID < $1.authorityID
+            }
         let grouped = Dictionary(grouping: beliefs, by: \.questionKey)
         let disagreements: [AgentKnowledgeDisagreement] = grouped.keys.sorted().compactMap { key in
             let rows = (grouped[key] ?? []).sorted { $0.ownerID < $1.ownerID }
@@ -96,7 +104,7 @@ extension AgentSimulationSession {
                 stances: rows.map(\.stance)
             )
         }
-        let canonical = [
+        var canonicalRows = [
             "enabled=\(state.enabled ? 1 : 0)",
             propositions.map {
                 "p|\($0.propositionID.rawValue)|\($0.questionKey)|\($0.value.canonicalText)"
@@ -121,7 +129,25 @@ extension AgentSimulationSession {
             }.joined(separator: ";"),
             "departedEvicted=\(state.departedBeliefEvictionCount ?? 0)",
             "evicted=\(state.evictionCounts.propositions),\(state.evictionCounts.evidence),\(state.evictionCounts.claims),\(state.evictionCounts.understandings),\(state.evictionCounts.revisions)",
-        ].joined(separator: "|")
+        ]
+        if state.historicalBeliefAuthorities != nil {
+            canonicalRows.append(historicalAuthorities.map {
+                historicalBeliefAuthorityCanonicalText($0)
+            }.joined(separator: ";"))
+            canonicalRows.append(
+                "historicalAuthorityBoundary="
+                    + (state.historicalBeliefAuthorityBoundary.map {
+                        "\($0.eventID.rawValue):\($0.digest)"
+                    } ?? "none")
+            )
+            canonicalRows.append(
+                "historicalAuthorityEvicted="
+                    + String(
+                        state.historicalBeliefAuthorityEvictionCount ?? 0
+                    )
+            )
+        }
+        let canonical = canonicalRows.joined(separator: "|")
         return AgentKnowledgeSnapshot(
             enabled: state.enabled,
             tick: tick,
@@ -135,6 +161,11 @@ extension AgentSimulationSession {
             departedBeliefs: departedBeliefs,
             departedBeliefEvictionCount:
                 state.departedBeliefEvictionCount ?? 0,
+            historicalBeliefAuthorities: historicalAuthorities,
+            historicalBeliefAuthorityBoundary:
+                state.historicalBeliefAuthorityBoundary,
+            historicalBeliefAuthorityEvictionCount:
+                state.historicalBeliefAuthorityEvictionCount ?? 0,
             disagreements: disagreements,
             evictionCounts: state.evictionCounts,
             digest: AgentKnowledgeDigest.make(canonical)
@@ -428,6 +459,139 @@ extension AgentSimulationSession {
             revisedAtTick: tick,
             revisionEventID: event.eventID
         ))
+    }
+
+    /// CIV-41 issues and owns the bounded historical epistemic authority used
+    /// by other domains. The caller receives only the stable authority ID.
+    mutating func retainKnowledgeHistoricalBeliefAuthority(
+        belief: AgentKnowledgeBelief,
+        proposition: AgentKnowledgeProposition
+    ) throws -> AgentKnowledgeHistoricalBeliefAuthority {
+        guard var state = knowledgeGraphState else {
+            throw AgentSessionError.knowledge(.disabled)
+        }
+        guard belief.ownerID == statesById[belief.ownerID.rawValue]?.agentID,
+              belief.propositionID == proposition.propositionID,
+              belief.stance == .accepted,
+              state.beliefs.contains(where: { $0 == belief }),
+              state.propositions.contains(where: { $0 == proposition }) else {
+            throw AgentSessionError.knowledge(
+                .invalidState("historical authority source")
+            )
+        }
+        let digest = knowledgeHistoricalBeliefAuthorityDigest(
+            beliefID: belief.beliefID,
+            ownerID: belief.ownerID,
+            proposition: proposition,
+            stance: belief.stance,
+            basisUnderstandingID: belief.basisUnderstandingID,
+            beliefFormedAtTick: belief.formedAtTick,
+            beliefUpdatedAtTick: belief.updatedAtTick,
+            beliefRevisionCount: belief.revisionCount,
+            sourceBeliefRevisionEventID: belief.lastRevisionEventID
+        )
+        let authorityID = AgentKnowledgeHistoricalBeliefAuthorityID(
+            rawValue: "historical-belief-authority-" + digest
+        )!
+        if let existing = (state.historicalBeliefAuthorities ?? []).first(
+            where: { $0.authorityID == authorityID }
+        ) {
+            return existing
+        }
+        let authority = AgentKnowledgeHistoricalBeliefAuthority(
+            authorityID: authorityID,
+            beliefID: belief.beliefID,
+            ownerID: belief.ownerID,
+            proposition: proposition,
+            stance: belief.stance,
+            basisUnderstandingID: belief.basisUnderstandingID,
+            beliefFormedAtTick: belief.formedAtTick,
+            beliefUpdatedAtTick: belief.updatedAtTick,
+            beliefRevisionCount: belief.revisionCount,
+            sourceBeliefRevisionEventID: belief.lastRevisionEventID,
+            digest: digest
+        )
+        var authorities = state.historicalBeliefAuthorities ?? []
+        authorities.append(authority)
+        var pinned = referencedKnowledgeHistoricalAuthorityIDs()
+        pinned.insert(authorityID)
+        let excess = max(
+            0, authorities.count - state.configuration.maximumRevisions
+        )
+        if excess > 0 {
+            let removable = authorities.indices.filter {
+                !pinned.contains(authorities[$0].authorityID)
+            }.sorted {
+                let lhs = authorities[$0]
+                let rhs = authorities[$1]
+                if lhs.beliefUpdatedAtTick != rhs.beliefUpdatedAtTick {
+                    return lhs.beliefUpdatedAtTick < rhs.beliefUpdatedAtTick
+                }
+                return lhs.authorityID < rhs.authorityID
+            }
+            guard removable.count >= excess else {
+                throw AgentSessionError.knowledge(
+                    .capacityReached("historical belief authorities")
+                )
+            }
+            for index in removable.prefix(excess).sorted(by: >) {
+                authorities.remove(at: index)
+            }
+        }
+        state.historicalBeliefAuthorities = authorities
+        state.historicalBeliefAuthorityEvictionCount =
+            (state.historicalBeliefAuthorityEvictionCount ?? 0) + excess
+        knowledgeGraphState = state
+        try commitKnowledgeHistoricalAuthorityBoundary(
+            causes: [belief.lastRevisionEventID]
+        )
+        return authority
+    }
+
+    func referencedKnowledgeHistoricalAuthorityIDs()
+        -> Set<AgentKnowledgeHistoricalBeliefAuthorityID> {
+        guard let language = languageState else { return [] }
+        var result = Set(language.communications.map {
+            $0.semanticAuthority.authorityID
+        })
+        result.formUnion(language.exposureReceipts.map(\.semanticAuthorityID))
+        return result
+    }
+
+    mutating func commitKnowledgeHistoricalAuthorityBoundary(
+        causes: [AgentCausalEventID]
+    ) throws {
+        guard var state = knowledgeGraphState,
+              state.historicalBeliefAuthorities != nil else { return }
+        let authorities = state.historicalBeliefAuthorities ?? []
+        guard !authorities.isEmpty else {
+            state.historicalBeliefAuthorityBoundary = nil
+            knowledgeGraphState = state
+            return
+        }
+        let digest = knowledgeHistoricalAuthorityBoundaryDigest(authorities)
+        var boundaryCauses = causes
+        if let previous = state.historicalBeliefAuthorityBoundary?.eventID {
+            boundaryCauses.append(previous)
+        }
+        let event = try requiredKnowledgeEvent(
+            kind: .knowledgeGraphInitialized,
+            actorID: nil,
+            subjectID: nil,
+            causes: Array(Set(boundaryCauses)).sorted(),
+            recordID: "historical-belief-authorities",
+            propositionID: nil,
+            status: "retentionBoundary",
+            reason: digest,
+            summary: "knowledge historical belief authority boundary"
+        )
+        state = knowledgeGraphState ?? state
+        state.historicalBeliefAuthorityBoundary =
+            AgentKnowledgeHistoricalAuthorityBoundary(
+                eventID: event.eventID,
+                digest: digest
+            )
+        knowledgeGraphState = state
     }
 
     /// Composes CIV-41 with the existing mortality authority. The death event
@@ -814,6 +978,9 @@ extension AgentSimulationSession {
               unique(state.beliefs.map(\.beliefID)),
               unique(state.revisions.map(\.revisionID)),
               unique((state.departedBeliefs ?? []).map(\.beliefID)),
+              unique((state.historicalBeliefAuthorities ?? []).map(
+                  \.authorityID
+              )),
               unique(state.beliefs.map {
                   "\($0.ownerID.rawValue)|\($0.questionKey)"
               }) else {
@@ -851,6 +1018,189 @@ extension AgentSimulationSession {
                 )
             }
             return nil
+        }
+        let historicalAuthorities = state.historicalBeliefAuthorities ?? []
+        let historicalAuthorityByID = Dictionary(uniqueKeysWithValues:
+            historicalAuthorities.map { ($0.authorityID, $0) }
+        )
+        guard referencedKnowledgeHistoricalAuthorityIDs().isSubset(
+                of: Set(historicalAuthorityByID.keys)
+              ),
+              historicalAuthorities.count <= configuration.maximumRevisions,
+              (state.historicalBeliefAuthorityEvictionCount ?? 0) >= 0 else {
+            throw AgentSessionError.knowledge(
+                .invalidState("historical authority bound or reference")
+            )
+        }
+        if historicalAuthorities.isEmpty {
+            guard state.historicalBeliefAuthorityBoundary == nil else {
+                throw AgentSessionError.knowledge(
+                    .invalidState("empty historical authority boundary")
+                )
+            }
+        } else {
+            guard let boundary = state.historicalBeliefAuthorityBoundary,
+                  boundary.digest
+                    == knowledgeHistoricalAuthorityBoundaryDigest(
+                        historicalAuthorities
+                    ),
+                  let event = retainedEventByID[boundary.eventID],
+                  event.kind == .knowledgeGraphInitialized,
+                  event.origin == .knowledgeTransition,
+                  event.actorID == nil,
+                  event.subjectID == nil,
+                  case let .knowledge(
+                    recordID, propositionID, status, reason
+                  ) = event.payload,
+                  recordID == "historical-belief-authorities",
+                  propositionID == nil,
+                  status == "retentionBoundary",
+                  reason == boundary.digest else {
+                throw AgentSessionError.knowledge(
+                    .invalidState("historical authority boundary")
+                )
+            }
+        }
+        for authority in historicalAuthorities {
+            let canonicalProposition = AgentKnowledgeProposition(
+                subject: authority.proposition.subject,
+                predicate: authority.proposition.predicate,
+                value: authority.proposition.value
+            )
+            let canonicalBeliefID = AgentKnowledgeBeliefID(
+                rawValue: "belief-" + AgentKnowledgeDigest.make(
+                    "\(authority.ownerID.rawValue)|"
+                        + authority.proposition.questionKey
+                )
+            )!
+            let expectedDigest = knowledgeHistoricalBeliefAuthorityDigest(
+                beliefID: authority.beliefID,
+                ownerID: authority.ownerID,
+                proposition: authority.proposition,
+                stance: authority.stance,
+                basisUnderstandingID: authority.basisUnderstandingID,
+                beliefFormedAtTick: authority.beliefFormedAtTick,
+                beliefUpdatedAtTick: authority.beliefUpdatedAtTick,
+                beliefRevisionCount: authority.beliefRevisionCount,
+                sourceBeliefRevisionEventID:
+                    authority.sourceBeliefRevisionEventID
+            )
+            let expectedID = AgentKnowledgeHistoricalBeliefAuthorityID(
+                rawValue: "historical-belief-authority-" + expectedDigest
+            )!
+            guard canonicalProposition == authority.proposition,
+                  canonicalBeliefID == authority.beliefID,
+                  expectedID == authority.authorityID,
+                  expectedDigest == authority.digest,
+                  authority.stance == .accepted,
+                  authority.beliefFormedAtTick >= 0,
+                  authority.beliefFormedAtTick
+                    <= authority.beliefUpdatedAtTick,
+                  authority.beliefUpdatedAtTick <= tick,
+                  authority.beliefRevisionCount >= 1,
+                  authority.sourceBeliefRevisionEventID.simulationID
+                    == simulationID,
+                  authority.sourceBeliefRevisionEventID.sequence.rawValue
+                    <= causalLedger.latestSequence else {
+                throw AgentSessionError.knowledge(
+                    .invalidState("historical belief authority")
+                )
+            }
+            if let exactEvent = retainedEventByID[
+                authority.sourceBeliefRevisionEventID
+            ] {
+                guard exactEvent.kind == .knowledgeBeliefRevised,
+                      exactEvent.origin == .knowledgeTransition,
+                      exactEvent.actorID == authority.ownerID,
+                      exactEvent.subjectID == authority.ownerID,
+                      case let .knowledge(
+                        recordID, propositionID, status, _
+                      ) = exactEvent.payload,
+                      recordID == authority.beliefID.rawValue,
+                      propositionID
+                        == authority.proposition.propositionID.rawValue,
+                      status == authority.stance.rawValue else {
+                    throw AgentSessionError.knowledge(
+                        .invalidState("historical authority revision event")
+                    )
+                }
+            }
+            if let retainedProposition = propositionByID[
+                authority.proposition.propositionID
+            ], retainedProposition != authority.proposition {
+                throw AgentSessionError.knowledge(
+                    .invalidState("historical authority proposition")
+                )
+            }
+            if let revision = state.revisions.first(where: {
+                $0.revisionEventID
+                    == authority.sourceBeliefRevisionEventID
+            }) {
+                guard revision.beliefID == authority.beliefID,
+                      revision.ownerID == authority.ownerID,
+                      revision.questionKey
+                        == authority.proposition.questionKey,
+                      revision.propositionID
+                        == authority.proposition.propositionID,
+                      revision.stance == authority.stance,
+                      revision.triggerUnderstandingID
+                        == authority.basisUnderstandingID,
+                      revision.revisedAtTick
+                        == authority.beliefUpdatedAtTick else {
+                    throw AgentSessionError.knowledge(
+                        .invalidState("historical authority revision")
+                    )
+                }
+            }
+            if let current = state.beliefs.first(where: {
+                $0.beliefID == authority.beliefID
+            }) {
+                guard current.ownerID == authority.ownerID,
+                      current.questionKey
+                        == authority.proposition.questionKey,
+                      current.formedAtTick
+                        == authority.beliefFormedAtTick,
+                      current.revisionCount
+                        >= authority.beliefRevisionCount,
+                      current.lastRevisionEventID.sequence
+                        >= authority.sourceBeliefRevisionEventID.sequence else {
+                    throw AgentSessionError.knowledge(
+                        .invalidState("historical authority current belief")
+                    )
+                }
+                if current.lastRevisionEventID
+                    == authority.sourceBeliefRevisionEventID {
+                    guard current.propositionID
+                            == authority.proposition.propositionID,
+                          current.stance == authority.stance,
+                          current.basisUnderstandingID
+                            == authority.basisUnderstandingID,
+                          current.updatedAtTick
+                            == authority.beliefUpdatedAtTick,
+                          current.revisionCount
+                            == authority.beliefRevisionCount else {
+                        throw AgentSessionError.knowledge(
+                            .invalidState("historical authority exact belief")
+                        )
+                    }
+                }
+            } else if let departed = (state.departedBeliefs ?? []).first(
+                where: { $0.beliefID == authority.beliefID }
+            ) {
+                guard departed.ownerID == authority.ownerID,
+                      departed.proposition.questionKey
+                        == authority.proposition.questionKey,
+                      departed.formedAtTick
+                        == authority.beliefFormedAtTick,
+                      departed.revisionCount
+                        >= authority.beliefRevisionCount,
+                      departed.lastRevisionEventID.sequence
+                        >= authority.sourceBeliefRevisionEventID.sequence else {
+                    throw AgentSessionError.knowledge(
+                        .invalidState("historical authority departed belief")
+                    )
+                }
+            }
         }
         func retainedKnowledgeEventMatches(
             _ eventID: AgentCausalEventID,
@@ -1284,4 +1634,65 @@ extension AgentSimulationSession {
             }
         }
     }
+}
+
+func historicalBeliefAuthorityCanonicalText(
+    _ authority: AgentKnowledgeHistoricalBeliefAuthority
+) -> String {
+    [
+        "historical-belief-authority",
+        authority.authorityID.rawValue,
+        authority.beliefID.rawValue,
+        authority.ownerID.rawValue,
+        authority.proposition.propositionID.rawValue,
+        authority.proposition.subject.canonicalText,
+        authority.proposition.predicate.rawValue,
+        authority.proposition.value.canonicalText,
+        authority.stance.rawValue,
+        authority.basisUnderstandingID.rawValue,
+        String(authority.beliefFormedAtTick),
+        String(authority.beliefUpdatedAtTick),
+        String(authority.beliefRevisionCount),
+        authority.sourceBeliefRevisionEventID.rawValue,
+        authority.digest,
+    ].joined(separator: "|")
+}
+
+func knowledgeHistoricalBeliefAuthorityDigest(
+    beliefID: AgentKnowledgeBeliefID,
+    ownerID: AgentID,
+    proposition: AgentKnowledgeProposition,
+    stance: AgentKnowledgeBeliefStance,
+    basisUnderstandingID: AgentKnowledgeUnderstandingID,
+    beliefFormedAtTick: Int,
+    beliefUpdatedAtTick: Int,
+    beliefRevisionCount: Int,
+    sourceBeliefRevisionEventID: AgentCausalEventID
+) -> String {
+    AgentKnowledgeDigest.make([
+        "historical-belief-authority-v1",
+        beliefID.rawValue,
+        ownerID.rawValue,
+        proposition.propositionID.rawValue,
+        proposition.subject.canonicalText,
+        proposition.predicate.rawValue,
+        proposition.value.canonicalText,
+        stance.rawValue,
+        basisUnderstandingID.rawValue,
+        String(beliefFormedAtTick),
+        String(beliefUpdatedAtTick),
+        String(beliefRevisionCount),
+        sourceBeliefRevisionEventID.rawValue,
+    ].joined(separator: "|"))
+}
+
+func knowledgeHistoricalAuthorityBoundaryDigest(
+    _ authorities: [AgentKnowledgeHistoricalBeliefAuthority]
+) -> String {
+    AgentKnowledgeDigest.make(
+        "historical-belief-authority-boundary-v1|"
+            + authorities.sorted { $0.authorityID < $1.authorityID }.map {
+                historicalBeliefAuthorityCanonicalText($0)
+            }.joined(separator: ";")
+    )
 }

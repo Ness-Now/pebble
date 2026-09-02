@@ -984,7 +984,10 @@ extension AgentSimulationSession {
                 deathEventID: deathEvent.eventID,
                 at: mortalityTick
             )
-            terminateLanguageForFinalizedDeath(agentID: item.agentID)
+            try terminateLanguageForFinalizedDeath(
+                agentID: item.agentID,
+                deathEventID: deathEvent.eventID
+            )
             try bindEstateToFinalizedDeath(
                 deathID: deathID,
                 deathEventID: deathEvent.eventID

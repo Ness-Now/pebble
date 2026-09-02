@@ -23,6 +23,8 @@ extension AgentSimulationSession {
         let originalLedger = causalLedger
         let originalEcology = ecologicalObservationState
         let originalAgriculture = agricultureState
+        let originalKnowledge = knowledgeGraphState
+        let originalLanguage = languageState
         do {
             var attempts = 0
             let attemptLimit = causalLedger.events.count + count + 2
@@ -36,6 +38,16 @@ extension AgentSimulationSession {
                 let leaving = try causalLedger.eventsEvictedByAppending(
                     count: count
                 )
+                if try appendKnowledgeHistoricalAuthorityBoundaryIfNeeded(
+                    beforeEvicting: leaving
+                ) {
+                    continue
+                }
+                if try appendLanguageProvenanceBoundaryIfNeeded(
+                    beforeEvicting: leaving
+                ) {
+                    continue
+                }
                 if try appendAgricultureRetentionBoundaryIfNeeded(
                     beforeEvicting: leaving,
                     testFault: testFault
@@ -64,6 +76,8 @@ extension AgentSimulationSession {
             causalLedger = originalLedger
             ecologicalObservationState = originalEcology
             agricultureState = originalAgriculture
+            knowledgeGraphState = originalKnowledge
+            languageState = originalLanguage
             throw error
         }
     }
@@ -84,6 +98,8 @@ extension AgentSimulationSession {
         let originalLedger = causalLedger
         let originalEcology = ecologicalObservationState
         let originalAgriculture = agricultureState
+        let originalKnowledge = knowledgeGraphState
+        let originalLanguage = languageState
         do {
             try prepareDurableEvidenceForCausalAppend(
                 count: 1,
@@ -116,8 +132,129 @@ extension AgentSimulationSession {
             causalLedger = originalLedger
             ecologicalObservationState = originalEcology
             agricultureState = originalAgriculture
+            knowledgeGraphState = originalKnowledge
+            languageState = originalLanguage
             throw error
         }
+    }
+
+    /// CIV-41's bounded historical authority set always has one exact retained
+    /// causal commitment. Refresh it while the previous commitment is still
+    /// exact, before FIFO compaction removes that event.
+    private mutating func appendKnowledgeHistoricalAuthorityBoundaryIfNeeded(
+        beforeEvicting leaving: [AgentCausalEvent]
+    ) throws -> Bool {
+        guard var state = knowledgeGraphState,
+              let authorities = state.historicalBeliefAuthorities,
+              !authorities.isEmpty,
+              !leaving.isEmpty else { return false }
+        let leavingIDs = Set(leaving.map(\.eventID))
+        let boundaryIsLeaving = state.historicalBeliefAuthorityBoundary.map {
+            leavingIDs.contains($0.eventID)
+        } ?? false
+        let uncommittedSourceIsLeaving =
+            state.historicalBeliefAuthorityBoundary == nil
+                && authorities.contains {
+                    leavingIDs.contains($0.sourceBeliefRevisionEventID)
+                }
+        guard boundaryIsLeaving || uncommittedSourceIsLeaving else {
+            return false
+        }
+        let digest = knowledgeHistoricalAuthorityBoundaryDigest(authorities)
+        let causes = state.historicalBeliefAuthorityBoundary.map {
+            [$0.eventID]
+        } ?? authorities.compactMap {
+            leavingIDs.contains($0.sourceBeliefRevisionEventID)
+                ? $0.sourceBeliefRevisionEventID : nil
+        }
+        guard let event = try causalLedger.append(
+            instant: simulationInstant,
+            kind: .knowledgeGraphInitialized,
+            origin: .knowledgeTransition,
+            actorID: nil,
+            subjectID: nil,
+            causes: Array(Set(causes)).sorted(),
+            payload: .knowledge(
+                recordID: "historical-belief-authorities",
+                propositionID: nil,
+                status: "retentionBoundary",
+                reason: digest
+            ),
+            summary: "knowledge historical belief authority boundary"
+        ) else {
+            throw AgentSessionError.knowledge(.causalLedgerRequired)
+        }
+        state.historicalBeliefAuthorityBoundary =
+            AgentKnowledgeHistoricalAuthorityBoundary(
+                eventID: event.eventID,
+                digest: digest
+            )
+        knowledgeGraphState = state
+        try validateKnowledgeGraphStateIfEnabled()
+        return true
+    }
+
+    /// CIV-42's current communications and acquisition receipts are committed
+    /// as one exact bounded proof set. A dropped-prefix ID alone is never
+    /// accepted; the current row must remain covered by this retained event.
+    private mutating func appendLanguageProvenanceBoundaryIfNeeded(
+        beforeEvicting leaving: [AgentCausalEvent]
+    ) throws -> Bool {
+        guard var state = languageState, !leaving.isEmpty else { return false }
+        let proofCount = state.communications.count
+            + state.priorSeedReceipts.count
+            + state.exposureReceipts.count
+        guard proofCount > 0 else { return false }
+        let leavingIDs = Set(leaving.map(\.eventID))
+        let boundaryIsLeaving = state.provenanceBoundary.map {
+            leavingIDs.contains($0.eventID)
+        } ?? false
+        let uncommittedProofIsLeaving = state.provenanceBoundary == nil
+            && (state.communications.contains {
+                leavingIDs.contains($0.communicationEventID)
+            } || state.priorSeedReceipts.contains {
+                leavingIDs.contains($0.seedEventID)
+            } || state.exposureReceipts.contains {
+                leavingIDs.contains($0.communicationEventID)
+            })
+        guard boundaryIsLeaving || uncommittedProofIsLeaving else {
+            return false
+        }
+        let digest = languageProvenanceBoundaryDigest(state)
+        let causes: [AgentCausalEventID]
+        if let previous = state.provenanceBoundary?.eventID {
+            causes = [previous]
+        } else {
+            causes = Array(Set(
+                state.communications.map(\.communicationEventID)
+                    + state.priorSeedReceipts.map(\.seedEventID)
+                    + state.exposureReceipts.map(\.communicationEventID)
+            ).intersection(leavingIDs)).sorted()
+        }
+        guard let event = try causalLedger.append(
+            instant: simulationInstant,
+            kind: .languageInitialized,
+            origin: .languageTransition,
+            actorID: nil,
+            subjectID: nil,
+            causes: causes,
+            payload: .language(
+                recordID: state.pack.packID.rawValue,
+                propositionID: nil,
+                status: "provenanceBoundary",
+                reason: digest
+            ),
+            summary: "language provenance retention boundary"
+        ) else {
+            throw AgentSessionError.language(.causalLedgerRequired)
+        }
+        state.provenanceBoundary = AgentLanguageProvenanceBoundary(
+            eventID: event.eventID,
+            digest: digest
+        )
+        languageState = state
+        try validateLanguageStateIfInitialized()
+        return true
     }
 
     private mutating func evictEcologicalRowsDependingOn(

@@ -232,6 +232,15 @@ private func languageSmokeAssociationID(
     )
 }
 
+private func languageSmokeEventIDText(_ value: [String: Any]) -> String {
+    let simulationID = value["simulationID"] as! String
+    let sequence = value["sequence"] as! UInt64
+    let digits = String(sequence)
+    return "\(simulationID)/event-"
+        + String(repeating: "0", count: max(0, 20 - digits.count))
+        + digits
+}
+
 private func languageSmokeResignedCheckpoint(
     _ checkpoint: AgentSessionCheckpoint,
     mutateDurable: (inout [String: Any]) -> Void
@@ -288,6 +297,19 @@ private func languageSmokeInvalidLanguageReason(
     }
 }
 
+private func languageSmokeInvalidKnowledgeReason(
+    _ checkpoint: AgentSessionCheckpoint
+) -> String? {
+    do {
+        _ = try AgentSimulationSession.restoring(checkpoint)
+        return nil
+    } catch AgentSessionError.knowledge(.invalidState(let reason)) {
+        return reason
+    } catch {
+        return "unexpected: \(error)"
+    }
+}
+
 private func languageSmokeMutateSemanticReferent(
     _ durable: inout [String: Any]
 ) {
@@ -333,6 +355,243 @@ private func languageSmokeMutateAssociationToUngrant(
         form: "pierre"
     )
     language["lexicalAssociations"] = associations
+    durable["languageState"] = language
+}
+
+private func languageSmokeExposureDigest(
+    communicationID: String,
+    speakerID: String,
+    recipientID: String,
+    sourceBeliefID: String,
+    sourceBeliefRevisionEventID: String,
+    sourcePropositionID: String,
+    semanticAuthorityID: String,
+    semanticContentDigest: String,
+    lexicalUses: [[String: Any]],
+    exposedAssociationIDs: [String],
+    communicatedAtTick: Int
+) -> String {
+    let uses = lexicalUses.map {
+        "\($0["role"] as! String):\($0["senseID"] as! String):"
+            + ($0["form"] as! String)
+    }.joined(separator: ",")
+    return languageSmokeSHA256([
+        "linguistic-exposure",
+        communicationID,
+        speakerID,
+        recipientID,
+        sourceBeliefID,
+        sourceBeliefRevisionEventID,
+        sourcePropositionID,
+        semanticAuthorityID,
+        semanticContentDigest,
+        uses,
+        exposedAssociationIDs.joined(separator: ","),
+        String(communicatedAtTick),
+    ].joined(separator: "|"))
+}
+
+private func languageSmokeFabricateSeedReceiptAndAssociation(
+    _ durable: inout [String: Any]
+) {
+    var language = durable["languageState"] as! [String: Any]
+    let pack = language["pack"] as! [String: Any]
+    let packID = pack["packID"] as! String
+    var associations = language["lexicalAssociations"]
+        as! [[String: Any]]
+    var receipts = language["priorSeedReceipts"] as! [[String: Any]]
+    let templateAssociation = associations.first {
+        $0["source"] as? String == "seededPrior"
+    }!
+    let templateReceipt = receipts[0]
+    let ownerID = "remote"
+    let senseID = "value.resource.stone"
+    let form = "pierre"
+    let associationID = languageSmokeAssociationID(
+        ownerID: ownerID,
+        packID: packID,
+        senseID: senseID,
+        form: form
+    )
+    let seededAtTick = templateReceipt["seededAtTick"] as! Int
+    let digest = languageSmokeSHA256([
+        "prior-seed",
+        ownerID,
+        packID,
+        associationID,
+        String(seededAtTick),
+    ].joined(separator: "|"))
+    let seedID = "language-seed-" + digest
+    let droppedEventJSON = templateReceipt["seedEventID"]
+        as! [String: Any]
+
+    var association = templateAssociation
+    association["associationID"] = associationID
+    association["ownerID"] = ownerID
+    association["senseID"] = senseID
+    association["form"] = form
+    association["competence"] = "known"
+    association["exposureCount"] = 0
+    association["firstAcquiredAtTick"] = seededAtTick
+    association["lastExposedAtTick"] = seededAtTick
+    association["lastEventID"] = droppedEventJSON
+    association["priorSeedID"] = seedID
+    association["learningCommunicationIDs"] = [String]()
+    association.removeValue(forKey: "lastExposureCommunicationID")
+    associations.append(association)
+
+    var receipt = templateReceipt
+    receipt["seedID"] = seedID
+    receipt["ownerID"] = ownerID
+    receipt["packID"] = packID
+    receipt["grantedAssociationIDs"] = [associationID]
+    receipt["seededAtTick"] = seededAtTick
+    receipt["seedEventID"] = droppedEventJSON
+    receipt["digest"] = digest
+    receipts.append(receipt)
+
+    language["lexicalAssociations"] = associations
+    language["priorSeedReceipts"] = receipts
+    durable["languageState"] = language
+}
+
+private func languageSmokeFabricateExposureReceiptsAndCompetence(
+    _ durable: inout [String: Any]
+) {
+    var language = durable["languageState"] as! [String: Any]
+    let pack = language["pack"] as! [String: Any]
+    let packID = pack["packID"] as! String
+    var associations = language["lexicalAssociations"]
+        as! [[String: Any]]
+    var receipts = language["exposureReceipts"] as! [[String: Any]]
+    let templates = receipts.sorted {
+        ($0["communicatedAtTick"] as! Int)
+            < ($1["communicatedAtTick"] as! Int)
+    }
+    let ownerID = "remote"
+    let senseID = "value.resource.stone"
+    let form = "pierre"
+    let associationID = languageSmokeAssociationID(
+        ownerID: ownerID,
+        packID: packID,
+        senseID: senseID,
+        form: form
+    )
+    let lexicalUses: [[String: Any]] = [[
+        "role": "value",
+        "senseID": senseID,
+        "form": form,
+    ]]
+    var fabricatedReceipts: [[String: Any]] = []
+    var communicationIDs: [String] = []
+    for index in 0..<2 {
+        var receipt = templates[index]
+        let communicationID = "language-communication-fabricated-\(index + 1)"
+        let tick = receipt["communicatedAtTick"] as! Int
+        let sourceBeliefID = receipt["sourceBeliefID"] as! String
+        let revisionEventID = languageSmokeEventIDText(receipt[
+            "sourceBeliefRevisionEventID"
+        ] as! [String: Any])
+        let propositionID = receipt["sourcePropositionID"] as! String
+        let authorityID = receipt["semanticAuthorityID"] as! String
+        let semanticDigest = receipt["semanticContentDigest"] as! String
+        receipt["communicationID"] = communicationID
+        receipt["recipientID"] = ownerID
+        receipt["lexicalUses"] = lexicalUses
+        receipt["exposedAssociationIDs"] = [associationID]
+        receipt["digest"] = languageSmokeExposureDigest(
+            communicationID: communicationID,
+            speakerID: receipt["speakerID"] as! String,
+            recipientID: ownerID,
+            sourceBeliefID: sourceBeliefID,
+            sourceBeliefRevisionEventID: revisionEventID,
+            sourcePropositionID: propositionID,
+            semanticAuthorityID: authorityID,
+            semanticContentDigest: semanticDigest,
+            lexicalUses: lexicalUses,
+            exposedAssociationIDs: [associationID],
+            communicatedAtTick: tick
+        )
+        fabricatedReceipts.append(receipt)
+        communicationIDs.append(communicationID)
+    }
+    receipts.append(contentsOf: fabricatedReceipts)
+
+    var association = associations.first {
+        $0["ownerID"] as? String == "learner"
+            && $0["source"] as? String == "exposure"
+    }!
+    association["associationID"] = associationID
+    association["ownerID"] = ownerID
+    association["senseID"] = senseID
+    association["form"] = form
+    association["competence"] = "known"
+    association["exposureCount"] = 2
+    association["firstAcquiredAtTick"] = fabricatedReceipts[0][
+        "communicatedAtTick"
+    ] as! Int
+    association["lastExposedAtTick"] = fabricatedReceipts[1][
+        "communicatedAtTick"
+    ] as! Int
+    association["lastEventID"] = fabricatedReceipts[1][
+        "communicationEventID"
+    ] as! [String: Any]
+    association.removeValue(forKey: "priorSeedID")
+    association["learningCommunicationIDs"] = communicationIDs
+    association["lastExposureCommunicationID"] = communicationIDs[1]
+    associations.append(association)
+
+    language["lexicalAssociations"] = associations
+    language["exposureReceipts"] = receipts
+    durable["languageState"] = language
+}
+
+private func languageSmokeFabricateHistoricalAuthorityReference(
+    _ durable: inout [String: Any]
+) {
+    var language = durable["languageState"] as! [String: Any]
+    var communications = language["communications"] as! [[String: Any]]
+    var communication = communications[0]
+    let fakeAuthorityID = "historical-belief-authority-"
+        + languageSmokeSHA256("fabricated-language-authority")
+    var authority = communication["semanticAuthority"] as! [String: Any]
+    authority["authorityID"] = fakeAuthorityID
+    communication["semanticAuthority"] = authority
+
+    var semantic = communication["semanticContent"] as! [String: Any]
+    var referent = semantic["referent"] as! [String: Any]
+    referent["key"] = "cell:9,64,9"
+    semantic["referent"] = referent
+    let fakePropositionID = "proposition-"
+        + languageSmokeSHA256("fabricated-language-proposition")
+    semantic["sourcePropositionID"] = fakePropositionID
+    let senses = semantic["senses"] as! [[String: Any]]
+    let canonicalSenses = senses.map {
+        "\($0["role"] as! String):\($0["senseID"] as! String)"
+    }.joined(separator: ",")
+    let semanticDigest = languageSmokeSHA256(
+        "\(fakePropositionID)|worldCell:cell:9,64,9|\(canonicalSenses)"
+    )
+    semantic["digest"] = semanticDigest
+    communication["semanticContent"] = semantic
+    communication["provenanceDigest"] = languageSmokeExposureDigest(
+        communicationID: communication["communicationID"] as! String,
+        speakerID: communication["speakerID"] as! String,
+        recipientID: communication["recipientID"] as! String,
+        sourceBeliefID: communication["sourceBeliefID"] as! String,
+        sourceBeliefRevisionEventID: languageSmokeEventIDText(
+            communication["sourceBeliefRevisionEventID"] as! [String: Any]
+        ),
+        sourcePropositionID: fakePropositionID,
+        semanticAuthorityID: fakeAuthorityID,
+        semanticContentDigest: semanticDigest,
+        lexicalUses: communication["lexicalUses"] as! [[String: Any]],
+        exposedAssociationIDs:
+            communication["exposedAssociationIDs"] as! [String],
+        communicatedAtTick: communication["communicatedAtTick"] as! Int
+    )
+    communications[0] = communication
+    language["communications"] = communications
     durable["languageState"] = language
 }
 
@@ -483,8 +742,30 @@ func runPebbleAgentsLanguageSmoke() {
     check("NO_RENDERING creates no accidental lexical exposure",
           noRendering.lexicalUses.isEmpty
             && session.languageSnapshot().lexicalAssociations.isEmpty)
-    check("semantic communication cannot mutate CIV-41 authority",
-          session.knowledgeSnapshot() == knowledgeBeforeLanguage)
+    let knowledgeAfterSemanticCommunication = session.knowledgeSnapshot()
+    check("semantic communication mutates no CIV-41 cognition",
+          knowledgeAfterSemanticCommunication.propositions
+            == knowledgeBeforeLanguage.propositions
+            && knowledgeAfterSemanticCommunication.evidence
+                == knowledgeBeforeLanguage.evidence
+            && knowledgeAfterSemanticCommunication.claims
+                == knowledgeBeforeLanguage.claims
+            && knowledgeAfterSemanticCommunication.understandings
+                == knowledgeBeforeLanguage.understandings
+            && knowledgeAfterSemanticCommunication.beliefs
+                == knowledgeBeforeLanguage.beliefs
+            && knowledgeAfterSemanticCommunication.revisions
+                == knowledgeBeforeLanguage.revisions
+            && knowledgeAfterSemanticCommunication.departedBeliefs
+                == knowledgeBeforeLanguage.departedBeliefs)
+    check("semantic communication references CIV-41-owned history",
+          knowledgeAfterSemanticCommunication
+            .historicalBeliefAuthorities.count == 1
+            && knowledgeAfterSemanticCommunication
+                .historicalBeliefAuthorityBoundary != nil
+            && knowledgeAfterSemanticCommunication
+                .historicalBeliefAuthorities[0].authorityID
+                == noRendering.semanticAuthority.authorityID)
 
     var unavailableBeforeLearning = false
     do {
@@ -601,12 +882,19 @@ func runPebbleAgentsLanguageSmoke() {
           ) == learnerRealization)
     let knowledgeAfterLearning = session.knowledgeSnapshot()
     check("rendering and exposure leave CIV-41 epistemic rows unchanged",
-          knowledgeAfterLearning.digest == knowledgeBeforeLanguage.digest
-            && knowledgeAfterLearning.propositions
+          knowledgeAfterLearning.propositions
                 == knowledgeBeforeLanguage.propositions
+            && knowledgeAfterLearning.evidence
+                == knowledgeBeforeLanguage.evidence
+            && knowledgeAfterLearning.claims
+                == knowledgeBeforeLanguage.claims
+            && knowledgeAfterLearning.understandings
+                == knowledgeBeforeLanguage.understandings
             && knowledgeAfterLearning.beliefs == knowledgeBeforeLanguage.beliefs
             && knowledgeAfterLearning.revisions
-                == knowledgeBeforeLanguage.revisions)
+                == knowledgeBeforeLanguage.revisions
+            && knowledgeAfterLearning.departedBeliefs
+                == knowledgeBeforeLanguage.departedBeliefs)
 
     var (semanticOnly, semanticOnlyPropositionID) = languageSmokePrepared(
         id: "civ42-semantic-only",
@@ -799,6 +1087,47 @@ func runPebbleAgentsLanguageSmoke() {
     check("Attack D: compacted provenance cannot fabricate competence",
           compactedFabricationReason == "lexical acquisition history")
 
+    let fabricatedSeedCheckpoint = languageSmokeResignedCheckpoint(
+        compactedCheckpoint,
+        mutateDurable: languageSmokeFabricateSeedReceiptAndAssociation
+    )
+    let fabricatedSeedReason = languageSmokeInvalidLanguageReason(
+        fabricatedSeedCheckpoint
+    )
+    check("Attack E: fabricated seed receipt plus competence is rejected",
+          fabricatedSeedReason == "language provenance boundary")
+
+    let fabricatedExposureCheckpoint = languageSmokeResignedCheckpoint(
+        compactedCheckpoint,
+        mutateDurable:
+            languageSmokeFabricateExposureReceiptsAndCompetence
+    )
+    let fabricatedExposureReason = languageSmokeInvalidLanguageReason(
+        fabricatedExposureCheckpoint
+    )
+    check("Attack F: fabricated exposure receipts plus competence are rejected",
+          fabricatedExposureReason == "language provenance boundary")
+
+    let fabricatedAuthorityCheckpoint = languageSmokeResignedCheckpoint(
+        compactedCheckpoint,
+        mutateDurable: languageSmokeFabricateHistoricalAuthorityReference
+    )
+    let fabricatedAuthorityReason = languageSmokeInvalidKnowledgeReason(
+        fabricatedAuthorityCheckpoint
+    )
+    let compactedKnowledge = compactedHostile.knowledgeSnapshot()
+    check("Attack G: language cannot manufacture CIV-41 historical authority",
+          fabricatedAuthorityReason
+            == "historical authority bound or reference"
+            && compactedKnowledge.historicalBeliefAuthorities.count == 1
+            && compactedKnowledge.historicalBeliefAuthorityBoundary != nil)
+    check("valid compacted control preserves authentic learned competence",
+          compactedSnapshot.lexicalAssociations.filter {
+              $0.ownerID.rawValue == "learner"
+                    && $0.competence == .known
+          }.count == 3
+            && compactedSnapshot.provenanceBoundary != nil)
+
     let (schema36Session, _) = languageSmokeKnowledgeSession(
         id: "civ42-schema36-compatibility",
         agents: [
@@ -972,5 +1301,5 @@ func runPebbleAgentsLanguageSmoke() {
     print("  CIV42_RESTART schema=\(sameProcessCheckpoint.schemaVersion) digest=\(sameProcessCheckpoint.semanticDigest.rawValue) language=\(sameProcessRestored.languageSnapshot().digest)")
     print("  CIV42_REPLAY records=\(journal.records.count) schema=\(journal.manifest.schemaVersion) verified=\(replayedA.report.verified)")
     print("  CIV42_LIFECYCLE retired=\(mortalityLanguage.retiredLexicalAssociationCount) current=\(mortalityLanguage.lexicalAssociations.count) communications=\(mortalityLanguage.communications.count)")
-    print("  CIV42_HOSTILE A=\(semanticMismatchReason ?? "accepted") A_compacted=\(compactedSemanticReason ?? "accepted") B=\(seededFabricationReason ?? "accepted") C=\(exposureFabricationReason ?? "accepted") D=\(compactedFabricationReason ?? "accepted") dropped=\(compactedLedger.droppedEventCount) receipts=\(compactedSnapshot.exposureReceipts.count)")
+    print("  CIV42_HOSTILE A=\(semanticMismatchReason ?? "accepted") A_compacted=\(compactedSemanticReason ?? "accepted") B=\(seededFabricationReason ?? "accepted") C=\(exposureFabricationReason ?? "accepted") D=\(compactedFabricationReason ?? "accepted") E=\(fabricatedSeedReason ?? "accepted") F=\(fabricatedExposureReason ?? "accepted") G=\(fabricatedAuthorityReason ?? "accepted") dropped=\(compactedLedger.droppedEventCount) receipts=\(compactedSnapshot.exposureReceipts.count) knowledgeAuthorities=\(compactedKnowledge.historicalBeliefAuthorities.count)")
 }
