@@ -25,6 +25,7 @@ extension AgentSimulationSession {
         let originalAgriculture = agricultureState
         let originalKnowledge = knowledgeGraphState
         let originalLanguage = languageState
+        let originalOral = oralTransmissionState
         do {
             var attempts = 0
             let attemptLimit = causalLedger.events.count + count + 2
@@ -44,6 +45,11 @@ extension AgentSimulationSession {
                     continue
                 }
                 if try appendLanguageProvenanceBoundaryIfNeeded(
+                    beforeEvicting: leaving
+                ) {
+                    continue
+                }
+                if try appendOralProvenanceBoundaryIfNeeded(
                     beforeEvicting: leaving
                 ) {
                     continue
@@ -78,6 +84,7 @@ extension AgentSimulationSession {
             agricultureState = originalAgriculture
             knowledgeGraphState = originalKnowledge
             languageState = originalLanguage
+            oralTransmissionState = originalOral
             throw error
         }
     }
@@ -100,6 +107,7 @@ extension AgentSimulationSession {
         let originalAgriculture = agricultureState
         let originalKnowledge = knowledgeGraphState
         let originalLanguage = languageState
+        let originalOral = oralTransmissionState
         do {
             try prepareDurableEvidenceForCausalAppend(
                 count: 1,
@@ -134,6 +142,7 @@ extension AgentSimulationSession {
             agricultureState = originalAgriculture
             knowledgeGraphState = originalKnowledge
             languageState = originalLanguage
+            oralTransmissionState = originalOral
             throw error
         }
     }
@@ -254,6 +263,61 @@ extension AgentSimulationSession {
         )
         languageState = state
         try validateLanguageStateIfInitialized()
+        return true
+    }
+
+    /// CIV-43 applies the same exact-retained-boundary doctrine as CIV-42.
+    /// The bounded current oral-hop set is recommitted before either its
+    /// previous commitment or an uncommitted receipt leaves the FIFO suffix.
+    private mutating func appendOralProvenanceBoundaryIfNeeded(
+        beforeEvicting leaving: [AgentCausalEvent]
+    ) throws -> Bool {
+        guard var state = oralTransmissionState,
+              !state.transmissions.isEmpty,
+              !leaving.isEmpty else { return false }
+        let leavingIDs = Set(leaving.map(\.eventID))
+        let boundaryIsLeaving = state.provenanceBoundary.map {
+            leavingIDs.contains($0.eventID)
+        } ?? false
+        let uncommittedReceiptIsLeaving = state.provenanceBoundary == nil
+            && state.transmissions.contains {
+                leavingIDs.contains($0.receiptEventID)
+            }
+        guard boundaryIsLeaving || uncommittedReceiptIsLeaving else {
+            return false
+        }
+        let digest = oralProvenanceBoundaryDigest(state)
+        let causes: [AgentCausalEventID]
+        if let previous = state.provenanceBoundary?.eventID {
+            causes = [previous]
+        } else {
+            causes = Array(Set(state.transmissions.map(\.receiptEventID))
+                .intersection(leavingIDs)).sorted()
+        }
+        guard let event = try causalLedger.append(
+            instant: simulationInstant,
+            kind: .oralProvenanceBoundary,
+            origin: .oralTransition,
+            actorID: nil,
+            subjectID: nil,
+            causes: causes,
+            payload: .oral(
+                transmissionID: "oral-provenance",
+                sourcePropositionID: nil,
+                receivedPropositionID: nil,
+                status: "provenanceBoundary",
+                reason: digest
+            ),
+            summary: "oral provenance retention boundary"
+        ) else {
+            throw AgentSessionError.oral(.causalLedgerRequired)
+        }
+        state.provenanceBoundary = AgentOralProvenanceBoundary(
+            eventID: event.eventID,
+            digest: digest
+        )
+        oralTransmissionState = state
+        try validateOralTransmissionStateIfInitialized()
         return true
     }
 

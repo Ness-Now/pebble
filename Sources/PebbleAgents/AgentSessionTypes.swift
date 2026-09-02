@@ -71,6 +71,7 @@ public enum AgentSessionError: Error, Equatable {
     case social(AgentSocialError)
     case knowledge(AgentKnowledgeError)
     case language(AgentLanguageError)
+    case oral(AgentOralError)
     case physical(AgentPhysicalChannelError)
     case cooperation(AgentCooperationError)
     case population(AgentPopulationError)

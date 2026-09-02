@@ -1,0 +1,1242 @@
+import Foundation
+import PebbleAgents
+
+private let oralA = AgentID(rawValue: "agent_0")!
+private let oralB = AgentID(rawValue: "agent_1")!
+private let oralC = AgentID(rawValue: "agent_2")!
+
+private let oralWoodSenseIDs = [
+    AgentLanguageSenseID(rawValue: "referent.worldCell")!,
+    AgentLanguageSenseID(
+        rawValue: "predicate.world.resource.presence"
+    )!,
+    AgentLanguageSenseID(rawValue: "value.resource.wood")!,
+]
+
+private let oralSmokeConfiguration = try! AgentOralConfiguration(
+    maximumTransmissionRecords: 32,
+    maximumFaithfulDistance: 1
+)
+
+private func oralSmokeAgent(
+    _ id: AgentID,
+    x: Int,
+    lethalWhenEnabled: Bool = false
+) -> AgentSessionAgentState {
+    let position = AgentPosition(x: x, y: 64, z: 0)
+    return AgentSessionAgentState(
+        id: id.rawValue,
+        state: "idle",
+        position: position,
+        needs: AgentNeeds(
+            hunger: lethalWhenEnabled ? 0.39 : -10,
+            fatigue: 0,
+            curiosity: 0,
+            safety: 1
+        ),
+        health: lethalWhenEnabled ? 26 : 100,
+        fear: 0,
+        homePosition: position,
+        nearbyAgents: [],
+        currentGoal: AgentGoal(
+            kind: .idle,
+            reason: "CIV-43 fixture",
+            startedAtTick: 0,
+            urgency: 0
+        ),
+        lastAction: nil,
+        lastActionEffect: nil,
+        memory: [],
+        tickCreated: 0,
+        ticksAlive: 0,
+        observationCount: 0,
+        nearbyObservationCount: 0,
+        goalSelectionCount: 0,
+        goalChangeCount: 0,
+        actionCount: 0,
+        actionEffectCount: 0,
+        movementCount: 0,
+        totalManhattanDistanceMoved: 0,
+        returnHomeMoveCount: 0,
+        totalDistanceReducedTowardHome: 0,
+        survivalProgress: nil
+    )
+}
+
+private func oralResourceObservation(
+    _ observerID: AgentID,
+    resource: AgentResourceKind
+)
+    -> AgentPerceptionInput {
+    AgentPerceptionInput(
+        agentId: observerID.rawValue,
+        socialResourceObservations: [AgentResourceObservation(
+            resource: resource,
+            target: AgentPosition(x: 2, y: 64, z: 0),
+            direction: observerID == oralA ? .east : .west,
+            distanceManhattan: observerID == oralA ? 2 : 1,
+            quantityAvailable: 1,
+            source: resource == .sandboxResource
+                ? .sandboxFixture : .naturalWorld,
+            expectedBlockFingerprint: resource == .sandboxResource
+                ? nil : 43_001
+        )]
+    )
+}
+
+private func oralSmokePrepared(
+    id: String,
+    reversed: Bool = false,
+    oralConfiguration: AgentOralConfiguration = oralSmokeConfiguration,
+    causalMaximumEvents: Int = 16_384,
+    sourceResource: AgentResourceKind = .wood,
+    lethalID: AgentID? = nil,
+    minimumTrustToVerify: Int = -100
+) -> (AgentSimulationSession, AgentKnowledgePropositionID) {
+    let agents = [
+        oralSmokeAgent(oralA, x: 0, lethalWhenEnabled: lethalID == oralA),
+        oralSmokeAgent(oralB, x: 1, lethalWhenEnabled: lethalID == oralB),
+        oralSmokeAgent(oralC, x: 3, lethalWhenEnabled: lethalID == oralC),
+    ]
+    let social = try! AgentSocialConfiguration(
+        communicationRadius: 2,
+        minimumTrustToVerify: minimumTrustToVerify,
+        claimLifetimeTicks: 64,
+        messageLifetimeTicks: 48,
+        maximumFactsPerAgent: 8,
+        maximumBeliefsPerAgent: 8,
+        maximumTrustRelations: 32,
+        maximumRetainedMessages: 32,
+        shareCooldownTicks: 1
+    )
+    let survival = lethalID == nil ? AgentSurvivalConfiguration.live : try!
+        AgentSurvivalConfiguration(
+            hungerPerTick: 1,
+            fatiguePerTick: AgentSurvivalConfiguration.live.fatiguePerTick,
+            hungryThreshold: AgentSurvivalConfiguration.live.hungryThreshold,
+            criticalHungerThreshold:
+                AgentSurvivalConfiguration.live.criticalHungerThreshold,
+            hungerRecoveryThreshold:
+                AgentSurvivalConfiguration.live.hungerRecoveryThreshold,
+            fatigueThreshold: AgentSurvivalConfiguration.live.fatigueThreshold,
+            fatigueRecoveryThreshold:
+                AgentSurvivalConfiguration.live.fatigueRecoveryThreshold,
+            foodNutrition: AgentSurvivalConfiguration.live.foodNutrition,
+            restRecoveryPerTick:
+                AgentSurvivalConfiguration.live.restRecoveryPerTick,
+            starvationGraceTicks: 0,
+            starvationDamagePerTick: 100
+        )
+    var session = try! AgentSimulationSession(
+        configuration: try! AgentSessionConfiguration(
+            seed: 143,
+            nearbyRadius: 16,
+            resourceObservationRadius: 8,
+            recentMemorySnapshotLimit: 8,
+            memoryPolicy: .bounded(maxEntries: 64),
+            survivalConfiguration: survival,
+            socialConfiguration: social
+        ),
+        agents: reversed ? Array(agents.reversed()) : agents,
+        simulationID: try! AgentSimulationID(validating: id),
+        causalLedgerPolicy: .bounded(maxEvents: causalMaximumEvents)
+    )
+    try! session.setSocialEnabled(true)
+    try! session.setKnowledgeGraphEnabled(true)
+    _ = try! session.advanceTick(perceptions: [
+        oralResourceObservation(oralA, resource: sourceResource),
+        oralResourceObservation(oralC, resource: sourceResource),
+    ])
+    let before = session.knowledgeSnapshot()
+    let source = before.beliefs.first {
+        $0.ownerID == oralA && $0.stance == .accepted
+    }!
+    precondition(
+        !before.beliefs.contains { $0.ownerID == oralB },
+        "CIV-43 fixture accidentally pre-acquired B's belief"
+    )
+    try! session.setLanguageEnabled(
+        true,
+        configuration: try! AgentLanguageConfiguration(
+            maximumLexicalAssociations: 64,
+            maximumLexicalAssociationsPerAgent: 16,
+            maximumCommunicationRecords: 64,
+            exposuresRequiredForLearning: 1
+        ),
+        pack: .frenchReference
+    )
+    try! session.setOralTransmissionEnabled(
+        true, configuration: oralConfiguration
+    )
+    try! session.seedLanguagePrior(
+        for: oralA, senseIDs: oralWoodSenseIDs
+    )
+    return (session, source.propositionID)
+}
+
+private func oralSmokeChain(
+    id: String,
+    reversed: Bool = false,
+    oralConfiguration: AgentOralConfiguration = oralSmokeConfiguration,
+    causalMaximumEvents: Int = 16_384
+) -> (
+    AgentSimulationSession,
+    AgentOralTransmission,
+    AgentOralTransmission,
+    AgentKnowledgePropositionID
+) {
+    var (session, sourceID) = oralSmokePrepared(
+        id: id,
+        reversed: reversed,
+        oralConfiguration: oralConfiguration,
+        causalMaximumEvents: causalMaximumEvents
+    )
+    let hop1 = try! session.transmitOralClaim(
+        speakerID: oralA,
+        recipientID: oralB,
+        propositionID: sourceID,
+        renderingMode: .deterministicCompositional
+    )
+    let bBelief = session.knowledgeSnapshot().beliefs.first {
+        $0.ownerID == oralB
+    }!
+    let hop2 = try! session.transmitOralClaim(
+        speakerID: oralB,
+        recipientID: oralC,
+        propositionID: bBelief.propositionID,
+        renderingMode: .deterministicCompositional
+    )
+    return (session, hop1, hop2, sourceID)
+}
+
+private func oralSmokeResignedCheckpoint(
+    _ checkpoint: AgentSessionCheckpoint,
+    mutateDurable: (inout [String: Any]) -> Void
+) -> AgentSessionCheckpoint {
+    var root = try! JSONSerialization.jsonObject(
+        with: AgentCheckpointCodec.encode(checkpoint)
+    ) as! [String: Any]
+    var durable = root["durableState"] as! [String: Any]
+    mutateDurable(&durable)
+    let mutatedBytes = try! JSONSerialization.data(
+        withJSONObject: durable,
+        options: [.sortedKeys, .withoutEscapingSlashes]
+    )
+    let mutatedState = try! AgentCheckpointCodec.decode(
+        AgentSessionDurableState.self,
+        from: mutatedBytes
+    )
+    let canonicalBytes = try! AgentCheckpointCodec.encode(mutatedState)
+    let canonical = try! JSONSerialization.jsonObject(
+        with: canonicalBytes
+    ) as! [String: Any]
+    let clock = canonical["clock"] as! [String: Any]
+    let simulationID = clock["simulationID"] as! String
+    let tick = clock["tick"] as! Int
+    let digest = AgentCheckpointDigest.sha256(canonicalBytes)
+    let simulationDigest = AgentCheckpointDigest.sha256(
+        Data(simulationID.utf8)
+    )
+    root["durableState"] = canonical
+    root["schemaVersion"] = canonical["schemaVersion"]
+    root["semanticDigest"] = digest.rawValue
+    root["checkpointID"] =
+        "checkpoint-\(simulationDigest.rawValue.prefix(12))"
+            + "-t\(tick)-\(digest.rawValue.prefix(16))"
+    return try! AgentCheckpointCodec.decode(
+        AgentSessionCheckpoint.self,
+        from: JSONSerialization.data(
+            withJSONObject: root,
+            options: [.sortedKeys, .withoutEscapingSlashes]
+        )
+    )
+}
+
+private func oralSmokeJSONEventID(_ value: Any) -> String {
+    let event = value as! [String: Any]
+    let sequence = (event["sequence"] as! NSNumber).uint64Value
+    return "\(event["simulationID"] as! String)/event-"
+        + String(format: "%020llu", sequence)
+}
+
+private func oralSmokeJSONPosition(_ value: Any) -> String {
+    let position = value as! [String: Any]
+    return "\(position["x"] as! Int),\(position["y"] as! Int),"
+        + "\(position["z"] as! Int)"
+}
+
+private func oralSmokeJSONProvenanceDigest(
+    _ row: [String: Any]
+) -> String {
+    let transmitted = row["transmittedSemanticContent"] as! [String: Any]
+    let interpreted = row["interpretedSemanticContent"] as! [String: Any]
+    let locality = row["locality"] as! [String: Any]
+    let text = [
+        "oral-transmission-provenance-v1",
+        row["transmissionID"] as! String,
+        row["speakerID"] as! String,
+        row["recipientID"] as! String,
+        row["sourceBeliefID"] as! String,
+        oralSmokeJSONEventID(row["sourceBeliefRevisionEventID"]!),
+        row["sourceAuthorityID"] as! String,
+        row["languageCommunicationID"] as! String,
+        oralSmokeJSONEventID(row["languageCommunicationEventID"]!),
+        transmitted["digest"] as! String,
+        interpreted["digest"] as! String,
+        row["outcome"] as! String,
+        row["decisionDigest"] as! String,
+        oralSmokeJSONPosition(locality["speakerPosition"]!),
+        oralSmokeJSONPosition(locality["recipientPosition"]!),
+        String(locality["distance"] as! Int),
+        String(locality["authorizedRadius"] as! Int),
+        String(locality["observedAtTick"] as! Int),
+        oralSmokeJSONEventID(row["receiptEventID"]!),
+        row["recipientClaimID"] as! String,
+        oralSmokeJSONEventID(row["recipientClaimEventID"]!),
+        row["recipientUnderstandingID"] as! String,
+        row["recipientBeliefID"] as! String,
+        oralSmokeJSONEventID(row["recipientBeliefRevisionEventID"]!),
+        String(row["transmittedAtTick"] as! Int),
+    ].joined(separator: "|")
+    return AgentCheckpointDigest.sha256(Data(text.utf8)).rawValue
+}
+
+private func oralSmokeJSONCanonicalTransmission(
+    _ row: [String: Any]
+) -> String {
+    let transmitted = row["transmittedSemanticContent"] as! [String: Any]
+    let interpreted = row["interpretedSemanticContent"] as! [String: Any]
+    let locality = row["locality"] as! [String: Any]
+    return [
+        row["transmissionID"] as! String,
+        row["speakerID"] as! String,
+        row["recipientID"] as! String,
+        row["sourceBeliefID"] as! String,
+        oralSmokeJSONEventID(row["sourceBeliefRevisionEventID"]!),
+        row["sourceAuthorityID"] as! String,
+        row["languageCommunicationID"] as! String,
+        oralSmokeJSONEventID(row["languageCommunicationEventID"]!),
+        transmitted["digest"] as! String,
+        interpreted["digest"] as! String,
+        row["outcome"] as! String,
+        row["decisionDigest"] as! String,
+        oralSmokeJSONPosition(locality["speakerPosition"]!),
+        oralSmokeJSONPosition(locality["recipientPosition"]!),
+        String(locality["distance"] as! Int),
+        String(locality["authorizedRadius"] as! Int),
+        String(locality["observedAtTick"] as! Int),
+        oralSmokeJSONEventID(row["receiptEventID"]!),
+        row["recipientClaimID"] as! String,
+        oralSmokeJSONEventID(row["recipientClaimEventID"]!),
+        row["recipientUnderstandingID"] as! String,
+        row["recipientBeliefID"] as! String,
+        oralSmokeJSONEventID(row["recipientBeliefRevisionEventID"]!),
+        String(row["transmittedAtTick"] as! Int),
+        row["provenanceDigest"] as! String,
+    ].joined(separator: "|")
+}
+
+private func oralSmokeJSONBoundaryDigest(
+    rows: [[String: Any]], evicted: Int
+) -> String {
+    let body = rows.sorted {
+        ($0["transmissionID"] as! String)
+            < ($1["transmissionID"] as! String)
+    }.map(oralSmokeJSONCanonicalTransmission).joined(separator: ";")
+    return AgentCheckpointDigest.sha256(Data(
+        ("oral-provenance-boundary-v1|" + body
+            + "|evicted=\(evicted)").utf8
+    )).rawValue
+}
+
+private func oralSmokeRestoreError(
+    _ checkpoint: AgentSessionCheckpoint
+) -> String? {
+    do {
+        _ = try AgentSimulationSession.restoring(checkpoint)
+        return nil
+    } catch AgentSessionError.oral(.invalidState(let reason)) {
+        return "oral:\(reason)"
+    } catch AgentSessionError.knowledge(.invalidState(let reason)) {
+        return "knowledge:\(reason)"
+    } catch AgentSessionError.language(.invalidState(let reason)) {
+        return "language:\(reason)"
+    } catch {
+        return "unexpected:\(error)"
+    }
+}
+
+private func oralSmokeRefusal(
+    _ name: String,
+    session: AgentSimulationSession,
+    operation: (inout AgentSimulationSession) throws -> Void,
+    matches: (Error) -> Bool
+) {
+    let before = try! session.durableStateDigest()
+    var candidate = session
+    do {
+        try operation(&candidate)
+        check(name, false, "accepted")
+    } catch {
+        check(name, matches(error), "\(error)")
+    }
+    check(
+        "\(name) is an exact atomic no-op",
+        try! candidate.durableStateDigest() == before
+    )
+}
+
+private func oralSmokeJournal(
+    from manifest: AgentReplayJournalManifest,
+    records: [AgentReplayRecord],
+    schemaVersion: Int? = nil
+) -> AgentReplayJournal {
+    let bytes = try! AgentReplayCodec.encodeRecords(records)
+    return AgentReplayJournal(
+        manifest: AgentReplayJournalManifest(
+            schemaVersion: schemaVersion ?? manifest.schemaVersion,
+            name: manifest.name,
+            baseCheckpointID: manifest.baseCheckpointID,
+            baseCheckpointDigest: manifest.baseCheckpointDigest,
+            simulationID: manifest.simulationID,
+            initialTick: manifest.initialTick,
+            recordCount: records.count,
+            droppedRecordCount: manifest.droppedRecordCount,
+            replayable: manifest.replayable,
+            nonReplayableReason: manifest.nonReplayableReason,
+            operationsStorageDigest: AgentCheckpointDigest.sha256(bytes),
+            operationsByteLength: bytes.count
+        ),
+        records: records
+    )
+}
+
+private func oralSmokeReplayHostileProof(
+    checkpoint: AgentSessionCheckpoint,
+    journal: AgentReplayJournal
+) {
+    guard journal.records.count == 2,
+          case let .transmitOralClaim(
+            _, _, _, _, firstEffect?
+          ) = journal.records[0].operation,
+          case let .transmitOralClaim(
+            speakerID, recipientID, propositionID, renderingMode, _
+          ) = journal.records[1].operation else {
+        preconditionFailure("CIV-43 replay fixture shape")
+    }
+    let original = journal.records[1]
+    let forged = AgentReplayRecord(
+        schemaVersion: original.schemaVersion,
+        simulationID: original.simulationID,
+        recordSequence: original.recordSequence,
+        operation: .transmitOralClaim(
+            speakerID: speakerID,
+            recipientID: recipientID,
+            propositionID: propositionID,
+            renderingMode: renderingMode,
+            acceptedEffect: firstEffect
+        ),
+        expectedTickBefore: original.expectedTickBefore,
+        preStateSemanticDigest: original.preStateSemanticDigest,
+        postStateSemanticDigest: original.postStateSemanticDigest,
+        causalSequenceBefore: original.causalSequenceBefore,
+        causalSequenceAfter: original.causalSequenceAfter,
+        causalDigestAfter: original.causalDigestAfter
+    )
+    let mutated = oralSmokeJournal(
+        from: journal.manifest,
+        records: [journal.records[0], forged]
+    )
+    let result = try! AgentSessionReplayer.replay(
+        checkpoint: checkpoint, journal: mutated
+    )
+    check("re-signed replay cannot reroll or replace accepted distortion",
+        !result.report.verified
+            && result.report.recordsApplied == 1
+            && (result.report.divergence?.reason.contains(
+                "replayEffectMismatch"
+            ) ?? false))
+
+    let future = oralSmokeJournal(
+        from: journal.manifest,
+        records: journal.records,
+        schemaVersion: AgentReplaySchema.oralTransmissionVersion + 1
+    )
+    let futureRejected: Bool
+    do {
+        _ = try AgentSessionReplayer.replay(
+            checkpoint: checkpoint, journal: future
+        )
+        futureRejected = false
+    } catch AgentReplayError.unsupportedSchema(let version) {
+        futureRejected = version
+            == AgentReplaySchema.oralTransmissionVersion + 1
+    } catch {
+        futureRejected = false
+    }
+    check("future replay schema 39 is refused", futureRejected)
+}
+
+func runPebbleAgentsOralTransmissionSmoke() {
+    section("CIV-43 oral transmission and distortion V1")
+
+    let (session, hop1, hop2, sourceID) = oralSmokeChain(
+        id: "civ43-decisive-chain"
+    )
+    let knowledge = session.knowledgeSnapshot()
+    let language = session.languageSnapshot()
+    let oral = session.oralTransmissionSnapshot()
+    let bBelief = knowledge.beliefs.first { $0.ownerID == oralB }!
+    let cBelief = knowledge.beliefs.first { $0.ownerID == oralC }!
+    let cRevision = knowledge.revisions.first {
+        $0.ownerID == oralC
+            && $0.revisionEventID == cBelief.lastRevisionEventID
+    }!
+    let bClaim = knowledge.claims.first {
+        $0.claimID == hop1.recipientClaimID
+    }!
+    let cClaim = knowledge.claims.first {
+        $0.claimID == hop2.recipientClaimID
+    }!
+
+    check("checkpoint schema advances to 38", try! session.makeCheckpoint()
+        .schemaVersion == AgentCheckpointSchema.oralTransmissionVersion)
+    check("faithful first hop preserves semantic content",
+        hop1.outcome == .faithful
+            && hop1.transmittedSemanticContent
+                == hop1.interpretedSemanticContent)
+    check("first hop creates genuine B acquisition",
+        bBelief.propositionID == sourceID
+            && bBelief.basisUnderstandingID
+                == hop1.recipientUnderstandingID)
+    check("first hop attributes immediate speaker A",
+        bClaim.sourceAgentID == oralA
+            && bClaim.recipientID == oralB
+            && bClaim.oralTransmissionID == hop1.transmissionID)
+    check("B retransmits from B's own current CIV-41 belief",
+        hop2.speakerID == oralB
+            && hop2.sourceBeliefID == bBelief.beliefID
+            && hop2.sourceBeliefRevisionEventID
+                == bBelief.lastRevisionEventID)
+    check("second hop genuinely distorts semantic content",
+        hop2.outcome == .distanceDistorted
+            && hop2.transmittedSemanticContent
+                != hop2.interpretedSemanticContent)
+    check("second hop attributes immediate speaker B, never A",
+        cClaim.sourceAgentID == oralB
+            && cClaim.sourceAgentID != oralA
+            && cClaim.recipientID == oralC)
+    check("C undergoes a real CIV-41 proposition revision",
+        cRevision.previousPropositionID == sourceID
+            && cRevision.propositionID == cBelief.propositionID
+            && cBelief.propositionID
+                == hop2.interpretedSemanticContent.sourcePropositionID
+            && cBelief.revisionCount == 2,
+        "previous=\(cRevision.previousPropositionID?.rawValue ?? "nil") current=\(cRevision.propositionID.rawValue) belief=\(cBelief.propositionID.rawValue) count=\(cBelief.revisionCount)")
+    check("oral misinformation leaves authoritative observation intact",
+        knowledge.evidence.filter {
+            $0.observerID == oralA || $0.observerID == oralC
+        }.allSatisfy { $0.propositionID == sourceID })
+    check("lexical learning and epistemic acquisition are distinct",
+        language.lexicalAssociations.contains {
+            $0.ownerID == oralB
+                && $0.source == .exposure
+                && $0.competence == .known
+        }
+            && bClaim.acquisitionEventID
+                != language.communications[0].communicationEventID)
+    check("oral provenance is bounded and boundary-authenticated",
+        oral.transmissions.count == 2
+            && oral.provenanceBoundary != nil)
+    oralSmokeDistortionRuleProof()
+
+    let ordered = oralSmokeChain(id: "civ43-order", reversed: false).0
+    let reversed = oralSmokeChain(id: "civ43-order", reversed: true).0
+    check("registration order does not change oral history",
+        ordered.oralTransmissionSnapshot().digest
+            == reversed.oralTransmissionSnapshot().digest
+            && ordered.knowledgeSnapshot().digest
+                == reversed.knowledgeSnapshot().digest)
+
+    let checkpoint = try! session.makeCheckpoint()
+    let bytes = try! AgentCheckpointCodec.encode(checkpoint)
+    let restored = try! AgentSimulationSession.restoring(checkpoint)
+    check("schema-38 exact restart preserves oral graph",
+        restored.oralTransmissionSnapshot() == oral)
+    check("schema-38 restart remains byte exact",
+        try! AgentCheckpointCodec.encode(restored.makeCheckpoint()) == bytes)
+
+    var replaySession = oralSmokePrepared(id: "civ43-replay").0
+    let replayBase = try! replaySession.makeCheckpoint()
+    var recorder = try! AgentReplayRecorder(
+        checkpoint: replayBase, session: replaySession
+    )
+    let replayHop1 = try! recorder.apply(.transmitOralClaim(
+        speakerID: oralA,
+        recipientID: oralB,
+        propositionID: sourceIDFor(session: replaySession, ownerID: oralA),
+        renderingMode: .deterministicCompositional,
+        acceptedEffect: nil
+    ), to: &replaySession).oralTransmissionResult!
+    let replayB = replaySession.knowledgeSnapshot().beliefs.first {
+        $0.ownerID == oralB
+    }!
+    _ = try! recorder.apply(.transmitOralClaim(
+        speakerID: oralB,
+        recipientID: oralC,
+        propositionID: replayB.propositionID,
+        renderingMode: .deterministicCompositional,
+        acceptedEffect: nil
+    ), to: &replaySession)
+    let journal = try! recorder.journal(
+        named: AgentCheckpointName(rawValue: "civ43-replay")!
+    )
+    let replay = try! AgentSessionReplayer.replay(
+        checkpoint: replayBase, journal: journal
+    )
+    check("replay schema advances to 38",
+        journal.manifest.schemaVersion
+            == AgentReplaySchema.oralTransmissionVersion)
+    check("journal stores accepted distortion effect",
+        journal.records.allSatisfy { record in
+            if case let .transmitOralClaim(_, _, _, _, effect) =
+                record.operation { return effect != nil }
+            return true
+        })
+    check("replay applies recorded effects to exact durable state",
+        replay.report.verified
+            && replay.report.finalSemanticDigest
+                == (try! replaySession.durableStateDigest()))
+    check("repeated replay duplicates no oral state",
+        try! AgentSessionReplayer.replay(
+            checkpoint: replayBase, journal: journal
+        ).report.finalSemanticDigest == replay.report.finalSemanticDigest)
+    oralSmokeReplayHostileProof(checkpoint: replayBase, journal: journal)
+    _ = replayHop1
+
+    oralSmokeAdversarialProof(session: session, checkpoint: checkpoint)
+    oralSmokeNegativeProof()
+    oralSmokeCompactionProof()
+    oralSmokeMortalityProof()
+
+    print(
+        "  CIV43_HOP1 speaker=\(hop1.speakerID.rawValue) source=\(hop1.transmittedSemanticContent.sourcePropositionID.rawValue) transmitted=\(hop1.transmittedSemanticContent.digest) interpreted=\(hop1.interpretedSemanticContent.digest) recipientBelief=\(bBelief.propositionID.rawValue) claim=\(hop1.recipientClaimID.rawValue) event=\(hop1.receiptEventID.rawValue) outcome=\(hop1.outcome.rawValue)"
+    )
+    print(
+        "  CIV43_HOP2 speaker=\(hop2.speakerID.rawValue) sourceBelief=\(hop2.sourceBeliefID.rawValue) source=\(hop2.transmittedSemanticContent.sourcePropositionID.rawValue) transmitted=\(hop2.transmittedSemanticContent.digest) interpreted=\(hop2.interpretedSemanticContent.digest) recipientBelief=\(cBelief.propositionID.rawValue) previous=\(sourceID.rawValue) claim=\(hop2.recipientClaimID.rawValue) event=\(hop2.receiptEventID.rawValue) outcome=\(hop2.outcome.rawValue)"
+    )
+    print(
+        "  CIV43_RESTART schema=\(checkpoint.schemaVersion) digest=\(checkpoint.semanticDigest.rawValue) oral=\(oral.digest)"
+    )
+    print(
+        "  CIV43_REPLAY records=\(journal.records.count) schema=\(journal.manifest.schemaVersion) verified=\(replay.report.verified)"
+    )
+}
+
+private func sourceIDFor(
+    session: AgentSimulationSession,
+    ownerID: AgentID
+) -> AgentKnowledgePropositionID {
+    session.knowledgeSnapshot().beliefs.first {
+        $0.ownerID == ownerID && $0.stance == .accepted
+    }!.propositionID
+}
+
+private func oralSmokeDistortionRuleProof() {
+    func distorted(
+        id: String,
+        resource: AgentResourceKind
+    ) -> (AgentOralTransmission, String) {
+        var (candidate, sourceID) = oralSmokePrepared(
+            id: id, sourceResource: resource
+        )
+        _ = try! candidate.transmitOralClaim(
+            speakerID: oralA,
+            recipientID: oralB,
+            propositionID: sourceID,
+            renderingMode: .noRendering
+        )
+        let bSource = sourceIDFor(session: candidate, ownerID: oralB)
+        let hop = try! candidate.transmitOralClaim(
+            speakerID: oralB,
+            recipientID: oralC,
+            propositionID: bSource,
+            renderingMode: .noRendering
+        )
+        let proposition = candidate.knowledgeSnapshot().propositions.first {
+            $0.propositionID
+                == hop.interpretedSemanticContent.sourcePropositionID
+        }!
+        let result: String
+        switch proposition.value {
+        case .absent: result = "absent"
+        case let .resource(kind, _): result = kind.rawValue
+        default: result = "unsupported"
+        }
+        return (hop, result)
+    }
+
+    let sameA = distorted(id: "civ43-rule-repeat", resource: .stone)
+    let sameB = distorted(id: "civ43-rule-repeat", resource: .stone)
+    check("identical distortion inputs reproduce the accepted effect",
+        sameA.0.decisionDigest == sameB.0.decisionDigest
+            && sameA.0.interpretedSemanticContent
+                == sameB.0.interpretedSemanticContent)
+
+    var outcomes: [String] = []
+    var everyResultChangedAndSupported = true
+    for ordinal in 0..<8 {
+        let source: AgentResourceKind = ordinal.isMultiple(of: 2)
+            ? .wood : .stone
+        let result = distorted(
+            id: "civ43-rule-variation-\(ordinal)",
+            resource: source
+        )
+        outcomes.append(result.1)
+        everyResultChangedAndSupported =
+            everyResultChangedAndSupported
+                && result.0.outcome == .distanceDistorted
+                && result.1 != source.rawValue
+                && ["absent", "wood", "stone"].contains(result.1)
+    }
+    check("general distortion excludes every source value",
+        everyResultChangedAndSupported)
+    check("different legitimate inputs exercise varied deterministic outputs",
+        Set(outcomes).count >= 2)
+    print(
+        "  CIV43_DISTORTION_VARIATION inputs=wood,stone outputs=\(outcomes.joined(separator: ",")) repeat=\(sameA.1) digest=\(sameA.0.decisionDigest)"
+    )
+}
+
+private func oralSmokeAdversarialProof(
+    session: AgentSimulationSession,
+    checkpoint: AgentSessionCheckpoint
+) {
+    let fabricated = oralSmokeResignedCheckpoint(checkpoint) { durable in
+        var knowledge = durable["knowledgeGraphState"] as! [String: Any]
+        var claims = knowledge["claims"] as! [[String: Any]]
+        claims.removeFirst()
+        knowledge["claims"] = claims
+        durable["knowledgeGraphState"] = knowledge
+    }
+    check("Attack 1: re-signed acquisition without CIV-41 claim is rejected",
+        oralSmokeRestoreError(fabricated) != nil)
+
+    let changedResult = oralSmokeResignedCheckpoint(checkpoint) { durable in
+        var oral = durable["oralTransmissionState"] as! [String: Any]
+        var rows = oral["transmissions"] as! [[String: Any]]
+        var semantic = rows[1]["interpretedSemanticContent"]
+            as! [String: Any]
+        let sourceSemantic = rows[0]["transmittedSemanticContent"]
+            as! [String: Any]
+        semantic["sourcePropositionID"] =
+            sourceSemantic["sourcePropositionID"]
+        rows[1]["interpretedSemanticContent"] = semantic
+        oral["transmissions"] = rows
+        durable["oralTransmissionState"] = oral
+    }
+    check("Attack 2: re-signed changed distortion result is rejected",
+        oralSmokeRestoreError(changedResult) != nil)
+
+    let forgedSpeaker = oralSmokeResignedCheckpoint(checkpoint) { durable in
+        var oral = durable["oralTransmissionState"] as! [String: Any]
+        var rows = oral["transmissions"] as! [[String: Any]]
+        rows[1]["speakerID"] = oralA.rawValue
+        oral["transmissions"] = rows
+        durable["oralTransmissionState"] = oral
+    }
+    check("Attack 3: forged immediate-speaker attribution is rejected",
+        oralSmokeRestoreError(forgedSpeaker) != nil)
+
+    let mismatchedAuthority = oralSmokeResignedCheckpoint(checkpoint) {
+        durable in
+        var oral = durable["oralTransmissionState"] as! [String: Any]
+        var rows = oral["transmissions"] as! [[String: Any]]
+        rows[1]["sourceAuthorityID"] = rows[0]["sourceAuthorityID"]
+        oral["transmissions"] = rows
+        durable["oralTransmissionState"] = oral
+    }
+    check("Attack 4: mismatched CIV-41 source authority is rejected",
+        oralSmokeRestoreError(mismatchedAuthority) != nil)
+
+    check("valid re-signed control still restores",
+        oralSmokeRestoreError(oralSmokeResignedCheckpoint(checkpoint) { _ in })
+            == nil)
+
+    let unsupportedFuture = oralSmokeResignedCheckpoint(checkpoint) {
+        durable in
+        durable["schemaVersion"] =
+            AgentCheckpointSchema.oralTransmissionVersion + 1
+    }
+    let futureRejected: Bool
+    do {
+        _ = try AgentSimulationSession.restoring(unsupportedFuture)
+        futureRejected = false
+    } catch AgentCheckpointError.unsupportedSchema(let version) {
+        futureRejected = version
+            == AgentCheckpointSchema.oralTransmissionVersion + 1
+    } catch {
+        futureRejected = false
+    }
+    check("future checkpoint schema 39 is refused", futureRejected)
+    _ = session
+}
+
+private func oralSmokeNegativeProof() {
+    var (prepared, sourceID) = oralSmokePrepared(id: "civ43-negative")
+    let noAuthorityID = sourceIDFor(session: prepared, ownerID: oralC)
+    oralSmokeRefusal(
+        "speaker lacking accepted CIV-41 authority is refused",
+        session: prepared,
+        operation: {
+            _ = try $0.transmitOralClaim(
+                speakerID: oralB,
+                recipientID: oralC,
+                propositionID: noAuthorityID,
+                renderingMode: .noRendering
+            )
+        },
+        matches: {
+            if case AgentSessionError.language(.missingBeliefAuthority) = $0 {
+                return true
+            }
+            return false
+        }
+    )
+    oralSmokeRefusal(
+        "unknown speaker is refused",
+        session: prepared,
+        operation: {
+            _ = try $0.transmitOralClaim(
+                speakerID: AgentID(rawValue: "oral-missing")!,
+                recipientID: oralB,
+                propositionID: sourceID,
+                renderingMode: .noRendering
+            )
+        },
+        matches: {
+            if case AgentSessionError.oral(.unknownAgent) = $0 { return true }
+            return false
+        }
+    )
+    oralSmokeRefusal(
+        "unknown recipient is refused",
+        session: prepared,
+        operation: {
+            _ = try $0.transmitOralClaim(
+                speakerID: oralA,
+                recipientID: AgentID(rawValue: "oral-missing")!,
+                propositionID: sourceID,
+                renderingMode: .noRendering
+            )
+        },
+        matches: {
+            if case AgentSessionError.oral(.unknownAgent) = $0 { return true }
+            return false
+        }
+    )
+    oralSmokeRefusal(
+        "self-transmission is refused",
+        session: prepared,
+        operation: {
+            _ = try $0.transmitOralClaim(
+                speakerID: oralA,
+                recipientID: oralA,
+                propositionID: sourceID,
+                renderingMode: .noRendering
+            )
+        },
+        matches: {
+            if case AgentSessionError.oral(.invalidParticipant) = $0 {
+                return true
+            }
+            return false
+        }
+    )
+    oralSmokeRefusal(
+        "non-local long-distance oral transmission is refused",
+        session: prepared,
+        operation: {
+            _ = try $0.transmitOralClaim(
+                speakerID: oralA,
+                recipientID: oralC,
+                propositionID: sourceID,
+                renderingMode: .noRendering
+            )
+        },
+        matches: {
+            if case AgentSessionError.oral(.nonLocal) = $0 { return true }
+            return false
+        }
+    )
+    let (trustRefused, trustSourceID) = oralSmokePrepared(
+        id: "civ43-local-authority-refused",
+        minimumTrustToVerify: 1
+    )
+    oralSmokeRefusal(
+        "in-radius oral transmission still requires Social authority",
+        session: trustRefused,
+        operation: {
+            _ = try $0.transmitOralClaim(
+                speakerID: oralA,
+                recipientID: oralB,
+                propositionID: trustSourceID,
+                renderingMode: .noRendering
+            )
+        },
+        matches: {
+            if case AgentSessionError.oral(.localAuthorityRefused) = $0 {
+                return true
+            }
+            return false
+        }
+    )
+
+    let unsupportedID = AgentKnowledgePropositionID(
+        rawValue: "proposition-unsupported-civ43-domain"
+    )!
+    oralSmokeRefusal(
+        "unknown/unsupported oral semantic proposition is refused",
+        session: prepared,
+        operation: {
+            _ = try $0.transmitOralClaim(
+                speakerID: oralA,
+                recipientID: oralB,
+                propositionID: unsupportedID,
+                renderingMode: .noRendering
+            )
+        },
+        matches: {
+            if case AgentSessionError.language(.unknownProposition) = $0 {
+                return true
+            }
+            return false
+        }
+    )
+
+    _ = try! prepared.transmitOralClaim(
+        speakerID: oralA,
+        recipientID: oralB,
+        propositionID: sourceID,
+        renderingMode: .noRendering
+    )
+    oralSmokeRefusal(
+        "CIV-43 refuses removal of its social locality dependency",
+        session: prepared,
+        operation: { try $0.setSocialEnabled(false) },
+        matches: {
+            if case AgentSessionError.oral(.socialRequired) = $0 {
+                return true
+            }
+            return false
+        }
+    )
+    oralSmokeRefusal(
+        "CIV-43 refuses removal of its CIV-41 dependency",
+        session: prepared,
+        operation: { try $0.setKnowledgeGraphEnabled(false) },
+        matches: {
+            if case AgentSessionError.oral(.knowledgeRequired) = $0 {
+                return true
+            }
+            return false
+        }
+    )
+    oralSmokeRefusal(
+        "CIV-43 refuses removal of its CIV-42 dependency",
+        session: prepared,
+        operation: { try $0.setLanguageEnabled(false) },
+        matches: {
+            if case AgentSessionError.oral(.languageRequired) = $0 {
+                return true
+            }
+            return false
+        }
+    )
+
+    let social = try! AgentSocialConfiguration(
+        communicationRadius: 2,
+        minimumTrustToVerify: -100
+    )
+    var missingKnowledge = try! AgentSimulationSession(
+        configuration: try! AgentSessionConfiguration(
+            seed: 143,
+            nearbyRadius: 8,
+            resourceObservationRadius: 4,
+            recentMemorySnapshotLimit: 4,
+            memoryPolicy: .bounded(maxEntries: 16),
+            socialConfiguration: social
+        ),
+        agents: [oralSmokeAgent(oralA, x: 0), oralSmokeAgent(oralB, x: 1)],
+        simulationID: try! AgentSimulationID(
+            validating: "civ43-missing-initialization"
+        ),
+        causalLedgerPolicy: .bounded(maxEvents: 256)
+    )
+    try! missingKnowledge.setSocialEnabled(true)
+    oralSmokeRefusal(
+        "oral initialization without CIV-41 is refused",
+        session: missingKnowledge,
+        operation: {
+            try $0.setOralTransmissionEnabled(true)
+        },
+        matches: {
+            if case AgentSessionError.oral(.knowledgeRequired) = $0 {
+                return true
+            }
+            return false
+        }
+    )
+    try! missingKnowledge.setKnowledgeGraphEnabled(true)
+    oralSmokeRefusal(
+        "oral initialization without CIV-42 is refused",
+        session: missingKnowledge,
+        operation: {
+            try $0.setOralTransmissionEnabled(true)
+        },
+        matches: {
+            if case AgentSessionError.oral(.languageRequired) = $0 {
+                return true
+            }
+            return false
+        }
+    )
+}
+
+private func oralSmokeMortalityProof() {
+    var (mortality, sourceID) = oralSmokePrepared(
+        id: "civ43-mortality",
+        lethalID: oralB
+    )
+    _ = try! mortality.transmitOralClaim(
+        speakerID: oralA,
+        recipientID: oralB,
+        propositionID: sourceID,
+        renderingMode: .deterministicCompositional
+    )
+    try! mortality.initializePopulationRegistry(
+        settlementAnchor: AgentPosition(x: 0, y: 64, z: 0),
+        receptionPosition: AgentPosition(x: 0, y: 64, z: 0)
+    )
+    mortality.setSurvivalEnabled(true)
+    try! mortality.setMortalityEnabled(true)
+    for _ in 0..<64 where mortality.snapshot().agents.contains(where: {
+        $0.id == oralB.rawValue
+    }) {
+        _ = try! mortality.advanceTick()
+    }
+    let historicalCount = mortality.oralTransmissionSummary()
+        .transmissionCount
+    check("mortality finalized the informed oral participant",
+        !mortality.snapshot().agents.contains { $0.id == oralB.rawValue })
+    check("death retires current belief and lexical competence only",
+        !mortality.knowledgeSnapshot().beliefs.contains {
+            $0.ownerID == oralB
+        }
+            && !mortality.languageSnapshot().lexicalAssociations.contains {
+                $0.ownerID == oralB
+            }
+            && historicalCount == 1)
+    oralSmokeRefusal(
+        "finalized-dead speaker cannot transmit",
+        session: mortality,
+        operation: {
+            _ = try $0.transmitOralClaim(
+                speakerID: oralB,
+                recipientID: oralA,
+                propositionID: sourceID,
+                renderingMode: .noRendering
+            )
+        },
+        matches: {
+            if case AgentSessionError.oral(.unknownAgent) = $0 { return true }
+            return false
+        }
+    )
+    oralSmokeRefusal(
+        "finalized-dead recipient cannot acquire",
+        session: mortality,
+        operation: {
+            _ = try $0.transmitOralClaim(
+                speakerID: oralA,
+                recipientID: oralB,
+                propositionID: sourceID,
+                renderingMode: .noRendering
+            )
+        },
+        matches: {
+            if case AgentSessionError.oral(.unknownAgent) = $0 { return true }
+            return false
+        }
+    )
+    let checkpoint = try! mortality.makeCheckpoint()
+    let restored = try! AgentSimulationSession.restoring(checkpoint)
+    check("restart does not resurrect dead oral cognition",
+        !restored.snapshot().agents.contains { $0.id == oralB.rawValue }
+            && !restored.knowledgeSnapshot().beliefs.contains {
+                $0.ownerID == oralB
+            }
+            && !restored.languageSnapshot().lexicalAssociations.contains {
+                $0.ownerID == oralB
+            }
+            && restored.oralTransmissionSummary().transmissionCount
+                == historicalCount)
+    print(
+        "  CIV43_LIFECYCLE dead=\(oralB.rawValue) historical=\(historicalCount) currentBeliefs=\(restored.knowledgeSummary().currentBeliefCount)"
+    )
+}
+
+private func oralSmokeCompactionProof() {
+    // The two-hop chain is intentionally pinned by B and C's current beliefs.
+    // A third row therefore fails at a bound of two without partial mutation.
+    let config = try! AgentOralConfiguration(
+        maximumTransmissionRecords: 2,
+        maximumFaithfulDistance: 1
+    )
+    let (bounded, _, _, sourceID) = oralSmokeChain(
+        id: "civ43-bounded",
+        oralConfiguration: config,
+        causalMaximumEvents: 24
+    )
+    oralSmokeRefusal(
+        "pinned oral capacity fails closed",
+        session: bounded,
+        operation: {
+            _ = try $0.transmitOralClaim(
+                speakerID: oralB,
+                recipientID: oralA,
+                propositionID: sourceID,
+                renderingMode: .noRendering
+            )
+        },
+        matches: {
+            if case AgentSessionError.oral(.capacityReached) = $0 {
+                return true
+            }
+            return false
+        }
+    )
+    var compacted = bounded
+    _ = try! compacted.transmitOralClaim(
+        speakerID: oralA,
+        recipientID: oralB,
+        propositionID: sourceID,
+        renderingMode: .noRendering
+    )
+    check("superseded oral basis compacts deterministically",
+        compacted.oralTransmissionSummary().transmissionCount == 2
+            && compacted.oralTransmissionSummary()
+                .evictedTransmissionCount == 1)
+    let checkpoint = try! compacted.makeCheckpoint()
+    let restored = try! AgentSimulationSession.restoring(checkpoint)
+    check("bounded compacted causal prefix preserves oral chain",
+        compacted.causalLedgerSnapshot().summary.droppedEventCount > 0
+            && restored.oralTransmissionSnapshot()
+                == compacted.oralTransmissionSnapshot())
+    check("compacted oral chain restarts byte exactly",
+        try! AgentCheckpointCodec.encode(restored.makeCheckpoint())
+            == (try! AgentCheckpointCodec.encode(checkpoint)))
+    let droppedCount = compacted.causalLedgerSnapshot().summary
+        .droppedEventCount
+    let droppedAuthorityIsReferenced = compacted.oralTransmissionSnapshot()
+        .transmissions.contains {
+            $0.sourceBeliefRevisionEventID.sequence.rawValue
+                <= UInt64(droppedCount)
+        }
+    let mutuallyCoherentForgery = oralSmokeResignedCheckpoint(checkpoint) {
+        durable in
+        var oral = durable["oralTransmissionState"] as! [String: Any]
+        var rows = oral["transmissions"] as! [[String: Any]]
+        let evicted = oral["evictedTransmissionCount"] as! Int
+        let authenticBoundary = oral["provenanceBoundary"]
+            as! [String: Any]
+        precondition(
+            oralSmokeJSONBoundaryDigest(rows: rows, evicted: evicted)
+                == authenticBoundary["digest"] as! String,
+            "CIV-43 hostile boundary recomputation fixture"
+        )
+        let forgedSourceIndex = rows.firstIndex {
+            let sourceEvent = $0["sourceBeliefRevisionEventID"]
+                as! [String: Any]
+            return (sourceEvent["sequence"] as! NSNumber).uint64Value
+                <= UInt64(droppedCount)
+        }!
+        var forged = rows[forgedSourceIndex]
+        let forgedID = "oral-transmission-forged-compacted-prefix"
+        forged["transmissionID"] = forgedID
+        forged["provenanceDigest"] = oralSmokeJSONProvenanceDigest(forged)
+        rows.append(forged)
+        oral["transmissions"] = rows.sorted {
+            ($0["transmissionID"] as! String)
+                < ($1["transmissionID"] as! String)
+        }
+        oral["nextTransmissionOrdinal"] = 10_000
+        var boundary = oral["provenanceBoundary"] as! [String: Any]
+        boundary["digest"] = oralSmokeJSONBoundaryDigest(
+            rows: rows, evicted: evicted
+        )
+        oral["provenanceBoundary"] = boundary
+        durable["oralTransmissionState"] = oral
+
+        var knowledge = durable["knowledgeGraphState"] as! [String: Any]
+        var claims = knowledge["claims"] as! [[String: Any]]
+        let claimID = forged["recipientClaimID"] as! String
+        let index = claims.firstIndex {
+            ($0["claimID"] as! String) == claimID
+        }!
+        claims[index]["oralTransmissionID"] = forgedID
+        knowledge["claims"] = claims
+        durable["knowledgeGraphState"] = knowledge
+    }
+    let forgeryError = oralSmokeRestoreError(mutuallyCoherentForgery)
+    check(
+        "compacted mutually coherent dropped-prefix forgery is rejected by authentic oral boundary",
+        droppedAuthorityIsReferenced
+            && forgeryError == "oral:oral provenance boundary",
+        "droppedReference=\(droppedAuthorityIsReferenced) error=\(forgeryError ?? "accepted")"
+    )
+    var retransmitting = restored
+    let currentB = sourceIDFor(session: retransmitting, ownerID: oralB)
+    _ = try! retransmitting.transmitOralClaim(
+        speakerID: oralB,
+        recipientID: oralC,
+        propositionID: currentB,
+        renderingMode: .noRendering
+    )
+    check("B can retransmit current belief after legitimate compaction",
+        retransmitting.oralTransmissionSummary().transmissionCount == 2
+            && retransmitting.oralTransmissionSummary()
+                .evictedTransmissionCount == 2)
+    print(
+        "  CIV43_BOUNDS retained=\(compacted.oralTransmissionSummary().transmissionCount)/2 evicted=\(compacted.oralTransmissionSummary().evictedTransmissionCount) dropped=\(compacted.causalLedgerSnapshot().summary.droppedEventCount) boundary=\(compacted.oralTransmissionSnapshot().provenanceBoundary!.eventID.rawValue) currentBeliefs=\(compacted.knowledgeSummary().currentBeliefCount) retransmitEvicted=\(retransmitting.oralTransmissionSummary().evictedTransmissionCount)"
+    )
+}
+
+func runPebbleAgentsOralTransmissionRestartWriteSmoke() {
+    let path = ProcessInfo.processInfo.environment[
+        "PEBBLELAB_CIV43_CHECKPOINT_PATH"
+    ]!
+    let session = oralSmokeChain(id: "civ43-fresh-process").0
+    let bytes = try! AgentCheckpointCodec.encode(session.makeCheckpoint())
+    try! bytes.write(to: URL(fileURLWithPath: path), options: .atomic)
+    check("CIV-43 fresh-process checkpoint write", !bytes.isEmpty)
+}
+
+func runPebbleAgentsOralTransmissionRestartReadSmoke() {
+    let path = ProcessInfo.processInfo.environment[
+        "PEBBLELAB_CIV43_CHECKPOINT_PATH"
+    ]!
+    let bytes = try! Data(contentsOf: URL(fileURLWithPath: path))
+    let checkpoint = try! AgentCheckpointCodec.decode(
+        AgentSessionCheckpoint.self, from: bytes
+    )
+    let restored = try! AgentSimulationSession.restoring(checkpoint)
+    check("CIV-43 fresh-process schema is 38",
+        checkpoint.schemaVersion
+            == AgentCheckpointSchema.oralTransmissionVersion)
+    check("CIV-43 fresh-process chain survives",
+        restored.oralTransmissionSummary().transmissionCount == 2
+            && restored.oralTransmissionSummary().distortedCount == 1)
+    check("CIV-43 fresh-process bytes remain exact",
+        try! AgentCheckpointCodec.encode(restored.makeCheckpoint()) == bytes)
+}

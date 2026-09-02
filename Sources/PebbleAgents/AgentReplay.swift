@@ -38,6 +38,7 @@ public enum AgentReplaySchema {
     public static let populationScaleVersion = 35
     public static let knowledgeVersion = 36
     public static let languageVersion = 37
+    public static let oralTransmissionVersion = 38
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -63,6 +64,7 @@ public enum AgentReplaySchema {
             || version == populationScaleVersion
             || version == knowledgeVersion
             || version == languageVersion
+            || version == oralTransmissionVersion
     }
 }
 
@@ -209,6 +211,8 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case languageFeature
     case languagePrior
     case languageCommunication
+    case oralFeature
+    case oralTransmission
 }
 
 public enum AgentReplayOperation: Codable {
@@ -242,6 +246,17 @@ public enum AgentReplayOperation: Codable {
         recipientID: AgentID,
         propositionID: AgentKnowledgePropositionID,
         renderingMode: AgentLanguageRenderingMode
+    )
+    case setOralTransmissionEnabled(
+        Bool,
+        configuration: AgentOralConfiguration
+    )
+    case transmitOralClaim(
+        speakerID: AgentID,
+        recipientID: AgentID,
+        propositionID: AgentKnowledgePropositionID,
+        renderingMode: AgentLanguageRenderingMode,
+        acceptedEffect: AgentOralAcceptedEffect?
     )
     case setPhysicalEnabled(Bool)
     case setCooperationEnabled(Bool)
@@ -521,6 +536,8 @@ public enum AgentReplayOperation: Codable {
         case .seedLanguagePrior: return .languagePrior
         case .communicateLanguageSemanticContent:
             return .languageCommunication
+        case .setOralTransmissionEnabled: return .oralFeature
+        case .transmitOralClaim: return .oralTransmission
         case .setPhysicalEnabled: return .physicalFeature
         case .setCooperationEnabled: return .cooperationFeature
         case .createConstructionProject: return .constructionProjectCreation
@@ -670,6 +687,12 @@ public enum AgentReplayOperation: Codable {
             raw = "language-communicate:\(speakerID.rawValue):"
                 + "\(recipientID.rawValue):\(propositionID.rawValue):"
                 + renderingMode.rawValue
+        case let .transmitOralClaim(
+            speakerID, recipientID, propositionID, renderingMode, _
+        ):
+            raw = "oral-transmit:\(speakerID.rawValue):"
+                + "\(recipientID.rawValue):\(propositionID.rawValue):"
+                + renderingMode.rawValue
         case let .applyBirthSiteObservation(observation):
             raw = "birth-site:\(observation.planID.rawValue):\(observation.observedTick)"
         case let .proposeUnion(receipt): raw = receipt.receiptID
@@ -811,6 +834,7 @@ public struct AgentReplayApplicationResult {
     public let tickResult: AgentSessionTickResult?
     public let socialVerificationResult: AgentSocialVerificationResult?
     public let claimedPhysicalPresentations: [AgentPhysicalPresentationRequest]
+    public let oralTransmissionResult: AgentOralTransmission?
 
     init(
         tick: Int,
@@ -818,7 +842,8 @@ public struct AgentReplayApplicationResult {
         causalDigest: String,
         tickResult: AgentSessionTickResult? = nil,
         socialVerificationResult: AgentSocialVerificationResult? = nil,
-        claimedPhysicalPresentations: [AgentPhysicalPresentationRequest] = []
+        claimedPhysicalPresentations: [AgentPhysicalPresentationRequest] = [],
+        oralTransmissionResult: AgentOralTransmission? = nil
     ) {
         self.tick = tick
         self.causalSequence = causalSequence
@@ -826,6 +851,7 @@ public struct AgentReplayApplicationResult {
         self.tickResult = tickResult
         self.socialVerificationResult = socialVerificationResult
         self.claimedPhysicalPresentations = claimedPhysicalPresentations
+        self.oralTransmissionResult = oralTransmissionResult
     }
 }
 
@@ -1056,6 +1082,9 @@ public struct AgentReplayRecorder {
         simulationID = checkpoint.simulationID
         initialTick = checkpoint.tick.rawValue
         schemaVersion = checkpoint.schemaVersion
+            == AgentCheckpointSchema.oralTransmissionVersion
+            ? AgentReplaySchema.oralTransmissionVersion
+            : checkpoint.schemaVersion
             == AgentCheckpointSchema.languageVersion
             ? AgentReplaySchema.languageVersion
             : checkpoint.schemaVersion
@@ -1393,6 +1422,16 @@ public struct AgentReplayRecorder {
             }
             schemaVersion = AgentReplaySchema.languageVersion
         }
+        if case let .setOralTransmissionEnabled(enabled, _) = operation,
+           enabled,
+           schemaVersion < AgentReplaySchema.oralTransmissionVersion {
+            guard records.isEmpty else {
+                throw AgentReplayError.invalidJournal(
+                    "oral activation must be the first v38 replay operation"
+                )
+            }
+            schemaVersion = AgentReplaySchema.oralTransmissionVersion
+        }
         guard session.simulationID == simulationID else { throw AgentReplayError.currentStateMismatch }
         let preDigest = try session.durableStateDigest()
         let tickBefore = session.tick
@@ -1401,11 +1440,37 @@ public struct AgentReplayRecorder {
         let result = try candidate.applyReplayOperation(operation)
         let postDigest = try candidate.durableStateDigest()
         let causalAfter = candidate.causalLedgerSnapshot().summary
+        let recordedOperation: AgentReplayOperation
+        if case let .transmitOralClaim(
+            speakerID, recipientID, propositionID, renderingMode, nil
+        ) = operation,
+           let oralResult = result.oralTransmissionResult,
+           let interpreted = candidate.knowledgeGraphState?.propositions
+            .first(where: {
+                $0.propositionID == oralResult.interpretedSemanticContent
+                    .sourcePropositionID
+            }) {
+            recordedOperation = .transmitOralClaim(
+                speakerID: speakerID,
+                recipientID: recipientID,
+                propositionID: propositionID,
+                renderingMode: renderingMode,
+                acceptedEffect: AgentOralAcceptedEffect(
+                    interpretedProposition: interpreted,
+                    interpretedSemanticContent:
+                        oralResult.interpretedSemanticContent,
+                    outcome: oralResult.outcome,
+                    decisionDigest: oralResult.decisionDigest
+                )
+            )
+        } else {
+            recordedOperation = operation
+        }
         let record = AgentReplayRecord(
             schemaVersion: schemaVersion,
             simulationID: simulationID,
             recordSequence: AgentReplayRecordSequence(rawValue: UInt64(records.count + 1))!,
-            operation: operation,
+            operation: recordedOperation,
             expectedTickBefore: tickBefore,
             preStateSemanticDigest: preDigest,
             postStateSemanticDigest: postDigest,
@@ -1648,6 +1713,10 @@ public enum AgentSessionReplayer {
                 && checkpoint.schemaVersion <= AgentCheckpointSchema.populationScaleVersion)
             || (manifest.schemaVersion == AgentReplaySchema.languageVersion
                 && checkpoint.schemaVersion <= AgentCheckpointSchema.knowledgeVersion)
+            || (manifest.schemaVersion
+                    == AgentReplaySchema.oralTransmissionVersion
+                && checkpoint.schemaVersion
+                    <= AgentCheckpointSchema.languageVersion)
         guard manifest.baseCheckpointID == checkpoint.checkpointID,
               manifest.baseCheckpointDigest == checkpoint.semanticDigest,
               manifest.simulationID == checkpoint.simulationID,
@@ -1717,6 +1786,7 @@ extension AgentSimulationSession {
         var claimed: [AgentPhysicalPresentationRequest] = []
         var tickResult: AgentSessionTickResult?
         var socialVerificationResult: AgentSocialVerificationResult?
+        var oralTransmissionResult: AgentOralTransmission?
         switch operation {
         case let .advanceTick(perceptions, physicalObservations):
             tickResult = try candidate.advanceTick(
@@ -1765,6 +1835,21 @@ extension AgentSimulationSession {
                 recipientID: recipientID,
                 propositionID: propositionID,
                 renderingMode: renderingMode
+            )
+        case let .setOralTransmissionEnabled(enabled, configuration):
+            try candidate.setOralTransmissionEnabled(
+                enabled, configuration: configuration
+            )
+        case let .transmitOralClaim(
+            speakerID, recipientID, propositionID, renderingMode,
+            acceptedEffect
+        ):
+            oralTransmissionResult = try candidate.transmitOralClaim(
+                speakerID: speakerID,
+                recipientID: recipientID,
+                propositionID: propositionID,
+                renderingMode: renderingMode,
+                recordedEffect: acceptedEffect
             )
         case let .setPhysicalEnabled(enabled):
             try candidate.setPhysicalEnabled(enabled)
@@ -2171,7 +2256,8 @@ extension AgentSimulationSession {
             causalDigest: causal.digest,
             tickResult: tickResult,
             socialVerificationResult: socialVerificationResult,
-            claimedPhysicalPresentations: claimed
+            claimedPhysicalPresentations: claimed,
+            oralTransmissionResult: oralTransmissionResult
         )
     }
 }

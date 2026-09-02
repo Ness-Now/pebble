@@ -14,6 +14,9 @@ extension AgentSimulationSession {
         guard knowledgeGraphState != nil else {
             throw AgentSessionError.language(.knowledgeRequired)
         }
+        if !enabled, oralTransmissionState != nil {
+            throw AgentSessionError.oral(.languageRequired)
+        }
         if languageState?.enabled == enabled {
             if let state = languageState,
                state.configuration != configuration || state.pack != pack {
@@ -367,12 +370,25 @@ extension AgentSimulationSession {
         )
         state = candidate.languageState ?? state
         if state.communications.count >= state.configuration.maximumCommunicationRecords {
-            let evicted = state.communications.sorted {
+            let oralCommunicationIDs = Set(
+                candidate.oralTransmissionState?.transmissions.map(
+                    \.languageCommunicationID
+                ) ?? []
+            )
+            let removable = state.communications.filter {
+                !oralCommunicationIDs.contains($0.communicationID)
+            }.sorted {
                 if $0.communicatedAtTick != $1.communicatedAtTick {
                     return $0.communicatedAtTick < $1.communicatedAtTick
                 }
                 return $0.communicationID < $1.communicationID
-            }.prefix(pendingEvictionCount)
+            }
+            guard removable.count >= pendingEvictionCount else {
+                throw AgentSessionError.language(
+                    .capacityReached("oral-pinned communication records")
+                )
+            }
+            let evicted = removable.prefix(pendingEvictionCount)
             let evictedIDs = Set(evicted.map(\.communicationID))
             state.communications.removeAll {
                 evictedIDs.contains($0.communicationID)
@@ -543,7 +559,7 @@ extension AgentSimulationSession {
         try commitLanguageProvenanceBoundary(causes: [deathEventID])
     }
 
-    private func languageBeliefAndSemanticContent(
+    func languageBeliefAndSemanticContent(
         ownerID: AgentID,
         propositionID: AgentKnowledgePropositionID
     ) throws -> (
@@ -577,7 +593,7 @@ extension AgentSimulationSession {
         )
     }
 
-    private func languageSemanticContent(
+    func languageSemanticContent(
         for proposition: AgentKnowledgeProposition
     ) throws -> AgentLanguageSemanticContent {
         guard proposition.subject.kind == .worldCell,

@@ -21,6 +21,9 @@ extension AgentSimulationSession {
         if enabled, !causalLedger.isEnabled {
             throw AgentSessionError.social(.causalLedgerRequired)
         }
+        if !enabled, oralTransmissionState != nil {
+            throw AgentSessionError.oral(.socialRequired)
+        }
         guard socialEnabled != enabled else { return }
         let physicalWasEnabled = physicalEnabled
         if !enabled, cooperationEnabled {
@@ -599,6 +602,32 @@ extension AgentSimulationSession {
                     && $0.fact.factID == intent.factID
                     && $0.fact.directObservationEventID == fact.directObservationEventID
               }) else { return false }
+        return true
+    }
+
+    /// Shared, actor-neutral direct/social locality authority. Domain-specific
+    /// communication may compose this reachability decision without acquiring
+    /// the fact-specific delivery and trust-state mutation owned by CIV-03.
+    func canUseDirectSocialCommunicationAuthority(
+        speakerID: AgentID,
+        recipientID: AgentID
+    ) -> Bool {
+        guard socialEnabled,
+              speakerID != recipientID,
+              !isMigratingAgent(speakerID.rawValue),
+              !isMigratingAgent(recipientID.rawValue),
+              let speaker = statesById[speakerID.rawValue],
+              let recipient = statesById[recipientID.rawValue],
+              !isSociallyUrgent(recipient),
+              !hasMaterialTransaction(recipient),
+              trustScore(
+                sourceAgentId: recipientID.rawValue,
+                targetAgentId: speakerID.rawValue
+              ) >= configuration.socialConfiguration.minimumTrustToVerify,
+              manhattanDistance(speaker.position, recipient.position)
+                <= configuration.socialConfiguration.communicationRadius else {
+            return false
+        }
         return true
     }
 

@@ -265,8 +265,16 @@ public struct AgentKnowledgeSourceClaim: Codable, Equatable, Sendable {
     public let propositionID: AgentKnowledgePropositionID
     public let sourceAgentID: AgentID
     public let recipientID: AgentID
-    public let sourceEvidenceID: AgentKnowledgeEvidenceID
-    public let socialMessageID: AgentSocialMessageID
+    /// Direct social claims retain the CIV-41 evidence and CIV-03 message.
+    /// Oral claims instead retain the speaker's CIV-41 historical belief
+    /// authority, CIV-42 semantic communication, and CIV-43 hop. Optionals
+    /// preserve byte-exact schema-37 decoding and re-encoding.
+    public let sourceEvidenceID: AgentKnowledgeEvidenceID?
+    public let socialMessageID: AgentSocialMessageID?
+    public let sourceBeliefAuthorityID:
+        AgentKnowledgeHistoricalBeliefAuthorityID?
+    public let languageCommunicationID: AgentLanguageCommunicationID?
+    public let oralTransmissionID: AgentOralTransmissionID?
     public let sentEventID: AgentCausalEventID
     public let receivedEventID: AgentCausalEventID
     public let acquisitionEventID: AgentCausalEventID
@@ -381,6 +389,16 @@ public enum AgentKnowledgeDepartedBeliefBasis:
         receivedEventID: AgentCausalEventID,
         acquisitionEventID: AgentCausalEventID
     )
+    case oralSourceClaim(
+        claimID: AgentKnowledgeClaimID,
+        sourceAgentID: AgentID,
+        sourceBeliefAuthorityID: AgentKnowledgeHistoricalBeliefAuthorityID,
+        languageCommunicationID: AgentLanguageCommunicationID,
+        oralTransmissionID: AgentOralTransmissionID,
+        sentEventID: AgentCausalEventID,
+        receivedEventID: AgentCausalEventID,
+        acquisitionEventID: AgentCausalEventID
+    )
 
     var canonicalText: String {
         switch self {
@@ -398,6 +416,16 @@ public enum AgentKnowledgeDepartedBeliefBasis:
                 + "\(sourceEvidenceAuthorityEventID.rawValue):"
                 + "\(sourceEvidenceAcquisitionEventID.rawValue):"
                 + "\(socialMessageID.rawValue):\(sentEventID.rawValue):"
+                + "\(receivedEventID.rawValue):\(acquisitionEventID.rawValue)"
+        case let .oralSourceClaim(
+            claimID, sourceAgentID, sourceBeliefAuthorityID,
+            languageCommunicationID, oralTransmissionID, sentEventID,
+            receivedEventID, acquisitionEventID
+        ):
+            return "oral-claim:\(claimID.rawValue):\(sourceAgentID.rawValue):"
+                + "\(sourceBeliefAuthorityID.rawValue):"
+                + "\(languageCommunicationID.rawValue):"
+                + "\(oralTransmissionID.rawValue):\(sentEventID.rawValue):"
                 + "\(receivedEventID.rawValue):\(acquisitionEventID.rawValue)"
         }
     }

@@ -13,6 +13,9 @@ extension AgentSimulationSession {
         if enabled, !socialEnabled {
             throw AgentSessionError.knowledge(.socialRequired)
         }
+        if !enabled, oralTransmissionState != nil {
+            throw AgentSessionError.oral(.knowledgeRequired)
+        }
         if knowledgeGraphState?.enabled == enabled {
             if enabled, knowledgeGraphState?.configuration != configuration {
                 throw AgentSessionError.knowledge(
@@ -113,7 +116,7 @@ extension AgentSimulationSession {
                 "e|\($0.evidenceID.rawValue)|\($0.observerID.rawValue)|\($0.propositionID.rawValue)|\($0.authority.rawValue)|\($0.authorityEventID.rawValue)|\($0.acquisitionEventID.rawValue)"
             }.joined(separator: ";"),
             claims.map {
-                "c|\($0.claimID.rawValue)|\($0.sourceAgentID.rawValue)|\($0.recipientID.rawValue)|\($0.propositionID.rawValue)|\($0.sourceEvidenceID.rawValue)|\($0.receivedEventID.rawValue)"
+                "c|\($0.claimID.rawValue)|\($0.sourceAgentID.rawValue)|\($0.recipientID.rawValue)|\($0.propositionID.rawValue)|\($0.sourceEvidenceID?.rawValue ?? "none")|\($0.socialMessageID?.rawValue ?? "none")|\($0.sourceBeliefAuthorityID?.rawValue ?? "none")|\($0.languageCommunicationID?.rawValue ?? "none")|\($0.oralTransmissionID?.rawValue ?? "none")|\($0.receivedEventID.rawValue)"
             }.joined(separator: ";"),
             understandings.map {
                 "u|\($0.understandingID.rawValue)|\($0.ownerID.rawValue)|\($0.propositionID.rawValue)|\($0.basis.canonicalText)|\($0.interpretation.rawValue)|\($0.formedEventID.rawValue)"
@@ -297,6 +300,9 @@ extension AgentSimulationSession {
             recipientID: message.recipientID,
             sourceEvidenceID: sourceEvidence.evidenceID,
             socialMessageID: message.messageID,
+            sourceBeliefAuthorityID: nil,
+            languageCommunicationID: nil,
+            oralTransmissionID: nil,
             sentEventID: message.sentEventID,
             receivedEventID: message.receivedEventID,
             acquisitionEventID: claimEvent.eventID,
@@ -340,7 +346,7 @@ extension AgentSimulationSession {
         )
     }
 
-    private func insertKnowledgeProposition(
+    func insertKnowledgeProposition(
         _ proposition: AgentKnowledgeProposition,
         into state: inout AgentKnowledgeGraphState
     ) {
@@ -350,7 +356,7 @@ extension AgentSimulationSession {
         state.propositions.append(proposition)
     }
 
-    private mutating func formKnowledgeUnderstanding(
+    mutating func formKnowledgeUnderstanding(
         ownerID: AgentID,
         proposition: AgentKnowledgeProposition,
         basis: AgentKnowledgeUnderstandingBasis,
@@ -390,7 +396,7 @@ extension AgentSimulationSession {
         return understanding
     }
 
-    private mutating func reviseKnowledgeBelief(
+    mutating func reviseKnowledgeBelief(
         ownerID: AgentID,
         proposition: AgentKnowledgeProposition,
         stance: AgentKnowledgeBeliefStance,
@@ -550,11 +556,27 @@ extension AgentSimulationSession {
 
     func referencedKnowledgeHistoricalAuthorityIDs()
         -> Set<AgentKnowledgeHistoricalBeliefAuthorityID> {
-        guard let language = languageState else { return [] }
-        var result = Set(language.communications.map {
+        var result = Set((languageState?.communications ?? []).map {
             $0.semanticAuthority.authorityID
         })
-        result.formUnion(language.exposureReceipts.map(\.semanticAuthorityID))
+        result.formUnion(
+            (languageState?.exposureReceipts ?? []).map(\.semanticAuthorityID)
+        )
+        result.formUnion(
+            knowledgeGraphState?.claims.compactMap(
+                \.sourceBeliefAuthorityID
+            ) ?? []
+        )
+        result.formUnion(
+            oralTransmissionState?.transmissions.map(\.sourceAuthorityID) ?? []
+        )
+        for departed in knowledgeGraphState?.departedBeliefs ?? [] {
+            if case let .oralSourceClaim(
+                _, _, authorityID, _, _, _, _, _
+            ) = departed.basis {
+                result.insert(authorityID)
+            }
+        }
         return result
     }
 
@@ -646,28 +668,48 @@ extension AgentSimulationSession {
                 )
             case let .sourceClaim(claimID):
                 guard let claim = claimsByID[claimID],
-                      claim.recipientID == agentID,
-                      let sourceEvidence = evidenceByID[
-                          claim.sourceEvidenceID
-                      ] else {
+                      claim.recipientID == agentID else {
                     throw AgentSessionError.knowledge(.invalidState(
                         "terminal source claim \(belief.beliefID.rawValue)"
                     ))
                 }
-                historicalBasis = .sourceClaim(
-                    claimID: claim.claimID,
-                    sourceAgentID: claim.sourceAgentID,
-                    sourceEvidenceID: claim.sourceEvidenceID,
-                    sourceEvidenceAuthority: sourceEvidence.authority,
-                    sourceEvidenceAuthorityEventID:
-                        sourceEvidence.authorityEventID,
-                    sourceEvidenceAcquisitionEventID:
-                        sourceEvidence.acquisitionEventID,
-                    socialMessageID: claim.socialMessageID,
-                    sentEventID: claim.sentEventID,
-                    receivedEventID: claim.receivedEventID,
-                    acquisitionEventID: claim.acquisitionEventID
-                )
+                if let sourceEvidenceID = claim.sourceEvidenceID,
+                   let socialMessageID = claim.socialMessageID,
+                   let sourceEvidence = evidenceByID[sourceEvidenceID] {
+                    historicalBasis = .sourceClaim(
+                        claimID: claim.claimID,
+                        sourceAgentID: claim.sourceAgentID,
+                        sourceEvidenceID: sourceEvidenceID,
+                        sourceEvidenceAuthority: sourceEvidence.authority,
+                        sourceEvidenceAuthorityEventID:
+                            sourceEvidence.authorityEventID,
+                        sourceEvidenceAcquisitionEventID:
+                            sourceEvidence.acquisitionEventID,
+                        socialMessageID: socialMessageID,
+                        sentEventID: claim.sentEventID,
+                        receivedEventID: claim.receivedEventID,
+                        acquisitionEventID: claim.acquisitionEventID
+                    )
+                } else if let sourceBeliefAuthorityID =
+                            claim.sourceBeliefAuthorityID,
+                          let languageCommunicationID =
+                            claim.languageCommunicationID,
+                          let oralTransmissionID = claim.oralTransmissionID {
+                    historicalBasis = .oralSourceClaim(
+                        claimID: claim.claimID,
+                        sourceAgentID: claim.sourceAgentID,
+                        sourceBeliefAuthorityID: sourceBeliefAuthorityID,
+                        languageCommunicationID: languageCommunicationID,
+                        oralTransmissionID: oralTransmissionID,
+                        sentEventID: claim.sentEventID,
+                        receivedEventID: claim.receivedEventID,
+                        acquisitionEventID: claim.acquisitionEventID
+                    )
+                } else {
+                    throw AgentSessionError.knowledge(.invalidState(
+                        "terminal source claim route \(belief.beliefID.rawValue)"
+                    ))
+                }
             }
             guard !departed.contains(where: {
                 $0.beliefID == belief.beliefID && $0.deathID == deathID
@@ -703,7 +745,7 @@ extension AgentSimulationSession {
         // A dead source's evidence remains only when a living understanding or
         // attributed claim still requires it. Its observer identity and
         // authority never change.
-        var retainedEvidenceIDs = Set(state.claims.map(\.sourceEvidenceID))
+        var retainedEvidenceIDs = Set(state.claims.compactMap(\.sourceEvidenceID))
         retainedEvidenceIDs.formUnion(state.understandings.compactMap {
             if case let .evidence(id) = $0.basis { return id }
             return nil
@@ -735,7 +777,7 @@ extension AgentSimulationSession {
         knowledgeGraphState = state
     }
 
-    private mutating func requiredKnowledgeEvent(
+    mutating func requiredKnowledgeEvent(
         kind: AgentCausalEventKind,
         actorID: AgentID?,
         subjectID: AgentID?,
@@ -765,7 +807,7 @@ extension AgentSimulationSession {
         return event
     }
 
-    private mutating func compactKnowledgeState(
+    mutating func compactKnowledgeState(
         _ state: inout AgentKnowledgeGraphState
     ) throws {
         let configuration = state.configuration
@@ -788,7 +830,12 @@ extension AgentSimulationSession {
             counter: &state.evictionCounts.revisions
         )
 
-        let currentUnderstandingIDs = Set(state.beliefs.map(\.basisUnderstandingID))
+        var currentUnderstandingIDs = Set(state.beliefs.map(\.basisUnderstandingID))
+        currentUnderstandingIDs.formUnion(
+            oralTransmissionState?.transmissions.map(
+                \.recipientUnderstandingID
+            ) ?? []
+        )
         let understandingIndices = try knowledgeEvictionIndices(
             records: state.understandings,
             maximumGlobal: configuration.maximumUnderstandings,
@@ -811,7 +858,9 @@ extension AgentSimulationSession {
         let retainedClaimIDs = Set(state.understandings.compactMap {
             if case let .sourceClaim(id) = $0.basis { return id }
             return nil
-        })
+        }).union(
+            oralTransmissionState?.transmissions.map(\.recipientClaimID) ?? []
+        )
         let claimIndices = try knowledgeEvictionIndices(
             records: state.claims,
             maximumGlobal: configuration.maximumClaims,
@@ -835,7 +884,7 @@ extension AgentSimulationSession {
             if case let .evidence(id) = $0.basis { return id }
             return nil
         })
-        retainedEvidenceIDs.formUnion(state.claims.map(\.sourceEvidenceID))
+        retainedEvidenceIDs.formUnion(state.claims.compactMap(\.sourceEvidenceID))
         let activeFactEvents = Set(
             socialFacts.filter { !$0.isExpired(at: tick) }
                 .map(\.directObservationEventID)
@@ -1252,6 +1301,11 @@ extension AgentSimulationSession {
                     sourceAuthorityEventID, sourceAcquisitionEventID,
                     sentEventID, receivedEventID, acquisitionEventID,
                 ]
+            case let .oralSourceClaim(
+                _, _, _, _, _, sentEventID, receivedEventID,
+                acquisitionEventID
+            ):
+                basis = [sentEventID, receivedEventID, acquisitionEventID]
             }
             return basis + [
                 record.understandingFormedEventID,
@@ -1298,30 +1352,85 @@ extension AgentSimulationSession {
             )
         }), try state.claims.allSatisfy({ record throws -> Bool in
             guard propositionByID[record.propositionID] != nil,
-                  let sourceEvidence = evidenceByID[record.sourceEvidenceID],
-                  sourceEvidence.propositionID == record.propositionID,
-                  sourceEvidence.observerID == record.sourceAgentID,
                   record.receivedAtTick >= 0, record.receivedAtTick <= tick,
-                  sourceEvidence.acquisitionEventID.sequence
-                    < record.sentEventID.sequence,
                   record.sentEventID.sequence < record.receivedEventID.sequence,
                   record.receivedEventID.sequence
                     < record.acquisitionEventID.sequence else { return false }
-            let socialEvents: [(AgentCausalEventID, AgentCausalEventKind, String)] = [
-                (record.sentEventID, .socialMessageSent, "sent"),
-                (record.receivedEventID, .socialMessageReceived, "received"),
-            ]
-            for (eventID, kind, status) in socialEvents {
-                let event = try retainedCausalEvent(eventID)
-                if let event {
-                    guard event.kind == kind,
+            if let sourceEvidenceID = record.sourceEvidenceID,
+               let socialMessageID = record.socialMessageID {
+                guard record.sourceBeliefAuthorityID == nil,
+                      record.languageCommunicationID == nil,
+                      record.oralTransmissionID == nil,
+                      let sourceEvidence = evidenceByID[sourceEvidenceID],
+                      sourceEvidence.propositionID == record.propositionID,
+                      sourceEvidence.observerID == record.sourceAgentID,
+                      sourceEvidence.acquisitionEventID.sequence
+                        < record.sentEventID.sequence else { return false }
+                let socialEvents: [(
+                    AgentCausalEventID, AgentCausalEventKind, String
+                )] = [
+                    (record.sentEventID, .socialMessageSent, "sent"),
+                    (record.receivedEventID, .socialMessageReceived, "received"),
+                ]
+                for (eventID, kind, status) in socialEvents {
+                    if let event = try retainedCausalEvent(eventID) {
+                        guard event.kind == kind,
+                              event.actorID == record.sourceAgentID,
+                              event.subjectID == record.recipientID,
+                              case let .socialMessage(
+                                messageID, _, eventStatus
+                              ) = event.payload,
+                              messageID == socialMessageID.rawValue,
+                              eventStatus == status else { return false }
+                    }
+                }
+            } else if let sourceAuthorityID =
+                        record.sourceBeliefAuthorityID,
+                      let communicationID = record.languageCommunicationID,
+                      let transmissionID = record.oralTransmissionID {
+                guard record.socialMessageID == nil,
+                      let authority = (state.historicalBeliefAuthorities ?? [])
+                        .first(where: { $0.authorityID == sourceAuthorityID }),
+                      authority.ownerID == record.sourceAgentID,
+                      let communication = languageState?.communications.first(
+                        where: { $0.communicationID == communicationID }
+                      ),
+                      communication.speakerID == record.sourceAgentID,
+                      communication.recipientID == record.recipientID,
+                      communication.semanticAuthority.authorityID
+                        == sourceAuthorityID,
+                      communication.communicationEventID == record.sentEventID,
+                      let transmission = oralTransmissionState?.transmissions
+                        .first(where: {
+                            $0.transmissionID == transmissionID
+                        }),
+                      transmission.recipientClaimID == record.claimID,
+                      transmission.speakerID == record.sourceAgentID,
+                      transmission.recipientID == record.recipientID,
+                      transmission.sourceAuthorityID == sourceAuthorityID,
+                      transmission.languageCommunicationID == communicationID,
+                      transmission.receiptEventID == record.receivedEventID,
+                      transmission.interpretedSemanticContent
+                        .sourcePropositionID == record.propositionID else {
+                    return false
+                }
+                if let event = try retainedCausalEvent(
+                    record.receivedEventID
+                ) {
+                    guard event.kind == .oralTransmissionAccepted,
+                          event.origin == .oralTransition,
                           event.actorID == record.sourceAgentID,
                           event.subjectID == record.recipientID,
-                          case let .socialMessage(messageID, _, eventStatus)
-                            = event.payload,
-                          messageID == record.socialMessageID.rawValue,
-                          eventStatus == status else { return false }
+                          case let .oral(
+                            eventTransmissionID, _, reachedID, _, _
+                          ) = event.payload,
+                          eventTransmissionID == transmissionID.rawValue,
+                          reachedID == record.propositionID.rawValue else {
+                        return false
+                    }
                 }
+            } else {
+                return false
             }
             let acquisition = try retainedCausalEvent(record.acquisitionEventID)
             guard let acquisition else { return true }
@@ -1523,6 +1632,57 @@ extension AgentSimulationSession {
                             recordID, propositionID, _, _
                           ) = acquisition.payload,
                           recordID == claimID.rawValue,
+                          propositionID
+                            == record.proposition.propositionID.rawValue else {
+                        return false
+                    }
+                }
+            case let .oralSourceClaim(
+                claimID, sourceAgentID, sourceBeliefAuthorityID,
+                languageCommunicationID, oralTransmissionID, sentEventID,
+                receivedEventID, acquisitionEventID
+            ):
+                guard sourceAgentID != record.ownerID,
+                      sentEventID.sequence < receivedEventID.sequence,
+                      receivedEventID.sequence < acquisitionEventID.sequence,
+                      acquisitionEventID.sequence
+                        < record.understandingFormedEventID.sequence,
+                      let authority = (state.historicalBeliefAuthorities ?? [])
+                        .first(where: {
+                            $0.authorityID == sourceBeliefAuthorityID
+                        }),
+                      authority.ownerID == sourceAgentID,
+                      let communication = languageState?.communications.first(
+                        where: {
+                            $0.communicationID == languageCommunicationID
+                        }),
+                      communication.speakerID == sourceAgentID,
+                      communication.recipientID == record.ownerID,
+                      communication.communicationEventID == sentEventID,
+                      communication.semanticAuthority.authorityID
+                        == sourceBeliefAuthorityID,
+                      let transmission = oralTransmissionState?.transmissions
+                        .first(where: {
+                            $0.transmissionID == oralTransmissionID
+                        }),
+                      transmission.recipientClaimID == claimID,
+                      transmission.receiptEventID == receivedEventID,
+                      transmission.interpretedSemanticContent
+                        .sourcePropositionID
+                            == record.proposition.propositionID else {
+                    return false
+                }
+                if let acquisition = try retainedCausalEvent(
+                    acquisitionEventID
+                ) {
+                    guard acquisition.kind == .knowledgeClaimReceived,
+                          acquisition.origin == .knowledgeTransition,
+                          acquisition.actorID == sourceAgentID,
+                          acquisition.subjectID == record.ownerID,
+                          case let .knowledge(
+                            eventRecordID, propositionID, _, _
+                          ) = acquisition.payload,
+                          eventRecordID == claimID.rawValue,
                           propositionID
                             == record.proposition.propositionID.rawValue else {
                         return false

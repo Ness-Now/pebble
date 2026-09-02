@@ -283,6 +283,9 @@ public enum AgentCausalEventKind: String, Codable, CaseIterable, Sendable {
     case languageInitialized
     case languagePriorSeeded
     case languageSemanticCommunicated
+    case oralTransmissionInitialized
+    case oralTransmissionAccepted
+    case oralProvenanceBoundary
 }
 
 public enum AgentCausalOrigin: String, Codable, Sendable {
@@ -322,6 +325,7 @@ public enum AgentCausalOrigin: String, Codable, Sendable {
     case marketTransition
     case knowledgeTransition
     case languageTransition
+    case oralTransition
 }
 
 public enum AgentCausalPayload: Codable, Equatable, Sendable {
@@ -357,6 +361,13 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
     case language(
         recordID: String,
         propositionID: String?,
+        status: String,
+        reason: String
+    )
+    case oral(
+        transmissionID: String,
+        sourcePropositionID: String?,
+        receivedPropositionID: String?,
         status: String,
         reason: String
     )
@@ -674,6 +685,13 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
             return "knowledge|\(recordID)|\(propositionID ?? "none")|\(status)|\(reason)"
         case let .language(recordID, propositionID, status, reason):
             return "language|\(recordID)|\(propositionID ?? "none")|\(status)|\(reason)"
+        case let .oral(
+            transmissionID, sourcePropositionID, receivedPropositionID,
+            status, reason
+        ):
+            return "oral|\(transmissionID)|"
+                + "\(sourcePropositionID ?? "none")|"
+                + "\(receivedPropositionID ?? "none")|\(status)|\(reason)"
         case let .physicalSignal(
             signalID, senderID, recipientID, factID, source, pointed, modalities
         ):
@@ -939,6 +957,9 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
              (.languageInitialized, .language),
              (.languagePriorSeeded, .language),
              (.languageSemanticCommunicated, .language),
+             (.oralTransmissionInitialized, .oral),
+             (.oralTransmissionAccepted, .oral),
+             (.oralProvenanceBoundary, .oral),
              (.physicalSignalEmitted, .physicalSignal),
              (.physicalSignalPerceived, .physicalPerception),
              (.physicalSignalDecoded, .physicalPerception),

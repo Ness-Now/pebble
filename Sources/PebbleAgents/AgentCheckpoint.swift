@@ -49,6 +49,7 @@ public enum AgentCheckpointSchema {
     public static let populationScaleVersion = 35
     public static let knowledgeVersion = 36
     public static let languageVersion = 37
+    public static let oralTransmissionVersion = 38
 
     public static func familyValidationSemantics(
         for version: Int
@@ -67,7 +68,8 @@ public enum AgentCheckpointSchema {
             || version == marketVersion
             || version == populationScaleVersion
             || version == knowledgeVersion
-            || version == languageVersion {
+            || version == languageVersion
+            || version == oralTransmissionVersion {
             return .strictDurableConsent
         }
         return nil
@@ -88,7 +90,8 @@ public enum AgentCheckpointSchema {
             || version == marketVersion
             || version == populationScaleVersion
             || version == knowledgeVersion
-            || version == languageVersion {
+            || version == languageVersion
+            || version == oralTransmissionVersion {
             return .strictDurableSuccessorPlan
         }
         return nil
@@ -118,6 +121,7 @@ public enum AgentCheckpointSchema {
             || version == populationScaleVersion
             || version == knowledgeVersion
             || version == languageVersion
+            || version == oralTransmissionVersion
     }
 }
 
@@ -283,6 +287,7 @@ public struct AgentSessionDurableState: Codable {
     public let socialEvictionCounts: AgentSocialEvictionCounts
     public let knowledgeGraphState: AgentKnowledgeGraphState?
     public let languageState: AgentLanguageGraphState?
+    public let oralTransmissionState: AgentOralTransmissionState?
     public let physicalEnabled: Bool
     public let physicalSignals: [AgentPhysicalSignal]
     public let physicalPerceptions: [AgentPhysicalPerception]
@@ -323,7 +328,9 @@ public struct AgentSessionDurableState: Codable {
     public let marketState: AgentMarketState?
 
     init(session: AgentSimulationSession) {
-        if session.languageState != nil {
+        if session.oralTransmissionState != nil {
+            schemaVersion = AgentCheckpointSchema.oralTransmissionVersion
+        } else if session.languageState != nil {
             schemaVersion = AgentCheckpointSchema.languageVersion
         } else if session.knowledgeGraphState != nil {
             schemaVersion = AgentCheckpointSchema.knowledgeVersion
@@ -466,6 +473,7 @@ public struct AgentSessionDurableState: Codable {
         socialEvictionCounts = session.socialEvictionCounts
         knowledgeGraphState = session.knowledgeGraphState
         languageState = session.languageState
+        oralTransmissionState = session.oralTransmissionState
         physicalEnabled = session.physicalEnabled
         physicalSignals = session.physicalSignals
         physicalPerceptions = session.physicalPerceptions
@@ -1275,6 +1283,7 @@ extension AgentSimulationSession {
         socialEvictionCounts = state.socialEvictionCounts
         knowledgeGraphState = state.knowledgeGraphState
         languageState = state.languageState
+        oralTransmissionState = state.oralTransmissionState
         physicalEnabled = state.physicalEnabled
         physicalSignals = state.physicalSignals
         physicalPerceptions = state.physicalPerceptions
@@ -1332,8 +1341,10 @@ extension AgentSimulationSession {
         try validateBarterStateIfEnabled()
         try validateContractStateIfEnabled()
         try validateMarketStateIfEnabled()
+        try validateOralProvenanceBoundaryIfInitialized()
         try validateKnowledgeGraphStateIfEnabled()
         try validateLanguageStateIfInitialized()
+        try validateOralTransmissionStateIfInitialized()
         if let settlementMetricsState {
             try validateSettlementMetricsState(settlementMetricsState)
         }
@@ -1365,9 +1376,12 @@ extension AgentSimulationSession {
             == AgentCheckpointSchema.knowledgeVersion
         let languageSchema = state.schemaVersion
             == AgentCheckpointSchema.languageVersion
+        let oralSchema = state.schemaVersion
+            == AgentCheckpointSchema.oralTransmissionVersion
         let latestSchema = renewableSchema || independentReceiptSchema
             || productionSchema || barterSchema || contractSchema || marketSchema
             || populationScaleSchema || knowledgeSchema || languageSchema
+            || oralSchema
         let estateSchema =
             state.schemaVersion == AgentCheckpointSchema.legacyEstateVersion
             || state.schemaVersion == AgentCheckpointSchema.estateVersion
@@ -1681,13 +1695,18 @@ extension AgentSimulationSession {
                 || (knowledgeSchema && state.knowledgeGraphState != nil)
                 || (languageSchema
                     && state.knowledgeGraphState != nil
-                    && state.languageState != nil) else {
+                    && state.languageState != nil)
+                || (oralSchema
+                    && state.knowledgeGraphState != nil
+                    && state.languageState != nil
+                    && state.oralTransmissionState != nil) else {
                 throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
             }
         }
-        guard (knowledgeSchema || languageSchema)
+        guard (knowledgeSchema || languageSchema || oralSchema)
                 == (state.knowledgeGraphState != nil),
-              languageSchema == (state.languageState != nil) else {
+              (languageSchema || oralSchema) == (state.languageState != nil),
+              oralSchema == (state.oralTransmissionState != nil) else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard state.clock.tick.rawValue >= 0,
