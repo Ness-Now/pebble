@@ -88,7 +88,8 @@ there is no implicit agent-language, agent-agent or concept matrix.
 
 Existing finalized mortality remains the lifecycle owner. Within that existing
 transaction CIV-42 removes the departed owner's current lexical competence and
-increments a bounded-space retirement count. Retained bounded communications
+increments a bounded-space retirement count. Orphaned seed and exposure
+receipts are removed in the same transition. Retained bounded communications
 remain historical semantic records. CIV-42 adds no death detector or parallel
 lifecycle.
 
@@ -97,10 +98,27 @@ lifecycle.
 Checkpoint schema advances from 36 to 37 only when language state has been
 initialized. Schema 37 stores the configuration, pack metadata, sparse lexical
 associations, bounded communication history, compaction counters and next
-stable ordinal. Restore validates bounds, canonical pack ordering, association
-identity and ownership, semantic digests, deterministic surfaces, exact
-exposure identities, CIV-41 source-belief events and typed CIV-42 causal
-events before publishing the session.
+stable ordinal. The senior-review correction adds two bounded validation-only
+provenance surfaces to that unpublished schema in place:
+
+- each retained communication carries the exact canonical CIV-41 proposition
+  and accepted belief-revision snapshot from which its semantic content was
+  derived; restore re-derives the semantic adapter and, whenever the relevant
+  CIV-41 proposition, belief, revision or departed-belief row is still
+  retained, requires exact agreement with that owning row;
+- exact prior-seed grant receipts and rendered-exposure receipts justify every
+  current association. Exposure competence cites a distinct causal receipt per
+  counted learning exposure plus at most one latest-use receipt. Receipts are
+  pruned as soon as no current association cites them.
+
+Restore also validates bounds, canonical pack ordering, association identity
+and ownership, deterministic surfaces, exact exposure identities and typed
+CIV-41/CIV-42 causal events before publishing the session. A seed receipt count
+cannot exceed current association count. Exposure receipts are explicitly
+bounded by current associations times the configured learning threshold plus
+one latest-use slot; the live maximum is therefore causal and finite rather
+than an unbounded history. Communication-history or causal-ledger compaction
+does not make the surviving current competence self-authorizing.
 
 Published schema-36 checkpoints still decode, validate, restore and re-encode
 byte-for-byte without fabricating language state. Schema-37 fresh-process
@@ -125,7 +143,20 @@ Both debug and optimized executions pass:
 - fresh-process writer: 3/3 assertions;
 - separate-process reader: 5/5 assertions;
 - main semantic, learning, authority, bounds, replay and lifecycle proof:
-  44/44 assertions.
+  51/51 assertions.
+
+The 51-assertion proof includes fully re-signed schema-37 attacks for:
+
+- semantic content that no longer corresponds to its cited CIV-41
+  proposition, both with retained causal bodies and after causal compaction;
+- seeded competence outside the exact prior grant set;
+- exposure competence for an association absent from the cited exposure;
+- the same lexical fabrication after both communication-history and causal
+  event-body compaction.
+
+Each hostile checkpoint recomputes its durable semantic digest and checkpoint
+identity. The legitimate compacted control restores byte-exactly; each forged
+variant is refused by the corresponding authority/reachability invariant.
 
 Adjacent optimized owning selectors also pass unchanged:
 

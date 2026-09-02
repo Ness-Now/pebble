@@ -76,7 +76,8 @@ private func languageSmokeKnowledgeSession(
     id: String,
     agents: [AgentSessionAgentState],
     teacherID: String = "teacher",
-    learnerID: String = "learner"
+    learnerID: String = "learner",
+    causalMaximumEvents: Int = 16_384
 ) -> (AgentSimulationSession, AgentKnowledgePropositionID) {
     let social = try! AgentSocialConfiguration(
         communicationRadius: 2,
@@ -100,7 +101,7 @@ private func languageSmokeKnowledgeSession(
         ),
         agents: agents,
         simulationID: try! AgentSimulationID(validating: id),
-        causalLedgerPolicy: .bounded(maxEvents: 16_384)
+        causalLedgerPolicy: .bounded(maxEvents: causalMaximumEvents)
     )
     try! session.setSocialEnabled(true)
     try! session.setKnowledgeGraphEnabled(true)
@@ -132,7 +133,8 @@ private func languageSmokePrepared(
     configuration: AgentLanguageConfiguration = .live,
     agents: [AgentSessionAgentState]? = nil,
     teacherID: String = "teacher",
-    learnerID: String = "learner"
+    learnerID: String = "learner",
+    causalMaximumEvents: Int = 16_384
 ) -> (AgentSimulationSession, AgentKnowledgePropositionID) {
     var (session, propositionID) = languageSmokeKnowledgeSession(
         id: id,
@@ -142,7 +144,8 @@ private func languageSmokePrepared(
             languageSmokeAgent("remote", x: 30),
         ],
         teacherID: teacherID,
-        learnerID: learnerID
+        learnerID: learnerID,
+        causalMaximumEvents: causalMaximumEvents
     )
     try! session.setLanguageEnabled(
         true,
@@ -212,6 +215,154 @@ private func languageSmokeDeterministicRun(
     )
     _ = languageSmokeLearn(session: &session, propositionID: propositionID)
     return session.languageSnapshot()
+}
+
+private func languageSmokeSHA256(_ text: String) -> String {
+    AgentCheckpointDigest.sha256(Data(text.utf8)).rawValue
+}
+
+private func languageSmokeAssociationID(
+    ownerID: String,
+    packID: String,
+    senseID: String,
+    form: String
+) -> String {
+    "language-association-" + languageSmokeSHA256(
+        "\(ownerID)|\(packID)|\(senseID)|\(form)"
+    )
+}
+
+private func languageSmokeResignedCheckpoint(
+    _ checkpoint: AgentSessionCheckpoint,
+    mutateDurable: (inout [String: Any]) -> Void
+) -> AgentSessionCheckpoint {
+    var root = try! JSONSerialization.jsonObject(
+        with: AgentCheckpointCodec.encode(checkpoint)
+    ) as! [String: Any]
+    var durable = root["durableState"] as! [String: Any]
+    mutateDurable(&durable)
+    let mutatedBytes = try! JSONSerialization.data(
+        withJSONObject: durable,
+        options: [.sortedKeys, .withoutEscapingSlashes]
+    )
+    let mutatedState = try! AgentCheckpointCodec.decode(
+        AgentSessionDurableState.self,
+        from: mutatedBytes
+    )
+    let canonicalBytes = try! AgentCheckpointCodec.encode(mutatedState)
+    let canonical = try! JSONSerialization.jsonObject(
+        with: canonicalBytes
+    ) as! [String: Any]
+    let clock = canonical["clock"] as! [String: Any]
+    let simulationID = clock["simulationID"] as! String
+    let tick = clock["tick"] as! Int
+    let digest = AgentCheckpointDigest.sha256(canonicalBytes)
+    let simulationDigest = AgentCheckpointDigest.sha256(
+        Data(simulationID.utf8)
+    )
+    root["durableState"] = canonical
+    root["schemaVersion"] = canonical["schemaVersion"]
+    root["semanticDigest"] = digest.rawValue
+    root["checkpointID"] =
+        "checkpoint-\(simulationDigest.rawValue.prefix(12))"
+            + "-t\(tick)-\(digest.rawValue.prefix(16))"
+    return try! AgentCheckpointCodec.decode(
+        AgentSessionCheckpoint.self,
+        from: JSONSerialization.data(
+            withJSONObject: root,
+            options: [.sortedKeys, .withoutEscapingSlashes]
+        )
+    )
+}
+
+private func languageSmokeInvalidLanguageReason(
+    _ checkpoint: AgentSessionCheckpoint
+) -> String? {
+    do {
+        _ = try AgentSimulationSession.restoring(checkpoint)
+        return nil
+    } catch AgentSessionError.language(.invalidState(let reason)) {
+        return reason
+    } catch {
+        return "unexpected: \(error)"
+    }
+}
+
+private func languageSmokeMutateSemanticReferent(
+    _ durable: inout [String: Any]
+) {
+    var language = durable["languageState"] as! [String: Any]
+    var communications = language["communications"] as! [[String: Any]]
+    var semantic = communications[0]["semanticContent"]
+        as! [String: Any]
+    var referent = semantic["referent"] as! [String: Any]
+    referent["key"] = "cell:9,64,9"
+    semantic["referent"] = referent
+    let propositionID = semantic["sourcePropositionID"] as! String
+    let senses = semantic["senses"] as! [[String: Any]]
+    let canonicalSenses = senses.map {
+        "\($0["role"] as! String):\($0["senseID"] as! String)"
+    }.joined(separator: ",")
+    semantic["digest"] = languageSmokeSHA256(
+        "\(propositionID)|worldCell:cell:9,64,9|\(canonicalSenses)"
+    )
+    communications[0]["semanticContent"] = semantic
+    language["communications"] = communications
+    durable["languageState"] = language
+}
+
+private func languageSmokeMutateAssociationToUngrant(
+    _ durable: inout [String: Any],
+    ownerID: String,
+    source: String
+) {
+    var language = durable["languageState"] as! [String: Any]
+    var associations = language["lexicalAssociations"]
+        as! [[String: Any]]
+    let index = associations.firstIndex {
+        $0["ownerID"] as? String == ownerID
+            && $0["source"] as? String == source
+    }!
+    let packID = associations[index]["packID"] as! String
+    associations[index]["senseID"] = "value.resource.stone"
+    associations[index]["form"] = "pierre"
+    associations[index]["associationID"] = languageSmokeAssociationID(
+        ownerID: ownerID,
+        packID: packID,
+        senseID: "value.resource.stone",
+        form: "pierre"
+    )
+    language["lexicalAssociations"] = associations
+    durable["languageState"] = language
+}
+
+private func languageSmokeCompactedFixture() -> AgentSimulationSession {
+    let configuration = try! AgentLanguageConfiguration(
+        maximumLexicalAssociations: 16,
+        maximumLexicalAssociationsPerAgent: 8,
+        maximumCommunicationRecords: 1,
+        exposuresRequiredForLearning: 2
+    )
+    var (session, propositionID) = languageSmokePrepared(
+        id: "civ42-hostile-compaction",
+        configuration: configuration,
+        causalMaximumEvents: 32
+    )
+    _ = languageSmokeLearn(
+        session: &session,
+        propositionID: propositionID
+    )
+    let retained = try! session.communicateLanguageSemanticContent(
+        speakerID: AgentID(rawValue: "teacher")!,
+        recipientID: AgentID(rawValue: "learner")!,
+        propositionID: propositionID,
+        renderingMode: .noRendering
+    )
+    for _ in 0..<512 where session.causalLedgerSnapshot().summary
+        .droppedEventCount < retained.communicationEventID.sequence.rawValue {
+        _ = try! session.advanceTick()
+    }
+    return session
 }
 
 func runPebbleAgentsLanguageRestartWriteSmoke() {
@@ -565,6 +716,89 @@ func runPebbleAgentsLanguageSmoke() {
           try! sameProcessRestored.durableStateBytes()
             == session.durableStateBytes())
 
+    let semanticMismatchCheckpoint = languageSmokeResignedCheckpoint(
+        sameProcessCheckpoint,
+        mutateDurable: languageSmokeMutateSemanticReferent
+    )
+    let semanticMismatchReason = languageSmokeInvalidLanguageReason(
+        semanticMismatchCheckpoint
+    )
+    check("Attack A: re-signed semantic/source mismatch is rejected",
+          semanticMismatchReason == "semantic authority mismatch")
+
+    let seededFabricationCheckpoint = languageSmokeResignedCheckpoint(
+        sameProcessCheckpoint
+    ) { durable in
+        languageSmokeMutateAssociationToUngrant(
+            &durable,
+            ownerID: "teacher",
+            source: "seededPrior"
+        )
+    }
+    let seededFabricationReason = languageSmokeInvalidLanguageReason(
+        seededFabricationCheckpoint
+    )
+    check("Attack B: re-signed fabricated seeded competence is rejected",
+          seededFabricationReason == "seeded lexical acquisition")
+
+    let exposureFabricationCheckpoint = languageSmokeResignedCheckpoint(
+        sameProcessCheckpoint
+    ) { durable in
+        languageSmokeMutateAssociationToUngrant(
+            &durable,
+            ownerID: "learner",
+            source: "exposure"
+        )
+    }
+    let exposureFabricationReason = languageSmokeInvalidLanguageReason(
+        exposureFabricationCheckpoint
+    )
+    check("Attack C: re-signed fabricated exposure competence is rejected",
+          exposureFabricationReason == "lexical acquisition history")
+
+    let compactedHostile = languageSmokeCompactedFixture()
+    let compactedSnapshot = compactedHostile.languageSnapshot()
+    let compactedLedger = compactedHostile.causalLedgerSnapshot().summary
+    let compactedCheckpoint = try! compactedHostile.makeCheckpoint()
+    let compactedRestored = try! AgentSimulationSession.restoring(
+        compactedCheckpoint
+    )
+    check("legitimate causal and communication compaction retains bounded proofs",
+          compactedSnapshot.communications.count == 1
+            && compactedSnapshot.evictedCommunicationCount == 2
+            && compactedSnapshot.exposureReceipts.count == 2
+            && compactedLedger.droppedEventCount
+                >= compactedSnapshot.communications[0]
+                    .communicationEventID.sequence.rawValue)
+    check("legitimate compacted schema-37 state restarts byte exactly",
+          try! compactedRestored.durableStateBytes()
+            == compactedHostile.durableStateBytes())
+
+    let compactedSemanticCheckpoint = languageSmokeResignedCheckpoint(
+        compactedCheckpoint,
+        mutateDurable: languageSmokeMutateSemanticReferent
+    )
+    let compactedSemanticReason = languageSmokeInvalidLanguageReason(
+        compactedSemanticCheckpoint
+    )
+    check("Attack A compacted: semantic/source mismatch remains rejected",
+          compactedSemanticReason == "semantic authority mismatch")
+
+    let compactedFabricationCheckpoint = languageSmokeResignedCheckpoint(
+        compactedCheckpoint
+    ) { durable in
+        languageSmokeMutateAssociationToUngrant(
+            &durable,
+            ownerID: "learner",
+            source: "exposure"
+        )
+    }
+    let compactedFabricationReason = languageSmokeInvalidLanguageReason(
+        compactedFabricationCheckpoint
+    )
+    check("Attack D: compacted provenance cannot fabricate competence",
+          compactedFabricationReason == "lexical acquisition history")
+
     let (schema36Session, _) = languageSmokeKnowledgeSession(
         id: "civ42-schema36-compatibility",
         agents: [
@@ -738,4 +972,5 @@ func runPebbleAgentsLanguageSmoke() {
     print("  CIV42_RESTART schema=\(sameProcessCheckpoint.schemaVersion) digest=\(sameProcessCheckpoint.semanticDigest.rawValue) language=\(sameProcessRestored.languageSnapshot().digest)")
     print("  CIV42_REPLAY records=\(journal.records.count) schema=\(journal.manifest.schemaVersion) verified=\(replayedA.report.verified)")
     print("  CIV42_LIFECYCLE retired=\(mortalityLanguage.retiredLexicalAssociationCount) current=\(mortalityLanguage.lexicalAssociations.count) communications=\(mortalityLanguage.communications.count)")
+    print("  CIV42_HOSTILE A=\(semanticMismatchReason ?? "accepted") A_compacted=\(compactedSemanticReason ?? "accepted") B=\(seededFabricationReason ?? "accepted") C=\(exposureFabricationReason ?? "accepted") D=\(compactedFabricationReason ?? "accepted") dropped=\(compactedLedger.droppedEventCount) receipts=\(compactedSnapshot.exposureReceipts.count)")
 }

@@ -58,6 +58,8 @@ extension AgentSimulationSession {
                 pack: nil,
                 lexicalAssociations: [],
                 communications: [],
+                priorSeedReceipts: [],
+                exposureReceipts: [],
                 evictedCommunicationCount: 0,
                 retiredLexicalAssociationCount: 0,
                 digest: AgentLanguageDigest.make("language:none")
@@ -72,6 +74,12 @@ extension AgentSimulationSession {
             }
             return $0.communicationID < $1.communicationID
         }
+        let priorSeedReceipts = state.priorSeedReceipts.sorted {
+            $0.seedID < $1.seedID
+        }
+        let exposureReceipts = state.exposureReceipts.sorted {
+            $0.communicationID < $1.communicationID
+        }
         let canonical = [
             "enabled=\(state.enabled ? 1 : 0)",
             "pack=\(state.pack.packID.rawValue)|\(state.pack.languageTag)|\(state.pack.version)",
@@ -81,6 +89,10 @@ extension AgentSimulationSession {
             associations.map { associationCanonicalText($0) }
                 .joined(separator: ";"),
             communications.map { communicationCanonicalText($0) }
+                .joined(separator: ";"),
+            priorSeedReceipts.map { priorSeedReceiptCanonicalText($0) }
+                .joined(separator: ";"),
+            exposureReceipts.map { exposureReceiptCanonicalText($0) }
                 .joined(separator: ";"),
             "evicted=\(state.evictedCommunicationCount)",
             "retired=\(state.retiredLexicalAssociationCount)",
@@ -93,6 +105,8 @@ extension AgentSimulationSession {
             pack: state.pack,
             lexicalAssociations: associations,
             communications: communications,
+            priorSeedReceipts: priorSeedReceipts,
+            exposureReceipts: exposureReceipts,
             evictedCommunicationCount: state.evictedCommunicationCount,
             retiredLexicalAssociationCount:
                 state.retiredLexicalAssociationCount,
@@ -156,10 +170,21 @@ extension AgentSimulationSession {
         )
         var candidate = self
         try candidate.prevalidateCausalAppend(count: 1)
-        let seedID = "language-seed-" + AgentLanguageDigest.make(
-            "\(agentID.rawValue)|\(state.pack.packID.rawValue)|"
-                + newEntries.map { $0.senseID.rawValue }.joined(separator: ",")
+        let grantedAssociationIDs = newEntries.map {
+            languageAssociationID(
+                ownerID: agentID,
+                packID: state.pack.packID,
+                senseID: $0.senseID,
+                form: $0.form
+            )
+        }.sorted()
+        let seedDigest = languagePriorSeedDigest(
+            ownerID: agentID,
+            packID: state.pack.packID,
+            grantedAssociationIDs: grantedAssociationIDs,
+            seededAtTick: candidate.tick
         )
+        let seedID = "language-seed-" + seedDigest
         let event = try candidate.requiredLanguageEvent(
             kind: .languagePriorSeeded,
             actorID: agentID,
@@ -168,9 +193,18 @@ extension AgentSimulationSession {
             recordID: seedID,
             propositionID: nil,
             status: "seededPrior",
-            reason: state.pack.packID.rawValue,
+            reason: seedDigest,
             summary: "language prior seeded agent=\(agentID.rawValue) senses=\(newEntries.count)"
         )
+        state.priorSeedReceipts.append(AgentLanguagePriorSeedReceipt(
+            seedID: seedID,
+            ownerID: agentID,
+            packID: state.pack.packID,
+            grantedAssociationIDs: grantedAssociationIDs,
+            seededAtTick: candidate.tick,
+            seedEventID: event.eventID,
+            digest: seedDigest
+        ))
         for entry in newEntries {
             state.lexicalAssociations.append(AgentLanguageLexicalAssociation(
                 associationID: languageAssociationID(
@@ -188,7 +222,10 @@ extension AgentSimulationSession {
                 exposureCount: 0,
                 firstAcquiredAtTick: candidate.tick,
                 lastExposedAtTick: candidate.tick,
-                lastEventID: event.eventID
+                lastEventID: event.eventID,
+                priorSeedID: seedID,
+                learningCommunicationIDs: [],
+                lastExposureCommunicationID: nil
             ))
         }
         candidate.languageState = state
@@ -206,7 +243,7 @@ extension AgentSimulationSession {
         guard statesById[agentID.rawValue] != nil else {
             throw AgentSessionError.language(.unknownAgent(agentID.rawValue))
         }
-        let (belief, content) = try languageBeliefAndSemanticContent(
+        let (belief, _, content) = try languageBeliefAndSemanticContent(
             ownerID: agentID,
             propositionID: propositionID
         )
@@ -249,9 +286,14 @@ extension AgentSimulationSession {
                 .invalidState("speaker and recipient must be distinct")
             )
         }
-        let (sourceBelief, content) = try languageBeliefAndSemanticContent(
+        let (sourceBelief, sourceProposition, content) =
+            try languageBeliefAndSemanticContent(
             ownerID: speakerID,
             propositionID: propositionID
+        )
+        let semanticAuthority = languageSemanticAuthorityReceipt(
+            belief: sourceBelief,
+            proposition: sourceProposition
         )
         let lexicalUses: [AgentLanguageLexicalUse]
         let surface: AgentLanguageSurfaceRealization
@@ -321,6 +363,28 @@ extension AgentSimulationSession {
         let communicationID = AgentLanguageCommunicationID(
             rawValue: "language-communication-\(state.nextCommunicationOrdinal)"
         )!
+        let orderedLexicalUses = lexicalUses.sorted { $0.role < $1.role }
+        let exposedAssociationIDs = orderedLexicalUses.map {
+            languageAssociationID(
+                ownerID: recipientID,
+                packID: state.pack.packID,
+                senseID: $0.senseID,
+                form: $0.form
+            )
+        }.sorted()
+        let provenanceDigest = languageExposureDigest(
+            communicationID: communicationID,
+            speakerID: speakerID,
+            recipientID: recipientID,
+            sourceBeliefID: sourceBelief.beliefID,
+            sourceBeliefRevisionEventID: sourceBelief.lastRevisionEventID,
+            sourcePropositionID: propositionID,
+            semanticAuthorityDigest: semanticAuthority.digest,
+            semanticContentDigest: content.digest,
+            lexicalUses: orderedLexicalUses,
+            exposedAssociationIDs: exposedAssociationIDs,
+            communicatedAtTick: candidate.tick
+        )
         let event = try candidate.requiredLanguageEvent(
             kind: .languageSemanticCommunicated,
             actorID: speakerID,
@@ -329,19 +393,35 @@ extension AgentSimulationSession {
             recordID: communicationID.rawValue,
             propositionID: propositionID,
             status: renderingMode.rawValue,
-            reason: content.digest,
+            reason: provenanceDigest,
             summary: "semantic communication speaker=\(speakerID.rawValue) recipient=\(recipientID.rawValue) rendering=\(renderingMode.rawValue)"
         )
-        var exposedAssociationIDs: [AgentLanguageAssociationID] = []
         var newlyLearnedSenseIDs: [AgentLanguageSenseID] = []
-        for lexicalUse in lexicalUses {
+        if !orderedLexicalUses.isEmpty {
+            state.exposureReceipts.append(AgentLanguageExposureReceipt(
+                communicationID: communicationID,
+                speakerID: speakerID,
+                recipientID: recipientID,
+                sourceBeliefID: sourceBelief.beliefID,
+                sourceBeliefRevisionEventID:
+                    sourceBelief.lastRevisionEventID,
+                sourcePropositionID: propositionID,
+                semanticAuthorityDigest: semanticAuthority.digest,
+                semanticContentDigest: content.digest,
+                lexicalUses: orderedLexicalUses,
+                exposedAssociationIDs: exposedAssociationIDs,
+                communicatedAtTick: candidate.tick,
+                communicationEventID: event.eventID,
+                digest: provenanceDigest
+            ))
+        }
+        for lexicalUse in orderedLexicalUses {
             let associationID = languageAssociationID(
                 ownerID: recipientID,
                 packID: state.pack.packID,
                 senseID: lexicalUse.senseID,
                 form: lexicalUse.form
             )
-            exposedAssociationIDs.append(associationID)
             if let index = state.lexicalAssociations.firstIndex(where: {
                 $0.associationID == associationID
             }) {
@@ -350,9 +430,15 @@ extension AgentSimulationSession {
                 if state.lexicalAssociations[index].exposureCount
                     < state.configuration.exposuresRequiredForLearning {
                     state.lexicalAssociations[index].exposureCount += 1
+                    if state.lexicalAssociations[index].source == .exposure {
+                        state.lexicalAssociations[index]
+                            .learningCommunicationIDs.append(communicationID)
+                    }
                 }
                 state.lexicalAssociations[index].lastExposedAtTick = candidate.tick
                 state.lexicalAssociations[index].lastEventID = event.eventID
+                state.lexicalAssociations[index]
+                    .lastExposureCommunicationID = communicationID
                 if state.lexicalAssociations[index].exposureCount
                     >= state.configuration.exposuresRequiredForLearning {
                     state.lexicalAssociations[index].competence = .known
@@ -377,7 +463,10 @@ extension AgentSimulationSession {
                         exposureCount: 1,
                         firstAcquiredAtTick: candidate.tick,
                         lastExposedAtTick: candidate.tick,
-                        lastEventID: event.eventID
+                        lastEventID: event.eventID,
+                        priorSeedID: nil,
+                        learningCommunicationIDs: [communicationID],
+                        lastExposureCommunicationID: communicationID
                     )
                 )
                 if competence == .known {
@@ -391,16 +480,19 @@ extension AgentSimulationSession {
             recipientID: recipientID,
             sourceBeliefID: sourceBelief.beliefID,
             sourceBeliefRevisionEventID: sourceBelief.lastRevisionEventID,
+            semanticAuthority: semanticAuthority,
             semanticContent: content,
             rendering: surface,
-            lexicalUses: lexicalUses.sorted { $0.role < $1.role },
+            lexicalUses: orderedLexicalUses,
             exposedAssociationIDs: exposedAssociationIDs.sorted(),
             newlyLearnedSenseIDs: newlyLearnedSenseIDs.sorted(),
             communicatedAtTick: candidate.tick,
-            communicationEventID: event.eventID
+            communicationEventID: event.eventID,
+            provenanceDigest: provenanceDigest
         )
         state.communications.append(communication)
         state.nextCommunicationOrdinal += 1
+        compactLanguageProvenanceReceipts(&state)
         candidate.languageState = state
         try candidate.validateLanguageStateIfInitialized()
         self = candidate
@@ -414,6 +506,7 @@ extension AgentSimulationSession {
         guard var state = languageState else { return }
         let before = state.lexicalAssociations.count
         state.lexicalAssociations.removeAll { $0.ownerID == agentID }
+        compactLanguageProvenanceReceipts(&state)
         let retired = before - state.lexicalAssociations.count
         if state.retiredLexicalAssociationCount <= Int.max - retired {
             state.retiredLexicalAssociationCount += retired
@@ -426,7 +519,11 @@ extension AgentSimulationSession {
     private func languageBeliefAndSemanticContent(
         ownerID: AgentID,
         propositionID: AgentKnowledgePropositionID
-    ) throws -> (AgentKnowledgeBelief, AgentLanguageSemanticContent) {
+    ) throws -> (
+        AgentKnowledgeBelief,
+        AgentKnowledgeProposition,
+        AgentLanguageSemanticContent
+    ) {
         guard let knowledge = knowledgeGraphState else {
             throw AgentSessionError.language(.knowledgeRequired)
         }
@@ -446,7 +543,11 @@ extension AgentSimulationSession {
                 .missingBeliefAuthority(ownerID.rawValue)
             )
         }
-        return (belief, try languageSemanticContent(for: proposition))
+        return (
+            belief,
+            proposition,
+            try languageSemanticContent(for: proposition)
+        )
     }
 
     private func languageSemanticContent(
@@ -557,6 +658,56 @@ extension AgentSimulationSession {
         )!
     }
 
+    private func languageSemanticAuthorityReceipt(
+        belief: AgentKnowledgeBelief,
+        proposition: AgentKnowledgeProposition
+    ) -> AgentLanguageSemanticAuthorityReceipt {
+        AgentLanguageSemanticAuthorityReceipt(
+            sourceBeliefID: belief.beliefID,
+            sourceOwnerID: belief.ownerID,
+            proposition: proposition,
+            stance: belief.stance,
+            basisUnderstandingID: belief.basisUnderstandingID,
+            beliefFormedAtTick: belief.formedAtTick,
+            beliefUpdatedAtTick: belief.updatedAtTick,
+            beliefRevisionCount: belief.revisionCount,
+            sourceBeliefRevisionEventID: belief.lastRevisionEventID,
+            digest: languageSemanticAuthorityDigest(
+                sourceBeliefID: belief.beliefID,
+                sourceOwnerID: belief.ownerID,
+                proposition: proposition,
+                stance: belief.stance,
+                basisUnderstandingID: belief.basisUnderstandingID,
+                beliefFormedAtTick: belief.formedAtTick,
+                beliefUpdatedAtTick: belief.updatedAtTick,
+                beliefRevisionCount: belief.revisionCount,
+                sourceBeliefRevisionEventID: belief.lastRevisionEventID
+            )
+        )
+    }
+
+    private func compactLanguageProvenanceReceipts(
+        _ state: inout AgentLanguageGraphState
+    ) {
+        let retainedSeedIDs = Set(
+            state.lexicalAssociations.compactMap(\.priorSeedID)
+        )
+        state.priorSeedReceipts.removeAll {
+            !retainedSeedIDs.contains($0.seedID)
+        }
+        var retainedCommunicationIDs = Set(
+            state.lexicalAssociations.flatMap(\.learningCommunicationIDs)
+        )
+        retainedCommunicationIDs.formUnion(
+            state.lexicalAssociations.compactMap(
+                \.lastExposureCommunicationID
+            )
+        )
+        state.exposureReceipts.removeAll {
+            !retainedCommunicationIDs.contains($0.communicationID)
+        }
+    }
+
     private func ensureLanguageAssociationCapacity(
         adding count: Int,
         for agentID: AgentID,
@@ -611,7 +762,7 @@ extension AgentSimulationSession {
 
     func validateLanguageStateIfInitialized() throws {
         guard let state = languageState else { return }
-        guard knowledgeGraphState != nil else {
+        guard let knowledge = knowledgeGraphState else {
             throw AgentSessionError.language(.knowledgeRequired)
         }
         do {
@@ -645,54 +796,24 @@ extension AgentSimulationSession {
                 <= state.configuration.maximumLexicalAssociations,
               state.communications.count
                 <= state.configuration.maximumCommunicationRecords,
+              state.priorSeedReceipts.count
+                <= state.lexicalAssociations.count,
+              state.exposureReceipts.count <= state.lexicalAssociations.count
+                * (state.configuration.exposuresRequiredForLearning + 1),
               state.evictedCommunicationCount >= 0,
               state.retiredLexicalAssociationCount >= 0,
               state.nextCommunicationOrdinal > 0,
               Set(state.lexicalAssociations.map(\.associationID)).count
                 == state.lexicalAssociations.count,
               Set(state.communications.map(\.communicationID)).count
-                == state.communications.count else {
+                == state.communications.count,
+              Set(state.priorSeedReceipts.map(\.seedID)).count
+                == state.priorSeedReceipts.count,
+              Set(state.exposureReceipts.map(\.communicationID)).count
+                == state.exposureReceipts.count else {
             throw AgentSessionError.language(.invalidState("global bound or identity"))
         }
         let activeAgentIDs = Set(statesById.values.map(\.agentID))
-        guard state.lexicalAssociations.allSatisfy({ association in
-            activeAgentIDs.contains(association.ownerID)
-                && association.packID == state.pack.packID
-                && isValidLanguageText(association.form, maximum: 64)
-                && association.exposureCount >= 0
-                && association.exposureCount
-                    <= state.configuration.exposuresRequiredForLearning
-                && association.firstAcquiredAtTick >= 0
-                && association.firstAcquiredAtTick
-                    <= association.lastExposedAtTick
-                && association.lastExposedAtTick <= tick
-                && association.associationID == languageAssociationID(
-                    ownerID: association.ownerID,
-                    packID: association.packID,
-                    senseID: association.senseID,
-                    form: association.form
-                )
-                && (association.source == .seededPrior
-                    ? association.competence == .known
-                    : association.exposureCount > 0
-                        && association.competence
-                            == (association.exposureCount
-                                >= state.configuration.exposuresRequiredForLearning
-                                    ? .known : .acquiring))
-        }) else {
-            throw AgentSessionError.language(
-                .invalidState("lexical association")
-            )
-        }
-        for ownerID in Set(state.lexicalAssociations.map(\.ownerID)) {
-            guard state.lexicalAssociations.filter({
-                $0.ownerID == ownerID
-            }).count <= state.configuration.maximumLexicalAssociationsPerAgent else {
-                throw AgentSessionError.language(
-                    .invalidState("per-agent bound \(ownerID.rawValue)")
-                )
-            }
-        }
         let retainedEvents = Dictionary(uniqueKeysWithValues:
             causalLedger.events.map { ($0.eventID, $0) }
         )
@@ -712,19 +833,462 @@ extension AgentSimulationSession {
             }
             return nil
         }
-        for association in state.lexicalAssociations {
-            if let event = try retainedEvent(association.lastEventID) {
-                guard event.origin == .languageTransition,
-                      event.kind == .languagePriorSeeded
-                        || event.kind == .languageSemanticCommunicated,
-                      event.actorID == association.ownerID
-                        || event.subjectID == association.ownerID else {
+
+        func validateSemanticAuthority(
+            _ receipt: AgentLanguageSemanticAuthorityReceipt,
+            communicatedAtTick: Int
+        ) throws {
+            let canonicalProposition = AgentKnowledgeProposition(
+                subject: receipt.proposition.subject,
+                predicate: receipt.proposition.predicate,
+                value: receipt.proposition.value
+            )
+            let canonicalBeliefID = AgentKnowledgeBeliefID(
+                rawValue: "belief-" + AgentKnowledgeDigest.make(
+                    "\(receipt.sourceOwnerID.rawValue)|"
+                        + receipt.proposition.questionKey
+                )
+            )!
+            let expectedDigest = languageSemanticAuthorityDigest(
+                sourceBeliefID: receipt.sourceBeliefID,
+                sourceOwnerID: receipt.sourceOwnerID,
+                proposition: receipt.proposition,
+                stance: receipt.stance,
+                basisUnderstandingID: receipt.basisUnderstandingID,
+                beliefFormedAtTick: receipt.beliefFormedAtTick,
+                beliefUpdatedAtTick: receipt.beliefUpdatedAtTick,
+                beliefRevisionCount: receipt.beliefRevisionCount,
+                sourceBeliefRevisionEventID:
+                    receipt.sourceBeliefRevisionEventID
+            )
+            guard canonicalProposition == receipt.proposition,
+                  canonicalBeliefID == receipt.sourceBeliefID,
+                  receipt.stance == .accepted,
+                  receipt.beliefFormedAtTick >= 0,
+                  receipt.beliefFormedAtTick
+                    <= receipt.beliefUpdatedAtTick,
+                  receipt.beliefUpdatedAtTick <= communicatedAtTick,
+                  receipt.beliefRevisionCount >= 1,
+                  receipt.sourceBeliefRevisionEventID.simulationID
+                    == simulationID,
+                  receipt.digest == expectedDigest else {
+                throw AgentSessionError.language(
+                    .invalidState("CIV-41 semantic authority receipt")
+                )
+            }
+            if let retainedProposition = knowledge.propositions.first(where: {
+                $0.propositionID == receipt.proposition.propositionID
+            }), retainedProposition != receipt.proposition {
+                throw AgentSessionError.language(
+                    .invalidState("CIV-41 proposition mismatch")
+                )
+            }
+            if let revision = knowledge.revisions.first(where: {
+                $0.revisionEventID == receipt.sourceBeliefRevisionEventID
+            }) {
+                guard revision.beliefID == receipt.sourceBeliefID,
+                      revision.ownerID == receipt.sourceOwnerID,
+                      revision.questionKey == receipt.proposition.questionKey,
+                      revision.propositionID
+                        == receipt.proposition.propositionID,
+                      revision.stance == receipt.stance,
+                      revision.triggerUnderstandingID
+                        == receipt.basisUnderstandingID,
+                      revision.revisedAtTick
+                        == receipt.beliefUpdatedAtTick else {
                     throw AgentSessionError.language(
-                        .invalidState("association event")
+                        .invalidState("CIV-41 retained revision mismatch")
+                    )
+                }
+            }
+            if let currentBelief = knowledge.beliefs.first(where: {
+                $0.beliefID == receipt.sourceBeliefID
+            }) {
+                guard currentBelief.ownerID == receipt.sourceOwnerID,
+                      currentBelief.questionKey
+                        == receipt.proposition.questionKey,
+                      currentBelief.formedAtTick
+                        == receipt.beliefFormedAtTick,
+                      currentBelief.revisionCount
+                        >= receipt.beliefRevisionCount,
+                      currentBelief.lastRevisionEventID.sequence
+                        >= receipt.sourceBeliefRevisionEventID.sequence else {
+                    throw AgentSessionError.language(
+                        .invalidState("CIV-41 retained belief mismatch")
+                    )
+                }
+                if currentBelief.lastRevisionEventID
+                    == receipt.sourceBeliefRevisionEventID {
+                    guard currentBelief.propositionID
+                            == receipt.proposition.propositionID,
+                          currentBelief.stance == receipt.stance,
+                          currentBelief.basisUnderstandingID
+                            == receipt.basisUnderstandingID,
+                          currentBelief.updatedAtTick
+                            == receipt.beliefUpdatedAtTick,
+                          currentBelief.revisionCount
+                            == receipt.beliefRevisionCount else {
+                        throw AgentSessionError.language(
+                            .invalidState("CIV-41 exact belief mismatch")
+                        )
+                    }
+                }
+            } else if let departed = (knowledge.departedBeliefs ?? []).first(
+                where: { $0.beliefID == receipt.sourceBeliefID }
+            ) {
+                guard departed.ownerID == receipt.sourceOwnerID,
+                      departed.proposition.questionKey
+                        == receipt.proposition.questionKey,
+                      departed.formedAtTick == receipt.beliefFormedAtTick,
+                      departed.revisionCount >= receipt.beliefRevisionCount,
+                      departed.lastRevisionEventID.sequence
+                        >= receipt.sourceBeliefRevisionEventID.sequence else {
+                    throw AgentSessionError.language(
+                        .invalidState("CIV-41 departed belief mismatch")
+                    )
+                }
+                if departed.lastRevisionEventID
+                    == receipt.sourceBeliefRevisionEventID {
+                    guard departed.proposition == receipt.proposition,
+                          departed.stance == receipt.stance,
+                          departed.basisUnderstandingID
+                            == receipt.basisUnderstandingID,
+                          departed.updatedAtTick
+                            == receipt.beliefUpdatedAtTick,
+                          departed.revisionCount
+                            == receipt.beliefRevisionCount else {
+                        throw AgentSessionError.language(
+                            .invalidState("CIV-41 exact departed belief mismatch")
+                        )
+                    }
+                }
+            } else if activeAgentIDs.contains(receipt.sourceOwnerID) {
+                throw AgentSessionError.language(
+                    .invalidState("missing retained CIV-41 belief")
+                )
+            }
+            if let event = try retainedEvent(
+                receipt.sourceBeliefRevisionEventID
+            ) {
+                guard event.kind == .knowledgeBeliefRevised,
+                      event.origin == .knowledgeTransition,
+                      event.actorID == receipt.sourceOwnerID,
+                      event.subjectID == receipt.sourceOwnerID,
+                      case let .knowledge(
+                        recordID, propositionID, status, _
+                      ) = event.payload,
+                      recordID == receipt.sourceBeliefID.rawValue,
+                      propositionID
+                        == receipt.proposition.propositionID.rawValue,
+                      status == AgentKnowledgeBeliefStance.accepted.rawValue
+                else {
+                    throw AgentSessionError.language(
+                        .invalidState("CIV-41 source authority event")
                     )
                 }
             }
         }
+
+        let seedReceiptsByID = Dictionary(uniqueKeysWithValues:
+            state.priorSeedReceipts.map { ($0.seedID, $0) }
+        )
+        for receipt in state.priorSeedReceipts {
+            let expectedDigest = languagePriorSeedDigest(
+                ownerID: receipt.ownerID,
+                packID: receipt.packID,
+                grantedAssociationIDs: receipt.grantedAssociationIDs,
+                seededAtTick: receipt.seededAtTick
+            )
+            guard activeAgentIDs.contains(receipt.ownerID),
+                  receipt.packID == state.pack.packID,
+                  !receipt.grantedAssociationIDs.isEmpty,
+                  receipt.grantedAssociationIDs
+                    == Array(Set(receipt.grantedAssociationIDs)).sorted(),
+                  receipt.seededAtTick >= 0,
+                  receipt.seededAtTick <= tick,
+                  receipt.seedEventID.simulationID == simulationID,
+                  receipt.digest == expectedDigest,
+                  receipt.seedID == "language-seed-" + expectedDigest else {
+                throw AgentSessionError.language(
+                    .invalidState("prior seed receipt")
+                )
+            }
+            if let event = try retainedEvent(receipt.seedEventID) {
+                guard event.kind == .languagePriorSeeded,
+                      event.origin == .languageTransition,
+                      event.actorID == receipt.ownerID,
+                      event.subjectID == receipt.ownerID,
+                      event.causes.isEmpty,
+                      case let .language(
+                        recordID, propositionID, status, reason
+                      ) = event.payload,
+                      recordID == receipt.seedID,
+                      propositionID == nil,
+                      status == "seededPrior",
+                      reason == receipt.digest else {
+                    throw AgentSessionError.language(
+                        .invalidState("prior seed event")
+                    )
+                }
+            }
+        }
+
+        let exposureReceiptsByID = Dictionary(uniqueKeysWithValues:
+            state.exposureReceipts.map { ($0.communicationID, $0) }
+        )
+        let communicationsByID = Dictionary(uniqueKeysWithValues:
+            state.communications.map { ($0.communicationID, $0) }
+        )
+        for receipt in state.exposureReceipts {
+            let expectedAssociationIDs = receipt.lexicalUses.map {
+                languageAssociationID(
+                    ownerID: receipt.recipientID,
+                    packID: state.pack.packID,
+                    senseID: $0.senseID,
+                    form: $0.form
+                )
+            }.sorted()
+            let expectedDigest = languageExposureDigest(
+                communicationID: receipt.communicationID,
+                speakerID: receipt.speakerID,
+                recipientID: receipt.recipientID,
+                sourceBeliefID: receipt.sourceBeliefID,
+                sourceBeliefRevisionEventID:
+                    receipt.sourceBeliefRevisionEventID,
+                sourcePropositionID: receipt.sourcePropositionID,
+                semanticAuthorityDigest: receipt.semanticAuthorityDigest,
+                semanticContentDigest: receipt.semanticContentDigest,
+                lexicalUses: receipt.lexicalUses,
+                exposedAssociationIDs: receipt.exposedAssociationIDs,
+                communicatedAtTick: receipt.communicatedAtTick
+            )
+            guard receipt.speakerID != receipt.recipientID,
+                  !receipt.lexicalUses.isEmpty,
+                  receipt.lexicalUses
+                    == receipt.lexicalUses.sorted(by: { $0.role < $1.role }),
+                  Set(receipt.lexicalUses.map(\.role)).count
+                    == receipt.lexicalUses.count,
+                  receipt.lexicalUses.allSatisfy({ lexicalUse in
+                      state.pack.entry(for: lexicalUse.senseID)?.form
+                        == lexicalUse.form
+                  }),
+                  receipt.exposedAssociationIDs == expectedAssociationIDs,
+                  receipt.communicatedAtTick >= 0,
+                  receipt.communicatedAtTick <= tick,
+                  receipt.communicationEventID.simulationID == simulationID,
+                  receipt.digest == expectedDigest else {
+                throw AgentSessionError.language(
+                    .invalidState("exposure receipt")
+                )
+            }
+            if let communication = communicationsByID[
+                receipt.communicationID
+            ] {
+                guard communication.speakerID == receipt.speakerID,
+                      communication.recipientID == receipt.recipientID,
+                      communication.sourceBeliefID
+                        == receipt.sourceBeliefID,
+                      communication.sourceBeliefRevisionEventID
+                        == receipt.sourceBeliefRevisionEventID,
+                      communication.semanticContent.sourcePropositionID
+                        == receipt.sourcePropositionID,
+                      communication.semanticAuthority.digest
+                        == receipt.semanticAuthorityDigest,
+                      communication.semanticContent.digest
+                        == receipt.semanticContentDigest,
+                      communication.lexicalUses == receipt.lexicalUses,
+                      communication.exposedAssociationIDs
+                        == receipt.exposedAssociationIDs,
+                      communication.communicatedAtTick
+                        == receipt.communicatedAtTick,
+                      communication.communicationEventID
+                        == receipt.communicationEventID,
+                      communication.provenanceDigest == receipt.digest else {
+                    throw AgentSessionError.language(
+                        .invalidState("retained exposure mismatch")
+                    )
+                }
+            }
+            if let event = try retainedEvent(receipt.communicationEventID) {
+                guard event.kind == .languageSemanticCommunicated,
+                      event.origin == .languageTransition,
+                      event.actorID == receipt.speakerID,
+                      event.subjectID == receipt.recipientID,
+                      event.causes
+                        == [receipt.sourceBeliefRevisionEventID],
+                      case let .language(
+                        recordID, propositionID, status, reason
+                      ) = event.payload,
+                      recordID == receipt.communicationID.rawValue,
+                      propositionID == receipt.sourcePropositionID.rawValue,
+                      status == AgentLanguageRenderingMode
+                        .deterministicCompositional.rawValue,
+                      reason == receipt.digest else {
+                    throw AgentSessionError.language(
+                        .invalidState("exposure event")
+                    )
+                }
+            }
+        }
+
+        func exposureProves(
+            _ receipt: AgentLanguageExposureReceipt,
+            association: AgentLanguageLexicalAssociation
+        ) -> Bool {
+            receipt.recipientID == association.ownerID
+                && receipt.exposedAssociationIDs.contains(
+                    association.associationID
+                )
+                && receipt.lexicalUses.contains {
+                    $0.senseID == association.senseID
+                        && $0.form == association.form
+                }
+        }
+
+        for association in state.lexicalAssociations {
+            guard activeAgentIDs.contains(association.ownerID),
+                  association.packID == state.pack.packID,
+                  state.pack.entry(for: association.senseID)?.form
+                    == association.form,
+                  isValidLanguageText(association.form, maximum: 64),
+                  association.exposureCount >= 0,
+                  association.exposureCount
+                    <= state.configuration.exposuresRequiredForLearning,
+                  association.firstAcquiredAtTick >= 0,
+                  association.firstAcquiredAtTick
+                    <= association.lastExposedAtTick,
+                  association.lastExposedAtTick <= tick,
+                  association.associationID == languageAssociationID(
+                    ownerID: association.ownerID,
+                    packID: association.packID,
+                    senseID: association.senseID,
+                    form: association.form
+                  ),
+                  Set(association.learningCommunicationIDs).count
+                    == association.learningCommunicationIDs.count else {
+                throw AgentSessionError.language(
+                    .invalidState("lexical association")
+                )
+            }
+            let learningReceipts = association.learningCommunicationIDs
+                .compactMap { exposureReceiptsByID[$0] }
+            let learningOrderIsCausal = zip(
+                learningReceipts,
+                learningReceipts.dropFirst()
+            ).allSatisfy { pair in
+                pair.0.communicationEventID.sequence
+                    < pair.1.communicationEventID.sequence
+            }
+            guard learningReceipts.count
+                    == association.learningCommunicationIDs.count,
+                  learningReceipts.allSatisfy({
+                      exposureProves($0, association: association)
+                  }),
+                  learningOrderIsCausal else {
+                throw AgentSessionError.language(
+                    .invalidState("lexical acquisition history")
+                )
+            }
+            switch association.source {
+            case .seededPrior:
+                guard let seedID = association.priorSeedID,
+                      let receipt = seedReceiptsByID[seedID],
+                      receipt.ownerID == association.ownerID,
+                      receipt.grantedAssociationIDs.contains(
+                        association.associationID
+                      ),
+                      association.competence == .known,
+                      association.learningCommunicationIDs.isEmpty,
+                      association.firstAcquiredAtTick
+                        == receipt.seededAtTick else {
+                    throw AgentSessionError.language(
+                        .invalidState("seeded lexical acquisition")
+                    )
+                }
+                if let lastID = association.lastExposureCommunicationID {
+                    guard let last = exposureReceiptsByID[lastID],
+                          exposureProves(last, association: association),
+                          association.lastExposedAtTick
+                            == last.communicatedAtTick,
+                          association.lastEventID
+                            == last.communicationEventID else {
+                        throw AgentSessionError.language(
+                            .invalidState("seeded lexical last exposure")
+                        )
+                    }
+                } else {
+                    guard association.lastExposedAtTick
+                            == receipt.seededAtTick,
+                          association.lastEventID == receipt.seedEventID else {
+                        throw AgentSessionError.language(
+                            .invalidState("seeded lexical origin")
+                        )
+                    }
+                }
+            case .exposure:
+                let expectedCompetence: AgentLanguageLexicalCompetence =
+                    association.exposureCount
+                        >= state.configuration.exposuresRequiredForLearning
+                            ? .known : .acquiring
+                guard association.priorSeedID == nil,
+                      association.exposureCount > 0,
+                      association.exposureCount
+                        == association.learningCommunicationIDs.count,
+                      association.competence == expectedCompetence,
+                      let firstLearning = learningReceipts.first,
+                      association.firstAcquiredAtTick
+                        == firstLearning.communicatedAtTick,
+                      let lastID = association.lastExposureCommunicationID,
+                      let last = exposureReceiptsByID[lastID],
+                      let lastLearning = learningReceipts.last,
+                      exposureProves(last, association: association),
+                      association.lastExposedAtTick
+                        == last.communicatedAtTick,
+                      association.lastEventID
+                        == last.communicationEventID,
+                      lastLearning.communicationEventID.sequence
+                        <= last.communicationEventID.sequence else {
+                    throw AgentSessionError.language(
+                        .invalidState("exposure lexical acquisition")
+                    )
+                }
+            }
+        }
+
+        for receipt in state.priorSeedReceipts {
+            let exactGrantSet = state.lexicalAssociations.filter {
+                $0.priorSeedID == receipt.seedID
+            }.map(\.associationID).sorted()
+            guard exactGrantSet == receipt.grantedAssociationIDs else {
+                throw AgentSessionError.language(
+                    .invalidState("seed grant reachability")
+                )
+            }
+        }
+        var referencedExposureIDs = Set(
+            state.lexicalAssociations.flatMap(\.learningCommunicationIDs)
+        )
+        referencedExposureIDs.formUnion(
+            state.lexicalAssociations.compactMap(
+                \.lastExposureCommunicationID
+            )
+        )
+        guard referencedExposureIDs
+                == Set(state.exposureReceipts.map(\.communicationID)) else {
+            throw AgentSessionError.language(
+                .invalidState("exposure receipt reachability")
+            )
+        }
+        for ownerID in Set(state.lexicalAssociations.map(\.ownerID)) {
+            guard state.lexicalAssociations.filter({
+                $0.ownerID == ownerID
+            }).count <= state.configuration.maximumLexicalAssociationsPerAgent else {
+                throw AgentSessionError.language(
+                    .invalidState("per-agent bound \(ownerID.rawValue)")
+                )
+            }
+        }
+
         for communication in state.communications {
             let rebuiltContent = AgentLanguageSemanticContent(
                 sourcePropositionID:
@@ -732,7 +1296,38 @@ extension AgentSimulationSession {
                 referent: communication.semanticContent.referent,
                 senses: communication.semanticContent.senses
             )
+            let expectedSemanticContent = try languageSemanticContent(
+                for: communication.semanticAuthority.proposition
+            )
+            try validateSemanticAuthority(
+                communication.semanticAuthority,
+                communicatedAtTick: communication.communicatedAtTick
+            )
+            let expectedProvenanceDigest = languageExposureDigest(
+                communicationID: communication.communicationID,
+                speakerID: communication.speakerID,
+                recipientID: communication.recipientID,
+                sourceBeliefID: communication.sourceBeliefID,
+                sourceBeliefRevisionEventID:
+                    communication.sourceBeliefRevisionEventID,
+                sourcePropositionID:
+                    communication.semanticContent.sourcePropositionID,
+                semanticAuthorityDigest:
+                    communication.semanticAuthority.digest,
+                semanticContentDigest: communication.semanticContent.digest,
+                lexicalUses: communication.lexicalUses,
+                exposedAssociationIDs:
+                    communication.exposedAssociationIDs,
+                communicatedAtTick: communication.communicatedAtTick
+            )
             guard rebuiltContent == communication.semanticContent,
+                  expectedSemanticContent == communication.semanticContent,
+                  communication.semanticAuthority.sourceBeliefID
+                    == communication.sourceBeliefID,
+                  communication.semanticAuthority.sourceOwnerID
+                    == communication.speakerID,
+                  communication.semanticAuthority.sourceBeliefRevisionEventID
+                    == communication.sourceBeliefRevisionEventID,
                   communication.speakerID != communication.recipientID,
                   AgentID(rawValue: communication.speakerID.rawValue) != nil,
                   AgentID(rawValue: communication.recipientID.rawValue) != nil,
@@ -749,9 +1344,11 @@ extension AgentSimulationSession {
                     == communication.newlyLearnedSenseIDs.count,
                   Set(communication.newlyLearnedSenseIDs).isSubset(
                     of: Set(communication.lexicalUses.map(\.senseID))
-                  ) else {
+                  ),
+                  communication.provenanceDigest
+                    == expectedProvenanceDigest else {
                 throw AgentSessionError.language(
-                    .invalidState("semantic communication")
+                    .invalidState("semantic authority mismatch")
                 )
             }
             switch communication.rendering {
@@ -782,6 +1379,8 @@ extension AgentSimulationSession {
                         == communication.semanticContent.senses.map(\.senseID),
                       orderedUses.allSatisfy({
                           isValidLanguageText($0.form, maximum: 64)
+                            && state.pack.entry(for: $0.senseID)?.form
+                                == $0.form
                       }),
                       communication.exposedAssociationIDs
                         == expectedExposedAssociationIDs,
@@ -812,26 +1411,9 @@ extension AgentSimulationSession {
                         ? AgentLanguageRenderingMode.noRendering.rawValue
                         : AgentLanguageRenderingMode
                             .deterministicCompositional.rawValue),
-                      reason == communication.semanticContent.digest else {
+                      reason == communication.provenanceDigest else {
                     throw AgentSessionError.language(
                         .invalidState("communication event")
-                    )
-                }
-            }
-            if let event = try retainedEvent(
-                communication.sourceBeliefRevisionEventID
-            ) {
-                guard event.kind == .knowledgeBeliefRevised,
-                      event.origin == .knowledgeTransition,
-                      event.actorID == communication.speakerID,
-                      case let .knowledge(
-                        recordID, propositionID, _, _
-                      ) = event.payload,
-                      recordID == communication.sourceBeliefID.rawValue,
-                      propositionID == communication.semanticContent
-                        .sourcePropositionID.rawValue else {
-                    throw AgentSessionError.language(
-                        .invalidState("CIV-41 source authority")
                     )
                 }
             }
@@ -853,6 +1435,7 @@ private func communicationCanonicalText(
         + "\(communication.speakerID.rawValue)|\(communication.recipientID.rawValue)|"
         + "\(communication.sourceBeliefID.rawValue)|"
         + "\(communication.sourceBeliefRevisionEventID.rawValue)|"
+        + "\(communication.semanticAuthority.digest)|"
         + "\(communication.semanticContent.digest)|\(rendering)|"
         + communication.lexicalUses.map {
             "\($0.role.rawValue):\($0.senseID.rawValue):\($0.form)"
@@ -863,6 +1446,7 @@ private func communicationCanonicalText(
             .joined(separator: ",")
         + "|\(communication.communicatedAtTick)|"
         + communication.communicationEventID.rawValue
+        + "|\(communication.provenanceDigest)"
 }
 
 private func associationCanonicalText(
@@ -881,6 +1465,122 @@ private func associationCanonicalText(
         String(association.firstAcquiredAtTick),
         String(association.lastExposedAtTick),
         association.lastEventID.rawValue,
+        association.priorSeedID ?? "none",
+        association.learningCommunicationIDs.map(\.rawValue)
+            .joined(separator: ","),
+        association.lastExposureCommunicationID?.rawValue ?? "none",
     ]
     return fields.joined(separator: "|")
+}
+
+private func languageSemanticAuthorityDigest(
+    sourceBeliefID: AgentKnowledgeBeliefID,
+    sourceOwnerID: AgentID,
+    proposition: AgentKnowledgeProposition,
+    stance: AgentKnowledgeBeliefStance,
+    basisUnderstandingID: AgentKnowledgeUnderstandingID,
+    beliefFormedAtTick: Int,
+    beliefUpdatedAtTick: Int,
+    beliefRevisionCount: Int,
+    sourceBeliefRevisionEventID: AgentCausalEventID
+) -> String {
+    AgentLanguageDigest.make([
+        "semantic-authority",
+        sourceBeliefID.rawValue,
+        sourceOwnerID.rawValue,
+        proposition.propositionID.rawValue,
+        proposition.subject.canonicalText,
+        proposition.predicate.rawValue,
+        proposition.value.canonicalText,
+        stance.rawValue,
+        basisUnderstandingID.rawValue,
+        String(beliefFormedAtTick),
+        String(beliefUpdatedAtTick),
+        String(beliefRevisionCount),
+        sourceBeliefRevisionEventID.rawValue,
+    ].joined(separator: "|"))
+}
+
+private func languagePriorSeedDigest(
+    ownerID: AgentID,
+    packID: AgentLanguagePackID,
+    grantedAssociationIDs: [AgentLanguageAssociationID],
+    seededAtTick: Int
+) -> String {
+    AgentLanguageDigest.make([
+        "prior-seed",
+        ownerID.rawValue,
+        packID.rawValue,
+        grantedAssociationIDs.map(\.rawValue).joined(separator: ","),
+        String(seededAtTick),
+    ].joined(separator: "|"))
+}
+
+private func languageExposureDigest(
+    communicationID: AgentLanguageCommunicationID,
+    speakerID: AgentID,
+    recipientID: AgentID,
+    sourceBeliefID: AgentKnowledgeBeliefID,
+    sourceBeliefRevisionEventID: AgentCausalEventID,
+    sourcePropositionID: AgentKnowledgePropositionID,
+    semanticAuthorityDigest: String,
+    semanticContentDigest: String,
+    lexicalUses: [AgentLanguageLexicalUse],
+    exposedAssociationIDs: [AgentLanguageAssociationID],
+    communicatedAtTick: Int
+) -> String {
+    AgentLanguageDigest.make([
+        "linguistic-exposure",
+        communicationID.rawValue,
+        speakerID.rawValue,
+        recipientID.rawValue,
+        sourceBeliefID.rawValue,
+        sourceBeliefRevisionEventID.rawValue,
+        sourcePropositionID.rawValue,
+        semanticAuthorityDigest,
+        semanticContentDigest,
+        lexicalUses.map {
+            "\($0.role.rawValue):\($0.senseID.rawValue):\($0.form)"
+        }.joined(separator: ","),
+        exposedAssociationIDs.map(\.rawValue).joined(separator: ","),
+        String(communicatedAtTick),
+    ].joined(separator: "|"))
+}
+
+private func priorSeedReceiptCanonicalText(
+    _ receipt: AgentLanguagePriorSeedReceipt
+) -> String {
+    [
+        "seed-receipt",
+        receipt.seedID,
+        receipt.ownerID.rawValue,
+        receipt.packID.rawValue,
+        receipt.grantedAssociationIDs.map(\.rawValue).joined(separator: ","),
+        String(receipt.seededAtTick),
+        receipt.seedEventID.rawValue,
+        receipt.digest,
+    ].joined(separator: "|")
+}
+
+private func exposureReceiptCanonicalText(
+    _ receipt: AgentLanguageExposureReceipt
+) -> String {
+    [
+        "exposure-receipt",
+        receipt.communicationID.rawValue,
+        receipt.speakerID.rawValue,
+        receipt.recipientID.rawValue,
+        receipt.sourceBeliefID.rawValue,
+        receipt.sourceBeliefRevisionEventID.rawValue,
+        receipt.sourcePropositionID.rawValue,
+        receipt.semanticAuthorityDigest,
+        receipt.semanticContentDigest,
+        receipt.lexicalUses.map {
+            "\($0.role.rawValue):\($0.senseID.rawValue):\($0.form)"
+        }.joined(separator: ","),
+        receipt.exposedAssociationIDs.map(\.rawValue).joined(separator: ","),
+        String(receipt.communicatedAtTick),
+        receipt.communicationEventID.rawValue,
+        receipt.digest,
+    ].joined(separator: "|")
 }

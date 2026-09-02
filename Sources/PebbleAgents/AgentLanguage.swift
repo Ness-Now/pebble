@@ -292,6 +292,56 @@ public struct AgentLanguageLexicalUse:
     public let form: String
 }
 
+/// A bounded historical receipt of the exact CIV-41 belief revision used as
+/// semantic authority for one retained communication. It is validation-only:
+/// CIV-41 remains the owner of live beliefs, propositions and revisions.
+public struct AgentLanguageSemanticAuthorityReceipt:
+    Codable, Equatable, Sendable {
+    public let sourceBeliefID: AgentKnowledgeBeliefID
+    public let sourceOwnerID: AgentID
+    public let proposition: AgentKnowledgeProposition
+    public let stance: AgentKnowledgeBeliefStance
+    public let basisUnderstandingID: AgentKnowledgeUnderstandingID
+    public let beliefFormedAtTick: Int
+    public let beliefUpdatedAtTick: Int
+    public let beliefRevisionCount: Int
+    public let sourceBeliefRevisionEventID: AgentCausalEventID
+    public let digest: String
+}
+
+/// Exact, bounded grant set for one Language Pack prior operation. Receipts
+/// survive causal event-body compaction only while a current association cites
+/// them and are retired with their last association.
+public struct AgentLanguagePriorSeedReceipt:
+    Codable, Equatable, Sendable {
+    public let seedID: String
+    public let ownerID: AgentID
+    public let packID: AgentLanguagePackID
+    public let grantedAssociationIDs: [AgentLanguageAssociationID]
+    public let seededAtTick: Int
+    public let seedEventID: AgentCausalEventID
+    public let digest: String
+}
+
+/// Exact linguistic exposure retained only while current lexical competence
+/// needs it. It records no recipient belief and grants no epistemic authority.
+public struct AgentLanguageExposureReceipt:
+    Codable, Equatable, Sendable {
+    public let communicationID: AgentLanguageCommunicationID
+    public let speakerID: AgentID
+    public let recipientID: AgentID
+    public let sourceBeliefID: AgentKnowledgeBeliefID
+    public let sourceBeliefRevisionEventID: AgentCausalEventID
+    public let sourcePropositionID: AgentKnowledgePropositionID
+    public let semanticAuthorityDigest: String
+    public let semanticContentDigest: String
+    public let lexicalUses: [AgentLanguageLexicalUse]
+    public let exposedAssociationIDs: [AgentLanguageAssociationID]
+    public let communicatedAtTick: Int
+    public let communicationEventID: AgentCausalEventID
+    public let digest: String
+}
+
 public enum AgentLanguageLexicalAssociationSource:
     String, Codable, Sendable {
     case seededPrior
@@ -317,6 +367,11 @@ public struct AgentLanguageLexicalAssociation:
     public let firstAcquiredAtTick: Int
     public internal(set) var lastExposedAtTick: Int
     public internal(set) var lastEventID: AgentCausalEventID
+    public let priorSeedID: String?
+    public internal(set) var learningCommunicationIDs:
+        [AgentLanguageCommunicationID]
+    public internal(set) var lastExposureCommunicationID:
+        AgentLanguageCommunicationID?
 }
 
 public struct AgentLanguageCommunication:
@@ -326,6 +381,7 @@ public struct AgentLanguageCommunication:
     public let recipientID: AgentID
     public let sourceBeliefID: AgentKnowledgeBeliefID
     public let sourceBeliefRevisionEventID: AgentCausalEventID
+    public let semanticAuthority: AgentLanguageSemanticAuthorityReceipt
     public let semanticContent: AgentLanguageSemanticContent
     public let rendering: AgentLanguageSurfaceRealization
     public let lexicalUses: [AgentLanguageLexicalUse]
@@ -333,6 +389,7 @@ public struct AgentLanguageCommunication:
     public let newlyLearnedSenseIDs: [AgentLanguageSenseID]
     public let communicatedAtTick: Int
     public let communicationEventID: AgentCausalEventID
+    public let provenanceDigest: String
 }
 
 public struct AgentLanguageRealization: Codable, Equatable, Sendable {
@@ -348,6 +405,9 @@ public struct AgentLanguageGraphState: Codable, Equatable, Sendable {
     public internal(set) var lexicalAssociations:
         [AgentLanguageLexicalAssociation]
     public internal(set) var communications: [AgentLanguageCommunication]
+    public internal(set) var priorSeedReceipts:
+        [AgentLanguagePriorSeedReceipt]
+    public internal(set) var exposureReceipts: [AgentLanguageExposureReceipt]
     public internal(set) var evictedCommunicationCount: Int
     public internal(set) var retiredLexicalAssociationCount: Int
     public internal(set) var nextCommunicationOrdinal: UInt64
@@ -361,6 +421,8 @@ public struct AgentLanguageGraphState: Codable, Equatable, Sendable {
         self.pack = pack
         lexicalAssociations = []
         communications = []
+        priorSeedReceipts = []
+        exposureReceipts = []
         evictedCommunicationCount = 0
         retiredLexicalAssociationCount = 0
         nextCommunicationOrdinal = 1
@@ -374,6 +436,8 @@ public struct AgentLanguageSnapshot: Codable, Equatable, Sendable {
     public let pack: AgentLanguagePack?
     public let lexicalAssociations: [AgentLanguageLexicalAssociation]
     public let communications: [AgentLanguageCommunication]
+    public let priorSeedReceipts: [AgentLanguagePriorSeedReceipt]
+    public let exposureReceipts: [AgentLanguageExposureReceipt]
     public let evictedCommunicationCount: Int
     public let retiredLexicalAssociationCount: Int
     public let digest: String
