@@ -54,6 +54,22 @@ SHA of the documentation commit that contains it.
   deterministic bound and preserves living dead-source claims without
   promoting their authority. Independent re-review passed, manual publication
   completed and that exact remote is verified.
+- `CIV-42 — Learned Language Foundations V1`:
+  **COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at
+  canonical product HEAD `c116b0780facc297dd3e0839ada505673e656189`.
+  Original implementation/proof commit
+  `900c9adf59e8e0be76c707f6380bfdf576c03899`, initial review-candidate
+  documentation `5ed3459241878c4b8917af77bdcc61691b6704a2` and schema-sentinel
+  correction `595875689e645ba5bc0a057e94b6f58b9d9e0052` established the reviewed
+  candidate. Senior Review Correction 01 at
+  `860bd703bc626556c1c2dfba65eeab35781bd48e` strengthened durable provenance
+  but remained blocked. Senior Review Correction 02 at the published product
+  HEAD returned historical belief authority to CIV-41 and anchored bounded
+  CIV-41/CIV-42 proof sets through retained causal boundaries. Re-signed
+  attacks A–G and the canonical repository gate passed; independent senior
+  re-review approved, manual publication completed and the exact remote was
+  verified. Final review archive SHA-256:
+  `4ac1130589c2f369bce6a4fa9213edb2040be84c936ef5e2728077f95ac3751d`.
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
 
 Gate F correction history:
@@ -248,9 +264,9 @@ Gate F correction history:
   `ca7e70799220b58c3b090716a2adf19e8abb2609d465b7139d25f7f59988af4c`.
 - Gate F is **ACQUIRED AND PUBLISHED — REMOTE VERIFIED** at acquisition
   canonical HEAD `14475f4ad5dde9e1063a830ba7e38390cfb4d045`.
-- The next eligible required phase and authorized action is `CIV-42 — Learned
-  Language Foundations V1`; it is not started. Gate G remains planned and
-  unevaluated.
+- The next eligible required phase and authorized action is `CIV-43 — Oral
+  Transmission and Distortion V1`; it is not started. Gate G remains planned
+  and unevaluated.
 
 Published Gate E history:
 
@@ -648,9 +664,9 @@ the Gate E acquisition are now published and independently remote verified.
 
 ```text
 active CIV phase: none
-completed and published through: CIV-41 (CIV-38 and CIV-40 remain optional and unstarted)
-next eligible action: CIV-42 — Learned Language Foundations V1 — NOT STARTED
-next authorized action: CIV-42
+completed and published through: CIV-42 (CIV-38 and CIV-40 remain optional and unstarted)
+next eligible action: CIV-43 — Oral Transmission and Distortion V1 — NOT STARTED
+next authorized action: CIV-43
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -723,7 +739,10 @@ CIV-40 status: OPTIONAL TOOLING — NOT STARTED
 CIV-41 status: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 CIV-41 published canonical product HEAD: 87190af6d7b51b57d600d6f39da4ccda71e3f162
 CIV-41 Senior Review Correction 01: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
-CIV-42 status: NOT STARTED — NEXT ELIGIBLE REQUIRED PHASE
+CIV-42 status: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+CIV-42 published canonical product HEAD: c116b0780facc297dd3e0839ada505673e656189
+CIV-42 final review archive SHA-256: 4ac1130589c2f369bce6a4fa9213edb2040be84c936ef5e2728077f95ac3751d
+CIV-43 status: NOT STARTED — NEXT ELIGIBLE REQUIRED PHASE
 V4-GATE-G-v1 status: PLANNED
 roadmap generation: V4
 ```
@@ -1145,8 +1164,13 @@ mortality remove dead-owner current knowledge authority and retain separately
 bounded, self-contained terminal belief evidence. Dead-source claims held by
 living recipients remain attributed claims and never become direct evidence or
 shared truth. Independent re-review passed, manual publication completed and
-the exact remote is verified. `CIV-42 — Learned Language Foundations V1` is not
-started and is the next eligible required phase. Gate G remains planned and
+the exact remote is verified. `CIV-42 — Learned Language Foundations V1` is
+**COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at
+canonical product HEAD `c116b0780facc297dd3e0839ada505673e656189`, with final
+review archive SHA-256
+`4ac1130589c2f369bce6a4fa9213edb2040be84c936ef5e2728077f95ac3751d`.
+`CIV-43 — Oral Transmission and Distortion V1` is not started and is the next
+eligible required phase and authorized action. Gate G remains planned and
 unevaluated.
 `CIV-38` remains **OPTIONAL — NOT STARTED** and is not a prerequisite.
 `CIV-40` remains **OPTIONAL TOOLING — NOT STARTED**. Currency is not a Gate E

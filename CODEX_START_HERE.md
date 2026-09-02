@@ -85,6 +85,14 @@ for the compact status. In particular:
   `1ce9506824775c1b59eaf5c358f0e8d4edd4eab7` did not pass unchanged; Senior
   Review Correction 01 composed current cognition with finalized mortality
   before approval and publication.
+- `CIV-42 — Learned Language Foundations V1` is **COMPLETE AND PUBLISHED —
+  SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical product HEAD
+  `c116b0780facc297dd3e0839ada505673e656189`. Senior Review Correction 01
+  strengthened durable provenance but remained blocked; Senior Review
+  Correction 02 returned historical belief authority to CIV-41 and anchored
+  bounded proof sets through retained causal boundaries. Attacks A–G and the
+  canonical repository gate passed. The final review archive SHA-256 is
+  `4ac1130589c2f369bce6a4fa9213edb2040be84c936ef5e2728077f95ac3751d`.
 - Gate F Evaluation 09 is frozen **FAIL — HISTORICAL IMMUTABLE EVIDENCE**.
 - Gate F Blocker 09 is **FIXED + PUBLISHED + REMOTE VERIFIED**, including
   Senior Review Correction 01, at canonical HEAD
@@ -123,9 +131,9 @@ for the compact status. In particular:
 - Gate F is **ACQUIRED AND PUBLISHED — REMOTE VERIFIED** at canonical HEAD
   `14475f4ad5dde9e1063a830ba7e38390cfb4d045`. Optional `CIV-40` remains
   unstarted and is not a prerequisite. Published progression is complete
-  through `CIV-41`; `CIV-42 — Learned Language Foundations V1` is not started
-  and is the next eligible required phase and authorized action. Gate G
-  remains planned and unevaluated.
+  through `CIV-42`; `CIV-43 — Oral Transmission and Distortion V1` is not
+  started and is the next eligible required phase and authorized action. Gate
+  G remains planned and unevaluated.
 
 Historical Gate B `FAIL` reports and the closure-candidate report are preserved
 as evidence of their own evaluations. They do not reopen Gate B.

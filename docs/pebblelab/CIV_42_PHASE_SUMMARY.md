@@ -1,24 +1,34 @@
 # CIV-42 — Learned Language Foundations V1
 
-## Candidate status and baseline
+## Published status and baseline
 
-`CIV-42` is a **LOCAL REVIEW CANDIDATE — NOT PUBLISHED**. This document does
-not mark the phase complete, rewrite published history, evaluate Gate G or
-claim Gate G acquisition.
+`CIV-42` is **COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE
+VERIFIED**. This publication does not evaluate or acquire Gate G.
 
 ```text
 repository: Ness-Now/pebble
 canonical ref: origin/lab/pebblelab-v1
 verified canonical base: 601e3cc75e589539e47a5742c8d7848f9a3e6b59
 implementation commit: 900c9adf59e8e0be76c707f6380bfdf576c03899
+initial review-candidate documentation: 5ed3459241878c4b8917af77bdcc61691b6704a2
+schema-sentinel correction: 595875689e645ba5bc0a057e94b6f58b9d9e0052
 senior-review correction 01: 860bd703bc626556c1c2dfba65eeab35781bd48e
-candidate branch: codex/civ-42-learned-language-foundations-v1
-publication: NOT ATTEMPTED
+senior-review correction 02 / published product HEAD: c116b0780facc297dd3e0839ada505673e656189
+final review archive: CIV-42-SENIOR-REVIEW-CORRECTION-02-c116b07.zip
+final review archive SHA-256: 4ac1130589c2f369bce6a4fa9213edb2040be84c936ef5e2728077f95ac3751d
+publication: COMPLETE — REMOTE VERIFIED
 Gate G: PLANNED AND UNEVALUATED
 ```
 
-The report intentionally does not self-reference its containing documentation
-commit. Published CIV-41 product and review history remain unchanged.
+Initial senior review found durable semantic-authority and lexical-provenance
+blockers. Senior Review Correction 01 bound language state to bounded receipts
+but remained blocked because CIV-42 could become the surviving historical
+belief authority and mutually fabricated receipts could exploit dropped causal
+prefixes. Senior Review Correction 02 moved historical accepted-belief
+authority back into CIV-41 and anchored the bounded CIV-41 and CIV-42 proof
+sets through exact retained causal boundaries. Re-signed attacks A–G passed,
+the canonical 35-stage repository gate passed, independent senior re-review
+approved, manual publication completed and the exact remote HEAD was verified.
 
 ## Behavioral contract
 
@@ -190,6 +200,9 @@ Adjacent optimized owning selectors also pass unchanged:
 - mortality/population exit: 93/93;
 - Gate F schema-family compatibility: 27/27.
 
+The final canonical `scripts/verify-pebblelab.sh` run passed all 35 stages with
+4,396 assertions and exit status 0 at the published product HEAD.
+
 The implementation changes no PebbleCore, Pebble live adapter, World mutation,
 rendering or other visible boundary, so a live campaign is not applicable.
 
@@ -199,5 +212,5 @@ CIV-42 does not implement oral belief transmission or distortion, long-distance
 carriers, writing, material texts, books, archives, distributed culture,
 dialects, from-zero emergent language, a general grammar, a universal concept
 graph, embeddings, an LLM provider or new physical mechanics. Those remain
-outside this candidate and, where authorized, belong to CIV-43 and later
+outside this published V1 and, where authorized, belong to CIV-43 and later
 phases.

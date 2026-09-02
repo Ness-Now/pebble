@@ -44,6 +44,7 @@ These documents form the minimal permanent memory of the project:
 | [`CIV_37_PHASE_SUMMARY.md`](CIV_37_PHASE_SUMMARY.md) | Published architecture, correction history, physical-market proof, price causality, validation and non-claims for CIV-37. |
 | [`CIV_39_PHASE_SUMMARY.md`](CIV_39_PHASE_SUMMARY.md) | Published CIV-39 architecture, multi-settlement/fidelity contract, Senior Review Correction 01 mortality composition, Evidence Reconciliation 02 schema-13 rendered proof, validation, publication history and non-claims. |
 | [`CIV_41_PHASE_SUMMARY.md`](CIV_41_PHASE_SUMMARY.md) | Published CIV-41 architecture, structured evidence/claim/understanding/belief separation, locality, provenance, schema-36 persistence/replay, Observer schema 14, Senior Review Correction 01 mortality composition, bounds, validation, publication history and non-claims. |
+| [`CIV_42_PHASE_SUMMARY.md`](CIV_42_PHASE_SUMMARY.md) | Published CIV-42 architecture, language-independent semantics, French seed/prior, sparse lexical learning, provider-off realization, schema-37 persistence/replay, Senior Review Corrections 01–02, retained-boundary provenance, attacks A–G, validation, publication history and non-claims. |
 | [`GATE_F_BLOCKER_01_SETTLEMENT_ADMISSION_CAPACITY.md`](GATE_F_BLOCKER_01_SETTLEMENT_ADMISSION_CAPACITY.md) | Published, independently remote-verified Blocker 01 correction record; preserves Gate F Evaluation 01 historical FAIL and documents shared publication/restore per-settlement admission capacity, atomic refusal and two-process schema-35 proof. |
 | [`GATE_F_BLOCKER_02_MIGRATION_DESTINATION_CAPACITY.md`](GATE_F_BLOCKER_02_MIGRATION_DESTINATION_CAPACITY.md) | Published, independently remote-verified Blocker 02 correction record; preserves Evaluation 02 historical FAIL and documents derived durable destination-slot authority, atomic full-destination refusal, exact arrival/death/failure release, schema-35 restart and two-process proof. |
 | [`GATE_F_BLOCKER_03_DYNAMIC_FIDELITY_AUTHORITY.md`](GATE_F_BLOCKER_03_DYNAMIC_FIDELITY_AUTHORITY.md) | Published, independently remote-verified Blocker 03 correction record; preserves Evaluation 03 historical FAIL and documents shared dynamic-member fidelity composition, exact birth refusal/retry, legacy migration, mortality, rotation and two-process schema-35 proof. |
@@ -103,8 +104,8 @@ CIV-38: OPTIONAL — NOT STARTED
 V4-GATE-E-v1: ACQUIRED AND PUBLISHED
 V4-GATE-E-v1 acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f76744f83
 active phase: none
-completed through: CIV-41 (CIV-38 and CIV-40 optional and unstarted)
-next eligible phase: CIV-42 — Learned Language Foundations V1 — NOT STARTED
+completed through: CIV-42 (CIV-38 and CIV-40 optional and unstarted)
+next eligible phase: CIV-43 — Oral Transmission and Distortion V1 — NOT STARTED
 Gate E Evaluation 01: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 01: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 02: FAIL — HISTORICAL IMMUTABLE EVIDENCE
@@ -114,7 +115,7 @@ V4-GATE-E-v1 Blocker 03: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 04: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 04: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 05: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
-next authorized action: CIV-42
+next authorized action: CIV-43
 CIV-39: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 V4-GATE-F-v1: ACQUIRED AND PUBLISHED — REMOTE VERIFIED
@@ -145,7 +146,10 @@ Gate F Evaluation 12: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 CIV-40: OPTIONAL TOOLING — NOT STARTED
 CIV-41: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 CIV-41 published canonical product HEAD: 87190af6d7b51b57d600d6f39da4ccda71e3f162
-CIV-42: NOT STARTED — NEXT ELIGIBLE REQUIRED PHASE
+CIV-42: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+CIV-42 published canonical product HEAD: c116b0780facc297dd3e0839ada505673e656189
+CIV-42 final review archive SHA-256: 4ac1130589c2f369bce6a4fa9213edb2040be84c936ef5e2728077f95ac3751d
+CIV-43: NOT STARTED — NEXT ELIGIBLE REQUIRED PHASE
 V4-GATE-G-v1: PLANNED
 ```
 
@@ -411,9 +415,13 @@ candidate `1ce9506824775c1b59eaf5c358f0e8d4edd4eab7` received a blocking senior
 review finding; Senior Review Correction 01 at the published product HEAD
 fixed the departed-cognition lifecycle composition before independent
 re-review passed, manual publication completed and the exact remote was
-verified. `CIV-42 — Learned Language Foundations V1` remains not started and
-is the next eligible required phase and authorized action; Gate G remains
-planned and unevaluated.
+verified. `CIV-42 — Learned Language Foundations V1` is **COMPLETE AND
+PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical product HEAD
+`c116b0780facc297dd3e0839ada505673e656189`, with final review archive SHA-256
+`4ac1130589c2f369bce6a4fa9213edb2040be84c936ef5e2728077f95ac3751d`.
+`CIV-43 — Oral Transmission and Distortion V1` is not started and is the next
+eligible required phase and authorized action; Gate G remains planned and
+unevaluated.
 `CIV-38` remains
 optional and not started; `CIV-40` remains optional tooling and not started.
 Currency is not a Gate E or CIV-39 prerequisite.
