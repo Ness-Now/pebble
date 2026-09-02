@@ -2153,16 +2153,16 @@ func runPebbleAgentsGateFBlocker09Smoke() {
                 decedentID: schema28.firstBirth.newbornID
             ).successorPlanProof == schema28Proof
             && gateFB09RestoreExact(schema28.session) != nil)
-    check("schema 27 remains legacy and schemas 28 through 36 remain strict",
+    check("schema 27 remains legacy and schemas 28 through 37 remain strict",
           AgentCheckpointSchema.estateValidationSemantics(for: 27)
             == .legacySuccessorPlanRevalidation
-            && (28...36).allSatisfy {
+            && (28...37).allSatisfy {
                 AgentCheckpointSchema.estateValidationSemantics(for: $0)
                     == .strictDurableSuccessorPlan
             })
     check("unsupported future schema remains rejected",
-          AgentCheckpointSchema.estateValidationSemantics(for: 37) == nil
-            && !AgentCheckpointSchema.supports(37))
+          AgentCheckpointSchema.estateValidationSemantics(for: 38) == nil
+            && !AgentCheckpointSchema.supports(38))
 
     var compacted = gateFB09BoundaryFixture(
         "gate-f-b09-compacted", causalMaximumEvents: 32
