@@ -485,6 +485,79 @@ extension AgentSimulationSession {
         }
     }
 
+    /// Mortality owns death and CIV-41 owns bounded terminal epistemic state.
+    /// When CIV-41 legitimately evicts the final terminal representation for
+    /// an oral acquisition, CIV-43 must lose the dependent historical hop in
+    /// the same aggregate-root transaction. Oral history never blocks death
+    /// and never copies the evicted generic belief authority.
+    mutating func reconcileOralHistoryAfterDepartedBeliefEviction(
+        _ evictedDepartedBeliefs: [AgentKnowledgeDepartedBelief],
+        causeEventID: AgentCausalEventID
+    ) throws {
+        guard var oral = oralTransmissionState,
+              !evictedDepartedBeliefs.isEmpty else { return }
+        let candidates: Set<AgentOralTransmissionID> = Set(
+            evictedDepartedBeliefs.compactMap { departed in
+                guard case let .oralSourceClaim(
+                    _, _, _, _, transmissionID, _, _, _
+                ) = departed.basis else { return nil }
+                return transmissionID
+            }
+        )
+        guard !candidates.isEmpty else { return }
+
+        let retainedTerminalIDs: Set<AgentOralTransmissionID> = Set(
+            (knowledgeGraphState?.departedBeliefs ?? []).compactMap {
+                departed -> AgentOralTransmissionID? in
+                guard case let .oralSourceClaim(
+                    _, _, _, _, transmissionID, _, _, _
+                ) = departed.basis else { return nil }
+                return transmissionID
+            }
+        )
+        let currentUnderstandingIDs = Set(
+            knowledgeGraphState?.beliefs.map(\.basisUnderstandingID) ?? []
+        )
+        let currentClaimIDs = Set(
+            knowledgeGraphState?.understandings.compactMap {
+                understanding -> AgentKnowledgeClaimID? in
+                guard currentUnderstandingIDs.contains(
+                    understanding.understandingID
+                ), case let .sourceClaim(claimID) = understanding.basis else {
+                    return nil
+                }
+                return claimID
+            } ?? []
+        )
+        let currentTransmissionIDs = Set(
+            knowledgeGraphState?.claims.compactMap { claim in
+                currentClaimIDs.contains(claim.claimID)
+                    ? claim.oralTransmissionID : nil
+            } ?? []
+        )
+        let removableIDs = candidates
+            .subtracting(retainedTerminalIDs)
+            .subtracting(currentTransmissionIDs)
+        guard !removableIDs.isEmpty else { return }
+
+        let removed = oral.transmissions.filter {
+            removableIDs.contains($0.transmissionID)
+        }
+        guard oral.evictedTransmissionCount <= Int.max - removed.count else {
+            throw AgentSessionError.oral(.invalidState(
+                "terminal compaction eviction counter"
+            ))
+        }
+        oral.transmissions.removeAll {
+            removableIDs.contains($0.transmissionID)
+        }
+        oral.evictedTransmissionCount += removed.count
+        oralTransmissionState = oral
+        if !removed.isEmpty {
+            try commitOralProvenanceBoundary(causes: [causeEventID])
+        }
+    }
+
     private mutating func retireKnowledgeOralClaim(
         _ claimID: AgentKnowledgeClaimID
     ) throws {

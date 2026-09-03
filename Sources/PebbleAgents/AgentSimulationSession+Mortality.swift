@@ -1217,6 +1217,7 @@ extension AgentSimulationSession {
         try validateEcologicalObservationStateIfEnabled()
         try validateKnowledgeGraphStateIfEnabled()
         try validateLanguageStateIfInitialized()
+        try validateOralTransmissionStateIfInitialized()
     }
 
     private func conservationSnapshotWith(

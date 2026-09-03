@@ -99,7 +99,11 @@ cannot send or receive a new hop. CIV-41 moves the departed current belief into
 its existing immutable terminal representation, CIV-42 removes current lexical
 competence, and CIV-43 may retain the bounded historical hop. Restore validates
 that terminal CIV-41 route without recreating a live claim, understanding,
-belief, lexical row, or agent.
+belief, lexical row, or agent. If a later finalized death makes CIV-41 evict
+that terminal belief under its own bound, the same aggregate-root transaction
+deterministically evicts the dependent oral hop before final cross-domain
+validation. CIV-43 copies no terminal belief, and oral history never blocks a
+legitimate death merely to preserve reconstruction.
 
 ## Schema, replay, and retained authority
 
@@ -118,13 +122,24 @@ acquisition, CIV-42 communication and semantics, locality evidence,
 deterministic distortion, typed causal events, and the record provenance
 digest. A dropped-prefix event ID alone is never accepted as oral proof.
 
-The focused hostile compacted-state proof adds a forged oral row, redirects its
-matching CIV-41 source route, recomputes the oral-set digest, durable semantic
-digest, and checkpoint identity, and uses plausible authority from the dropped
-causal prefix. Restore rejects it because the authentic retained boundary event
-commits the real set. A legitimate compacted control drops 24 causal events,
+The focused hostile compacted-state proof leaves every authentic oral row and
+dependent route unchanged, adds a logically separate forged oral row plus its
+own CIV-41 claim, understanding, and revision, recomputes record and oral-set
+digests, durable semantic digest, and checkpoint identity, and uses plausible
+authority from the dropped causal prefix. Restore rejects it specifically
+because the authentic retained boundary event commits the real set. A
+legitimate compacted control drops 47 causal events,
 retains two of two bounded hops after one oral eviction, restarts byte-exactly,
 and permits a living recipient to retransmit its current CIV-41 belief.
+
+A separate terminal-pressure control retains one oral hop while its recipient's
+two terminal beliefs remain within CIV-41's capacity. The pressure trajectory
+then finalizes another epistemically relevant death, reaches three retained
+terminal beliefs after one real terminal eviction, removes the evicted oral
+route, increments CIV-43 oral eviction accounting once, keeps mortality
+successful, drops seven causal events, restarts byte-exactly, replays without
+recreating removed history, and repeats with identical domain and checkpoint
+digests.
 
 ## Focused evidence
 
@@ -134,14 +149,15 @@ The optimized wrapper is:
 scripts/verify-pebblelab-civ43.sh
 ```
 
-Its focused proof contains 67 assertions covering faithful acquisition,
+Its focused proof contains 78 assertions covering faithful acquisition,
 immediate-speaker attribution, genuine CIV-41 acquisition and revision, the
 `agent_0 -> agent_1 -> agent_2` chain, deterministic distortion variation,
 lexical/epistemic separation, unchanged authoritative evidence, order
 independence, schema-38 restart, recorded-effect replay, no-reroll tampering,
 future-schema refusal, re-signed checkpoint attacks, atomic refusals, real
 bounded compaction, the forged dropped-prefix attack, valid post-compaction
-retransmission, and mortality without cognitive resurrection. Separate-process
+retransmission, mortality without cognitive resurrection, coordinated terminal
+belief/oral compaction, and deterministic multi-death replay. Separate-process
 schema-38 writer and reader checks are part of the wrapper.
 
 The implementation changes only deterministic PebbleAgents composition and

@@ -766,12 +766,22 @@ extension AgentSimulationSession {
         let historicalExcess = max(
             0, departed.count - state.configuration.maximumDepartedBeliefs
         )
+        let evictedDepartedBeliefs: [AgentKnowledgeDepartedBelief]
         if historicalExcess > 0 {
+            evictedDepartedBeliefs = Array(departed.prefix(historicalExcess))
             departed.removeFirst(historicalExcess)
             state.departedBeliefEvictionCount =
                 (state.departedBeliefEvictionCount ?? 0) + historicalExcess
+        } else {
+            evictedDepartedBeliefs = []
         }
         state.departedBeliefs = departed
+        knowledgeGraphState = state
+        try reconcileOralHistoryAfterDepartedBeliefEviction(
+            evictedDepartedBeliefs,
+            causeEventID: deathEventID
+        )
+        state = knowledgeGraphState ?? state
         try compactKnowledgeState(&state)
         try validateKnowledgeGraphState(state)
         knowledgeGraphState = state

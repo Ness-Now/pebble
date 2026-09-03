@@ -4,6 +4,7 @@ import PebbleAgents
 private let oralA = AgentID(rawValue: "agent_0")!
 private let oralB = AgentID(rawValue: "agent_1")!
 private let oralC = AgentID(rawValue: "agent_2")!
+private let oralD = AgentID(rawValue: "agent_3")!
 
 private let oralWoodSenseIDs = [
     AgentLanguageSenseID(rawValue: "referent.worldCell")!,
@@ -21,7 +22,9 @@ private let oralSmokeConfiguration = try! AgentOralConfiguration(
 private func oralSmokeAgent(
     _ id: AgentID,
     x: Int,
-    lethalWhenEnabled: Bool = false
+    lethalWhenEnabled: Bool = false,
+    initialHunger: Double? = nil,
+    initialHealth: Int? = nil
 ) -> AgentSessionAgentState {
     let position = AgentPosition(x: x, y: 64, z: 0)
     return AgentSessionAgentState(
@@ -29,12 +32,12 @@ private func oralSmokeAgent(
         state: "idle",
         position: position,
         needs: AgentNeeds(
-            hunger: lethalWhenEnabled ? 0.39 : -10,
+            hunger: initialHunger ?? (lethalWhenEnabled ? 0.39 : -10),
             fatigue: 0,
             curiosity: 0,
             safety: 1
         ),
-        health: lethalWhenEnabled ? 26 : 100,
+        health: initialHealth ?? (lethalWhenEnabled ? 26 : 100),
         fear: 0,
         homePosition: position,
         nearbyAgents: [],
@@ -259,10 +262,50 @@ private func oralSmokeJSONEventID(_ value: Any) -> String {
         + String(format: "%020llu", sequence)
 }
 
+private func oralSmokeJSONEventSequence(_ value: Any) -> UInt64 {
+    let event = value as! [String: Any]
+    return (event["sequence"] as! NSNumber).uint64Value
+}
+
 private func oralSmokeJSONPosition(_ value: Any) -> String {
     let position = value as! [String: Any]
     return "\(position["x"] as! Int),\(position["y"] as! Int),"
         + "\(position["z"] as! Int)"
+}
+
+private func oralSmokeJSONReplacing(
+    _ value: Any,
+    replacements: [String: String]
+) -> Any {
+    if let text = value as? String {
+        return replacements[text] ?? text
+    }
+    if let values = value as? [Any] {
+        return values.map {
+            oralSmokeJSONReplacing($0, replacements: replacements)
+        }
+    }
+    if let values = value as? [String: Any] {
+        return Dictionary(uniqueKeysWithValues: values.map { key, item in
+            (
+                key,
+                oralSmokeJSONReplacing(item, replacements: replacements)
+            )
+        })
+    }
+    return value
+}
+
+private func oralSmokeJSONEqual(_ lhs: Any, _ rhs: Any) -> Bool {
+    let left = try! JSONSerialization.data(
+        withJSONObject: lhs,
+        options: [.sortedKeys, .withoutEscapingSlashes]
+    )
+    let right = try! JSONSerialization.data(
+        withJSONObject: rhs,
+        options: [.sortedKeys, .withoutEscapingSlashes]
+    )
+    return left == right
 }
 
 private func oralSmokeJSONProvenanceDigest(
@@ -618,6 +661,7 @@ func runPebbleAgentsOralTransmissionSmoke() {
     oralSmokeNegativeProof()
     oralSmokeCompactionProof()
     oralSmokeMortalityProof()
+    oralSmokeTerminalCompactionProof()
 
     print(
         "  CIV43_HOP1 speaker=\(hop1.speakerID.rawValue) source=\(hop1.transmittedSemanticContent.sourcePropositionID.rawValue) transmitted=\(hop1.transmittedSemanticContent.digest) interpreted=\(hop1.interpretedSemanticContent.digest) recipientBelief=\(bBelief.propositionID.rawValue) claim=\(hop1.recipientClaimID.rawValue) event=\(hop1.receiptEventID.rawValue) outcome=\(hop1.outcome.rawValue)"
@@ -1003,6 +1047,358 @@ private func oralSmokeNegativeProof() {
     )
 }
 
+private func oralSmokeTerminalCompactionPrepared(
+    id: String
+) -> (AgentSimulationSession, AgentKnowledgePropositionID) {
+    let survival = try! AgentSurvivalConfiguration(
+        hungerPerTick: 0.1,
+        fatiguePerTick: AgentSurvivalConfiguration.live.fatiguePerTick,
+        hungryThreshold: 0.1,
+        criticalHungerThreshold: 0.2,
+        hungerRecoveryThreshold: 0.05,
+        fatigueThreshold: AgentSurvivalConfiguration.live.fatigueThreshold,
+        fatigueRecoveryThreshold:
+            AgentSurvivalConfiguration.live.fatigueRecoveryThreshold,
+        foodNutrition: AgentSurvivalConfiguration.live.foodNutrition,
+        restRecoveryPerTick:
+            AgentSurvivalConfiguration.live.restRecoveryPerTick,
+        starvationGraceTicks: 0,
+        starvationDamagePerTick: 25
+    )
+    let social = try! AgentSocialConfiguration(
+        communicationRadius: 8,
+        minimumTrustToVerify: -100,
+        claimLifetimeTicks: 64,
+        messageLifetimeTicks: 48,
+        maximumFactsPerAgent: 8,
+        maximumBeliefsPerAgent: 8,
+        maximumTrustRelations: 32,
+        maximumRetainedMessages: 32,
+        shareCooldownTicks: 1
+    )
+    let agents = [
+        oralSmokeAgent(
+            oralA, x: 0, initialHunger: 0, initialHealth: 100
+        ),
+        oralSmokeAgent(
+            oralB, x: 1, initialHunger: 0, initialHealth: 26
+        ),
+        oralSmokeAgent(
+            oralC, x: 1, initialHunger: 0, initialHealth: 76
+        ),
+    ]
+    var session = try! AgentSimulationSession(
+        configuration: try! AgentSessionConfiguration(
+            seed: 143,
+            nearbyRadius: 16,
+            resourceObservationRadius: 8,
+            recentMemorySnapshotLimit: 8,
+            memoryPolicy: .bounded(maxEntries: 64),
+            survivalConfiguration: survival,
+            socialConfiguration: social
+        ),
+        agents: agents,
+        simulationID: try! AgentSimulationID(validating: id),
+        causalLedgerPolicy: .bounded(maxEvents: 96)
+    )
+    try! session.setSocialEnabled(true)
+    try! session.setKnowledgeGraphEnabled(
+        true,
+        configuration: try! AgentKnowledgeConfiguration(
+            maximumPropositions: 8,
+            maximumEvidence: 8,
+            maximumClaims: 8,
+            maximumUnderstandings: 8,
+            maximumBeliefs: 3,
+            maximumRevisions: 8,
+            maximumEvidencePerAgent: 4,
+            maximumClaimsPerAgent: 4,
+            maximumUnderstandingsPerAgent: 4,
+            maximumBeliefsPerAgent: 2,
+            maximumRevisionsPerAgent: 4
+        )
+    )
+    _ = try! session.advanceTick(perceptions: [
+        oralResourceObservation(oralA, resource: .wood),
+    ])
+    let sourceID = sourceIDFor(session: session, ownerID: oralA)
+    let bPosition = session.snapshot().agents.first {
+        $0.id == oralB.rawValue
+    }!.position
+    _ = try! session.advanceTick(perceptions: [AgentPerceptionInput(
+        agentId: oralB.rawValue,
+        socialResourceObservations: [AgentResourceObservation(
+            resource: .stone,
+            target: AgentPosition(
+                x: bPosition.x + 3, y: bPosition.y, z: bPosition.z
+            ),
+            direction: .east,
+            distanceManhattan: 3,
+            quantityAvailable: 1,
+            source: .naturalWorld,
+            expectedBlockFingerprint: 43_002
+        )]
+    )])
+    try! session.setLanguageEnabled(
+        true,
+        configuration: try! AgentLanguageConfiguration(
+            maximumLexicalAssociations: 32,
+            maximumLexicalAssociationsPerAgent: 8,
+            maximumCommunicationRecords: 16,
+            exposuresRequiredForLearning: 1
+        ),
+        pack: .frenchReference
+    )
+    try! session.setOralTransmissionEnabled(
+        true,
+        configuration: try! AgentOralConfiguration(
+            maximumTransmissionRecords: 8,
+            maximumFaithfulDistance: 1
+        )
+    )
+    try! session.initializePopulationRegistry(
+        settlementAnchor: AgentPosition(x: 0, y: 64, z: 0),
+        receptionPosition: AgentPosition(x: 0, y: 64, z: 0),
+        configuration: try! AgentPopulationConfiguration(
+            maximumActivePopulation: 8,
+            maximumMigrationRecords: 8
+        )
+    )
+    let aPosition = session.snapshot().agents.first {
+        $0.id == oralA.rawValue
+    }!.position
+    try! session.applyInteractionOutcome(AgentInteractionOutcome(
+        interactionId: "civ43-terminal-source-food",
+        agentId: oralA.rawValue,
+        tick: session.tick,
+        target: AgentPosition(
+            x: aPosition.x, y: aPosition.y, z: aPosition.z + 1
+        ),
+        resource: .foodRaw,
+        status: .succeeded,
+        inventoryDelta: AgentInventoryDelta(resource: .foodRaw, quantity: 1),
+        reason: "bounded lifecycle fixture"
+    ))
+    return (session, sourceID)
+}
+
+private func oralSmokeTerminalCompactionOperations(
+    sourceID: AgentKnowledgePropositionID
+) -> [AgentReplayOperation] {
+    [
+        .transmitOralClaim(
+            speakerID: oralA, recipientID: oralB,
+            propositionID: sourceID, renderingMode: .noRendering,
+            acceptedEffect: nil
+        ),
+        .setSurvivalEnabled(true),
+        .setMortalityEnabled(true, configuration: .live),
+        .advanceTick(perceptions: [], physicalObservations: []),
+        .advanceTick(perceptions: [], physicalObservations: []),
+        .advanceTick(perceptions: [], physicalObservations: []),
+    ]
+}
+
+private func oralSmokeTerminalCompactionProof() {
+    let id = "civ43-terminal-compaction"
+    var (session, sourceID) = oralSmokeTerminalCompactionPrepared(id: id)
+    let base = try! session.makeCheckpoint()
+    var recorder = try! AgentReplayRecorder(
+        checkpoint: base, session: session
+    )
+    var controlBoundaryID = "none"
+    var controlBoundaryDigest = "none"
+    let operations = oralSmokeTerminalCompactionOperations(sourceID: sourceID)
+    for (index, operation) in operations.enumerated() {
+        _ = try! recorder.apply(operation, to: &session)
+        if index == 5 {
+            let controlKnowledge = session.knowledgeSnapshot()
+            let controlOral = session.oralTransmissionSnapshot()
+            if let boundary = controlOral.provenanceBoundary {
+                controlBoundaryID = boundary.eventID.rawValue
+                controlBoundaryDigest = boundary.digest
+            }
+            let controlCheckpoint = try! session.makeCheckpoint()
+            let controlBytes = try! AgentCheckpointCodec.encode(
+                controlCheckpoint
+            )
+            let controlRestored = try! AgentSimulationSession.restoring(
+                controlCheckpoint
+            )
+            check("terminal proof remains while within CIV-41 capacity",
+                controlKnowledge.departedBeliefs.count == 2
+                    && controlKnowledge.departedBeliefEvictionCount == 0
+                    && controlKnowledge.departedBeliefs.allSatisfy {
+                        $0.ownerID == oralB
+                    }
+                    && controlKnowledge.departedBeliefs.contains {
+                        if case .oralSourceClaim = $0.basis { return true }
+                        return false
+                    }
+                    && controlOral.transmissions.count == 1
+                    && controlOral.transmissions[0].recipientID == oralB)
+            check("within-capacity terminal oral control restarts exactly",
+                try! AgentCheckpointCodec.encode(
+                    controlRestored.makeCheckpoint()
+                ) == controlBytes
+                    && controlRestored.oralTransmissionSnapshot()
+                        == controlOral)
+        }
+    }
+
+    let cPosition = session.snapshot().agents.first {
+        $0.id == oralC.rawValue
+    }!.position
+    let cObservation = AgentPerceptionInput(
+        agentId: oralC.rawValue,
+        socialResourceObservations: [
+            AgentResourceObservation(
+                resource: .wood,
+                target: AgentPosition(
+                    x: cPosition.x + 1, y: cPosition.y, z: cPosition.z
+                ),
+                direction: .east,
+                distanceManhattan: 1,
+                quantityAvailable: 1,
+                source: .naturalWorld,
+                expectedBlockFingerprint: 43_003
+            ),
+            AgentResourceObservation(
+                resource: .stone,
+                target: AgentPosition(
+                    x: cPosition.x - 1, y: cPosition.y, z: cPosition.z
+                ),
+                direction: .west,
+                distanceManhattan: 1,
+                quantityAvailable: 1,
+                source: .naturalWorld,
+                expectedBlockFingerprint: 43_004
+            ),
+        ]
+    )
+    _ = try! recorder.apply(
+        .advanceTick(
+            perceptions: [cObservation], physicalObservations: []
+        ),
+        to: &session
+    )
+    let aHunger = session.snapshot().agents.first {
+        $0.id == oralA.rawValue
+    }!.needs.hunger
+    _ = try! recorder.apply(
+        .consumptionOutcome(AgentConsumptionOutcome(
+            consumptionId: "civ43-terminal-source-survival",
+            agentId: oralA.rawValue,
+            tick: session.tick,
+            resource: .foodRaw,
+            quantity: 1,
+            status: .succeeded,
+            hungerBefore: aHunger,
+            hungerAfter: 0,
+            reason: "bounded lifecycle fixture"
+        )),
+        to: &session
+    )
+    _ = try! recorder.apply(
+        .advanceTick(perceptions: [], physicalObservations: []),
+        to: &session
+    )
+
+    let knowledge = session.knowledgeSnapshot()
+    let oral = session.oralTransmissionSnapshot()
+    let mortality = session.mortalitySnapshot()
+    check("terminal pressure finalizes both legitimate deaths",
+        mortality.totalDeathCount == 2
+            && session.snapshot().agents.map(\.id) == [oralA.rawValue])
+    check("CIV-41 terminal bound performs a real deterministic eviction",
+        knowledge.departedBeliefs.count == 3
+            && knowledge.departedBeliefEvictionCount == 1
+            && !knowledge.departedBeliefs.contains {
+                if case .oralSourceClaim = $0.basis {
+                    return $0.ownerID == oralB
+                }
+                return false
+            }
+            && Set(knowledge.departedBeliefs.map(\.ownerID))
+                == Set([oralB, oralC]))
+    check("terminal pressure never resurrects current cognition",
+        knowledge.beliefs.count == 1
+            && knowledge.beliefs[0].ownerID == oralA
+            && !session.languageSnapshot().lexicalAssociations.contains {
+                [oralB, oralC].contains($0.ownerID)
+            })
+    check("CIV-43 removes only the hop whose terminal proof disappeared",
+        oral.transmissions.isEmpty
+            && oral.evictedTransmissionCount == 1
+            && !oral.transmissions.contains { $0.recipientID == oralB })
+    check("mortality remains authoritative under oral historical pressure",
+        mortality.records.count == 2
+            && oral.provenanceBoundary == nil)
+
+    let checkpoint = try! session.makeCheckpoint()
+    let bytes = try! AgentCheckpointCodec.encode(checkpoint)
+    let restored = try! AgentSimulationSession.restoring(checkpoint)
+    check("terminal-compacted schema-38 checkpoint restarts byte exactly",
+        checkpoint.schemaVersion == AgentCheckpointSchema.oralTransmissionVersion
+            && (try! AgentCheckpointCodec.encode(restored.makeCheckpoint()))
+                == bytes)
+    check("restart recreates neither evicted epistemic nor oral history",
+        !restored.knowledgeSnapshot().departedBeliefs.contains { departed in
+            guard departed.ownerID == oralB else { return false }
+            if case .oralSourceClaim = departed.basis { return true }
+            return false
+        }
+            && !restored.oralTransmissionSnapshot().transmissions.contains {
+                $0.recipientID == oralB
+            }
+            && restored.knowledgeSnapshot().departedBeliefEvictionCount == 1
+            && restored.oralTransmissionSummary()
+                .evictedTransmissionCount == 1)
+
+    let journal = try! recorder.journal(
+        named: AgentCheckpointName(rawValue: "civ43-terminal-compaction")!
+    )
+    let replay = try! AgentSessionReplayer.replay(
+        checkpoint: base, journal: journal
+    )
+    check("replay preserves terminal epistemic and oral compaction",
+        replay.report.verified
+            && replay.report.finalSemanticDigest
+                == (try! session.durableStateDigest())
+            && !replay.session.knowledgeSnapshot().departedBeliefs.contains {
+                departed in
+                guard departed.ownerID == oralB else { return false }
+                if case .oralSourceClaim = departed.basis { return true }
+                return false
+            }
+            && !replay.session.oralTransmissionSnapshot().transmissions
+                .contains { $0.recipientID == oralB })
+
+    var (repeatSession, _) =
+        oralSmokeTerminalCompactionPrepared(id: id)
+    let repeatBase = try! repeatSession.makeCheckpoint()
+    var repeatRecorder = try! AgentReplayRecorder(
+        checkpoint: repeatBase, session: repeatSession
+    )
+    for record in journal.records {
+        _ = try! repeatRecorder.apply(record.operation, to: &repeatSession)
+    }
+    check("terminal compaction repeats with exact final digests",
+        session.knowledgeSnapshot().digest
+            == repeatSession.knowledgeSnapshot().digest
+            && session.oralTransmissionSnapshot().digest
+                == repeatSession.oralTransmissionSnapshot().digest
+            && session.mortalitySnapshot().digest
+                == repeatSession.mortalitySnapshot().digest
+            && (try! AgentCheckpointCodec.encode(
+                repeatSession.makeCheckpoint()
+            )) == bytes)
+
+    print(
+        "  CIV43_TERMINAL_COMPACTION departed=\(knowledge.departedBeliefs.count)/3 departedEvicted=\(knowledge.departedBeliefEvictionCount) oral=\(oral.transmissions.count) oralEvicted=\(oral.evictedTransmissionCount) deaths=\(mortality.totalDeathCount) causalDropped=\(session.causalLedgerSnapshot().summary.droppedEventCount) survivingBoundary=none controlBoundary=\(controlBoundaryID) controlBoundaryDigest=\(controlBoundaryDigest) replay=\(replay.report.verified)"
+    )
+}
+
 private func oralSmokeMortalityProof() {
     var (mortality, sourceID) = oralSmokePrepared(
         id: "civ43-mortality",
@@ -1116,6 +1512,12 @@ private func oralSmokeCompactionProof() {
             return false
         }
     )
+    let preEvictionCheckpoint = try! bounded.makeCheckpoint()
+    let preEvictionRoot = try! JSONSerialization.jsonObject(
+        with: AgentCheckpointCodec.encode(preEvictionCheckpoint)
+    ) as! [String: Any]
+    let preEvictionDurable = preEvictionRoot["durableState"]
+        as! [String: Any]
     var compacted = bounded
     _ = try! compacted.transmitOralClaim(
         speakerID: oralA,
@@ -1127,6 +1529,25 @@ private func oralSmokeCompactionProof() {
         compacted.oralTransmissionSummary().transmissionCount == 2
             && compacted.oralTransmissionSummary()
                 .evictedTransmissionCount == 1)
+    let preOral = preEvictionDurable["oralTransmissionState"]
+        as! [String: Any]
+    let preRows = preOral["transmissions"] as! [[String: Any]]
+    let retainedIDs = Set(compacted.oralTransmissionSnapshot()
+        .transmissions.map { $0.transmissionID.rawValue })
+    let evictedTemplate = preRows.first {
+        !retainedIDs.contains($0["transmissionID"] as! String)
+    }!
+    let forgedRouteLastSequence = [
+        evictedTemplate["sourceBeliefRevisionEventID"]!,
+        evictedTemplate["languageCommunicationEventID"]!,
+        evictedTemplate["receiptEventID"]!,
+        evictedTemplate["recipientClaimEventID"]!,
+        evictedTemplate["recipientBeliefRevisionEventID"]!,
+    ].map(oralSmokeJSONEventSequence).max()!
+    for _ in 0..<32 where compacted.causalLedgerSnapshot().summary
+        .droppedEventCount < forgedRouteLastSequence {
+        _ = try! compacted.advanceTick()
+    }
     let checkpoint = try! compacted.makeCheckpoint()
     let restored = try! AgentSimulationSession.restoring(checkpoint)
     check("bounded compacted causal prefix preserves oral chain",
@@ -1138,15 +1559,13 @@ private func oralSmokeCompactionProof() {
             == (try! AgentCheckpointCodec.encode(checkpoint)))
     let droppedCount = compacted.causalLedgerSnapshot().summary
         .droppedEventCount
-    let droppedAuthorityIsReferenced = compacted.oralTransmissionSnapshot()
-        .transmissions.contains {
-            $0.sourceBeliefRevisionEventID.sequence.rawValue
-                <= UInt64(droppedCount)
-        }
+    let forgedRouteUsesDroppedPrefix = forgedRouteLastSequence
+        <= UInt64(droppedCount)
     let mutuallyCoherentForgery = oralSmokeResignedCheckpoint(checkpoint) {
         durable in
         var oral = durable["oralTransmissionState"] as! [String: Any]
         var rows = oral["transmissions"] as! [[String: Any]]
+        let authenticRows = rows
         let evicted = oral["evictedTransmissionCount"] as! Int
         let authenticBoundary = oral["provenanceBoundary"]
             as! [String: Any]
@@ -1155,21 +1574,37 @@ private func oralSmokeCompactionProof() {
                 == authenticBoundary["digest"] as! String,
             "CIV-43 hostile boundary recomputation fixture"
         )
-        let forgedSourceIndex = rows.firstIndex {
-            let sourceEvent = $0["sourceBeliefRevisionEventID"]
-                as! [String: Any]
-            return (sourceEvent["sequence"] as! NSNumber).uint64Value
-                <= UInt64(droppedCount)
-        }!
-        var forged = rows[forgedSourceIndex]
-        let forgedID = "oral-transmission-forged-compacted-prefix"
-        forged["transmissionID"] = forgedID
+        let originalTransmissionID = evictedTemplate["transmissionID"]
+            as! String
+        let originalClaimID = evictedTemplate["recipientClaimID"] as! String
+        let originalUnderstandingID = evictedTemplate[
+            "recipientUnderstandingID"
+        ] as! String
+        let forgedTransmissionID =
+            "oral-transmission-forged-separate-dropped-prefix"
+        let forgedClaimID = "claim-forged-separate-dropped-prefix"
+        let forgedUnderstandingID =
+            "understanding-forged-separate-dropped-prefix"
+        let forgedRevisionID = "revision-forged-separate-dropped-prefix"
+        let replacements = [
+            originalTransmissionID: forgedTransmissionID,
+            originalClaimID: forgedClaimID,
+            originalUnderstandingID: forgedUnderstandingID,
+        ]
+        var forged = oralSmokeJSONReplacing(
+            evictedTemplate,
+            replacements: replacements
+        ) as! [String: Any]
         forged["provenanceDigest"] = oralSmokeJSONProvenanceDigest(forged)
         rows.append(forged)
-        oral["transmissions"] = rows.sorted {
+        rows.sort {
             ($0["transmissionID"] as! String)
                 < ($1["transmissionID"] as! String)
         }
+        oral["transmissions"] = rows
+        var oralConfiguration = oral["configuration"] as! [String: Any]
+        oralConfiguration["maximumTransmissionRecords"] = rows.count
+        oral["configuration"] = oralConfiguration
         oral["nextTransmissionOrdinal"] = 10_000
         var boundary = oral["provenanceBoundary"] as! [String: Any]
         boundary["digest"] = oralSmokeJSONBoundaryDigest(
@@ -1180,20 +1615,85 @@ private func oralSmokeCompactionProof() {
 
         var knowledge = durable["knowledgeGraphState"] as! [String: Any]
         var claims = knowledge["claims"] as! [[String: Any]]
-        let claimID = forged["recipientClaimID"] as! String
-        let index = claims.firstIndex {
-            ($0["claimID"] as! String) == claimID
+        var understandings = knowledge["understandings"]
+            as! [[String: Any]]
+        var revisions = knowledge["revisions"] as! [[String: Any]]
+        let preKnowledge = preEvictionDurable["knowledgeGraphState"]
+            as! [String: Any]
+        let preClaims = preKnowledge["claims"] as! [[String: Any]]
+        let preUnderstandings = preKnowledge["understandings"]
+            as! [[String: Any]]
+        let preRevisions = preKnowledge["revisions"]
+            as! [[String: Any]]
+        let claimTemplate = preClaims.first {
+            ($0["claimID"] as! String) == originalClaimID
         }!
-        claims[index]["oralTransmissionID"] = forgedID
+        let understandingTemplate = preUnderstandings.first {
+            ($0["understandingID"] as! String) == originalUnderstandingID
+        }!
+        var revisionTemplate = preRevisions.first {
+            oralSmokeJSONEventID($0["revisionEventID"]!)
+                == oralSmokeJSONEventID(
+                    evictedTemplate["recipientBeliefRevisionEventID"]!
+                )
+        }!
+        revisionTemplate["revisionID"] = forgedRevisionID
+        let forgedClaim = oralSmokeJSONReplacing(
+            claimTemplate,
+            replacements: replacements
+        ) as! [String: Any]
+        let forgedUnderstanding = oralSmokeJSONReplacing(
+            understandingTemplate,
+            replacements: replacements
+        ) as! [String: Any]
+        revisionTemplate = oralSmokeJSONReplacing(
+            revisionTemplate,
+            replacements: replacements
+        ) as! [String: Any]
+        claims.append(forgedClaim)
+        understandings.append(forgedUnderstanding)
+        revisions.append(revisionTemplate)
+        claims.sort {
+            ($0["claimID"] as! String) < ($1["claimID"] as! String)
+        }
+        understandings.sort {
+            ($0["understandingID"] as! String)
+                < ($1["understandingID"] as! String)
+        }
+        revisions.sort {
+            ($0["revisionID"] as! String)
+                < ($1["revisionID"] as! String)
+        }
         knowledge["claims"] = claims
+        knowledge["understandings"] = understandings
+        knowledge["revisions"] = revisions
+        var evictionCounts = knowledge["evictionCounts"]
+            as! [String: Any]
+        for key in ["claims", "understandings", "revisions"] {
+            let count = evictionCounts[key] as! Int
+            precondition(count > 0, "forged route eviction accounting")
+            evictionCounts[key] = count - 1
+        }
+        knowledge["evictionCounts"] = evictionCounts
         durable["knowledgeGraphState"] = knowledge
+
+        let rowsByID = Dictionary(uniqueKeysWithValues: rows.map {
+            ($0["transmissionID"] as! String, $0)
+        })
+        precondition(authenticRows.allSatisfy { authentic in
+            let id = authentic["transmissionID"] as! String
+            return oralSmokeJSONEqual(rowsByID[id]!, authentic)
+        }, "CIV-43 hostile fixture changed an authentic oral row")
     }
     let forgeryError = oralSmokeRestoreError(mutuallyCoherentForgery)
     check(
-        "compacted mutually coherent dropped-prefix forgery is rejected by authentic oral boundary",
-        droppedAuthorityIsReferenced
+        "separate mutually coherent dropped-prefix forgery is rejected by authentic oral boundary",
+        forgedRouteUsesDroppedPrefix
             && forgeryError == "oral:oral provenance boundary",
-        "droppedReference=\(droppedAuthorityIsReferenced) error=\(forgeryError ?? "accepted")"
+        "droppedRoute=\(forgedRouteUsesDroppedPrefix) error=\(forgeryError ?? "accepted")"
+    )
+    print(
+        "  CIV43_FORGERY separateRoute=true authenticRowsUnchanged=true droppedRoute=\(forgedRouteUsesDroppedPrefix) ordinaryDigestsResigned=true rejection=\(forgeryError ?? "accepted")"
     )
     var retransmitting = restored
     let currentB = sourceIDFor(session: retransmitting, ownerID: oralB)
