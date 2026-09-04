@@ -273,8 +273,11 @@ extension AgentSimulationSession {
         beforeEvicting leaving: [AgentCausalEvent]
     ) throws -> Bool {
         guard var state = oralTransmissionState,
-              !state.transmissions.isEmpty,
               !leaving.isEmpty else { return false }
+        let hasOralHistory = !state.transmissions.isEmpty
+            || state.evictedTransmissionCount > 0
+            || state.provenanceBoundary != nil
+        guard hasOralHistory else { return false }
         let leavingIDs = Set(leaving.map(\.eventID))
         let boundaryIsLeaving = state.provenanceBoundary.map {
             leavingIDs.contains($0.eventID)

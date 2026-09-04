@@ -8,6 +8,14 @@ based exactly on published canonical HEAD
 `origin/lab/pebblelab-v1`. It does not change canonical program progression,
 authorize CIV-44, evaluate Gate G, or acquire Gate G.
 
+The initial local candidate is
+`2ac189b9da1ece0db7ead0bd60c5ca4e9992ea54`. Senior Review Correction 01 at
+`2e232b1c0cfa6455eed48ba2a6d6ccc7220a3cd2` reconciles CIV-41 terminal-belief
+compaction with dependent oral history without subordinating mortality.
+Senior Review Correction 02 keeps exact current oral authority after the last
+hop compacts away, refuses resurrection through a stale formerly authentic
+boundary, and refreshes that empty-set authority under causal FIFO pressure.
+
 ## Authority and transition
 
 The V1 path is:
@@ -116,11 +124,17 @@ The boundary digest commits the complete retained oral set and eviction count.
 Its exact causal boundary event must remain in the retained ledger suffix.
 Before that event would leave the FIFO suffix, a replacement event commits the
 same exact set and causally references the previous boundary. Restore
-authenticates this independent boundary before cross-domain relationships, then
-checks every record against CIV-41 historical authority and recipient
-acquisition, CIV-42 communication and semantics, locality evidence,
-deterministic distortion, typed causal events, and the record provenance
-digest. A dropped-prefix event ID alone is never accepted as oral proof.
+authenticates this independent boundary before cross-domain relationships and
+requires it to be the newest retained CIV-43 boundary. An oral domain that has
+never carried a hop remains boundary-free. Once oral history exists, legitimate
+compaction to zero retained hops publishes an exact empty-set boundary whose
+digest also commits the eviction count. The empty boundary causally supersedes
+the prior non-empty boundary and is itself refreshed before FIFO eviction.
+Restore then checks every retained record against CIV-41 historical authority
+and recipient acquisition, CIV-42 communication and semantics, locality
+evidence, deterministic distortion, typed causal events, and the record
+provenance digest. A dropped-prefix event ID alone is never accepted as oral
+proof.
 
 The focused hostile compacted-state proof leaves every authentic oral row and
 dependent route unchanged, adds a logically separate forged oral row plus its
@@ -137,9 +151,15 @@ two terminal beliefs remain within CIV-41's capacity. The pressure trajectory
 then finalizes another epistemically relevant death, reaches three retained
 terminal beliefs after one real terminal eviction, removes the evicted oral
 route, increments CIV-43 oral eviction accounting once, keeps mortality
-successful, drops seven causal events, restarts byte-exactly, replays without
-recreating removed history, and repeats with identical domain and checkpoint
-digests.
+successful, publishes an exact empty-set boundary, drops eight causal events,
+restarts byte-exactly, replays without recreating removed history, and repeats
+with identical domain and checkpoint digests. A re-signed resurrection attack
+then restores the old legitimate terminal belief, its legitimate oral hop, and
+its still-exact former boundary while keeping terminal bounds valid. Restore
+rejects that otherwise coherent historical graph because the newer retained
+empty-set boundary makes the formerly authentic boundary stale. A further
+long-running control drops 102 causal events and refreshes the empty boundary
+with a causal link to its predecessor.
 
 ## Focused evidence
 
@@ -149,7 +169,7 @@ The optimized wrapper is:
 scripts/verify-pebblelab-civ43.sh
 ```
 
-Its focused proof contains 78 assertions covering faithful acquisition,
+Its focused proof contains 81 assertions covering faithful acquisition,
 immediate-speaker attribution, genuine CIV-41 acquisition and revision, the
 `agent_0 -> agent_1 -> agent_2` chain, deterministic distortion variation,
 lexical/epistemic separation, unchanged authoritative evidence, order
@@ -157,8 +177,9 @@ independence, schema-38 restart, recorded-effect replay, no-reroll tampering,
 future-schema refusal, re-signed checkpoint attacks, atomic refusals, real
 bounded compaction, the forged dropped-prefix attack, valid post-compaction
 retransmission, mortality without cognitive resurrection, coordinated terminal
-belief/oral compaction, and deterministic multi-death replay. Separate-process
-schema-38 writer and reader checks are part of the wrapper.
+belief/oral compaction, stale authentic-boundary resurrection refusal,
+empty-set boundary refresh, and deterministic multi-death replay.
+Separate-process schema-38 writer and reader checks are part of the wrapper.
 
 The implementation changes only deterministic PebbleAgents composition and
 headless evidence. It changes no Pebble live adapter, PebbleCore World mechanic,

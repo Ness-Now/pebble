@@ -733,9 +733,13 @@ extension AgentSimulationSession {
         causes: [AgentCausalEventID]
     ) throws {
         guard var state = oralTransmissionState else { return }
-        guard !state.transmissions.isEmpty else {
-            state.provenanceBoundary = nil
-            oralTransmissionState = state
+        // A never-used oral domain has no historical set to authenticate.
+        // Once any hop has existed, however, an empty retained set is itself
+        // authoritative state: publish an exact tombstone rather than making
+        // a formerly authentic boundary selectable again.
+        guard !state.transmissions.isEmpty
+                || state.evictedTransmissionCount > 0
+                || state.provenanceBoundary != nil else {
             return
         }
         let digest = oralProvenanceBoundaryDigest(state)
@@ -1045,10 +1049,16 @@ extension AgentSimulationSession {
     /// rows could fail only inside a mutually edited domain.
     func validateOralProvenanceBoundaryIfInitialized() throws {
         guard let state = oralTransmissionState else { return }
-        if state.transmissions.isEmpty {
-            guard state.provenanceBoundary == nil else {
+        let retainedBoundaryEvents = causalLedger.events.filter {
+            $0.kind == .oralProvenanceBoundary
+        }
+        let hasOralHistory = !state.transmissions.isEmpty
+            || state.evictedTransmissionCount > 0
+        if !hasOralHistory {
+            guard state.provenanceBoundary == nil,
+                  retainedBoundaryEvents.isEmpty else {
                 throw AgentSessionError.oral(.invalidState(
-                    "empty oral provenance boundary"
+                    "unused oral provenance boundary"
                 ))
             }
             return
@@ -1073,6 +1083,12 @@ extension AgentSimulationSession {
               reason == boundary.digest else {
             throw AgentSessionError.oral(.invalidState(
                 "oral provenance boundary"
+            ))
+        }
+        guard retainedBoundaryEvents.map(\.eventID).max()
+                == boundary.eventID else {
+            throw AgentSessionError.oral(.invalidState(
+                "stale oral provenance boundary"
             ))
         }
     }

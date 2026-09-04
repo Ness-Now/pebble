@@ -1208,6 +1208,9 @@ private func oralSmokeTerminalCompactionProof() {
     )
     var controlBoundaryID = "none"
     var controlBoundaryDigest = "none"
+    var controlBoundary: AgentOralProvenanceBoundary?
+    var controlCheckpoint: AgentSessionCheckpoint?
+    var controlOralDepartedBeliefID: AgentKnowledgeBeliefID?
     let operations = oralSmokeTerminalCompactionOperations(sourceID: sourceID)
     for (index, operation) in operations.enumerated() {
         _ = try! recorder.apply(operation, to: &session)
@@ -1217,13 +1220,20 @@ private func oralSmokeTerminalCompactionProof() {
             if let boundary = controlOral.provenanceBoundary {
                 controlBoundaryID = boundary.eventID.rawValue
                 controlBoundaryDigest = boundary.digest
+                controlBoundary = boundary
             }
-            let controlCheckpoint = try! session.makeCheckpoint()
+            controlOralDepartedBeliefID = controlKnowledge.departedBeliefs
+                .first { departed in
+                    guard departed.ownerID == oralB else { return false }
+                    if case .oralSourceClaim = departed.basis { return true }
+                    return false
+                }?.beliefID
+            controlCheckpoint = try! session.makeCheckpoint()
             let controlBytes = try! AgentCheckpointCodec.encode(
-                controlCheckpoint
+                controlCheckpoint!
             )
             let controlRestored = try! AgentSimulationSession.restoring(
-                controlCheckpoint
+                controlCheckpoint!
             )
             check("terminal proof remains while within CIV-41 capacity",
                 controlKnowledge.departedBeliefs.count == 2
@@ -1307,6 +1317,15 @@ private func oralSmokeTerminalCompactionProof() {
     let knowledge = session.knowledgeSnapshot()
     let oral = session.oralTransmissionSnapshot()
     let mortality = session.mortalitySnapshot()
+    let oldBoundary = controlBoundary!
+    let emptyBoundary = oral.provenanceBoundary!
+    let retainedCausalEvents = session.causalLedgerSnapshot().events
+    let emptyBoundaryEvent = retainedCausalEvents.first {
+        $0.eventID == emptyBoundary.eventID
+    }!
+    let newBoundaryStillRetained = retainedCausalEvents.contains {
+        $0.eventID == emptyBoundary.eventID
+    }
     check("terminal pressure finalizes both legitimate deaths",
         mortality.totalDeathCount == 2
             && session.snapshot().agents.map(\.id) == [oralA.rawValue])
@@ -1333,10 +1352,94 @@ private func oralSmokeTerminalCompactionProof() {
             && !oral.transmissions.contains { $0.recipientID == oralB })
     check("mortality remains authoritative under oral historical pressure",
         mortality.records.count == 2
-            && oral.provenanceBoundary == nil)
+            && emptyBoundary.digest == oralSmokeJSONBoundaryDigest(
+                rows: [], evicted: oral.evictedTransmissionCount
+            )
+            && emptyBoundaryEvent.causes.contains(oldBoundary.eventID))
 
     let checkpoint = try! session.makeCheckpoint()
     let bytes = try! AgentCheckpointCodec.encode(checkpoint)
+    let controlRoot = try! JSONSerialization.jsonObject(
+        with: AgentCheckpointCodec.encode(controlCheckpoint!)
+    ) as! [String: Any]
+    let controlDurable = controlRoot["durableState"] as! [String: Any]
+    let controlOralJSON = controlDurable["oralTransmissionState"]
+        as! [String: Any]
+    let controlKnowledgeJSON = controlDurable["knowledgeGraphState"]
+        as! [String: Any]
+    let controlDeparted = controlKnowledgeJSON["departedBeliefs"]
+        as! [[String: Any]]
+    let oldOralDepartedJSON = controlDeparted.first {
+        ($0["beliefID"] as! String)
+            == controlOralDepartedBeliefID!.rawValue
+    }!
+    let controlOralRows = controlOralJSON["transmissions"]
+        as! [[String: Any]]
+    let controlOralEvicted = controlOralJSON["evictedTransmissionCount"]
+        as! Int
+    let controlBoundaryJSON = controlOralJSON["provenanceBoundary"]
+        as! [String: Any]
+    let oldBoundaryStillRetained = retainedCausalEvents.contains {
+        $0.eventID == oldBoundary.eventID
+            && $0.kind == .oralProvenanceBoundary
+            && $0.origin == .oralTransition
+            && $0.payload == .oral(
+                transmissionID: "oral-provenance",
+                sourcePropositionID: nil,
+                receivedPropositionID: nil,
+                status: "provenanceBoundary",
+                reason: oldBoundary.digest
+            )
+    }
+    let resurrectionStructurallyCoherent =
+        controlOralRows.count == 1
+            && controlOralEvicted == 0
+            && oralSmokeJSONBoundaryDigest(
+                rows: controlOralRows, evicted: controlOralEvicted
+            ) == controlBoundaryJSON["digest"] as! String
+            && controlBoundaryJSON["digest"] as! String
+                == oldBoundary.digest
+            && oldOralDepartedJSON["ownerID"] as! String
+                == oralB.rawValue
+            && knowledge.departedBeliefs.count
+                == knowledge.configuration!.maximumDepartedBeliefs
+    let staleResurrection = oralSmokeResignedCheckpoint(checkpoint) {
+        durable in
+        durable["oralTransmissionState"] = controlOralJSON
+        var forgedKnowledge = durable["knowledgeGraphState"]
+            as! [String: Any]
+        var departed = forgedKnowledge["departedBeliefs"]
+            as! [[String: Any]]
+        let replacement = departed.indices.last {
+            departed[$0]["ownerID"] as! String == oralC.rawValue
+        }!
+        departed.remove(at: replacement)
+        departed.append(oldOralDepartedJSON)
+        departed.sort { left, right in
+            let leftTick = left["departedAtTick"] as! Int
+            let rightTick = right["departedAtTick"] as! Int
+            if leftTick != rightTick { return leftTick < rightTick }
+            let leftDeath = left["deathID"] as! String
+            let rightDeath = right["deathID"] as! String
+            if leftDeath != rightDeath { return leftDeath < rightDeath }
+            return (left["beliefID"] as! String)
+                < (right["beliefID"] as! String)
+        }
+        forgedKnowledge["departedBeliefs"] = departed
+        durable["knowledgeGraphState"] = forgedKnowledge
+    }
+    let staleResurrectionError = oralSmokeRestoreError(staleResurrection)
+    check(
+        "formerly authentic oral boundary cannot resurrect a compacted route",
+        oldBoundaryStillRetained
+            && newBoundaryStillRetained
+            && resurrectionStructurallyCoherent
+            && staleResurrectionError
+                == "oral:stale oral provenance boundary",
+        "oldRetained=\(oldBoundaryStillRetained) "
+            + "coherent=\(resurrectionStructurallyCoherent) "
+            + "error=\(staleResurrectionError ?? "accepted")"
+    )
     let restored = try! AgentSimulationSession.restoring(checkpoint)
     check("terminal-compacted schema-38 checkpoint restarts byte exactly",
         checkpoint.schemaVersion == AgentCheckpointSchema.oralTransmissionVersion
@@ -1394,8 +1497,60 @@ private func oralSmokeTerminalCompactionProof() {
                 repeatSession.makeCheckpoint()
             )) == bytes)
 
+    var refreshSession = restored
+    let droppedBeforeRefresh = refreshSession.causalLedgerSnapshot().summary
+        .droppedEventCount
+    let tombstoneBeforeRefresh = refreshSession.oralTransmissionSnapshot()
+        .provenanceBoundary!
+    for ordinal in 0..<128 where refreshSession
+        .oralTransmissionSnapshot().provenanceBoundary?.eventID
+            == tombstoneBeforeRefresh.eventID {
+        let hunger = refreshSession.snapshot().agents.first {
+            $0.id == oralA.rawValue
+        }!.needs.hunger
+        try! refreshSession.applyConsumptionOutcome(AgentConsumptionOutcome(
+            consumptionId: "civ43-empty-boundary-refresh-\(ordinal)",
+            agentId: oralA.rawValue,
+            tick: refreshSession.tick,
+            resource: .foodRaw,
+            quantity: 1,
+            status: .blocked,
+            hungerBefore: hunger,
+            hungerAfter: hunger,
+            reason: "bounded empty-boundary refresh fixture"
+        ))
+    }
+    let refreshedOral = refreshSession.oralTransmissionSnapshot()
+    let refreshedBoundary = refreshedOral.provenanceBoundary!
+    let refreshedBoundaryEvent = refreshSession.causalLedgerSnapshot().events
+        .first { $0.eventID == refreshedBoundary.eventID }!
+    let oldTombstoneDropped = !refreshSession.causalLedgerSnapshot().events
+        .contains { $0.eventID == tombstoneBeforeRefresh.eventID }
+    check("empty oral provenance authority refreshes before FIFO eviction",
+        refreshedBoundary.eventID != tombstoneBeforeRefresh.eventID
+            && refreshedOral.transmissions.isEmpty
+            && refreshedOral.evictedTransmissionCount == 1
+            && refreshedBoundary.digest == tombstoneBeforeRefresh.digest
+            && oldTombstoneDropped
+            && refreshedBoundaryEvent.causes.contains(
+                tombstoneBeforeRefresh.eventID
+            ))
+    let refreshCheckpoint = try! refreshSession.makeCheckpoint()
+    let refreshRestartExact = try! AgentCheckpointCodec.encode(
+        AgentSimulationSession.restoring(refreshCheckpoint)
+            .makeCheckpoint()
+    ) == (try! AgentCheckpointCodec.encode(refreshCheckpoint))
+    check("refreshed empty oral boundary restarts byte exactly",
+        refreshRestartExact)
+
     print(
-        "  CIV43_TERMINAL_COMPACTION departed=\(knowledge.departedBeliefs.count)/3 departedEvicted=\(knowledge.departedBeliefEvictionCount) oral=\(oral.transmissions.count) oralEvicted=\(oral.evictedTransmissionCount) deaths=\(mortality.totalDeathCount) causalDropped=\(session.causalLedgerSnapshot().summary.droppedEventCount) survivingBoundary=none controlBoundary=\(controlBoundaryID) controlBoundaryDigest=\(controlBoundaryDigest) replay=\(replay.report.verified)"
+        "  CIV43_TERMINAL_COMPACTION departed=\(knowledge.departedBeliefs.count)/3 departedEvicted=\(knowledge.departedBeliefEvictionCount) oral=\(oral.transmissions.count) oralEvicted=\(oral.evictedTransmissionCount) deaths=\(mortality.totalDeathCount) causalDropped=\(session.causalLedgerSnapshot().summary.droppedEventCount) currentBoundary=\(emptyBoundary.eventID.rawValue) boundaryDigest=\(emptyBoundary.digest) controlBoundary=\(controlBoundaryID) controlBoundaryDigest=\(controlBoundaryDigest) replay=\(replay.report.verified)"
+    )
+    print(
+        "  CIV43_STALE_BOUNDARY oldBoundary=\(oldBoundary.eventID.rawValue) newBoundary=\(emptyBoundary.eventID.rawValue) oldBoundaryStillRetained=\(oldBoundaryStillRetained) newBoundaryStillRetained=\(newBoundaryStillRetained) resurrectionStructurallyCoherent=\(resurrectionStructurallyCoherent) ordinaryDigestsResigned=true rejection=\(staleResurrectionError ?? "accepted")"
+    )
+    print(
+        "  CIV43_EMPTY_BOUNDARY_REFRESH previousBoundary=\(tombstoneBeforeRefresh.eventID.rawValue) replacementBoundary=\(refreshedBoundary.eventID.rawValue) digest=\(refreshedBoundary.digest) causeLinked=\(refreshedBoundaryEvent.causes.contains(tombstoneBeforeRefresh.eventID)) oldBoundaryDropped=\(oldTombstoneDropped) droppedBefore=\(droppedBeforeRefresh) droppedAfter=\(refreshSession.causalLedgerSnapshot().summary.droppedEventCount) restartExact=\(refreshRestartExact)"
     )
 }
 
