@@ -136,9 +136,9 @@ Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
 active CIV phase: none
-completed and published through: CIV-42 (CIV-38 and CIV-40 remain optional and unstarted)
-next eligible action: CIV-43 — Oral Transmission and Distortion V1 — NOT STARTED
-next authorized action: CIV-43
+completed and published through: CIV-43 (CIV-38 and CIV-40 remain optional and unstarted)
+next eligible action: CIV-44 — Compositional and Long-Distance Communication V1 — NOT STARTED
+next authorized action: CIV-44
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
@@ -213,7 +213,10 @@ CIV-41 published canonical product HEAD: 87190af6d7b51b57d600d6f39da4ccda71e3f16
 CIV-42: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 CIV-42 published canonical product HEAD: c116b0780facc297dd3e0839ada505673e656189
 CIV-42 final review archive SHA-256: 4ac1130589c2f369bce6a4fa9213edb2040be84c936ef5e2728077f95ac3751d
-CIV-43: NOT STARTED — NEXT ELIGIBLE REQUIRED PHASE
+CIV-43: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+CIV-43 published canonical product HEAD: 9690538a5cfd2a871750ffa839a404f7d19818d5
+CIV-43 final review archive SHA-256: 1c22063677e95430bb6f220a95c75e07e0512d532d0273accf7c442a9b6fd54a
+CIV-44: NOT STARTED — NEXT ELIGIBLE REQUIRED PHASE / NEXT AUTHORIZED ACTION
 V4-GATE-G-v1: PLANNED
 ```
 
@@ -629,9 +632,13 @@ verified. `CIV-42 — Learned Language Foundations V1` is **COMPLETE AND
 PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical product
 HEAD `c116b0780facc297dd3e0839ada505673e656189`, with final review archive
 SHA-256 `4ac1130589c2f369bce6a4fa9213edb2040be84c936ef5e2728077f95ac3751d`.
-`CIV-43 — Oral Transmission and Distortion V1` is not started and is the next
-eligible required phase and authorized action. Gate G remains planned and
-unevaluated.
+`CIV-43 — Oral Transmission and Distortion V1` is **COMPLETE AND PUBLISHED —
+SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical product HEAD
+`9690538a5cfd2a871750ffa839a404f7d19818d5`, with final review archive SHA-256
+`1c22063677e95430bb6f220a95c75e07e0512d532d0273accf7c442a9b6fd54a`.
+`CIV-44 — Compositional and Long-Distance Communication V1` is not started and
+is the next eligible required phase and authorized action. Gate G remains
+planned and unevaluated.
 
 | Phase | Requirement | Outcome |
 | --- | --- | --- |
@@ -1425,7 +1432,7 @@ Evaluation 05 product correction: NO
 Evaluation 05 verdict: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 Gate E status: ACQUIRED AND PUBLISHED
 Gate E acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f76744f83
-next authorized action: CIV-43
+next authorized action: CIV-44
 CIV-39 status: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 Gate F status: ACQUIRED AND PUBLISHED — REMOTE VERIFIED
@@ -1459,7 +1466,10 @@ CIV-41 published canonical product HEAD: 87190af6d7b51b57d600d6f39da4ccda71e3f16
 CIV-42 status: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 CIV-42 published canonical product HEAD: c116b0780facc297dd3e0839ada505673e656189
 CIV-42 final review archive SHA-256: 4ac1130589c2f369bce6a4fa9213edb2040be84c936ef5e2728077f95ac3751d
-CIV-43 status: NOT STARTED — NEXT ELIGIBLE REQUIRED PHASE
+CIV-43 status: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+CIV-43 published canonical product HEAD: 9690538a5cfd2a871750ffa839a404f7d19818d5
+CIV-43 final review archive SHA-256: 1c22063677e95430bb6f220a95c75e07e0512d532d0273accf7c442a9b6fd54a
+CIV-44 status: NOT STARTED — NEXT ELIGIBLE REQUIRED PHASE / NEXT AUTHORIZED ACTION
 V4-GATE-G-v1 status: PLANNED
 ```
 
@@ -1701,9 +1711,12 @@ tooling and is not a prerequisite. CIV-41 is **COMPLETE AND PUBLISHED — SENIOR
 REVIEW APPROVED — REMOTE VERIFIED** at canonical product HEAD
 `87190af6d7b51b57d600d6f39da4ccda71e3f162`. CIV-42 is **COMPLETE AND
 PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical product
-HEAD `c116b0780facc297dd3e0839ada505673e656189`; CIV-43 is not started and is
-the next eligible required phase and authorized action. Gate G remains planned
-and unevaluated.
+HEAD `c116b0780facc297dd3e0839ada505673e656189`. CIV-43 is **COMPLETE AND
+PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical product
+HEAD `9690538a5cfd2a871750ffa839a404f7d19818d5`; final review archive SHA-256 is
+`1c22063677e95430bb6f220a95c75e07e0512d532d0273accf7c442a9b6fd54a`.
+CIV-44 is not started and is the next eligible required phase and authorized
+action. Gate G remains planned and unevaluated.
 
 ## Wave 5 — Knowledge, language and culture
 
@@ -1782,7 +1795,25 @@ authority to CIV-41 and anchored bounded proof sets through retained causal
 boundaries. Attacks A–G and the canonical repository gate passed. The final
 review archive SHA-256 is
 `4ac1130589c2f369bce6a4fa9213edb2040be84c936ef5e2728077f95ac3751d`.
-Published progression is through `CIV-42`; `CIV-43` has not started and is the
+`CIV-43` is **COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE
+VERIFIED** at canonical product HEAD
+`9690538a5cfd2a871750ffa839a404f7d19818d5`, from exact baseline
+`a25167567e636939c39bac502904931323d920a7`. Initial candidate
+`2ac189b9da1ece0db7ead0bd60c5ca4e9992ea54`, Correction 01
+`2e232b1c0cfa6455eed48ba2a6d6ccc7220a3cd2` and Correction 02/final product
+`9690538a5cfd2a871750ffa839a404f7d19818d5` preserve the review history. Manual
+publication and exact remote verification passed; final review archive SHA-256
+is `1c22063677e95430bb6f220a95c75e07e0512d532d0273accf7c442a9b6fd54a`.
+It composes existing Social locality with CIV-41 epistemic and CIV-42 semantic
+authority for immediate-speaker-attributed faithful or bounded deterministic
+distortion, including A→B→C retransmission from B's own current belief. World
+truth remains unchanged. Schema 38 preserves accepted distortion without
+reroll, bounded oral/terminal compaction, refreshable retained boundaries and
+exact empty-set authority against stale-boundary resurrection; schema 37 stays
+compatible and schema 39 is refused. It does not add culture, writing,
+long-distance transport, discourse or dialect infrastructure.
+
+Published progression is through `CIV-43`. `CIV-44` has not started and is the
 next eligible required phase and authorized action. Gate G has not been
 evaluated.
 

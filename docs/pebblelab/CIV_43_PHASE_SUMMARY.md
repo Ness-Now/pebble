@@ -2,19 +2,27 @@
 
 ## Review status and baseline
 
-`CIV-43` is a **LOCAL REVIEW CANDIDATE — NOT PUBLISHED**. The candidate is
-based exactly on published canonical HEAD
+`CIV-43` is **COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE
+VERIFIED**. It was implemented from exact published canonical baseline
 `a25167567e636939c39bac502904931323d920a7` from
-`origin/lab/pebblelab-v1`. It does not change canonical program progression,
-authorize CIV-44, evaluate Gate G, or acquire Gate G.
+`origin/lab/pebblelab-v1`. The final product is published at canonical HEAD
+`9690538a5cfd2a871750ffa839a404f7d19818d5`; manual publication completed and
+independent exact-remote verification passed. The accepted final review
+archive SHA-256 is
+`1c22063677e95430bb6f220a95c75e07e0512d532d0273accf7c442a9b6fd54a`.
 
-The initial local candidate is
+The initial reviewed candidate is
 `2ac189b9da1ece0db7ead0bd60c5ca4e9992ea54`. Senior Review Correction 01 at
 `2e232b1c0cfa6455eed48ba2a6d6ccc7220a3cd2` reconciles CIV-41 terminal-belief
 compaction with dependent oral history without subordinating mortality.
 Senior Review Correction 02 keeps exact current oral authority after the last
 hop compacts away, refuses resurrection through a stale formerly authentic
 boundary, and refreshes that empty-set authority under causal FIFO pressure.
+Correction 02 is the final published product at
+`9690538a5cfd2a871750ffa839a404f7d19818d5`; the correction history is retained
+rather than presenting the initial candidate as approved unchanged. CIV-44 is
+not started and is the next eligible required phase and authorized action.
+Gate G remains planned and unevaluated.
 
 ## Authority and transition
 

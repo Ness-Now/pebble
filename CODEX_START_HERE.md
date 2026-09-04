@@ -130,10 +130,17 @@ for the compact status. In particular:
   `ca7e70799220b58c3b090716a2adf19e8abb2609d465b7139d25f7f59988af4c`.
 - Gate F is **ACQUIRED AND PUBLISHED — REMOTE VERIFIED** at canonical HEAD
   `14475f4ad5dde9e1063a830ba7e38390cfb4d045`. Optional `CIV-40` remains
-  unstarted and is not a prerequisite. Published progression is complete
-  through `CIV-42`; `CIV-43 — Oral Transmission and Distortion V1` is not
-  started and is the next eligible required phase and authorized action. Gate
-  G remains planned and unevaluated.
+  unstarted and is not a prerequisite.
+- `CIV-43 — Oral Transmission and Distortion V1` is **COMPLETE AND PUBLISHED —
+  SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical product HEAD
+  `9690538a5cfd2a871750ffa839a404f7d19818d5`. Its final accepted review archive
+  SHA-256 is
+  `1c22063677e95430bb6f220a95c75e07e0512d532d0273accf7c442a9b6fd54a`;
+  manual publication completed and exact remote verification passed.
+  Published progression is complete through `CIV-43`.
+- `CIV-44 — Compositional and Long-Distance Communication V1` is not started
+  and is the next eligible required phase and authorized action. Gate G
+  remains planned and unevaluated.
 
 Historical Gate B `FAIL` reports and the closure-candidate report are preserved
 as evidence of their own evaluations. They do not reopen Gate B.
