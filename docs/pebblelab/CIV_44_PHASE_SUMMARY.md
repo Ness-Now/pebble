@@ -2,12 +2,13 @@
 
 ## Review status and baseline
 
-`CIV-44` is a **SENIOR REVIEW CORRECTION 02 — LOCAL RE-REVIEW CANDIDATE —
-NOT PUBLISHED**. It was implemented
-from exact canonical baseline
+`CIV-44` is **COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE
+VERIFIED** at canonical HEAD
+`0c6a6e88ce838266897526a74d067532163cb06f`. It was implemented from exact
+canonical baseline
 `50d0f73fb9b2a29fd1c3aa80395d20df862a0048` after fetching and verifying
-`origin/lab/pebblelab-v1`. The local branch is
-`codex/civ-44-compositional-long-distance-communication-v1`; its local
+`origin/lab/pebblelab-v1`. The working branch was
+`codex/civ-44-compositional-long-distance-communication-v1`; its initial
 product/test proof commit is
 `6d8a3a99f3c0a80333a3e5f8c97cfd32a44e9ae4`; its initial review-candidate
 HEAD was `2c6abeddf547d545148bd879b824d08d4ed3415d`.
@@ -28,12 +29,16 @@ CIV-44 transport IDs. A decodable, re-signed schema-39 checkpoint containing a
 duplicate transport ID could therefore trap before the normal CIV-44 identity
 guard. Correction 02 proves uniqueness before constructing that dictionary and
 returns a controlled checkpoint error for duplicates. Its product/test commit
-is `acb6d8399fa021afeb47d9db236ab0a5f3b687c8`. No publication, push, senior
-approval of Correction 02, or remote verification of the corrected candidate
-has occurred.
-Published canonical history therefore remains complete only through CIV-43 at
-product HEAD `9690538a5cfd2a871750ffa839a404f7d19818d5`. Gate G remains
-**PLANNED / UNEVALUATED**; CIV-45 is not authorized by this candidate.
+is `acb6d8399fa021afeb47d9db236ab0a5f3b687c8`; its documentation completed the
+final candidate at `0c6a6e88ce838266897526a74d067532163cb06f`.
+
+Final senior re-review approved Correction 02. Manual publication completed,
+and `origin/lab/pebblelab-v1` was independently verified exactly at
+`0c6a6e88ce838266897526a74d067532163cb06f`. The accepted final review archive
+SHA-256 is
+`570df1fd45349de684b47a0c30fcb1452137b86d5d40174146126333e6f51683`.
+Gate G remains **PLANNED / UNEVALUATED**. CIV-45 is the next eligible and
+authorized phase, but is **NOT STARTED**.
 
 ## Authority and transition
 
