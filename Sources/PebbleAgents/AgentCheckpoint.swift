@@ -2645,10 +2645,17 @@ extension AgentSimulationSession {
                     )
                 }
             }
+            let communicationTransports =
+                state.longDistanceCommunicationState?.transports ?? []
+            guard Set(communicationTransports.map(\.transportID)).count
+                    == communicationTransports.count else {
+                throw AgentCheckpointError.invalidBound(
+                    "mortality communication transport identity"
+                )
+            }
             let communicationTransportsByID = Dictionary(
                 uniqueKeysWithValues:
-                    (state.longDistanceCommunicationState?.transports ?? [])
-                        .map { ($0.transportID, $0) }
+                    communicationTransports.map { ($0.transportID, $0) }
             )
             let retainedCommunicationFailureCount =
                 communicationTransportsByID.values.filter {

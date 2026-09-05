@@ -795,6 +795,43 @@ private func communicationTerminalEvictionProof() {
                 && controlOral.contains {
                     $0.transmissionID == result.dependentTransmissionID
                 })
+        if case .pickup = route {
+            let controlBytes = try! AgentCheckpointCodec.encode(
+                result.controlCheckpoint
+            )
+            let controlRestored = try! AgentSimulationSession.restoring(
+                result.controlCheckpoint
+            )
+            check("valid mortality transport checkpoint restores byte-exact",
+                try! AgentCheckpointCodec.encode(
+                    controlRestored.makeCheckpoint()
+                ) == controlBytes)
+
+            let duplicateTransport = communicationResignedCheckpoint(
+                result.controlCheckpoint
+            ) { durable in
+                var communication = durable[
+                    "longDistanceCommunicationState"
+                ] as! [String: Any]
+                var transports = communication["transports"]
+                    as! [[String: Any]]
+                transports.append(transports[0])
+                communication["transports"] = transports
+                durable["longDistanceCommunicationState"] = communication
+            }
+            let duplicateRejected: Bool
+            do {
+                _ = try AgentSimulationSession.restoring(duplicateTransport)
+                duplicateRejected = false
+            } catch AgentCheckpointError.invalidBound(let reason) {
+                duplicateRejected = reason
+                    == "mortality communication transport identity"
+            } catch {
+                duplicateRejected = false
+            }
+            check("re-signed duplicate transport ID is refused without trap",
+                duplicateRejected)
+        }
         check("\(label) departed-belief pressure performs real eviction",
             finalKnowledge.departedBeliefEvictionCount > 0
                 && result.session.mortalitySnapshot().totalDeathCount
