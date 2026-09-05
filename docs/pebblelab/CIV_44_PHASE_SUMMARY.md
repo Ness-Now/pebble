@@ -2,7 +2,7 @@
 
 ## Review status and baseline
 
-`CIV-44` is a **SENIOR REVIEW CORRECTION 01 — LOCAL RE-REVIEW CANDIDATE —
+`CIV-44` is a **SENIOR REVIEW CORRECTION 02 — LOCAL RE-REVIEW CANDIDATE —
 NOT PUBLISHED**. It was implemented
 from exact canonical baseline
 `50d0f73fb9b2a29fd1c3aa80395d20df862a0048` after fetching and verifying
@@ -19,9 +19,18 @@ reproduction on the uncorrected candidate reported `54 passed, 5 failed` and
 also exposed destination-only accepted movement leaving CIV-44 `inTransit`.
 Correction 01 composes both cases with the existing authorities and preserves
 the original commits without amend or rewrite. Its product/test correction
-commit is `8536ae464052d2737f1d34ffde5f08c650613c46`. No publication, push,
-senior re-approval, or remote verification of the corrected candidate has
-occurred.
+commit is `8536ae464052d2737f1d34ffde5f08c650613c46`, and its local candidate
+HEAD was `6b58f7a7d3ea3be13b51fa79e1b3a9adc64a6e15`.
+
+Senior re-review of Correction 01 returned **CORRECTION 02 REQUIRED** because
+its Mortality checkpoint bridge constructed a dictionary from unvalidated
+CIV-44 transport IDs. A decodable, re-signed schema-39 checkpoint containing a
+duplicate transport ID could therefore trap before the normal CIV-44 identity
+guard. Correction 02 proves uniqueness before constructing that dictionary and
+returns a controlled checkpoint error for duplicates. Its product/test commit
+is `acb6d8399fa021afeb47d9db236ab0a5f3b687c8`. No publication, push, senior
+approval of Correction 02, or remote verification of the corrected candidate
+has occurred.
 Published canonical history therefore remains complete only through CIV-43 at
 product HEAD `9690538a5cfd2a871750ffa839a404f7d19818d5`. Gate G remains
 **PLANNED / UNEVALUATED**; CIV-45 is not authorized by this candidate.
@@ -157,6 +166,13 @@ a newer authentic CIV-44 boundary, and the bounded failed/evicted counters.
 This preserves mortality history without accepting an orphaned CIV-41, CIV-42,
 CIV-43, or CIV-44 state.
 
+Correction 02 also adds no durable field and does not advance schema 39. Before
+the Correction 01 Mortality bridge builds its retained-transport lookup, it
+proves that every retained `transportID` is unique. Duplicate IDs now produce a
+controlled `AgentCheckpointError.invalidBound`; no record is selected or
+discarded arbitrarily. The existing CIV-44 validator, historical failure
+matching, counters, boundary, replay, and reconciliation rules are unchanged.
+
 ## Focused and canonical evidence
 
 The optimized wrapper is:
@@ -165,8 +181,8 @@ The optimized wrapper is:
 scripts/verify-pebblelab-civ44.sh
 ```
 
-Its Correction 01 run passed the release build, a fresh-process schema-39
-writer (`2/2`), a fresh-process reader (`5/5`), and `60/60` focused assertions.
+Its Correction 02 run passed the release build, a fresh-process schema-39
+writer (`2/2`), a fresh-process reader (`5/5`), and `62/62` focused assertions.
 The assertions cover direct CIV-42/CIV-43 non-delivery, no pre-arrival effect,
 blocked and accepted movement, exact pickup commitment, same-content
 reaffirmation, different-content refusal, source/author/carrier/destination
@@ -176,7 +192,9 @@ recorded-effect replay, hostile replay substitution, deterministic ordering,
 terminal-only compaction, coordinated pickup/delivery terminal eviction,
 causal FIFO boundary refresh, stale-boundary resurrection, journey-step
 failure, accepted destination movement, rejected abstract position rewrite,
-and author/carrier/destination mortality.
+author/carrier/destination mortality, byte-exact restore of a valid Mortality
+transport checkpoint, and controlled refusal of a re-signed duplicate-ID
+checkpoint.
 
 The final canonical command was:
 
@@ -184,8 +202,10 @@ The final canonical command was:
 scripts/verify-pebblelab.sh
 ```
 
-The Correction 01 run passed all 35 repository steps. Its shared-runtime smoke
-suite reported `4537 passed, 0 failed`. Goldens were not regenerated.
+The Correction 02 run passed all 35 repository steps. Its shared-runtime smoke
+suite reported `4539 passed, 0 failed`. Focused CIV-43, CIV-41 Correction 01,
+checkpoint/replay, and Mortality regressions passed `81/81`, `19/19`, `49/49`,
+and `93/93`, respectively. Goldens were not regenerated.
 
 ## Live and visual applicability
 
