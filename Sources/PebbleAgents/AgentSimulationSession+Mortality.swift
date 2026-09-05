@@ -1233,6 +1233,7 @@ extension AgentSimulationSession {
         try validateKnowledgeGraphStateIfEnabled()
         try validateLanguageStateIfInitialized()
         try validateOralTransmissionStateIfInitialized()
+        try validateLongDistanceCommunicationStateIfInitialized()
     }
 
     private func conservationSnapshotWith(

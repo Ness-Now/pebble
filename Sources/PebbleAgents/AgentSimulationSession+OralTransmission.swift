@@ -554,6 +554,10 @@ extension AgentSimulationSession {
                 "terminal compaction eviction counter"
             ))
         }
+        try reconcileLongDistanceCommunicationBeforeOralHistoryEviction(
+            transmissionIDs: Set(removed.map(\.transmissionID)),
+            causeEventID: causeEventID
+        )
         oral.transmissions.removeAll {
             removableIDs.contains($0.transmissionID)
         }

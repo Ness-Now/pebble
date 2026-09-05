@@ -586,8 +586,9 @@ extension AgentSimulationSession {
     }
 
     /// Called only after the existing movement authority has accepted and
-    /// published outcomes. Stationary or rejected outcomes create no transport
-    /// progress and can never cause arrival.
+    /// published outcomes. Carrier movement advances the bounded journey;
+    /// accepted movement by either participant may satisfy local arrival.
+    /// Stationary or rejected outcomes create neither progress nor arrival.
     mutating func updateLongDistanceCommunicationAfterMovementEvents(
         outcomes: [AgentMovementOutcome]
     ) throws {
@@ -607,25 +608,39 @@ extension AgentSimulationSession {
                 $0.transportID == transportID
             }) else { continue }
             let current = state.transports[index]
-            guard let outcome = outcomesByAgent[current.carrierID.rawValue],
-                  outcome.status == .moved,
-                  let movementEventID = lastOutcomeEventByAgentID[
-                      current.carrierID
-                  ],
-                  let destination = statesById[
-                      current.destinationID.rawValue
-                  ] else { continue }
-            if current.progress.count
-                >= state.configuration.maximumJourneySteps {
+            let carrierOutcome = outcomesByAgent[
+                current.carrierID.rawValue
+            ]
+            let destinationOutcome = outcomesByAgent[
+                current.destinationID.rawValue
+            ]
+            let carrierMoved = carrierOutcome?.status == .moved
+            let destinationMoved = destinationOutcome?.status == .moved
+            guard carrierMoved || destinationMoved else { continue }
+            let carrierMovementEventID = carrierMoved
+                ? lastOutcomeEventByAgentID[current.carrierID] : nil
+            let destinationMovementEventID = destinationMoved
+                ? lastOutcomeEventByAgentID[current.destinationID] : nil
+            guard !carrierMoved || carrierMovementEventID != nil,
+                  !destinationMoved || destinationMovementEventID != nil else {
+                throw AgentSessionError.longDistanceCommunication(
+                    .invalidState("accepted participant movement provenance")
+                )
+            }
+
+            var arrivalPredecessor = current.progress.last?.progressEventID
+                ?? current.dispatchEventID
+            if carrierMoved,
+               current.progress.count
+                    >= state.configuration.maximumJourneySteps {
                 let failureEvent =
                     try requiredCommunicationTransportEvent(
                         kind: .communicationTransportFailed,
                         actorID: current.carrierID,
                         subjectID: current.destinationID,
                         causes: [
-                            current.progress.last?.progressEventID
-                                ?? current.dispatchEventID,
-                            movementEventID,
+                            arrivalPredecessor,
+                            carrierMovementEventID!,
                         ],
                         transportID: transportID.rawValue,
                         authorID: current.authorID,
@@ -659,56 +674,73 @@ extension AgentSimulationSession {
                 boundaryCauses.append(failureEvent.eventID)
                 continue
             }
-            let progressEvent = try requiredCommunicationTransportEvent(
-                kind: .communicationTransportProgressed,
-                actorID: current.carrierID,
-                subjectID: current.destinationID,
-                causes: [
-                    current.progress.last?.progressEventID
-                        ?? current.dispatchEventID,
-                    movementEventID,
-                ],
-                transportID: transportID.rawValue,
-                authorID: current.authorID,
-                carrierID: current.carrierID,
-                destinationID: current.destinationID,
-                status: AgentCommunicationTransportStatus.inTransit.rawValue,
-                detail:
-                    "\(outcome.fromPosition.x),\(outcome.fromPosition.y),"
-                    + "\(outcome.fromPosition.z)>\(outcome.toPosition.x),"
-                    + "\(outcome.toPosition.y),\(outcome.toPosition.z)",
-                summary:
-                    "communication transport progressed carrier="
-                    + current.carrierID.rawValue
-            )
-            state = longDistanceCommunicationState ?? state
-            guard let refreshed = state.transports.firstIndex(where: {
-                $0.transportID == transportID
-            }) else { continue }
-            state.transports[refreshed].progress.append(
-                AgentCommunicationTransportProgress(
-                    stepOrdinal:
-                        state.transports[refreshed].progress.count + 1,
-                    fromPosition: outcome.fromPosition,
-                    toPosition: outcome.toPosition,
-                    movementEventID: movementEventID,
-                    progressEventID: progressEvent.eventID,
-                    progressedAtTick: tick
+            if let outcome = carrierOutcome, carrierMoved {
+                let progressEvent = try requiredCommunicationTransportEvent(
+                    kind: .communicationTransportProgressed,
+                    actorID: current.carrierID,
+                    subjectID: current.destinationID,
+                    causes: [
+                        arrivalPredecessor,
+                        carrierMovementEventID!,
+                    ],
+                    transportID: transportID.rawValue,
+                    authorID: current.authorID,
+                    carrierID: current.carrierID,
+                    destinationID: current.destinationID,
+                    status:
+                        AgentCommunicationTransportStatus.inTransit.rawValue,
+                    detail:
+                        "\(outcome.fromPosition.x),\(outcome.fromPosition.y),"
+                        + "\(outcome.fromPosition.z)>"
+                        + "\(outcome.toPosition.x),\(outcome.toPosition.y),"
+                        + "\(outcome.toPosition.z)",
+                    summary:
+                        "communication transport progressed carrier="
+                        + current.carrierID.rawValue
                 )
-            )
-            // Publish the accepted step before a possible arrival event. The
-            // causal append coordinator may inspect/refresh CIV-44 evidence.
-            longDistanceCommunicationState = state
-            boundaryCauses.append(progressEvent.eventID)
+                state = longDistanceCommunicationState ?? state
+                guard let refreshed = state.transports.firstIndex(where: {
+                    $0.transportID == transportID
+                }) else { continue }
+                state.transports[refreshed].progress.append(
+                    AgentCommunicationTransportProgress(
+                        stepOrdinal:
+                            state.transports[refreshed].progress.count + 1,
+                        fromPosition: outcome.fromPosition,
+                        toPosition: outcome.toPosition,
+                        movementEventID: carrierMovementEventID!,
+                        progressEventID: progressEvent.eventID,
+                        progressedAtTick: tick
+                    )
+                )
+                // Publish the accepted carrier step before a possible arrival
+                // event so retention can inspect the new transport evidence.
+                longDistanceCommunicationState = state
+                boundaryCauses.append(progressEvent.eventID)
+                arrivalPredecessor = progressEvent.eventID
+            }
+
+            state = longDistanceCommunicationState ?? state
+            guard let arrivalIndex = state.transports.firstIndex(where: {
+                $0.transportID == transportID
+            }), state.transports[arrivalIndex].status == .inTransit,
+                  let carrier = statesById[current.carrierID.rawValue],
+                  let destination = statesById[
+                      current.destinationID.rawValue
+                  ] else { continue }
             if manhattanDistance(
-                outcome.toPosition, destination.position
+                carrier.position, destination.position
             ) <= 1 {
+                var arrivalCauses = [arrivalPredecessor]
+                if let destinationMovementEventID {
+                    arrivalCauses.append(destinationMovementEventID)
+                }
                 let arrivalEvent =
                     try requiredCommunicationTransportEvent(
                         kind: .communicationTransportArrived,
                         actorID: current.carrierID,
                         subjectID: current.destinationID,
-                        causes: [progressEvent.eventID],
+                        causes: arrivalCauses,
                         transportID: transportID.rawValue,
                         authorID: current.authorID,
                         carrierID: current.carrierID,
@@ -717,24 +749,26 @@ extension AgentSimulationSession {
                             AgentCommunicationTransportStatus.arrived
                                 .rawValue,
                         detail:
-                            "\(outcome.toPosition.x),"
-                            + "\(outcome.toPosition.y),"
-                            + "\(outcome.toPosition.z)",
+                            "\(carrier.position.x),"
+                            + "\(carrier.position.y),"
+                            + "\(carrier.position.z)",
                         summary:
-                            "communication transport arrived carrier="
-                            + current.carrierID.rawValue
+                            "communication transport arrived participants="
+                            + "\(current.carrierID.rawValue)>"
+                            + current.destinationID.rawValue
                     )
                 state = longDistanceCommunicationState ?? state
-                guard let arrivalIndex = state.transports.firstIndex(where: {
-                    $0.transportID == transportID
-                }) else { continue }
-                state.transports[arrivalIndex].status = .arrived
-                state.transports[arrivalIndex].arrivalPosition =
-                    outcome.toPosition
-                state.transports[arrivalIndex]
+                guard let refreshedArrivalIndex = state.transports
+                    .firstIndex(where: {
+                        $0.transportID == transportID
+                    }) else { continue }
+                state.transports[refreshedArrivalIndex].status = .arrived
+                state.transports[refreshedArrivalIndex].arrivalPosition =
+                    carrier.position
+                state.transports[refreshedArrivalIndex]
                     .destinationPositionAtArrival = destination.position
-                state.transports[arrivalIndex].arrivedAtTick = tick
-                state.transports[arrivalIndex].arrivalEventID =
+                state.transports[refreshedArrivalIndex].arrivedAtTick = tick
+                state.transports[refreshedArrivalIndex].arrivalEventID =
                     arrivalEvent.eventID
                 boundaryCauses.append(arrivalEvent.eventID)
             }
@@ -826,6 +860,49 @@ extension AgentSimulationSession {
         })
     }
 
+    /// CIV-41 may legitimately evict terminal belief authority, after which
+    /// CIV-43 must remove the exclusively dependent oral hop. Before that hop
+    /// disappears, retire only terminal CIV-44 records that reference it and
+    /// commit the resulting bounded set. Active transports remain protected
+    /// by current CIV-41 acquisition authority and are never compacted here.
+    mutating func reconcileLongDistanceCommunicationBeforeOralHistoryEviction(
+        transmissionIDs: Set<AgentOralTransmissionID>,
+        causeEventID: AgentCausalEventID
+    ) throws {
+        guard var state = longDistanceCommunicationState,
+              !transmissionIDs.isEmpty else { return }
+        let dependent = state.transports.filter { record in
+            transmissionIDs.contains(record.pickupTransmissionID)
+                || record.deliveryTransmissionID.map {
+                    transmissionIDs.contains($0)
+                } == true
+        }.sorted(by: communicationTransportSort)
+        guard !dependent.isEmpty else { return }
+        guard dependent.allSatisfy({ $0.status.isTerminal }) else {
+            throw AgentSessionError.longDistanceCommunication(
+                .invalidState(
+                    "active transport lost current oral authority"
+                )
+            )
+        }
+        guard state.evictedTransportCount
+                <= Int.max - dependent.count else {
+            throw AgentSessionError.longDistanceCommunication(
+                .invalidState("terminal reconciliation eviction counter")
+            )
+        }
+        let dependentIDs = Set(dependent.map(\.transportID))
+        state.transports.removeAll {
+            dependentIDs.contains($0.transportID)
+        }
+        state.evictedTransportCount += dependent.count
+        longDistanceCommunicationState = state
+        try commitLongDistanceCommunicationProvenanceBoundary(
+            causes: [causeEventID]
+        )
+        try validateLongDistanceCommunicationStateIfInitialized()
+    }
+
     func hasActiveLongDistanceCommunicationParticipant(
         _ agentID: AgentID
     ) -> Bool {
@@ -849,17 +926,35 @@ extension AgentSimulationSession {
         var eventCount = 0
         var willCommitBoundary = false
         for record in state.transports where record.status == .inTransit {
-            guard let outcome = outcomesByAgent[record.carrierID.rawValue],
-                  outcome.status == .moved else { continue }
-            willCommitBoundary = true
-            eventCount += 1 // failed-at-bound, or accepted progress
-            if record.progress.count < state.configuration.maximumJourneySteps,
-               let destination = statesById[record.destinationID.rawValue],
-               manhattanDistance(
-                   outcome.toPosition, destination.position
-               ) <= 1 {
-                eventCount += 1 // arrival
+            let carrierMoved = outcomesByAgent[record.carrierID.rawValue]?
+                .status == .moved
+            let destinationMoved = outcomesByAgent[
+                record.destinationID.rawValue
+            ]?.status == .moved
+            guard carrierMoved || destinationMoved else { continue }
+            if carrierMoved {
+                willCommitBoundary = true
+                eventCount += 1 // failed-at-bound, or accepted progress
+                if record.progress.count
+                    >= state.configuration.maximumJourneySteps {
+                    continue
+                }
             }
+            guard let carrier = statesById[record.carrierID.rawValue],
+                  let destination = statesById[
+                      record.destinationID.rawValue
+                  ], manhattanDistance(
+                    carrierMoved
+                        ? outcomesByAgent[record.carrierID.rawValue]!
+                            .toPosition
+                        : carrier.position,
+                    destinationMoved
+                        ? outcomesByAgent[record.destinationID.rawValue]!
+                            .toPosition
+                        : destination.position
+                  ) <= 1 else { continue }
+            if !willCommitBoundary { willCommitBoundary = true }
+            eventCount += 1 // arrival from accepted participant movement
         }
         return eventCount + (willCommitBoundary ? 1 : 0)
     }
@@ -1144,7 +1239,8 @@ extension AgentSimulationSession {
                         record.destinationPositionAtArrival,
                       let arrivalTick = record.arrivedAtTick,
                       let arrivalEventID = record.arrivalEventID,
-                      record.progress.last?.toPosition == arrivalPosition,
+                      (record.progress.last?.toPosition
+                        ?? record.dispatchPosition) == arrivalPosition,
                       manhattanDistance(
                           arrivalPosition, destinationPosition
                       ) <= 1,
@@ -1170,10 +1266,40 @@ extension AgentSimulationSession {
                           destinationID == record.destinationID.rawValue,
                           status == AgentCommunicationTransportStatus
                             .arrived.rawValue,
-                          event.causes == [previousEvent] else {
+                          event.simulationTick.rawValue == arrivalTick,
+                          event.causes.contains(previousEvent),
+                          event.causes.count <= 2 else {
                         throw AgentSessionError.longDistanceCommunication(
                             .invalidState("arrival event")
                         )
+                    }
+                    let destinationMovementCauses = event.causes.filter {
+                        $0 != previousEvent
+                    }
+                    guard destinationMovementCauses.count <= 1,
+                          !record.progress.isEmpty
+                            || destinationMovementCauses.count == 1 else {
+                        throw AgentSessionError.longDistanceCommunication(
+                            .invalidState("arrival movement authority")
+                        )
+                    }
+                    if let movementEventID =
+                        destinationMovementCauses.first,
+                       let movement = try retainedEvent(movementEventID) {
+                        guard movement.kind == .movement,
+                              movement.origin == .worldOutcome,
+                              movement.actorID == record.destinationID,
+                              movement.simulationTick.rawValue == arrivalTick,
+                              case let .movement(status, _, to) =
+                                movement.payload,
+                              status == AgentMovementStatus.moved.rawValue,
+                              to == destinationPosition else {
+                            throw AgentSessionError.longDistanceCommunication(
+                                .invalidState(
+                                    "destination arrival movement"
+                                )
+                            )
+                        }
                     }
                 }
                 if record.status == .arrived {

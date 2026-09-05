@@ -16,7 +16,8 @@ private let communicationSenseIDs = [
 private func communicationAgent(
     _ id: AgentID,
     x: Int,
-    lethal: Bool = false
+    lethal: Bool = false,
+    health: Int? = nil
 ) -> AgentSessionAgentState {
     let position = AgentPosition(x: x, y: 64, z: 0)
     return AgentSessionAgentState(
@@ -29,7 +30,7 @@ private func communicationAgent(
             curiosity: 0,
             safety: 1
         ),
-        health: lethal ? 26 : 100,
+        health: health ?? (lethal ? 26 : 100),
         fear: 0,
         homePosition: position,
         nearbyAgents: [],
@@ -58,13 +59,34 @@ private func communicationAgent(
     )
 }
 
+private func communicationKnowledgeConfiguration(
+    maximumBeliefs: Int
+) -> AgentKnowledgeConfiguration {
+    try! AgentKnowledgeConfiguration(
+        maximumPropositions: 64,
+        maximumEvidence: 64,
+        maximumClaims: 64,
+        maximumUnderstandings: 64,
+        maximumBeliefs: maximumBeliefs,
+        maximumRevisions: 128,
+        maximumEvidencePerAgent: 8,
+        maximumClaimsPerAgent: 8,
+        maximumUnderstandingsPerAgent: 8,
+        maximumBeliefsPerAgent: 8,
+        maximumRevisionsPerAgent: 16
+    )
+}
+
 private func communicationPrepared(
     id: String,
     reversed: Bool = false,
     transportConfiguration: AgentLongDistanceCommunicationConfiguration
         = .live,
+    knowledgeConfiguration: AgentKnowledgeConfiguration = .live,
     causalMaximumEvents: Int = 16_384,
     lethalID: AgentID? = nil,
+    healthByAgentID: [AgentID: Int] = [:],
+    starvationDamagePerTick: Int = 100,
     enableLongDistance: Bool = true
 ) -> (AgentSimulationSession, AgentKnowledgePropositionID) {
     let agents = [
@@ -72,16 +94,22 @@ private func communicationPrepared(
             communicationAuthor,
             x: 0,
             lethal: lethalID == communicationAuthor
+                || healthByAgentID[communicationAuthor] != nil,
+            health: healthByAgentID[communicationAuthor]
         ),
         communicationAgent(
             communicationCarrier,
             x: 1,
             lethal: lethalID == communicationCarrier
+                || healthByAgentID[communicationCarrier] != nil,
+            health: healthByAgentID[communicationCarrier]
         ),
         communicationAgent(
             communicationDestination,
             x: 8,
             lethal: lethalID == communicationDestination
+                || healthByAgentID[communicationDestination] != nil,
+            health: healthByAgentID[communicationDestination]
         ),
     ]
     let survival = lethalID == nil ? AgentSurvivalConfiguration.live : try!
@@ -101,7 +129,7 @@ private func communicationPrepared(
             restRecoveryPerTick:
                 AgentSurvivalConfiguration.live.restRecoveryPerTick,
             starvationGraceTicks: 0,
-            starvationDamagePerTick: 100
+            starvationDamagePerTick: starvationDamagePerTick
         )
     let social = try! AgentSocialConfiguration(
         communicationRadius: 2,
@@ -129,7 +157,10 @@ private func communicationPrepared(
         causalLedgerPolicy: .bounded(maxEvents: causalMaximumEvents)
     )
     try! session.setSocialEnabled(true)
-    try! session.setKnowledgeGraphEnabled(true)
+    try! session.setKnowledgeGraphEnabled(
+        true,
+        configuration: knowledgeConfiguration
+    )
     _ = try! session.advanceTick(perceptions: [
         AgentPerceptionInput(
             agentId: communicationAuthor.rawValue,
@@ -325,6 +356,94 @@ private func communicationReachArrival(
     preconditionFailure("CIV-44 transport did not terminate bounded travel")
 }
 
+private func communicationVerifiedReconciliationMovements(
+    session: AgentSimulationSession,
+    agentID: AgentID,
+    dx: Int,
+    status: AgentMovementStatus = .moved
+) -> [AgentVerifiedPhysicalMovement] {
+    session.snapshot().agents.sorted {
+        $0.id < $1.id
+    }.map { agent -> AgentVerifiedPhysicalMovement in
+        let moving = agent.id == agentID.rawValue
+        let to = moving
+            ? AgentPosition(
+                x: agent.position.x + dx,
+                y: agent.position.y,
+                z: agent.position.z
+            ) : agent.position
+        let before = abs(agent.position.x - agent.homePosition.x)
+            + abs(agent.position.y - agent.homePosition.y)
+            + abs(agent.position.z - agent.homePosition.z)
+        let after = abs(to.x - agent.homePosition.x)
+            + abs(to.y - agent.homePosition.y)
+            + abs(to.z - agent.homePosition.z)
+        return AgentVerifiedPhysicalMovement(
+            kind: .reconciliation,
+            outcome: AgentMovementOutcome(
+                agentId: agent.id,
+                tick: session.tick,
+                status: moving ? status : .notRequested,
+                fromPosition: agent.position,
+                toPosition: to,
+                requestedDirection: nil,
+                requestedDX: 0,
+                requestedDY: 0,
+                requestedDZ: 0,
+                appliedDX: moving ? dx : 0,
+                appliedDY: 0,
+                appliedDZ: 0,
+                goalKind: agent.currentGoal.kind,
+                actionReason: "verified physical reconciliation",
+                resolutionReason: moving
+                    ? "accepted verified physical reconciliation"
+                    : "no accepted movement",
+                worldTickObserved: session.tick,
+                distanceFromHomeBefore: before,
+                distanceFromHomeAfter: after,
+                distanceReducedTowardHome: max(0, before - after)
+            )
+        )
+    }
+}
+
+private func communicationApplyVerifiedReconciliationStep(
+    session: inout AgentSimulationSession,
+    agentID: AgentID,
+    dx: Int
+) {
+    let outcomes = communicationVerifiedReconciliationMovements(
+        session: session,
+        agentID: agentID,
+        dx: dx
+    )
+    try! session.applyVerifiedPhysicalMovements(outcomes)
+}
+
+@discardableResult
+private func communicationReachArrivalThroughVerifiedReconciliation(
+    session: inout AgentSimulationSession,
+    transportID: AgentCommunicationTransportID
+) -> AgentCommunicationTransport {
+    for _ in 0..<32 {
+        let record = session.longDistanceCommunicationSnapshot().transports
+            .first { $0.transportID == transportID }!
+        if record.status != .inTransit { return record }
+        let carrier = session.snapshot().agents.first {
+            $0.id == record.carrierID.rawValue
+        }!
+        let destination = session.snapshot().agents.first {
+            $0.id == record.destinationID.rawValue
+        }!
+        communicationApplyVerifiedReconciliationStep(
+            session: &session,
+            agentID: record.carrierID,
+            dx: destination.position.x > carrier.position.x ? 1 : -1
+        )
+    }
+    preconditionFailure("CIV-44 verified reconciliation did not arrive")
+}
+
 private func communicationRefusal(
     _ name: String,
     session: AgentSimulationSession,
@@ -428,6 +547,445 @@ private func communicationCompleted(
         renderingMode: renderingMode
     )
     return (session, delivered)
+}
+
+private enum CommunicationTerminalEvictionRoute: Equatable {
+    case pickup
+    case delivery
+}
+
+private struct CommunicationTerminalEvictionResult {
+    let session: AgentSimulationSession
+    let transportID: AgentCommunicationTransportID
+    let dependentTransmissionID: AgentOralTransmissionID
+    let controlCheckpoint: AgentSessionCheckpoint
+    let replayVerified: Bool
+    let expectedDeathCount: Int
+}
+
+private func communicationTerminalEvictionScenario(
+    id: String,
+    route: CommunicationTerminalEvictionRoute
+) -> CommunicationTerminalEvictionResult {
+    let isDelivery = route == .delivery
+    let lethalID = isDelivery
+        ? communicationDestination : communicationCarrier
+    let pressureID = isDelivery
+        ? communicationCarrier : communicationDestination
+    var (session, propositionID) = communicationPrepared(
+        id: id,
+        knowledgeConfiguration: communicationKnowledgeConfiguration(
+            maximumBeliefs: isDelivery ? 4 : 3
+        ),
+        lethalID: lethalID,
+        healthByAgentID: [pressureID: 60],
+        starvationDamagePerTick: 20
+    )
+    let started = try! session.beginLongDistanceCommunication(
+        authorID: communicationAuthor,
+        carrierID: communicationCarrier,
+        destinationID: communicationDestination,
+        propositionID: propositionID,
+        renderingMode: .noRendering
+    )
+    let terminal: AgentCommunicationTransport
+    if isDelivery {
+        _ = communicationReachArrivalThroughVerifiedReconciliation(
+            session: &session,
+            transportID: started.transportID
+        )
+        terminal = try! session.deliverLongDistanceCommunication(
+            transportID: started.transportID,
+            renderingMode: .noRendering
+        )
+        communicationApplyVerifiedReconciliationStep(
+            session: &session,
+            agentID: communicationCarrier,
+            dx: -1
+        )
+        communicationApplyVerifiedReconciliationStep(
+            session: &session,
+            agentID: communicationCarrier,
+            dx: -1
+        )
+    } else {
+        terminal = started
+        communicationApplyVerifiedReconciliationStep(
+            session: &session,
+            agentID: communicationCarrier,
+            dx: 1
+        )
+        communicationApplyVerifiedReconciliationStep(
+            session: &session,
+            agentID: communicationCarrier,
+            dx: 1
+        )
+    }
+    let dependentTransmissionID = isDelivery
+        ? terminal.deliveryTransmissionID! : terminal.pickupTransmissionID
+    let preDeathBeliefOwner = isDelivery
+        ? communicationDestination : communicationCarrier
+    let preDeathPosition = session.snapshot().agents.first {
+        $0.id == preDeathBeliefOwner.rawValue
+    }!.position
+    // The delivery route needs two terminal beliefs from its first death,
+    // while the oldest one must remain the CIV-43-dependent delivery belief
+    // so one later eviction exercises the reviewed dependency. Cell +4 gives
+    // that deterministic belief-ID order without changing production policy.
+    let preDeathObservationDistance = isDelivery ? 4 : 1
+    _ = try! session.advanceTick(perceptions: [AgentPerceptionInput(
+        agentId: preDeathBeliefOwner.rawValue,
+        socialResourceObservations: [AgentResourceObservation(
+            resource: .stone,
+            target: AgentPosition(
+                x: preDeathPosition.x + preDeathObservationDistance,
+                y: preDeathPosition.y,
+                z: preDeathPosition.z
+            ),
+            direction: .east,
+            distanceManhattan: preDeathObservationDistance,
+            quantityAvailable: 1,
+            source: .naturalWorld,
+            expectedBlockFingerprint: isDelivery ? 44_004 : 44_003
+        )]
+    )])
+    let dependentBeliefID = isDelivery
+        ? terminal.destinationBeliefID! : terminal.carrierBeliefID
+    let terminalOwnerBeliefs = session.knowledgeSnapshot().beliefs.filter {
+        $0.ownerID == preDeathBeliefOwner
+    }.sorted { $0.beliefID < $1.beliefID }
+    precondition(
+        terminalOwnerBeliefs.first?.beliefID == dependentBeliefID,
+        "CIV-44 terminal-eviction fixture lost deterministic dependency order"
+    )
+    try! session.initializePopulationRegistry(
+        settlementAnchor: AgentPosition(x: 0, y: 64, z: 0),
+        receptionPosition: AgentPosition(x: 0, y: 64, z: 0)
+    )
+    let pressurePosition = session.snapshot().agents.first {
+        $0.id == pressureID.rawValue
+    }!.position
+    let pressurePerception = AgentPerceptionInput(
+        agentId: pressureID.rawValue,
+        socialResourceObservations: [
+            AgentResourceObservation(
+                resource: .wood,
+                target: AgentPosition(
+                    x: pressurePosition.x + 1,
+                    y: pressurePosition.y,
+                    z: pressurePosition.z
+                ),
+                direction: .east,
+                distanceManhattan: 1,
+                quantityAvailable: 1,
+                source: .naturalWorld,
+                expectedBlockFingerprint: isDelivery ? 44_006 : 44_005
+            ),
+            AgentResourceObservation(
+                resource: .stone,
+                target: AgentPosition(
+                    x: pressurePosition.x - 1,
+                    y: pressurePosition.y,
+                    z: pressurePosition.z
+                ),
+                direction: .west,
+                distanceManhattan: 1,
+                quantityAvailable: 1,
+                source: .naturalWorld,
+                expectedBlockFingerprint: isDelivery ? 44_008 : 44_007
+            ),
+        ]
+    )
+    let base = try! session.makeCheckpoint()
+    var recorder = try! AgentReplayRecorder(
+        checkpoint: base,
+        session: session
+    )
+    _ = try! recorder.apply(.setSurvivalEnabled(true), to: &session)
+    _ = try! recorder.apply(
+        .setMortalityEnabled(true, configuration: .live),
+        to: &session
+    )
+    _ = try! recorder.apply(
+        .advanceTick(perceptions: [], physicalObservations: []),
+        to: &session
+    )
+    _ = try! recorder.apply(
+        .advanceTick(
+            perceptions: [pressurePerception],
+            physicalObservations: []
+        ),
+        to: &session
+    )
+    precondition(
+        !session.snapshot().agents.contains { $0.id == lethalID.rawValue },
+        "CIV-44 terminal-eviction fixture did not finalize first death"
+    )
+    let controlCheckpoint = try! session.makeCheckpoint()
+    for _ in 0..<8 where session.oralTransmissionSnapshot()
+        .transmissions.contains(where: {
+            $0.transmissionID == dependentTransmissionID
+        }) {
+        _ = try! recorder.apply(
+            .advanceTick(perceptions: [], physicalObservations: []),
+            to: &session
+        )
+    }
+    let journal = try! recorder.journal(
+        named: AgentCheckpointName(rawValue: id)!
+    )
+    let replay = try! AgentSessionReplayer.replay(
+        checkpoint: base,
+        journal: journal
+    )
+    return CommunicationTerminalEvictionResult(
+        session: session,
+        transportID: started.transportID,
+        dependentTransmissionID: dependentTransmissionID,
+        controlCheckpoint: controlCheckpoint,
+        replayVerified: replay.report.verified
+            && replay.report.finalSemanticDigest
+                == (try! session.durableStateDigest()),
+        expectedDeathCount: 2
+    )
+}
+
+private func communicationTerminalEvictionProof() {
+    for (route, label) in [
+        (CommunicationTerminalEvictionRoute.pickup, "pickup"),
+        (CommunicationTerminalEvictionRoute.delivery, "delivery"),
+    ] {
+        let result = communicationTerminalEvictionScenario(
+            id: "civ44-terminal-eviction-\(label)",
+            route: route
+        )
+        let controlTransport = result.controlCheckpoint.durableState
+            .longDistanceCommunicationState!.transports.first {
+                $0.transportID == result.transportID
+            }
+        let controlOral = result.controlCheckpoint.durableState
+            .oralTransmissionState!.transmissions
+        let finalTransport = result.session.longDistanceCommunicationSnapshot()
+        let finalOral = result.session.oralTransmissionSnapshot()
+        let finalKnowledge = result.session.knowledgeSnapshot()
+        let controlKnowledge = result.controlCheckpoint.durableState
+            .knowledgeGraphState!
+        let controlBeliefsByOwner = Dictionary(
+            grouping: controlKnowledge.beliefs,
+            by: { $0.ownerID.rawValue }
+        ).mapValues(\.count)
+        let controlHealthByOwner = Dictionary(
+            uniqueKeysWithValues: result.controlCheckpoint.durableState
+                .agents.map { ($0.id, $0.health) }
+        )
+        let terminalEvictionDetail = [
+            "controlBeliefs=\(controlBeliefsByOwner)",
+            "controlHealth=\(controlHealthByOwner)",
+            "controlTick=\(result.controlCheckpoint.durableState.clock.tick.rawValue)",
+            "controlDeparted=\((controlKnowledge.departedBeliefs ?? []).count)",
+            "departed=\(finalKnowledge.departedBeliefs.count)",
+            "departedEvicted=\(finalKnowledge.departedBeliefEvictionCount)",
+            "beliefs=\(finalKnowledge.beliefs.count)",
+            "deaths=\(result.session.mortalitySnapshot().totalDeathCount)",
+            "live=\(result.session.snapshot().agents.map(\.id).sorted())",
+        ].joined(separator: " ")
+        check("\(label) dependency is initially retained after death",
+            controlTransport != nil
+                && controlTransport!.status.isTerminal
+                && controlOral.contains {
+                    $0.transmissionID == result.dependentTransmissionID
+                })
+        check("\(label) departed-belief pressure performs real eviction",
+            finalKnowledge.departedBeliefEvictionCount > 0
+                && result.session.mortalitySnapshot().totalDeathCount
+                    == result.expectedDeathCount,
+            terminalEvictionDetail)
+        check("\(label) CIV-43 eviction leaves no CIV-44 orphan",
+            !finalOral.transmissions.contains {
+                $0.transmissionID == result.dependentTransmissionID
+            }
+                && !finalTransport.transports.contains {
+                    $0.transportID == result.transportID
+                }
+                && finalTransport.evictedTransportCount == 1
+                && finalTransport.totalStartedCount == 1,
+            terminalEvictionDetail)
+        let checkpoint = try! result.session.makeCheckpoint()
+        let checkpointBytes = try! AgentCheckpointCodec.encode(checkpoint)
+        let restartExact: Bool
+        let restartDetail: String
+        do {
+            let restored = try AgentSimulationSession.restoring(checkpoint)
+            let restoredBytes = try AgentCheckpointCodec.encode(
+                restored.makeCheckpoint()
+            )
+            restartExact = restoredBytes == checkpointBytes
+                && !restored.longDistanceCommunicationSnapshot()
+                    .transports.contains {
+                        $0.transportID == result.transportID
+                    }
+            restartDetail = restartExact
+                ? "exact" : "restored bytes or retained transport diverged"
+        } catch {
+            restartExact = false
+            restartDetail = "\(error)"
+        }
+        check("\(label) reconciled checkpoint restarts without resurrection",
+            restartExact, restartDetail)
+        check("\(label) terminal reconciliation replays exactly",
+            result.replayVerified)
+
+        let oldTransportState = result.controlCheckpoint.durableState
+            .longDistanceCommunicationState!
+        let staleResurrection = communicationResignedCheckpoint(checkpoint) {
+            durable in
+            let oldBytes = try! AgentCheckpointCodec.encode(
+                oldTransportState
+            )
+            durable["longDistanceCommunicationState"] =
+                try! JSONSerialization.jsonObject(with: oldBytes)
+        }
+        check("\(label) former authentic transport cannot resurrect",
+            communicationRestoreError(staleResurrection) != nil)
+    }
+}
+
+private func communicationMobileDestinationProof() {
+    var (session, propositionID) = communicationPrepared(
+        id: "civ44-mobile-destination"
+    )
+    let transport = try! session.beginLongDistanceCommunication(
+        authorID: communicationAuthor,
+        carrierID: communicationCarrier,
+        destinationID: communicationDestination,
+        propositionID: propositionID,
+        renderingMode: .noRendering
+    )
+    let carrierStart = session.snapshot().agents.first {
+        $0.id == communicationCarrier.rawValue
+    }!.position
+    let beforeUnauthorizedRewrite = try! session.durableStateDigest()
+    var unauthorizedRewrite = session
+    let unauthorizedDX = carrierStart.x
+        - session.snapshot().agents.first {
+            $0.id == communicationDestination.rawValue
+        }!.position.x
+    let unauthorizedRejected: Bool
+    do {
+        try unauthorizedRewrite.applyVerifiedPhysicalMovements(
+            communicationVerifiedReconciliationMovements(
+                session: unauthorizedRewrite,
+                agentID: communicationDestination,
+                dx: unauthorizedDX,
+                status: .notRequested
+            )
+        )
+        unauthorizedRejected = false
+    } catch AgentSessionError.invalidStationaryMovement(let agentID) {
+        unauthorizedRejected = agentID == communicationDestination.rawValue
+    } catch {
+        unauthorizedRejected = false
+    }
+    let unauthorizedTransport = unauthorizedRewrite
+        .longDistanceCommunicationSnapshot().transports.first {
+            $0.transportID == transport.transportID
+        }
+    check("abstract destination position rewrite is refused atomically",
+        unauthorizedRejected
+            && (try! unauthorizedRewrite.durableStateDigest())
+                == beforeUnauthorizedRewrite
+            && unauthorizedTransport?.status == .inTransit
+            && !unauthorizedRewrite.knowledgeSnapshot().beliefs.contains {
+                $0.ownerID == communicationDestination
+            })
+    for _ in 0..<16 {
+        let carrier = session.snapshot().agents.first {
+            $0.id == communicationCarrier.rawValue
+        }!
+        let destination = session.snapshot().agents.first {
+            $0.id == communicationDestination.rawValue
+        }!
+        if abs(carrier.position.x - destination.position.x)
+                + abs(carrier.position.y - destination.position.y)
+                + abs(carrier.position.z - destination.position.z) <= 1 {
+            break
+        }
+        let destinationActivity = AgentAutonomousActivityCandidate(
+            candidateID: "mobile-destination-activity",
+            actorID: communicationDestination,
+            domain: .materialHandling,
+            actionKey: "meet_carrier",
+            stableReference: "mobile-destination-activity",
+            target: carrier.position,
+            logicalTargetKey: "mobile-destination-target",
+            physicalTarget: carrier.position,
+            approachPosition: carrier.position,
+            materialFingerprint: "mobile-destination-accepted-movement",
+            source: .responsibility,
+            priorityBand: 15,
+            urgency: 80,
+            continuity: true,
+            distance: abs(destination.position.x - carrier.position.x)
+                + abs(destination.position.y - carrier.position.y)
+                + abs(destination.position.z - carrier.position.z),
+            observedAtTick: session.tick
+        )
+        _ = try! session.selectAutonomousActivities(
+            session.longDistanceCommunicationActivityCandidates()
+                + [destinationActivity]
+        )
+        let result = try! session.advanceTick(perceptions: [
+            AgentPerceptionInput(
+                agentId: communicationCarrier.rawValue,
+                navigationObservation: communicationNavigationObservation(
+                    origin: carrier.position,
+                    target: destination.position,
+                    tick: session.tick
+                )
+            ),
+            AgentPerceptionInput(
+                agentId: communicationDestination.rawValue,
+                navigationObservation: communicationNavigationObservation(
+                    origin: destination.position,
+                    target: carrier.position,
+                    tick: session.tick
+                )
+            ),
+        ])
+        try! session.applyMovementOutcomes(
+            communicationMovementOutcomes(
+                result: result,
+                session: session,
+                carrierID: communicationDestination,
+                carrierStatus: .moved
+            )
+        )
+    }
+    let arrived = session.longDistanceCommunicationSnapshot().transports
+        .first { $0.transportID == transport.transportID }!
+    let arrivalEvent = arrived.arrivalEventID.flatMap { arrivalID in
+        session.causalLedgerSnapshot().events.first {
+            $0.eventID == arrivalID
+        }
+    }
+    let acceptedDestinationMovement = arrivalEvent?.causes.contains {
+        causeID in
+        session.causalLedgerSnapshot().events.contains { event in
+            guard event.eventID == causeID,
+                  event.kind == .movement,
+                  event.origin == .worldOutcome,
+                  event.actorID == communicationDestination,
+                  case let .movement(status, _, _) = event.payload else {
+                return false
+            }
+            return status == AgentMovementStatus.moved.rawValue
+        }
+    } == true
+    check("accepted destination movement can causally satisfy arrival",
+        arrived.status == .arrived
+            && arrived.progress.isEmpty
+            && arrived.arrivalPosition == carrierStart
+            && acceptedDestinationMovement)
 }
 
 private func communicationReplayProof() {
@@ -1195,6 +1753,8 @@ func runPebbleAgentsLongDistanceCommunicationSmoke() {
     communicationCompactionProof()
     communicationCausalCompactionProof()
     communicationMortalityProof()
+    communicationTerminalEvictionProof()
+    communicationMobileDestinationProof()
 
     print(
         "  CIV44_CHAIN transport=\(delivered.transportID.rawValue) "
@@ -1223,6 +1783,22 @@ func runPebbleAgentsLongDistanceCommunicationRestartWriteSmoke() {
     ]!
     try! bytes.write(to: URL(fileURLWithPath: path), options: .atomic)
     check("CIV-44 fresh-process checkpoint write", !bytes.isEmpty)
+
+    let terminal = communicationTerminalEvictionScenario(
+        id: "civ44-fresh-process-terminal-eviction",
+        route: .delivery
+    ).session
+    let terminalBytes = try! AgentCheckpointCodec.encode(
+        terminal.makeCheckpoint()
+    )
+    try! terminalBytes.write(
+        to: URL(fileURLWithPath: path + ".terminal-eviction"),
+        options: .atomic
+    )
+    check("CIV-44 reconciled terminal checkpoint write",
+        !terminalBytes.isEmpty
+            && terminal.longDistanceCommunicationSnapshot()
+                .transports.isEmpty)
 }
 
 func runPebbleAgentsLongDistanceCommunicationRestartReadSmoke() {
@@ -1245,4 +1821,24 @@ func runPebbleAgentsLongDistanceCommunicationRestartReadSmoke() {
                 .status == .delivered)
     check("CIV-44 fresh-process bytes remain exact",
         try! AgentCheckpointCodec.encode(restored.makeCheckpoint()) == bytes)
+
+    let terminalBytes = try! Data(
+        contentsOf: URL(fileURLWithPath: path + ".terminal-eviction")
+    )
+    let terminalCheckpoint = try! AgentCheckpointCodec.decode(
+        AgentSessionCheckpoint.self,
+        from: terminalBytes
+    )
+    let terminalRestored = try! AgentSimulationSession.restoring(
+        terminalCheckpoint
+    )
+    check("CIV-44 fresh-process terminal reconciliation survives",
+        terminalRestored.longDistanceCommunicationSnapshot()
+            .transports.isEmpty
+            && terminalRestored.longDistanceCommunicationSnapshot()
+                .evictedTransportCount == 1)
+    check("CIV-44 fresh-process terminal bytes remain exact",
+        try! AgentCheckpointCodec.encode(
+            terminalRestored.makeCheckpoint()
+        ) == terminalBytes)
 }

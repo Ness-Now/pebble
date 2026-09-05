@@ -2645,6 +2645,34 @@ extension AgentSimulationSession {
                     )
                 }
             }
+            let communicationTransportsByID = Dictionary(
+                uniqueKeysWithValues:
+                    (state.longDistanceCommunicationState?.transports ?? [])
+                        .map { ($0.transportID, $0) }
+            )
+            let retainedCommunicationFailureCount =
+                communicationTransportsByID.values.filter {
+                    $0.status == .failed
+                }.count
+            let reconciledCommunicationFailureCapacity: Int
+            if let communication = state.longDistanceCommunicationState {
+                guard communication.totalFailedCount
+                        >= retainedCommunicationFailureCount,
+                      communication.totalFailedCount
+                            - retainedCommunicationFailureCount
+                        <= communication.evictedTransportCount else {
+                    throw AgentCheckpointError.invalidBound(
+                        "mortality communication failure count"
+                    )
+                }
+                reconciledCommunicationFailureCapacity =
+                    communication.totalFailedCount
+                        - retainedCommunicationFailureCount
+            } else {
+                reconciledCommunicationFailureCapacity = 0
+            }
+            var reconciledCommunicationFailureIDs =
+                Set<AgentCausalEventID>()
             for record in mortality.records {
                 let event: (AgentCausalEventID) -> AgentCausalEvent? = { eventID in
                     state.causalLedger.events.first { $0.eventID == eventID }
@@ -2693,14 +2721,82 @@ extension AgentSimulationSession {
                     }
                 let settlementMigrationFailure = settlementMigrationRecord?
                     .failureEventID.flatMap(event)
-                let communicationTransportFailures =
-                    state.longDistanceCommunicationState?.transports
-                        .filter {
-                            $0.status == .failed
-                                && $0.failedAtTick == record.deathTick
-                                && ($0.carrierID == record.agentID
-                                    || $0.destinationID == record.agentID)
-                        }.compactMap(\.failureEventID) ?? []
+                // A bounded CIV-44 terminal record may already have been
+                // reconciled away after CIV-41/CIV-43 evicted its oral
+                // authority. A retained transport must still match exactly.
+                // Otherwise, its failure is historical only when the current
+                // post-failure CIV-44 boundary and counters cover that causal
+                // event; the population exit remains its mortality owner.
+                let communicationTransportFailures = exit.causes.filter {
+                    causeID in
+                    guard let failure = event(causeID),
+                          failure.kind == .communicationTransportFailed,
+                          failure.origin
+                            == .communicationTransportTransition,
+                          failure.simulationTick.rawValue == record.deathTick,
+                          failure.causes.count == 2,
+                          failure.causes.contains(lethal.eventID),
+                          case let .communicationTransport(
+                              transportID, authorID, carrierID,
+                              destinationID, status, detail
+                          ) = failure.payload,
+                          let typedTransportID =
+                            AgentCommunicationTransportID(
+                                rawValue: transportID
+                            ) else {
+                        return false
+                    }
+                    guard let authorID = authorID.flatMap({
+                              AgentID(rawValue: $0)
+                          }),
+                          let carrierID = carrierID.flatMap({
+                              AgentID(rawValue: $0)
+                          }),
+                          let destinationID = destinationID.flatMap({
+                              AgentID(rawValue: $0)
+                          }),
+                          authorID != carrierID,
+                          authorID != destinationID,
+                          carrierID != destinationID,
+                          knownPopulationIDs.contains(authorID),
+                          knownPopulationIDs.contains(carrierID),
+                          knownPopulationIDs.contains(destinationID),
+                          failure.actorID == carrierID,
+                          failure.subjectID == destinationID,
+                          status == AgentCommunicationTransportStatus
+                            .failed.rawValue else {
+                        return false
+                    }
+                    let matchesDeath =
+                        (detail == AgentCommunicationTransportFailure
+                            .carrierDied.rawValue
+                            && carrierID == record.agentID)
+                        || (detail == AgentCommunicationTransportFailure
+                            .destinationDied.rawValue
+                            && destinationID == record.agentID)
+                    guard matchesDeath else { return false }
+                    if let retained = communicationTransportsByID[
+                        typedTransportID
+                    ] {
+                        return retained.status == .failed
+                            && retained.authorID == authorID
+                            && retained.carrierID == carrierID
+                            && retained.destinationID == destinationID
+                            && retained.failedAtTick == record.deathTick
+                            && retained.failure?.rawValue == detail
+                            && retained.failureEventID == causeID
+                    }
+                    guard let communication =
+                            state.longDistanceCommunicationState,
+                          communication.evictedTransportCount > 0,
+                          reconciledCommunicationFailureCapacity > 0,
+                          let boundary = communication.provenanceBoundary,
+                          failure.sequence < boundary.eventID.sequence else {
+                        return false
+                    }
+                    reconciledCommunicationFailureIDs.insert(causeID)
+                    return true
+                }
                 let careExit = exit.causes.compactMap { causeID in
                     event(causeID)
                 }.filter {
@@ -2868,6 +2964,12 @@ extension AgentSimulationSession {
                       }) else {
                     throw AgentCheckpointError.invalidBound("mortality causal chain")
                 }
+            }
+            guard reconciledCommunicationFailureIDs.count
+                    <= reconciledCommunicationFailureCapacity else {
+                throw AgentCheckpointError.invalidBound(
+                    "mortality reconciled communication failures"
+                )
             }
         }
         if let lifecycle = state.lifecycleState, let population = state.populationRegistry {
