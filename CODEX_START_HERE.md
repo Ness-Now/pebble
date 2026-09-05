@@ -137,10 +137,13 @@ for the compact status. In particular:
   SHA-256 is
   `1c22063677e95430bb6f220a95c75e07e0512d532d0273accf7c442a9b6fd54a`;
   manual publication completed and exact remote verification passed.
-  Published progression is complete through `CIV-43`.
-- `CIV-44 — Compositional and Long-Distance Communication V1` is not started
-  and is the next eligible required phase and authorized action. Gate G
-  remains planned and unevaluated.
+- `CIV-44 — Compositional and Long-Distance Communication V1` is **COMPLETE
+  AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical
+  product HEAD `0c6a6e88ce838266897526a74d067532163cb06f`. Published progression is
+  complete through `CIV-44`.
+- `CIV-45 — Writing and Literacy V1` is **NOT STARTED** and is the next
+  eligible required phase and authorized action. Gate G remains planned and
+  unevaluated.
 
 Historical Gate B `FAIL` reports and the closure-candidate report are preserved
 as evidence of their own evaluations. They do not reopen Gate B.
