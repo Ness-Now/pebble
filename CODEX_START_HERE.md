@@ -141,9 +141,15 @@ for the compact status. In particular:
   AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical
   product HEAD `0c6a6e88ce838266897526a74d067532163cb06f`. Published progression is
   complete through `CIV-44`.
-- `CIV-45 — Writing and Literacy V1` is **NOT STARTED** and is the next
-  eligible required phase and authorized action. Gate G remains planned and
-  unevaluated.
+- `CIV-45 — Writing and Literacy V1` is a **LOCAL REVIEW CANDIDATE — NOT
+  PUBLISHED** from exact published baseline
+  `9a2cfec10b4a0d1b6a5d2f46aac8f3c312ddbb0e`; local product commit
+  `ac38675d88d4b709183e7b26f92a0a45b0e928c1` passed focused debug/release,
+  canonical repository and two-seed/two-process live World proof. Published
+  progression remains complete through CIV-44. The next authorized action is
+  CIV-45 senior review; CIV-46 and CIV-47 remain unstarted and unauthorized.
+  Gate G remains planned and unevaluated. See
+  [`CIV_45_PHASE_SUMMARY.md`](docs/pebblelab/CIV_45_PHASE_SUMMARY.md).
 
 Historical Gate B `FAIL` reports and the closure-candidate report are preserved
 as evidence of their own evaluations. They do not reopen Gate B.

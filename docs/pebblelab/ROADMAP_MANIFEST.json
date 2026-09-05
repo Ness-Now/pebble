@@ -267,7 +267,10 @@
     "civ44ReviewArchive": "PebbleLab-CIV44-Correction02-FinalReReview-0c6a6e8.zip",
     "civ44ReviewArchiveSHA256": "570df1fd45349de684b47a0c30fcb1452137b86d5d40174146126333e6f51683",
     "civ44PublicationStatus": "completedPublishedSeniorReviewApprovedRemoteVerified",
-    "meaning": "Canonical published product history is complete through CIV-44, with optional CIV-38 and CIV-40 unstarted; Gate E is acquired and published at independently remote-verified canonical HEAD 076a616a97a229e921a5c36eebdfd12f76744f83; CIV-39 is complete and published at independently remote-verified canonical HEAD 0b0ec535cda62b70add182875c65eaee27bb5bb2 after Senior Review Correction 01 and Evidence Reconciliation 02; Gate F Evaluations 01 through 11 are FAIL historical immutable evidence; Gate F Blockers 01 through 11 are fixed, published and independently remote verified; Evaluation 12 is senior-review-approved published PASS evidence at canonical HEAD b31a7e53cfcf7a5c3ab6419f3cb5c0c309f04112; Gate F is acquired and published at independently remote-verified canonical HEAD 14475f4ad5dde9e1063a830ba7e38390cfb4d045; CIV-41 remains the sole generic epistemic authority; CIV-42 remains the language, semantic and lexical authority; CIV-43 remains the local oral-transmission authority; CIV-44 preserves its initial candidate and two senior-review correction blockers in history, final senior review approved Correction 02, manual publication completed and the exact canonical remote is verified at 0c6a6e88ce838266897526a74d067532163cb06f; CIV-45 is the next eligible and authorized phase but is not started; Gate G remains planned and unevaluated; currency is not a Gate E or CIV-39 dependency.",
+    "civ45ExactBaseline": "9a2cfec10b4a0d1b6a5d2f46aac8f3c312ddbb0e",
+    "civ45LocalProductProofCommit": "ac38675d88d4b709183e7b26f92a0a45b0e928c1",
+    "civ45PublicationStatus": "localReviewCandidateNotPublished",
+    "meaning": "Canonical published product history is complete through CIV-44, with optional CIV-38 and CIV-40 unstarted; Gate E is acquired and published at independently remote-verified canonical HEAD 076a616a97a229e921a5c36eebdfd12f76744f83; CIV-39 is complete and published at independently remote-verified canonical HEAD 0b0ec535cda62b70add182875c65eaee27bb5bb2 after Senior Review Correction 01 and Evidence Reconciliation 02; Gate F Evaluations 01 through 11 are FAIL historical immutable evidence; Gate F Blockers 01 through 11 are fixed, published and independently remote verified; Evaluation 12 is senior-review-approved published PASS evidence at canonical HEAD b31a7e53cfcf7a5c3ab6419f3cb5c0c309f04112; Gate F is acquired and published at independently remote-verified canonical HEAD 14475f4ad5dde9e1063a830ba7e38390cfb4d045; CIV-41 remains the sole generic epistemic authority; CIV-42 remains the language, semantic and lexical authority; CIV-43 remains the local oral-transmission authority; CIV-44 preserves its initial candidate and two senior-review correction blockers in history, final senior review approved Correction 02, manual publication completed and the exact canonical remote is verified at 0c6a6e88ce838266897526a74d067532163cb06f; CIV-45 is a local review candidate from exact published baseline 9a2cfec10b4a0d1b6a5d2f46aac8f3c312ddbb0e at local product commit ac38675d88d4b709183e7b26f92a0a45b0e928c1, is not published and awaits senior review; CIV-46 and CIV-47 remain unstarted and unauthorized; Gate G remains planned and unevaluated; currency is not a Gate E or CIV-39 dependency.",
     "safeBootstrapHardeningPublished": true
   },
   "documents": {
@@ -294,6 +297,7 @@
     "civ42PhaseEvidence": "docs/pebblelab/CIV_42_PHASE_SUMMARY.md",
     "civ43PhaseEvidence": "docs/pebblelab/CIV_43_PHASE_SUMMARY.md",
     "civ44PhaseEvidence": "docs/pebblelab/CIV_44_PHASE_SUMMARY.md",
+    "civ45PhaseEvidence": "docs/pebblelab/CIV_45_PHASE_SUMMARY.md",
     "gateFBlocker01SettlementAdmissionCapacity": "docs/pebblelab/GATE_F_BLOCKER_01_SETTLEMENT_ADMISSION_CAPACITY.md",
     "gateFBlocker02MigrationDestinationCapacity": "docs/pebblelab/GATE_F_BLOCKER_02_MIGRATION_DESTINATION_CAPACITY.md",
     "gateFBlocker03DynamicFidelityAuthority": "docs/pebblelab/GATE_F_BLOCKER_03_DYNAMIC_FIDELITY_AUTHORITY.md",
@@ -337,10 +341,10 @@
     "historicalPlans": "nonDirective"
   },
   "currentState": {
-    "activePhase": null,
+    "activePhase": "CIV-45",
     "completedThrough": "CIV-44",
     "nextEligiblePhase": "CIV-45",
-    "nextAuthorizedAction": "CIV-45",
+    "nextAuthorizedAction": "CIV-45-INDEPENDENT-REVIEW",
     "civ41ReviewedCandidate": "1ce9506824775c1b59eaf5c358f0e8d4edd4eab7",
     "civ41SeniorReviewCorrection01Status": "completedPublishedSeniorReviewApprovedRemoteVerified",
     "civ27Status": "completed",
@@ -611,7 +615,14 @@
     "gateFEvaluation12LocalPendingSeniorReview": false,
     "civ40Status": "optionalNotStarted",
     "renewableSubsistenceMilestoneStatus": "completedPublished",
-    "v4CanonicalDocumentSet": true
+    "v4CanonicalDocumentSet": true,
+    "civ45Status": "localReviewCandidateNotPublished",
+    "civ45ReviewStatus": "pending",
+    "civ45ImplementationBaseline": "9a2cfec10b4a0d1b6a5d2f46aac8f3c312ddbb0e",
+    "civ45LocalProductProofCommit": "ac38675d88d4b709183e7b26f92a0a45b0e928c1",
+    "civ45Published": false,
+    "civ45PublicationVerified": false,
+    "civ45CheckpointSchema": 40
   },
   "gateFBlocker10Validation": {
     "title": "Terminal Mortality Migration Admission",
@@ -3693,10 +3704,24 @@
     {
       "id": "CIV-45",
       "title": "Writing and Literacy V1",
-      "status": "planned",
+      "status": "localReviewCandidateNotPublished",
+      "complete": false,
+      "implementationComplete": true,
+      "published": false,
+      "publicationVerified": false,
+      "seniorReview": "pending",
+      "implementationBaseline": "9a2cfec10b4a0d1b6a5d2f46aac8f3c312ddbb0e",
+      "localProductProofCommit": "ac38675d88d4b709183e7b26f92a0a45b0e928c1",
+      "checkpointSchema": 40,
       "wave": "wave-5-knowledge-language-culture",
       "requiredForCanonicalProgression": true,
       "writtenArtifact": "persistentMaterialInformationCarrier",
+      "materialCarrier": "existingPebbleCoreStandingSign",
+      "physicalIdentity": "worldPersistedCoreIdentityAllocationDistinctFromPositionTextAndCivilizationOrdinal",
+      "currentAccessAuthority": "freshLocalPebbleCoreSignVerificationThroughPebbleAdapter",
+      "epistemicAuthority": "CIV41SoleGenericEpistemicAuthority",
+      "languageAuthority": "CIV42SemanticLexicalLanguageAuthority",
+      "literacy": "sparseCausalCIV45NotationCapabilityDistinctFromOralLexicalKnowledge",
       "writtenContentIsWorldTruth": false,
       "writtenContentMayBe": [
         "false",
@@ -3705,7 +3730,17 @@
         "propagandistic",
         "contradictory"
       ],
-      "contentRepresentation": "openUntilCIV45",
+      "contentRepresentation": "boundedCIV42SemanticPropositionAndDeterministicFourLineRealization",
+      "assertionMayDifferFromAuthorBelief": true,
+      "historicalRecordAuthorizesCurrentReadingWithoutArtifact": false,
+      "replacementAtSamePositionAndTextPreservesIdentity": false,
+      "retention": "boundedExactStateWithRefreshableCausalBoundaryAndOwnedHistoricalAuthorities",
+      "replayUsesPersistedAcceptedContentWithoutReroll": true,
+      "defaultArtifactCapacity": 256,
+      "defaultReadingCapacity": 512,
+      "defaultLiteracyCapacity": 512,
+      "liveProof": "twoSeedsTwoProcessesWorldSaveStopReloadReadEditReplaceRefusalPassed",
+      "llmRequired": false,
       "dependsOn": [
         "CIV-44"
       ]

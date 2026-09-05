@@ -106,9 +106,13 @@ SHA of the documentation commit that contains it.
   approved, manual publication completed and the exact remote was verified.
   Final review archive SHA-256:
   `570df1fd45349de684b47a0c30fcb1452137b86d5d40174146126333e6f51683`.
-  CIV-45 is next eligible and authorized but not started; Gate G remains
-  planned and unevaluated. See
-  [`CIV_44_PHASE_SUMMARY.md`](CIV_44_PHASE_SUMMARY.md).
+  Published progression remains complete through CIV-44. CIV-45 is now a
+  **LOCAL REVIEW CANDIDATE — NOT PUBLISHED** at local product commit
+  `ac38675d88d4b709183e7b26f92a0a45b0e928c1`; its next authorized action is
+  senior review. CIV-46 and CIV-47 remain unstarted and unauthorized. Gate G
+  remains planned and unevaluated. See
+  [`CIV_44_PHASE_SUMMARY.md`](CIV_44_PHASE_SUMMARY.md) and
+  [`CIV_45_PHASE_SUMMARY.md`](CIV_45_PHASE_SUMMARY.md).
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
 
 Gate F correction history:
@@ -306,8 +310,9 @@ Gate F correction history:
 - `CIV-44 — Compositional and Long-Distance Communication V1` is **COMPLETE
   AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical HEAD
   `0c6a6e88ce838266897526a74d067532163cb06f`. Published canonical progression
-  is complete through CIV-44. CIV-45 is next eligible and authorized but not
-  started; Gate G remains planned and unevaluated.
+  remains complete through CIV-44. CIV-45 is a local review candidate at local
+  product commit `ac38675d88d4b709183e7b26f92a0a45b0e928c1`, is not published,
+  and awaits senior review. Gate G remains planned and unevaluated.
 
 Published Gate E history:
 
@@ -704,10 +709,10 @@ the Gate E acquisition are now published and independently remote verified.
 ## Current program position
 
 ```text
-active CIV phase: none
+active CIV phase: CIV-45 — LOCAL REVIEW CANDIDATE — NOT PUBLISHED
 completed and published through: CIV-44 (CIV-38 and CIV-40 remain optional and unstarted)
-next eligible action: CIV-45 — Writing and Literacy V1
-next authorized action: CIV-45
+next eligible action: CIV-45 independent review / user-owned publication
+next authorized action: CIV-45 review; CIV-46 remains unauthorized
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -789,7 +794,11 @@ CIV-43 final review archive SHA-256: 1c22063677e95430bb6f220a95c75e07e0512d532d0
 CIV-44 status: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 CIV-44 published canonical HEAD: 0c6a6e88ce838266897526a74d067532163cb06f
 CIV-44 final review archive SHA-256: 570df1fd45349de684b47a0c30fcb1452137b86d5d40174146126333e6f51683
-CIV-45 status: NOT STARTED — NEXT ELIGIBLE / AUTHORIZED
+CIV-45 status: LOCAL REVIEW CANDIDATE — NOT PUBLISHED
+CIV-45 exact published baseline: 9a2cfec10b4a0d1b6a5d2f46aac8f3c312ddbb0e
+CIV-45 local product commit: ac38675d88d4b709183e7b26f92a0a45b0e928c1
+CIV-45 next authorized action: INDEPENDENT REVIEW / USER-OWNED PUBLICATION
+CIV-46 / CIV-47 status: PLANNED — NOT STARTED / NOT AUTHORIZED
 V4-GATE-G-v1 status: PLANNED / UNEVALUATED
 roadmap generation: V4
 ```
@@ -1224,8 +1233,10 @@ SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical product HEAD
 PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical HEAD
 `0c6a6e88ce838266897526a74d067532163cb06f`, from exact implementation baseline
 `50d0f73fb9b2a29fd1c3aa80395d20df862a0048`. Published progression is complete
-through CIV-44. CIV-45 is next eligible and authorized but not started. Gate G
-remains planned and unevaluated.
+through CIV-44. CIV-45 is a **LOCAL REVIEW CANDIDATE — NOT PUBLISHED** at
+local product commit `ac38675d88d4b709183e7b26f92a0a45b0e928c1` and awaits senior
+review. CIV-46 and CIV-47 remain unstarted and unauthorized. Gate G remains
+planned and unevaluated. See [`CIV_45_PHASE_SUMMARY.md`](CIV_45_PHASE_SUMMARY.md).
 `CIV-38` remains **OPTIONAL — NOT STARTED** and is not a prerequisite.
 `CIV-40` remains **OPTIONAL TOOLING — NOT STARTED**. Currency is not a Gate E
 or CIV-39 prerequisite.
