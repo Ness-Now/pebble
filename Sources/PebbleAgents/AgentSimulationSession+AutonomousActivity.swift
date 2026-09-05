@@ -33,6 +33,13 @@ extension AgentSimulationSession {
             }
             return
         }
+        guard enabled || longDistanceCommunicationState == nil else {
+            throw AgentSessionError.autonomousActivity(
+                .invalidCandidate(
+                    "communication transport history requires orchestration"
+                )
+            )
+        }
         guard autonomousActivityState?.activeActivities.isEmpty != false else {
             throw AgentSessionError.autonomousActivity(.invalidCandidate("active work must end first"))
         }
@@ -79,7 +86,8 @@ extension AgentSimulationSession {
                     requiredCapability = .harvest
                 case .construction, .production:
                     requiredCapability = .build
-                case .materialHandling, .barter, .contract, .market:
+                case .materialHandling, .barter, .contract, .market,
+                     .communication:
                     requiredCapability = .deliver
                 case .dependentCare, .teaching:
                     requiredCapability = .cooperateAsWorker

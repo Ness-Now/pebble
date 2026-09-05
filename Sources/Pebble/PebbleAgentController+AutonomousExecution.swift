@@ -75,7 +75,8 @@ extension PebbleAgentController {
                     activity: activity, actor: embodiment, world: world,
                     session: &session, recorder: &recorder
                 )
-            case .dependentCare, .teaching, .construction, .materialHandling:
+            case .dependentCare, .teaching, .construction, .materialHandling,
+                 .communication:
                 throw ControllerError.feedbackBoundary(
                     "autonomous domain remains owned by its existing cognitive path"
                 )

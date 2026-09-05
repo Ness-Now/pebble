@@ -8,6 +8,11 @@ extension AgentSimulationSession {
         configuration: AgentLanguageConfiguration = .live,
         pack: AgentLanguagePack = .frenchReference
     ) throws {
+        if !enabled, longDistanceCommunicationState != nil {
+            throw AgentSessionError.longDistanceCommunication(
+                .languageRequired
+            )
+        }
         guard causalLedger.isEnabled else {
             throw AgentSessionError.language(.causalLedgerRequired)
         }

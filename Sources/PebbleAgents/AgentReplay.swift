@@ -39,6 +39,7 @@ public enum AgentReplaySchema {
     public static let knowledgeVersion = 36
     public static let languageVersion = 37
     public static let oralTransmissionVersion = 38
+    public static let longDistanceCommunicationVersion = 39
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -65,6 +66,7 @@ public enum AgentReplaySchema {
             || version == knowledgeVersion
             || version == languageVersion
             || version == oralTransmissionVersion
+            || version == longDistanceCommunicationVersion
     }
 }
 
@@ -213,6 +215,9 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case languageCommunication
     case oralFeature
     case oralTransmission
+    case longDistanceCommunicationFeature
+    case longDistanceCommunicationDispatch
+    case longDistanceCommunicationDelivery
 }
 
 public enum AgentReplayOperation: Codable {
@@ -257,6 +262,23 @@ public enum AgentReplayOperation: Codable {
         propositionID: AgentKnowledgePropositionID,
         renderingMode: AgentLanguageRenderingMode,
         acceptedEffect: AgentOralAcceptedEffect?
+    )
+    case setLongDistanceCommunicationEnabled(
+        Bool,
+        configuration: AgentLongDistanceCommunicationConfiguration
+    )
+    case beginLongDistanceCommunication(
+        authorID: AgentID,
+        carrierID: AgentID,
+        destinationID: AgentID,
+        propositionID: AgentKnowledgePropositionID,
+        renderingMode: AgentLanguageRenderingMode,
+        acceptedPickupEffect: AgentOralAcceptedEffect?
+    )
+    case deliverLongDistanceCommunication(
+        transportID: AgentCommunicationTransportID,
+        renderingMode: AgentLanguageRenderingMode,
+        acceptedDeliveryEffect: AgentOralAcceptedEffect?
     )
     case setPhysicalEnabled(Bool)
     case setCooperationEnabled(Bool)
@@ -538,6 +560,12 @@ public enum AgentReplayOperation: Codable {
             return .languageCommunication
         case .setOralTransmissionEnabled: return .oralFeature
         case .transmitOralClaim: return .oralTransmission
+        case .setLongDistanceCommunicationEnabled:
+            return .longDistanceCommunicationFeature
+        case .beginLongDistanceCommunication:
+            return .longDistanceCommunicationDispatch
+        case .deliverLongDistanceCommunication:
+            return .longDistanceCommunicationDelivery
         case .setPhysicalEnabled: return .physicalFeature
         case .setCooperationEnabled: return .cooperationFeature
         case .createConstructionProject: return .constructionProjectCreation
@@ -693,6 +721,18 @@ public enum AgentReplayOperation: Codable {
             raw = "oral-transmit:\(speakerID.rawValue):"
                 + "\(recipientID.rawValue):\(propositionID.rawValue):"
                 + renderingMode.rawValue
+        case let .beginLongDistanceCommunication(
+            authorID, carrierID, destinationID, propositionID,
+            renderingMode, _
+        ):
+            raw = "communication-transport-begin:\(authorID.rawValue):"
+                + "\(carrierID.rawValue):\(destinationID.rawValue):"
+                + "\(propositionID.rawValue):\(renderingMode.rawValue)"
+        case let .deliverLongDistanceCommunication(
+            transportID, renderingMode, _
+        ):
+            raw = "communication-transport-deliver:"
+                + "\(transportID.rawValue):\(renderingMode.rawValue)"
         case let .applyBirthSiteObservation(observation):
             raw = "birth-site:\(observation.planID.rawValue):\(observation.observedTick)"
         case let .proposeUnion(receipt): raw = receipt.receiptID
@@ -1082,6 +1122,9 @@ public struct AgentReplayRecorder {
         simulationID = checkpoint.simulationID
         initialTick = checkpoint.tick.rawValue
         schemaVersion = checkpoint.schemaVersion
+            == AgentCheckpointSchema.longDistanceCommunicationVersion
+            ? AgentReplaySchema.longDistanceCommunicationVersion
+            : checkpoint.schemaVersion
             == AgentCheckpointSchema.oralTransmissionVersion
             ? AgentReplaySchema.oralTransmissionVersion
             : checkpoint.schemaVersion
@@ -1432,6 +1475,21 @@ public struct AgentReplayRecorder {
             }
             schemaVersion = AgentReplaySchema.oralTransmissionVersion
         }
+        if case let .setLongDistanceCommunicationEnabled(
+            enabled, _
+        ) = operation,
+           enabled,
+           schemaVersion
+            < AgentReplaySchema.longDistanceCommunicationVersion {
+            guard records.isEmpty else {
+                throw AgentReplayError.invalidJournal(
+                    "long-distance communication activation must be the "
+                        + "first v39 replay operation"
+                )
+            }
+            schemaVersion =
+                AgentReplaySchema.longDistanceCommunicationVersion
+        }
         guard session.simulationID == simulationID else { throw AgentReplayError.currentStateMismatch }
         let preDigest = try session.durableStateDigest()
         let tickBefore = session.tick
@@ -1456,6 +1514,50 @@ public struct AgentReplayRecorder {
                 propositionID: propositionID,
                 renderingMode: renderingMode,
                 acceptedEffect: AgentOralAcceptedEffect(
+                    interpretedProposition: interpreted,
+                    interpretedSemanticContent:
+                        oralResult.interpretedSemanticContent,
+                    outcome: oralResult.outcome,
+                    decisionDigest: oralResult.decisionDigest
+                )
+            )
+        } else if case let .beginLongDistanceCommunication(
+            authorID, carrierID, destinationID, propositionID,
+            renderingMode, nil
+        ) = operation,
+          let oralResult = result.oralTransmissionResult,
+          let interpreted = candidate.knowledgeGraphState?.propositions
+            .first(where: {
+                $0.propositionID == oralResult.interpretedSemanticContent
+                    .sourcePropositionID
+            }) {
+            recordedOperation = .beginLongDistanceCommunication(
+                authorID: authorID,
+                carrierID: carrierID,
+                destinationID: destinationID,
+                propositionID: propositionID,
+                renderingMode: renderingMode,
+                acceptedPickupEffect: AgentOralAcceptedEffect(
+                    interpretedProposition: interpreted,
+                    interpretedSemanticContent:
+                        oralResult.interpretedSemanticContent,
+                    outcome: oralResult.outcome,
+                    decisionDigest: oralResult.decisionDigest
+                )
+            )
+        } else if case let .deliverLongDistanceCommunication(
+            transportID, renderingMode, nil
+        ) = operation,
+          let oralResult = result.oralTransmissionResult,
+          let interpreted = candidate.knowledgeGraphState?.propositions
+            .first(where: {
+                $0.propositionID == oralResult.interpretedSemanticContent
+                    .sourcePropositionID
+            }) {
+            recordedOperation = .deliverLongDistanceCommunication(
+                transportID: transportID,
+                renderingMode: renderingMode,
+                acceptedDeliveryEffect: AgentOralAcceptedEffect(
                     interpretedProposition: interpreted,
                     interpretedSemanticContent:
                         oralResult.interpretedSemanticContent,
@@ -1717,6 +1819,10 @@ public enum AgentSessionReplayer {
                     == AgentReplaySchema.oralTransmissionVersion
                 && checkpoint.schemaVersion
                     <= AgentCheckpointSchema.languageVersion)
+            || (manifest.schemaVersion
+                    == AgentReplaySchema.longDistanceCommunicationVersion
+                && checkpoint.schemaVersion
+                    <= AgentCheckpointSchema.oralTransmissionVersion)
         guard manifest.baseCheckpointID == checkpoint.checkpointID,
               manifest.baseCheckpointDigest == checkpoint.semanticDigest,
               manifest.simulationID == checkpoint.simulationID,
@@ -1851,6 +1957,44 @@ extension AgentSimulationSession {
                 renderingMode: renderingMode,
                 recordedEffect: acceptedEffect
             )
+        case let .setLongDistanceCommunicationEnabled(
+            enabled, configuration
+        ):
+            try candidate.setLongDistanceCommunicationEnabled(
+                enabled, configuration: configuration
+            )
+        case let .beginLongDistanceCommunication(
+            authorID, carrierID, destinationID, propositionID,
+            renderingMode, acceptedPickupEffect
+        ):
+            let transport =
+                try candidate.beginLongDistanceCommunication(
+                    authorID: authorID,
+                    carrierID: carrierID,
+                    destinationID: destinationID,
+                    propositionID: propositionID,
+                    renderingMode: renderingMode,
+                    recordedPickupEffect: acceptedPickupEffect
+                )
+            oralTransmissionResult = candidate.oralTransmissionState?
+                .transmissions.first {
+                    $0.transmissionID == transport.pickupTransmissionID
+                }
+        case let .deliverLongDistanceCommunication(
+            transportID, renderingMode, acceptedDeliveryEffect
+        ):
+            let transport =
+                try candidate.deliverLongDistanceCommunication(
+                    transportID: transportID,
+                    renderingMode: renderingMode,
+                    recordedDeliveryEffect: acceptedDeliveryEffect
+                )
+            oralTransmissionResult = transport.deliveryTransmissionID
+                .flatMap { transmissionID in
+                    candidate.oralTransmissionState?.transmissions.first {
+                        $0.transmissionID == transmissionID
+                    }
+                }
         case let .setPhysicalEnabled(enabled):
             try candidate.setPhysicalEnabled(enabled)
         case let .setCooperationEnabled(enabled):

@@ -583,6 +583,7 @@ extension AgentSimulationSession {
               origin.settlementID != destination.settlementID,
               scale.settlementMigrations.filter({ !$0.status.isTerminal }).count
                 < scale.configuration.maximumConcurrentSettlementMigrations,
+              !hasActiveLongDistanceCommunicationParticipant(agentID),
               registry.members[memberIndex].status != .migrating,
               origin.residentIDs.contains(agentID),
               !origin.inTransitIDs.contains(agentID) else {

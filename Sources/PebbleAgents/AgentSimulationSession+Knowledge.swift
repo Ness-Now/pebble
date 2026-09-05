@@ -7,6 +7,11 @@ extension AgentSimulationSession {
         _ enabled: Bool,
         configuration: AgentKnowledgeConfiguration = .live
     ) throws {
+        if !enabled, longDistanceCommunicationState != nil {
+            throw AgentSessionError.longDistanceCommunication(
+                .knowledgeRequired
+            )
+        }
         guard causalLedger.isEnabled else {
             throw AgentSessionError.knowledge(.causalLedgerRequired)
         }

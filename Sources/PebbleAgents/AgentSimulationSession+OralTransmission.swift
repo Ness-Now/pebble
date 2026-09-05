@@ -7,6 +7,9 @@ extension AgentSimulationSession {
         _ enabled: Bool,
         configuration: AgentOralConfiguration = .live
     ) throws {
+        if !enabled, longDistanceCommunicationState != nil {
+            throw AgentSessionError.longDistanceCommunication(.oralRequired)
+        }
         guard causalLedger.isEnabled else {
             throw AgentSessionError.oral(.causalLedgerRequired)
         }
@@ -455,6 +458,9 @@ extension AgentSimulationSession {
                 pinnedTransmissionIDs.insert(transmissionID)
             }
         }
+        pinnedTransmissionIDs.formUnion(
+            retainedLongDistanceCommunicationOralTransmissionIDs()
+        )
         let removable = oral.transmissions.filter {
             !pinnedTransmissionIDs.contains($0.transmissionID)
         }.sorted {

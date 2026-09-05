@@ -35,6 +35,7 @@ public enum AgentAutonomousActivityDomain: String, Codable, CaseIterable, Sendab
     case barter
     case contract
     case market
+    case communication
 
     public var skillDomain: AgentSkillDomain? {
         switch self {
@@ -47,7 +48,7 @@ public enum AgentAutonomousActivityDomain: String, Codable, CaseIterable, Sendab
         case .construction: return .construction
         case .materialHandling: return .materialHandling
         case .production: return .crafting
-        case .barter, .contract, .market: return nil
+        case .barter, .contract, .market, .communication: return nil
         case .teaching: return nil
         }
     }

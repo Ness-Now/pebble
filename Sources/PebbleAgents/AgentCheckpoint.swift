@@ -50,6 +50,7 @@ public enum AgentCheckpointSchema {
     public static let knowledgeVersion = 36
     public static let languageVersion = 37
     public static let oralTransmissionVersion = 38
+    public static let longDistanceCommunicationVersion = 39
 
     public static func familyValidationSemantics(
         for version: Int
@@ -69,7 +70,8 @@ public enum AgentCheckpointSchema {
             || version == populationScaleVersion
             || version == knowledgeVersion
             || version == languageVersion
-            || version == oralTransmissionVersion {
+            || version == oralTransmissionVersion
+            || version == longDistanceCommunicationVersion {
             return .strictDurableConsent
         }
         return nil
@@ -91,7 +93,8 @@ public enum AgentCheckpointSchema {
             || version == populationScaleVersion
             || version == knowledgeVersion
             || version == languageVersion
-            || version == oralTransmissionVersion {
+            || version == oralTransmissionVersion
+            || version == longDistanceCommunicationVersion {
             return .strictDurableSuccessorPlan
         }
         return nil
@@ -122,6 +125,7 @@ public enum AgentCheckpointSchema {
             || version == knowledgeVersion
             || version == languageVersion
             || version == oralTransmissionVersion
+            || version == longDistanceCommunicationVersion
     }
 }
 
@@ -288,6 +292,8 @@ public struct AgentSessionDurableState: Codable {
     public let knowledgeGraphState: AgentKnowledgeGraphState?
     public let languageState: AgentLanguageGraphState?
     public let oralTransmissionState: AgentOralTransmissionState?
+    public let longDistanceCommunicationState:
+        AgentLongDistanceCommunicationState?
     public let physicalEnabled: Bool
     public let physicalSignals: [AgentPhysicalSignal]
     public let physicalPerceptions: [AgentPhysicalPerception]
@@ -328,7 +334,10 @@ public struct AgentSessionDurableState: Codable {
     public let marketState: AgentMarketState?
 
     init(session: AgentSimulationSession) {
-        if session.oralTransmissionState != nil {
+        if session.longDistanceCommunicationState != nil {
+            schemaVersion =
+                AgentCheckpointSchema.longDistanceCommunicationVersion
+        } else if session.oralTransmissionState != nil {
             schemaVersion = AgentCheckpointSchema.oralTransmissionVersion
         } else if session.languageState != nil {
             schemaVersion = AgentCheckpointSchema.languageVersion
@@ -474,6 +483,8 @@ public struct AgentSessionDurableState: Codable {
         knowledgeGraphState = session.knowledgeGraphState
         languageState = session.languageState
         oralTransmissionState = session.oralTransmissionState
+        longDistanceCommunicationState =
+            session.longDistanceCommunicationState
         physicalEnabled = session.physicalEnabled
         physicalSignals = session.physicalSignals
         physicalPerceptions = session.physicalPerceptions
@@ -1284,6 +1295,8 @@ extension AgentSimulationSession {
         knowledgeGraphState = state.knowledgeGraphState
         languageState = state.languageState
         oralTransmissionState = state.oralTransmissionState
+        longDistanceCommunicationState =
+            state.longDistanceCommunicationState
         physicalEnabled = state.physicalEnabled
         physicalSignals = state.physicalSignals
         physicalPerceptions = state.physicalPerceptions
@@ -1342,9 +1355,11 @@ extension AgentSimulationSession {
         try validateContractStateIfEnabled()
         try validateMarketStateIfEnabled()
         try validateOralProvenanceBoundaryIfInitialized()
+        try validateLongDistanceCommunicationProvenanceBoundaryIfInitialized()
         try validateKnowledgeGraphStateIfEnabled()
         try validateLanguageStateIfInitialized()
         try validateOralTransmissionStateIfInitialized()
+        try validateLongDistanceCommunicationStateIfInitialized()
         if let settlementMetricsState {
             try validateSettlementMetricsState(settlementMetricsState)
         }
@@ -1378,10 +1393,12 @@ extension AgentSimulationSession {
             == AgentCheckpointSchema.languageVersion
         let oralSchema = state.schemaVersion
             == AgentCheckpointSchema.oralTransmissionVersion
+        let longDistanceCommunicationSchema = state.schemaVersion
+            == AgentCheckpointSchema.longDistanceCommunicationVersion
         let latestSchema = renewableSchema || independentReceiptSchema
             || productionSchema || barterSchema || contractSchema || marketSchema
             || populationScaleSchema || knowledgeSchema || languageSchema
-            || oralSchema
+            || oralSchema || longDistanceCommunicationSchema
         let estateSchema =
             state.schemaVersion == AgentCheckpointSchema.legacyEstateVersion
             || state.schemaVersion == AgentCheckpointSchema.estateVersion
@@ -1699,14 +1716,25 @@ extension AgentSimulationSession {
                 || (oralSchema
                     && state.knowledgeGraphState != nil
                     && state.languageState != nil
-                    && state.oralTransmissionState != nil) else {
+                    && state.oralTransmissionState != nil)
+                || (longDistanceCommunicationSchema
+                    && state.knowledgeGraphState != nil
+                    && state.languageState != nil
+                    && state.oralTransmissionState != nil
+                    && state.longDistanceCommunicationState != nil) else {
                 throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
             }
         }
-        guard (knowledgeSchema || languageSchema || oralSchema)
+        guard (knowledgeSchema || languageSchema || oralSchema
+                || longDistanceCommunicationSchema)
                 == (state.knowledgeGraphState != nil),
-              (languageSchema || oralSchema) == (state.languageState != nil),
-              oralSchema == (state.oralTransmissionState != nil) else {
+              (languageSchema || oralSchema
+                || longDistanceCommunicationSchema)
+                == (state.languageState != nil),
+              (oralSchema || longDistanceCommunicationSchema)
+                == (state.oralTransmissionState != nil),
+              longDistanceCommunicationSchema
+                == (state.longDistanceCommunicationState != nil) else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard state.clock.tick.rawValue >= 0,
@@ -2665,6 +2693,14 @@ extension AgentSimulationSession {
                     }
                 let settlementMigrationFailure = settlementMigrationRecord?
                     .failureEventID.flatMap(event)
+                let communicationTransportFailures =
+                    state.longDistanceCommunicationState?.transports
+                        .filter {
+                            $0.status == .failed
+                                && $0.failedAtTick == record.deathTick
+                                && ($0.carrierID == record.agentID
+                                    || $0.destinationID == record.agentID)
+                        }.compactMap(\.failureEventID) ?? []
                 let careExit = exit.causes.compactMap { causeID in
                     event(causeID)
                 }.filter {
@@ -2808,7 +2844,7 @@ extension AgentSimulationSession {
                                 ? [estateOpeningID].compactMap { $0 }
                                 : [])
                       ).sorted(),
-                      exit.causes == [
+                      exit.causes == ([
                           lethal.eventID,
                           resources.eventID,
                           commitments.eventID,
@@ -2817,7 +2853,8 @@ extension AgentSimulationSession {
                           careExit,
                           familyExit,
                           householdExit,
-                      ].compactMap({ $0 }).sorted(),
+                      ].compactMap({ $0 })
+                        + communicationTransportFailures).sorted(),
                       finalized.causes == [exit.eventID],
                       lethal.sequence < resources.sequence,
                       resources.sequence < commitments.sequence,

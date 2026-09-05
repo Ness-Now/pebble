@@ -503,7 +503,7 @@ private func oralSmokeReplayHostileProof(
     let future = oralSmokeJournal(
         from: journal.manifest,
         records: journal.records,
-        schemaVersion: AgentReplaySchema.oralTransmissionVersion + 1
+        schemaVersion: AgentReplaySchema.longDistanceCommunicationVersion + 1
     )
     let futureRejected: Bool
     do {
@@ -513,11 +513,11 @@ private func oralSmokeReplayHostileProof(
         futureRejected = false
     } catch AgentReplayError.unsupportedSchema(let version) {
         futureRejected = version
-            == AgentReplaySchema.oralTransmissionVersion + 1
+            == AgentReplaySchema.longDistanceCommunicationVersion + 1
     } catch {
         futureRejected = false
     }
-    check("future replay schema 39 is refused", futureRejected)
+    check("future replay schema 40 is refused", futureRejected)
 }
 
 func runPebbleAgentsOralTransmissionSmoke() {

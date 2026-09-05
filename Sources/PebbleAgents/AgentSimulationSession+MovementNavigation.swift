@@ -70,10 +70,13 @@ extension AgentSimulationSession {
         let settlementMigrationArrivalCapacity = populationRegistry?.scaleState?
             .settlementMigrations.contains { $0.status == .inTransit } == true
             ? 1 : 0
+        let communicationTransportEventCapacity =
+            longDistanceCommunicationMovementEventCapacity(for: outcomes)
         try prevalidateCausalAppend(
             count: outcomes.count + populationArrivalEventCapacity
                 + householdArrivalEventCapacity + settlementPulseCapacity
                 + settlementMigrationArrivalCapacity
+                + communicationTransportEventCapacity
         )
         let ids = sortedIds
         guard outcomes.count == ids.count else {
@@ -334,6 +337,9 @@ extension AgentSimulationSession {
         }
         try updatePopulationAfterMovementEvents()
         try updateSettlementMigrationsAfterMovementEvents()
+        try updateLongDistanceCommunicationAfterMovementEvents(
+            outcomes: outcomes
+        )
         _ = try applySettlementMetricsPulseIfDue()
     }
 

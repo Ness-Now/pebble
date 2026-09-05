@@ -505,6 +505,7 @@ extension PebbleAgentController {
         case .barter: return "barter"
         case .contract: return "contract"
         case .market: return "market"
+        case .communication: return "communication"
         }
     }
 }

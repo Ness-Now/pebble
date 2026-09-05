@@ -26,6 +26,8 @@ extension AgentSimulationSession {
         let originalKnowledge = knowledgeGraphState
         let originalLanguage = languageState
         let originalOral = oralTransmissionState
+        let originalLongDistanceCommunication =
+            longDistanceCommunicationState
         do {
             var attempts = 0
             let attemptLimit = causalLedger.events.count + count + 2
@@ -50,6 +52,11 @@ extension AgentSimulationSession {
                     continue
                 }
                 if try appendOralProvenanceBoundaryIfNeeded(
+                    beforeEvicting: leaving
+                ) {
+                    continue
+                }
+                if try appendLongDistanceCommunicationProvenanceBoundaryIfNeeded(
                     beforeEvicting: leaving
                 ) {
                     continue
@@ -85,6 +92,8 @@ extension AgentSimulationSession {
             knowledgeGraphState = originalKnowledge
             languageState = originalLanguage
             oralTransmissionState = originalOral
+            longDistanceCommunicationState =
+                originalLongDistanceCommunication
             throw error
         }
     }
@@ -108,6 +117,8 @@ extension AgentSimulationSession {
         let originalKnowledge = knowledgeGraphState
         let originalLanguage = languageState
         let originalOral = oralTransmissionState
+        let originalLongDistanceCommunication =
+            longDistanceCommunicationState
         do {
             try prepareDurableEvidenceForCausalAppend(
                 count: 1,
@@ -143,6 +154,8 @@ extension AgentSimulationSession {
             knowledgeGraphState = originalKnowledge
             languageState = originalLanguage
             oralTransmissionState = originalOral
+            longDistanceCommunicationState =
+                originalLongDistanceCommunication
             throw error
         }
     }
@@ -321,6 +334,80 @@ extension AgentSimulationSession {
         )
         oralTransmissionState = state
         try validateOralTransmissionStateIfInitialized()
+        return true
+    }
+
+    /// CIV-44 authenticates its exact bounded transport set before FIFO
+    /// compaction can remove either a current boundary or uncommitted causal
+    /// transport evidence.
+    private mutating func
+        appendLongDistanceCommunicationProvenanceBoundaryIfNeeded(
+            beforeEvicting leaving: [AgentCausalEvent]
+        ) throws -> Bool {
+        guard var state = longDistanceCommunicationState,
+              !leaving.isEmpty else { return false }
+        let hasHistory = state.totalStartedCount > 0
+            || state.evictedTransportCount > 0
+            || state.provenanceBoundary != nil
+        guard hasHistory else { return false }
+        let leavingIDs = Set(leaving.map(\.eventID))
+        let boundaryIsLeaving = state.provenanceBoundary.map {
+            leavingIDs.contains($0.eventID)
+        } ?? false
+        let evidenceIDs = state.transports.flatMap { record in
+            [record.dispatchEventID]
+                + record.progress.flatMap {
+                    [$0.movementEventID, $0.progressEventID]
+                }
+                + [
+                    record.arrivalEventID,
+                    record.deliveryEventID,
+                    record.failureEventID,
+                ].compactMap { $0 }
+        }
+        let uncommittedEvidenceIsLeaving =
+            state.provenanceBoundary == nil
+                && !Set(evidenceIDs).isDisjoint(with: leavingIDs)
+        guard boundaryIsLeaving || uncommittedEvidenceIsLeaving else {
+            return false
+        }
+        let digest =
+            longDistanceCommunicationProvenanceBoundaryDigest(state)
+        let causes: [AgentCausalEventID]
+        if let previous = state.provenanceBoundary?.eventID {
+            causes = [previous]
+        } else {
+            causes = Array(Set(evidenceIDs).intersection(leavingIDs))
+                .sorted()
+        }
+        guard let event = try causalLedger.append(
+            instant: simulationInstant,
+            kind: .communicationTransportProvenanceBoundary,
+            origin: .communicationTransportTransition,
+            actorID: nil,
+            subjectID: nil,
+            causes: Array(causes.prefix(4)),
+            payload: .communicationTransport(
+                transportID: "communication-transport-provenance",
+                authorID: nil,
+                carrierID: nil,
+                destinationID: nil,
+                status: "provenanceBoundary",
+                detail: digest
+            ),
+            summary: "communication transport provenance retention boundary"
+        ) else {
+            throw AgentSessionError.longDistanceCommunication(
+                .causalLedgerRequired
+            )
+        }
+        state.provenanceBoundary =
+            AgentCommunicationTransportProvenanceBoundary(
+                eventID: event.eventID,
+                digest: digest
+            )
+        longDistanceCommunicationState = state
+        try validateLongDistanceCommunicationStateIfInitialized()
         return true
     }
 

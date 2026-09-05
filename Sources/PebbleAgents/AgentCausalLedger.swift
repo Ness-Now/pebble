@@ -286,6 +286,13 @@ public enum AgentCausalEventKind: String, Codable, CaseIterable, Sendable {
     case oralTransmissionInitialized
     case oralTransmissionAccepted
     case oralProvenanceBoundary
+    case communicationTransportInitialized
+    case communicationTransportDispatched
+    case communicationTransportProgressed
+    case communicationTransportArrived
+    case communicationTransportDelivered
+    case communicationTransportFailed
+    case communicationTransportProvenanceBoundary
 }
 
 public enum AgentCausalOrigin: String, Codable, Sendable {
@@ -326,6 +333,7 @@ public enum AgentCausalOrigin: String, Codable, Sendable {
     case knowledgeTransition
     case languageTransition
     case oralTransition
+    case communicationTransportTransition
 }
 
 public enum AgentCausalPayload: Codable, Equatable, Sendable {
@@ -370,6 +378,14 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
         receivedPropositionID: String?,
         status: String,
         reason: String
+    )
+    case communicationTransport(
+        transportID: String,
+        authorID: String?,
+        carrierID: String?,
+        destinationID: String?,
+        status: String,
+        detail: String
     )
     case physicalSignal(
         signalID: String,
@@ -692,6 +708,12 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
             return "oral|\(transmissionID)|"
                 + "\(sourcePropositionID ?? "none")|"
                 + "\(receivedPropositionID ?? "none")|\(status)|\(reason)"
+        case let .communicationTransport(
+            transportID, authorID, carrierID, destinationID, status, detail
+        ):
+            return "communicationTransport|\(transportID)|"
+                + "\(authorID ?? "none")|\(carrierID ?? "none")|"
+                + "\(destinationID ?? "none")|\(status)|\(detail)"
         case let .physicalSignal(
             signalID, senderID, recipientID, factID, source, pointed, modalities
         ):
@@ -960,6 +982,14 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
              (.oralTransmissionInitialized, .oral),
              (.oralTransmissionAccepted, .oral),
              (.oralProvenanceBoundary, .oral),
+             (.communicationTransportInitialized, .communicationTransport),
+             (.communicationTransportDispatched, .communicationTransport),
+             (.communicationTransportProgressed, .communicationTransport),
+             (.communicationTransportArrived, .communicationTransport),
+             (.communicationTransportDelivered, .communicationTransport),
+             (.communicationTransportFailed, .communicationTransport),
+             (.communicationTransportProvenanceBoundary,
+                .communicationTransport),
              (.physicalSignalEmitted, .physicalSignal),
              (.physicalSignalPerceived, .physicalPerception),
              (.physicalSignalDecoded, .physicalPerception),

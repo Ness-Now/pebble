@@ -563,6 +563,14 @@ extension AgentSimulationSession {
                 $0.agentID == item.agentID && $0.status == .inTransit
             } ?? false) ? 1 : 0)
         }
+        let communicationTransportEventCount = lethal.reduce(0) {
+            count, item in
+            count + (longDistanceCommunicationState?.transports.filter {
+                !$0.status.isTerminal
+                    && ($0.carrierID == item.agentID
+                        || $0.destinationID == item.agentID)
+            }.count ?? 0)
+        }
         try prevalidateCausalAppend(
             count: lethal.count * (lifecycleState == nil ? 7 : 9)
                 + householdEventCount
@@ -570,6 +578,7 @@ extension AgentSimulationSession {
                 + terminalWorkEventCount
                 + familyEventCount
                 + settlementMigrationEventCount
+                + communicationTransportEventCount
         )
         let preDeathIDs = Set(statesById.values.map(\.agentID))
         guard lethal.map(\.agentID) == lethal.map(\.agentID).sorted(),
@@ -921,6 +930,11 @@ extension AgentSimulationSession {
                 causeEventID: commitmentsEvent.eventID,
                 at: mortalityTick
             )
+            let communicationTransportEventIDs =
+                try terminateLongDistanceCommunicationForDeath(
+                    agentID: item.agentID,
+                    deathCauseEventID: lethalEvent.eventID
+                )
             registry.members.remove(at: memberIndex)
             registry.removeMemberFromEverySettlement(item.agentID)
             if var scale = registry.scaleState {
@@ -934,7 +948,7 @@ extension AgentSimulationSession {
                 kind: .populationMemberExited,
                 actorID: item.agentID,
                 subjectID: item.agentID,
-                causes: [
+                causes: ([
                     lethalEvent.eventID,
                     resourcesEvent.eventID,
                     commitmentsEvent.eventID,
@@ -943,7 +957,8 @@ extension AgentSimulationSession {
                     careEventID,
                     familyEventID,
                     householdEventID,
-                ].compactMap { $0 }.sorted(),
+                ].compactMap { $0 }
+                    + communicationTransportEventIDs).sorted(),
                 payload: mortalityDeathPayload(
                     deathID: deathID,
                     state: state,
