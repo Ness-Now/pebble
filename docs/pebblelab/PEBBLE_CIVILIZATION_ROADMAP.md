@@ -135,10 +135,10 @@ CIV-38: OPTIONAL — NOT STARTED
 Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
-active CIV phase: none
+active CIV phase: CIV-44 — LOCAL REVIEW CANDIDATE — NOT PUBLISHED
 completed and published through: CIV-43 (CIV-38 and CIV-40 remain optional and unstarted)
-next eligible action: CIV-44 — Compositional and Long-Distance Communication V1 — NOT STARTED
-next authorized action: CIV-44
+next eligible action: CIV-44 independent review / user-owned publication
+next authorized action: CIV-44 review; CIV-45 remains unauthorized
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
@@ -216,7 +216,7 @@ CIV-42 final review archive SHA-256: 4ac1130589c2f369bce6a4fa9213edb2040be84c936
 CIV-43: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 CIV-43 published canonical product HEAD: 9690538a5cfd2a871750ffa839a404f7d19818d5
 CIV-43 final review archive SHA-256: 1c22063677e95430bb6f220a95c75e07e0512d532d0273accf7c442a9b6fd54a
-CIV-44: NOT STARTED — NEXT ELIGIBLE REQUIRED PHASE / NEXT AUTHORIZED ACTION
+CIV-44: LOCAL REVIEW CANDIDATE — NOT PUBLISHED
 V4-GATE-G-v1: PLANNED
 ```
 
@@ -636,9 +636,13 @@ SHA-256 `4ac1130589c2f369bce6a4fa9213edb2040be84c936ef5e2728077f95ac3751d`.
 SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical product HEAD
 `9690538a5cfd2a871750ffa839a404f7d19818d5`, with final review archive SHA-256
 `1c22063677e95430bb6f220a95c75e07e0512d532d0273accf7c442a9b6fd54a`.
-`CIV-44 — Compositional and Long-Distance Communication V1` is not started and
-is the next eligible required phase and authorized action. Gate G remains
-planned and unevaluated.
+`CIV-44 — Compositional and Long-Distance Communication V1` is a **LOCAL REVIEW
+CANDIDATE — NOT PUBLISHED** from exact canonical baseline
+`50d0f73fb9b2a29fd1c3aa80395d20df862a0048`, with local product/test proof
+commit `6d8a3a99f3c0a80333a3e5f8c97cfd32a44e9ae4`. Published progression remains
+through CIV-43; only CIV-44 review or user-owned publication is eligible next.
+CIV-45 remains unauthorized and Gate G remains planned and unevaluated. See
+[`CIV_44_PHASE_SUMMARY.md`](CIV_44_PHASE_SUMMARY.md).
 
 | Phase | Requirement | Outcome |
 | --- | --- | --- |
@@ -1469,7 +1473,7 @@ CIV-42 final review archive SHA-256: 4ac1130589c2f369bce6a4fa9213edb2040be84c936
 CIV-43 status: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 CIV-43 published canonical product HEAD: 9690538a5cfd2a871750ffa839a404f7d19818d5
 CIV-43 final review archive SHA-256: 1c22063677e95430bb6f220a95c75e07e0512d532d0273accf7c442a9b6fd54a
-CIV-44 status: NOT STARTED — NEXT ELIGIBLE REQUIRED PHASE / NEXT AUTHORIZED ACTION
+CIV-44 status: LOCAL REVIEW CANDIDATE — NOT PUBLISHED
 V4-GATE-G-v1 status: PLANNED
 ```
 
@@ -1715,8 +1719,10 @@ HEAD `c116b0780facc297dd3e0839ada505673e656189`. CIV-43 is **COMPLETE AND
 PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical product
 HEAD `9690538a5cfd2a871750ffa839a404f7d19818d5`; final review archive SHA-256 is
 `1c22063677e95430bb6f220a95c75e07e0512d532d0273accf7c442a9b6fd54a`.
-CIV-44 is not started and is the next eligible required phase and authorized
-action. Gate G remains planned and unevaluated.
+CIV-44 is a **LOCAL REVIEW CANDIDATE — NOT PUBLISHED** from exact baseline
+`50d0f73fb9b2a29fd1c3aa80395d20df862a0048`. Published progression remains
+through CIV-43; CIV-45 is not authorized. Gate G remains planned and
+unevaluated.
 
 ## Wave 5 — Knowledge, language and culture
 
@@ -1813,9 +1819,10 @@ exact empty-set authority against stale-boundary resurrection; schema 37 stays
 compatible and schema 39 is refused. It does not add culture, writing,
 long-distance transport, discourse or dialect infrastructure.
 
-Published progression is through `CIV-43`. `CIV-44` has not started and is the
-next eligible required phase and authorized action. Gate G has not been
-evaluated.
+Published progression is through `CIV-43`. `CIV-44` is a **LOCAL REVIEW
+CANDIDATE — NOT PUBLISHED**; only its independent review or user-owned
+publication is eligible next, and CIV-45 remains unauthorized. Gate G has not
+been evaluated.
 
 Observable slices:
 

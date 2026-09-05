@@ -1,0 +1,170 @@
+# CIV-44 — Compositional and Long-Distance Communication V1
+
+## Review status and baseline
+
+`CIV-44` is a **LOCAL REVIEW CANDIDATE — NOT PUBLISHED**. It was implemented
+from exact canonical baseline
+`50d0f73fb9b2a29fd1c3aa80395d20df862a0048` after fetching and verifying
+`origin/lab/pebblelab-v1`. The local branch is
+`codex/civ-44-compositional-long-distance-communication-v1`; its local
+product/test proof commit is
+`6d8a3a99f3c0a80333a3e5f8c97cfd32a44e9ae4`. No senior review, publication,
+push, or remote verification of this candidate has occurred.
+Published canonical history therefore remains complete only through CIV-43 at
+product HEAD `9690538a5cfd2a871750ffa839a404f7d19818d5`. Gate G remains
+**PLANNED / UNEVALUATED**; CIV-45 is not authorized by this candidate.
+
+## Authority and transition
+
+The V1 path is:
+
+```text
+author's accepted CIV-41 belief and CIV-42 semantic content
+-> local author-to-carrier CIV-43 pickup
+-> immutable transport commitment to that accepted pickup
+-> existing generic civilization-activity navigation
+-> accepted movement publications from the existing movement authority
+-> destination arrival inside the existing local radius
+-> explicit local carrier-to-destination CIV-43 handoff
+-> destination-attributed CIV-41 acquisition or revision
+```
+
+`AgentSimulationSession` remains the sole civilization aggregate root. CIV-41
+remains the only generic epistemic authority; CIV-42 remains the semantic,
+lexical, Language Pack, and rendering authority; CIV-43 remains the authority
+for each local oral hop and any deterministic distortion. Social remains the
+local reachability and trust authority. Movement/navigation remains the sole
+position-progression authority, Population Scale remains the migration and
+residence authority, and Mortality remains the participant-lifecycle authority.
+CIV-44 owns only a bounded causal transport record and its reconstruction
+checks. It creates neither World truth nor a competing belief, language,
+movement, migration, or global-message authority.
+
+## Content in transit
+
+The transport does not copy `AgentLanguageSemanticContent` into a new semantic
+store. Its immutable content commitment consists of the retained CIV-43 pickup
+transmission and receipt identities, the CIV-41 historical source authority,
+the carrier belief identity and exact pickup revision, the origin and carried
+semantic digests, and the carried proposition identity. The retained CIV-43
+row remains the authoritative semantic reconstruction source; CIV-44's digests
+and proposition ID only bind later progression and delivery to that row.
+
+This representation is an embodied messenger's causal commitment, not a
+letter, written artifact, book, archive, or independently readable message.
+It has no material or World representation and cannot be accessed as prose.
+`NO_RENDERING` is a fully supported path. Deterministic compositional rendering
+may accompany either local hop, but surface wording is never content,
+provenance, arrival, or truth authority.
+
+The carrier may receive a later same-content CIV-41 reaffirmation while
+travelling. Delivery accepts that later current revision only when the belief
+identity and proposition still match the pickup commitment, and the final
+CIV-43 transmitted digest and proposition must still exactly equal the carried
+digest and proposition. A carrier revision to different semantic content is
+refused atomically with no destination effect. Thus mutable current belief is
+not the transport payload and cannot silently rewrite what was picked up.
+
+## Causal transport and locality
+
+Dispatch requires a successful local CIV-43 author-to-carrier hop and a
+destination outside both author and carrier direct-social range. Dispatch
+creates no destination belief. The carrier receives an ordinary
+`.communication` civilization-activity candidate whose target is passed to the
+existing generic navigation path. CIV-44 never increments distance on a timer
+or private counter: one progress row is added only after an accepted
+`AgentMovementOutcome.status == .moved` publication, linked to the existing
+`.movement` causal event. Blocked, stationary, missing, rejected, or never
+published movement creates no progress and cannot produce arrival.
+
+Arrival is recorded only after accepted position authority places the carrier
+within one Manhattan cell of the destination's current position. Arrival alone
+still creates no destination belief. Delivery is a separate explicit local
+CIV-43 carrier-to-destination hop, and its CIV-41 result is accepted only after
+the arrival event and exact content checks succeed in the same candidate
+transaction.
+
+A direct remote CIV-43 call remains refused by Social locality. A direct CIV-42
+semantic-communication call may retain CIV-42/CIV-41 historical source
+authority under its published semantics, but creates no CIV-44 transport and
+no destination evidence, claim, understanding, belief, or revision. It cannot
+mark a transport arrived or delivered. There is therefore no free remote
+CIV-44 or epistemic-delivery path.
+
+The carrier's journey changes neither settlement residence nor migration
+membership. An active carrier or destination is refused admission to a
+settlement migration, and restore rejects active transports whose carrier or
+destination is migrating. No settlement-migration event is used as transport
+progress.
+
+## Lifecycle, bounds, persistence, and replay
+
+Active carrier death or destination death terminates the transport as failed
+inside Mortality's existing aggregate transition and never delivers. Author
+death after an accepted pickup does not erase the historical source: the
+carrier's live belief and retained CIV-41/CIV-43 authority keep the accepted
+message reconstructible without resurrecting the author. Restart retains these
+same outcomes.
+
+Durable state is bounded by configurable caps for retained transports, journey
+steps, transport distance, and the product of retained transports and steps.
+Only terminal transports compact for new admission; active authority is never
+evicted. The exact retained set and counters are authenticated by a causal
+provenance boundary. The boundary refreshes before causal FIFO eviction and
+must be the newest retained CIV-44 boundary. A formerly authentic older
+boundary cannot resurrect stale in-transit authority.
+
+Checkpoint and replay schema advance from published predecessor 38 to 39.
+Schema 38 remains byte-exactly restorable. Schema 39 stores accepted pickup and
+delivery effects, bounded progress linked to accepted movement events, terminal
+state, counters, and the current provenance boundary. Replay applies the
+recorded CIV-43 effects and verifies final digests; it never rerolls them. A
+re-signed substituted effect is rejected. Unsupported checkpoint and replay
+schema 40 are refused.
+
+## Focused and canonical evidence
+
+The optimized wrapper is:
+
+```bash
+scripts/verify-pebblelab-civ44.sh
+```
+
+Its final run passed the release build, a fresh-process schema-39 writer
+(`1/1`), a fresh-process reader (`3/3`), and `46/46` focused assertions. The
+assertions cover direct CIV-42/CIV-43 non-delivery, no pre-arrival effect,
+blocked and accepted movement, exact pickup commitment, same-content
+reaffirmation, different-content refusal, source/author/carrier/destination
+reconstruction, no-rendering, unchanged observation truth, restart while in
+transit and after delivery, schema-38 compatibility, schema-40 refusal,
+recorded-effect replay, hostile replay substitution, deterministic ordering,
+terminal-only compaction, causal FIFO boundary refresh, stale-boundary
+resurrection, journey-step failure, and author/carrier/destination mortality.
+
+The final canonical command was:
+
+```bash
+scripts/verify-pebblelab.sh
+```
+
+It passed all 35 repository steps. Its shared-runtime smoke suite reported
+`4523 passed, 0 failed`. Goldens were not regenerated.
+
+## Live and visual applicability
+
+This candidate adds deterministic PebbleAgents composition and headless proof.
+The only Pebble changes keep `.communication` rejected by the existing live
+physical executor and label it exhaustively in passive tracing. No PebbleCore
+World mechanic, live adapter, physical executor, renderer, or visible
+communication path was added or changed. The candidate therefore makes no live
+physical claim, and the live/visual campaign and Visual Game Smoke Policy V5
+workflow are not applicable.
+
+## Deliberate V1 limits
+
+V1 provides one embodied carrier and one final recipient, not relay networks,
+a postal system, universal discourse engine, general concept graph, or new
+pathfinder. It deliberately excludes writing, literacy, letters, books,
+manuscripts, archives, libraries, culture, norms, rituals, organizations,
+mandatory prose, an LLM provider, and Gate G evaluation. Those require later
+separate authorization.

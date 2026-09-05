@@ -88,6 +88,17 @@ SHA of the documentation commit that contains it.
   senior review passed, manual publication completed and the exact remote was
   verified. Final review archive SHA-256:
   `1c22063677e95430bb6f220a95c75e07e0512d532d0273accf7c442a9b6fd54a`.
+- `CIV-44 — Compositional and Long-Distance Communication V1`:
+  **LOCAL REVIEW CANDIDATE — NOT PUBLISHED** from exact canonical baseline
+  `50d0f73fb9b2a29fd1c3aa80395d20df862a0048`, with local product/test proof
+  commit `6d8a3a99f3c0a80333a3e5f8c97cfd32a44e9ae4`. It composes a local CIV-43
+  pickup, embodied carrier progression through accepted generic movement, and
+  a post-arrival local CIV-43 handoff. CIV-44 retains only bounded causal
+  transport commitments to CIV-41/42/43 authority. Focused release and fresh-
+  process proofs pass `46/46`; the canonical 35-step gate passes. No senior
+  review or publication has occurred. Published history remains through
+  CIV-43, CIV-45 remains unauthorized, and Gate G remains planned and
+  unevaluated. See [`CIV_44_PHASE_SUMMARY.md`](CIV_44_PHASE_SUMMARY.md).
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
 
 Gate F correction history:
@@ -282,9 +293,10 @@ Gate F correction history:
   `ca7e70799220b58c3b090716a2adf19e8abb2609d465b7139d25f7f59988af4c`.
 - Gate F is **ACQUIRED AND PUBLISHED — REMOTE VERIFIED** at acquisition
   canonical HEAD `14475f4ad5dde9e1063a830ba7e38390cfb4d045`.
-- The next eligible required phase and authorized action is `CIV-44 —
-  Compositional and Long-Distance Communication V1`; it is not started. Gate G
-  remains planned and unevaluated.
+- `CIV-44 — Compositional and Long-Distance Communication V1` is a **LOCAL
+  REVIEW CANDIDATE — NOT PUBLISHED**. Published canonical progression remains
+  complete through CIV-43; only review/publication of CIV-44 is eligible next.
+  CIV-45 is not authorized and Gate G remains planned and unevaluated.
 
 Published Gate E history:
 
@@ -681,10 +693,10 @@ the Gate E acquisition are now published and independently remote verified.
 ## Current program position
 
 ```text
-active CIV phase: none
+active CIV phase: CIV-44 — LOCAL REVIEW CANDIDATE — NOT PUBLISHED
 completed and published through: CIV-43 (CIV-38 and CIV-40 remain optional and unstarted)
-next eligible action: CIV-44 — Compositional and Long-Distance Communication V1 — NOT STARTED
-next authorized action: CIV-44
+next eligible action: CIV-44 independent review / user-owned publication
+next authorized action: CIV-44 review; CIV-45 remains unauthorized
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -763,7 +775,7 @@ CIV-42 final review archive SHA-256: 4ac1130589c2f369bce6a4fa9213edb2040be84c936
 CIV-43 status: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 CIV-43 published canonical product HEAD: 9690538a5cfd2a871750ffa839a404f7d19818d5
 CIV-43 final review archive SHA-256: 1c22063677e95430bb6f220a95c75e07e0512d532d0273accf7c442a9b6fd54a
-CIV-44 status: NOT STARTED — NEXT ELIGIBLE REQUIRED PHASE / NEXT AUTHORIZED ACTION
+CIV-44 status: LOCAL REVIEW CANDIDATE — NOT PUBLISHED
 V4-GATE-G-v1 status: PLANNED
 roadmap generation: V4
 ```
@@ -1194,9 +1206,11 @@ review archive SHA-256
 SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical product HEAD
 `9690538a5cfd2a871750ffa839a404f7d19818d5`, with final review archive SHA-256
 `1c22063677e95430bb6f220a95c75e07e0512d532d0273accf7c442a9b6fd54a`.
-`CIV-44 — Compositional and Long-Distance Communication V1` is not started and
-is the next eligible required phase and authorized action. Gate G remains
-planned and unevaluated.
+`CIV-44 — Compositional and Long-Distance Communication V1` is a **LOCAL REVIEW
+CANDIDATE — NOT PUBLISHED** from exact baseline
+`50d0f73fb9b2a29fd1c3aa80395d20df862a0048`. Published progression remains
+through CIV-43; CIV-45 is not authorized. Gate G remains planned and
+unevaluated.
 `CIV-38` remains **OPTIONAL — NOT STARTED** and is not a prerequisite.
 `CIV-40` remains **OPTIONAL TOOLING — NOT STARTED**. Currency is not a Gate E
 or CIV-39 prerequisite.
