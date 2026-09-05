@@ -2,14 +2,26 @@
 
 ## Review status and baseline
 
-`CIV-44` is a **LOCAL REVIEW CANDIDATE — NOT PUBLISHED**. It was implemented
+`CIV-44` is a **SENIOR REVIEW CORRECTION 01 — LOCAL RE-REVIEW CANDIDATE —
+NOT PUBLISHED**. It was implemented
 from exact canonical baseline
 `50d0f73fb9b2a29fd1c3aa80395d20df862a0048` after fetching and verifying
 `origin/lab/pebblelab-v1`. The local branch is
 `codex/civ-44-compositional-long-distance-communication-v1`; its local
 product/test proof commit is
-`6d8a3a99f3c0a80333a3e5f8c97cfd32a44e9ae4`. No senior review, publication,
-push, or remote verification of this candidate has occurred.
+`6d8a3a99f3c0a80333a3e5f8c97cfd32a44e9ae4`; its initial review-candidate
+HEAD was `2c6abeddf547d545148bd879b824d08d4ed3415d`.
+
+Senior review of that candidate returned **CORRECTION REQUIRED** after finding
+that CIV-41 terminal-belief compaction could legitimately remove a CIV-43 hop
+still referenced by retained terminal CIV-44 history. The executable
+reproduction on the uncorrected candidate reported `54 passed, 5 failed` and
+also exposed destination-only accepted movement leaving CIV-44 `inTransit`.
+Correction 01 composes both cases with the existing authorities and preserves
+the original commits without amend or rewrite. Its product/test correction
+commit is `8536ae464052d2737f1d34ffde5f08c650613c46`. No publication, push,
+senior re-approval, or remote verification of the corrected candidate has
+occurred.
 Published canonical history therefore remains complete only through CIV-43 at
 product HEAD `9690538a5cfd2a871750ffa839a404f7d19818d5`. Gate G remains
 **PLANNED / UNEVALUATED**; CIV-45 is not authorized by this candidate.
@@ -36,9 +48,10 @@ for each local oral hop and any deterministic distortion. Social remains the
 local reachability and trust authority. Movement/navigation remains the sole
 position-progression authority, Population Scale remains the migration and
 residence authority, and Mortality remains the participant-lifecycle authority.
-CIV-44 owns only a bounded causal transport record and its reconstruction
-checks. It creates neither World truth nor a competing belief, language,
-movement, migration, or global-message authority.
+CIV-44 owns only a bounded causal transport record, coordinated terminal
+reconciliation, and its reconstruction checks. It creates neither World truth
+nor a competing belief, language, movement, migration, compaction, or
+global-message authority.
 
 ## Content in transit
 
@@ -78,10 +91,14 @@ or private counter: one progress row is added only after an accepted
 published movement creates no progress and cannot produce arrival.
 
 Arrival is recorded only after accepted position authority places the carrier
-within one Manhattan cell of the destination's current position. Arrival alone
-still creates no destination belief. Delivery is a separate explicit local
-CIV-43 carrier-to-destination hop, and its CIV-41 result is accepted only after
-the arrival event and exact content checks succeed in the same candidate
+and destination within one Manhattan cell. An accepted carrier movement adds a
+bounded journey step; an accepted destination movement may satisfy arrival but
+does not pretend the carrier travelled. In both cases arrival cites an existing
+`.movement` world-outcome event. A stationary outcome or attempted abstract
+position rewrite is rejected and creates neither arrival nor delivery. Arrival
+alone still creates no destination belief. Delivery is a separate explicit
+local CIV-43 carrier-to-destination hop, and its CIV-41 result is accepted only
+after the arrival event and exact content checks succeed in the same candidate
 transaction.
 
 A direct remote CIV-43 call remains refused by Social locality. A direct CIV-42
@@ -106,6 +123,16 @@ carrier's live belief and retained CIV-41/CIV-43 authority keep the accepted
 message reconstructible without resurrecting the author. Restart retains these
 same outcomes.
 
+When CIV-41 later evicts a departed carrier or destination belief under its own
+terminal-history bound, CIV-43 remains free to remove the oral hop that depended
+exclusively on that belief. Before CIV-43 publishes that removal, CIV-44
+deterministically removes only terminal transports referencing the affected
+hop, increments its existing eviction counter, and commits the exact remaining
+set through its existing provenance boundary in the same aggregate-root
+transaction. Active transports are rejected from this path rather than
+compacted. Mortality is never refused to preserve CIV-44, and CIV-44 copies no
+terminal belief or semantic object.
+
 Durable state is bounded by configurable caps for retained transports, journey
 steps, transport distance, and the product of retained transports and steps.
 Only terminal transports compact for new admission; active authority is never
@@ -122,6 +149,14 @@ recorded CIV-43 effects and verifies final digests; it never rerolls them. A
 re-signed substituted effect is rejected. Unsupported checkpoint and replay
 schema 40 are refused.
 
+Correction 01 adds no durable field and does not advance schema 39. Checkpoint
+validation continues to require exact retained transport references. If a
+failed terminal transport has been legitimately reconciled away, its retained
+population-exit cause is accepted only from the exact causal failure payload,
+a newer authentic CIV-44 boundary, and the bounded failed/evicted counters.
+This preserves mortality history without accepting an orphaned CIV-41, CIV-42,
+CIV-43, or CIV-44 state.
+
 ## Focused and canonical evidence
 
 The optimized wrapper is:
@@ -130,16 +165,18 @@ The optimized wrapper is:
 scripts/verify-pebblelab-civ44.sh
 ```
 
-Its final run passed the release build, a fresh-process schema-39 writer
-(`1/1`), a fresh-process reader (`3/3`), and `46/46` focused assertions. The
-assertions cover direct CIV-42/CIV-43 non-delivery, no pre-arrival effect,
+Its Correction 01 run passed the release build, a fresh-process schema-39
+writer (`2/2`), a fresh-process reader (`5/5`), and `60/60` focused assertions.
+The assertions cover direct CIV-42/CIV-43 non-delivery, no pre-arrival effect,
 blocked and accepted movement, exact pickup commitment, same-content
 reaffirmation, different-content refusal, source/author/carrier/destination
 reconstruction, no-rendering, unchanged observation truth, restart while in
 transit and after delivery, schema-38 compatibility, schema-40 refusal,
 recorded-effect replay, hostile replay substitution, deterministic ordering,
-terminal-only compaction, causal FIFO boundary refresh, stale-boundary
-resurrection, journey-step failure, and author/carrier/destination mortality.
+terminal-only compaction, coordinated pickup/delivery terminal eviction,
+causal FIFO boundary refresh, stale-boundary resurrection, journey-step
+failure, accepted destination movement, rejected abstract position rewrite,
+and author/carrier/destination mortality.
 
 The final canonical command was:
 
@@ -147,8 +184,8 @@ The final canonical command was:
 scripts/verify-pebblelab.sh
 ```
 
-It passed all 35 repository steps. Its shared-runtime smoke suite reported
-`4523 passed, 0 failed`. Goldens were not regenerated.
+The Correction 01 run passed all 35 repository steps. Its shared-runtime smoke
+suite reported `4537 passed, 0 failed`. Goldens were not regenerated.
 
 ## Live and visual applicability
 
