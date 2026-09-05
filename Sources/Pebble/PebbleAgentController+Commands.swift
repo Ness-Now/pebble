@@ -158,6 +158,8 @@ extension PebbleAgentController {
                 world: world,
                 player: player
             )
+        case "writing":
+            return handleWriting(Array(arguments.dropFirst()), world: world, player: player)
         case "rights":
             return handleMaterialRights(Array(arguments.dropFirst()), world: world)
         case "observer":

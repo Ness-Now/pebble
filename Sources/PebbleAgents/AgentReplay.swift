@@ -40,6 +40,7 @@ public enum AgentReplaySchema {
     public static let languageVersion = 37
     public static let oralTransmissionVersion = 38
     public static let longDistanceCommunicationVersion = 39
+    public static let writingVersion = 40
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -67,6 +68,7 @@ public enum AgentReplaySchema {
             || version == languageVersion
             || version == oralTransmissionVersion
             || version == longDistanceCommunicationVersion
+            || version == writingVersion
     }
 }
 
@@ -215,6 +217,10 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case languageCommunication
     case oralFeature
     case oralTransmission
+    case writingLiteracy
+    case writingFeature
+    case writingInscription
+    case writingReading
     case longDistanceCommunicationFeature
     case longDistanceCommunicationDispatch
     case longDistanceCommunicationDelivery
@@ -263,6 +269,11 @@ public enum AgentReplayOperation: Codable {
         renderingMode: AgentLanguageRenderingMode,
         acceptedEffect: AgentOralAcceptedEffect?
     )
+    case seedWritingEducationalPrior(ownerID: AgentID)
+    case practiceWritingNotation(artifactID: String, teacherID: AgentID, learnerID: AgentID, teacherReceipt: AgentWritingPhysicalReceipt, learnerReceipt: AgentWritingPhysicalReceipt)
+    case setWritingEnabled(enabled: Bool, worldID: String, configuration: AgentWritingConfiguration)
+    case acceptWriting(plan: AgentWritingPlan, receipt: AgentWritingPhysicalReceipt)
+    case readWriting(artifactID: String, readerID: AgentID, receipt: AgentWritingPhysicalReceipt)
     case setLongDistanceCommunicationEnabled(
         Bool,
         configuration: AgentLongDistanceCommunicationConfiguration
@@ -560,6 +571,10 @@ public enum AgentReplayOperation: Codable {
             return .languageCommunication
         case .setOralTransmissionEnabled: return .oralFeature
         case .transmitOralClaim: return .oralTransmission
+        case .seedWritingEducationalPrior, .practiceWritingNotation: return .writingLiteracy
+        case .setWritingEnabled: return .writingFeature
+        case .acceptWriting: return .writingInscription
+        case .readWriting: return .writingReading
         case .setLongDistanceCommunicationEnabled:
             return .longDistanceCommunicationFeature
         case .beginLongDistanceCommunication:
@@ -1121,7 +1136,9 @@ public struct AgentReplayRecorder {
         baseCheckpointDigest = checkpoint.semanticDigest
         simulationID = checkpoint.simulationID
         initialTick = checkpoint.tick.rawValue
-        schemaVersion = checkpoint.schemaVersion
+        schemaVersion = checkpoint.schemaVersion == AgentCheckpointSchema.writingVersion
+            ? AgentReplaySchema.writingVersion
+            : checkpoint.schemaVersion
             == AgentCheckpointSchema.longDistanceCommunicationVersion
             ? AgentReplaySchema.longDistanceCommunicationVersion
             : checkpoint.schemaVersion
@@ -1475,6 +1492,13 @@ public struct AgentReplayRecorder {
             }
             schemaVersion = AgentReplaySchema.oralTransmissionVersion
         }
+        if case let .setWritingEnabled(enabled, _, _) = operation, enabled,
+           schemaVersion < AgentReplaySchema.writingVersion {
+            guard records.isEmpty else {
+                throw AgentReplayError.invalidJournal("writing activation must be first v40 operation")
+            }
+            schemaVersion = AgentReplaySchema.writingVersion
+        }
         if case let .setLongDistanceCommunicationEnabled(
             enabled, _
         ) = operation,
@@ -1731,6 +1755,15 @@ public enum AgentSessionReplayer {
         guard AgentReplaySchema.supports(manifest.schemaVersion) else {
             throw AgentReplayError.unsupportedSchema(manifest.schemaVersion)
         }
+        if manifest.schemaVersion == AgentReplaySchema.writingVersion,
+           checkpoint.schemaVersion < AgentCheckpointSchema.writingVersion {
+            // A version-40 envelope cannot relabel a pre-writing journal.
+            // The recorder promotes only at the first, explicit activation.
+            guard case .setWritingEnabled(enabled: true, worldID: _, configuration: _)?
+                = journal.records.first?.operation else {
+                throw AgentReplayError.unsupportedSchema(manifest.schemaVersion)
+            }
+        }
         let compatibleSchema = manifest.schemaVersion == checkpoint.schemaVersion
             || (manifest.schemaVersion == AgentReplaySchema.settlementMetricsVersion
                 && checkpoint.schemaVersion == AgentCheckpointSchema.populationVersion)
@@ -1819,6 +1852,8 @@ public enum AgentSessionReplayer {
                     == AgentReplaySchema.oralTransmissionVersion
                 && checkpoint.schemaVersion
                     <= AgentCheckpointSchema.languageVersion)
+            || (manifest.schemaVersion == AgentReplaySchema.writingVersion
+                && checkpoint.schemaVersion <= AgentCheckpointSchema.longDistanceCommunicationVersion)
             || (manifest.schemaVersion
                     == AgentReplaySchema.longDistanceCommunicationVersion
                 && checkpoint.schemaVersion
@@ -1957,6 +1992,16 @@ extension AgentSimulationSession {
                 renderingMode: renderingMode,
                 recordedEffect: acceptedEffect
             )
+        case let .seedWritingEducationalPrior(ownerID):
+            try candidate.seedWritingEducationalPrior(for: ownerID)
+        case let .practiceWritingNotation(artifactID, teacherID, learnerID, teacherReceipt, learnerReceipt):
+            try candidate.practiceWritingNotation(artifactID: artifactID, teacherID: teacherID, learnerID: learnerID, teacherReceipt: teacherReceipt, learnerReceipt: learnerReceipt)
+        case let .setWritingEnabled(enabled, worldID, configuration):
+            try candidate.setWritingEnabled(enabled, worldID: worldID, configuration: configuration)
+        case let .acceptWriting(plan, receipt):
+            _ = try candidate.acceptWriting(plan, receipt: receipt)
+        case let .readWriting(artifactID, readerID, receipt):
+            _ = try candidate.readWriting(artifactID: artifactID, readerID: readerID, receipt: receipt)
         case let .setLongDistanceCommunicationEnabled(
             enabled, configuration
         ):

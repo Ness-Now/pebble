@@ -5,6 +5,14 @@ set -euo pipefail
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 ROOT_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd -P)
 RUNBOOK="$ROOT_DIR/docs/pebblelab-3d-live-prototype.md"
+# CIV-45 uses its bounded two-process material-writing campaign.
+if [ "${1:-}" = "--writing" ] || [ "${2:-}" = "--writing" ]; then
+    case "$*" in
+        --writing) exec "$SCRIPT_DIR/verify-pebblelab-civ45-live.sh" ;;
+        "--writing --dry-run"|"--dry-run --writing") exec "$SCRIPT_DIR/verify-pebblelab-civ45-live.sh" --dry-run ;;
+        *) exit 2 ;;
+    esac
+fi
 MODE="survival"
 WORLD_SEED="12345"
 
@@ -26,6 +34,7 @@ PebbleLab-Disposable-* name. It does not claim to validate pixels; inspect the
 retained trace and capture using $RUNBOOK.
 
 Options:
+  --writing Run CIV-45 two-process physical inscriptions and local literacy.
   --dry-run  Print the environment, commands, and manual steps; do not launch.
   --survival Run the Phase J hunger, consumption, and rest proof (default).
   --economy  Run the preserved Phase I closed-economy proof.

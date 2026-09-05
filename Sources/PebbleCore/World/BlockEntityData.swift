@@ -28,7 +28,14 @@ public final class BlockEntityData: Codable {
     public var brewTime: Int?
     public var fuel: Int?
     // sign
-    public var lines: [String]?
+    public var lines: [String]? {
+        didSet {
+            // Normal text editing ends this immutable inscription's identity.
+            // Retyping the old text later cannot revive the old identity.
+            if lines != oldValue { signInscription = nil }
+        }
+    }
+    public internal(set) var signInscription: SignInscription?
     public var glowing: Bool?
     public var color: String?
     // spawner

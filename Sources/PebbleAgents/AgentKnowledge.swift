@@ -260,6 +260,11 @@ public struct AgentKnowledgeEvidence: Codable, Equatable, Sendable {
     public let acquiredAtTick: Int
 }
 
+public struct AgentKnowledgeWrittenSource: Codable, Equatable, Sendable {
+    public let artifactID: String
+    public let readingID: String
+}
+
 public struct AgentKnowledgeSourceClaim: Codable, Equatable, Sendable {
     public let claimID: AgentKnowledgeClaimID
     public let propositionID: AgentKnowledgePropositionID
@@ -275,6 +280,7 @@ public struct AgentKnowledgeSourceClaim: Codable, Equatable, Sendable {
         AgentKnowledgeHistoricalBeliefAuthorityID?
     public let languageCommunicationID: AgentLanguageCommunicationID?
     public let oralTransmissionID: AgentOralTransmissionID?
+    public internal(set) var writtenSource: AgentKnowledgeWrittenSource? = nil
     public let sentEventID: AgentCausalEventID
     public let receivedEventID: AgentCausalEventID
     public let acquisitionEventID: AgentCausalEventID
@@ -389,6 +395,7 @@ public enum AgentKnowledgeDepartedBeliefBasis:
         receivedEventID: AgentCausalEventID,
         acquisitionEventID: AgentCausalEventID
     )
+    case writtenSourceClaim(claim: AgentKnowledgeSourceClaim)
     case oralSourceClaim(
         claimID: AgentKnowledgeClaimID,
         sourceAgentID: AgentID,
@@ -417,6 +424,8 @@ public enum AgentKnowledgeDepartedBeliefBasis:
                 + "\(sourceEvidenceAcquisitionEventID.rawValue):"
                 + "\(socialMessageID.rawValue):\(sentEventID.rawValue):"
                 + "\(receivedEventID.rawValue):\(acquisitionEventID.rawValue)"
+        case let .writtenSourceClaim(claim):
+            return "written-claim:" + writingDigest(claim)
         case let .oralSourceClaim(
             claimID, sourceAgentID, sourceBeliefAuthorityID,
             languageCommunicationID, oralTransmissionID, sentEventID,

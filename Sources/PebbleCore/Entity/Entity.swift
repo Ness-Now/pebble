@@ -11,6 +11,25 @@ private var nextEntityId = 1
 public func resetEntityIds(_ start: Int) { nextEntityId = start }
 public func peekNextEntityId() -> Int { nextEntityId }
 
+/// Actor-neutral use of the existing World-persisted physical identity
+/// namespace. The legacy save field remains `nextEntityId`; no entity is
+/// created for an inscription. Reservation is checked before any mutation.
+public enum PhysicalIdentityError: Error { case unavailable, rollbackUnverified }
+
+func claimPhysicalIdentity(_ expected: Int) throws {
+    guard expected > 0, expected < Int.max, nextEntityId == expected else {
+        throw PhysicalIdentityError.unavailable
+    }
+    nextEntityId += 1
+}
+
+func rollbackPhysicalIdentity(_ claimed: Int) throws {
+    guard claimed > 0, claimed < Int.max, nextEntityId == claimed + 1 else {
+        throw PhysicalIdentityError.rollbackUnverified
+    }
+    nextEntityId = claimed
+}
+
 /// generic per-entity data bag (variant, color, tame owner id, …) — closed
 /// field set surveyed from the baseline `data: Record<string, any>` usage.
 public struct EntityData: Codable, Equatable {

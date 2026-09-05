@@ -1264,6 +1264,7 @@ final class SignScreen: Screen {
             game.world.setBlockEntity(sign!)
         }
         sign!.lines = lines
+        game.world.getChunkAt(pos.x, pos.z)?.modified = true
     }
 }
 

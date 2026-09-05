@@ -8,6 +8,9 @@ extension AgentSimulationSession {
         configuration: AgentLanguageConfiguration = .live,
         pack: AgentLanguagePack = .frenchReference
     ) throws {
+        if !enabled, writingState != nil {
+            throw AgentWritingError.unavailable("language dependency")
+        }
         if !enabled, longDistanceCommunicationState != nil {
             throw AgentSessionError.longDistanceCommunication(
                 .languageRequired
@@ -644,7 +647,7 @@ extension AgentSimulationSession {
         )
     }
 
-    private func languageLexicalUses(
+    func languageLexicalUses(
         for agentID: AgentID,
         content: AgentLanguageSemanticContent,
         state: AgentLanguageGraphState
@@ -678,7 +681,7 @@ extension AgentSimulationSession {
         }.sorted { $0.role < $1.role }
     }
 
-    private func languageDeterministicText(
+    func languageDeterministicText(
         content: AgentLanguageSemanticContent,
         lexicalUses: [AgentLanguageLexicalUse]
     ) -> String {
@@ -692,7 +695,7 @@ extension AgentSimulationSession {
             + "\(byRole[.referentKind] ?? "") \(referentSurface)"
     }
 
-    private func languageAssociationID(
+    func languageAssociationID(
         ownerID: AgentID,
         packID: AgentLanguagePackID,
         senseID: AgentLanguageSenseID,
@@ -786,7 +789,7 @@ extension AgentSimulationSession {
         }
     }
 
-    private mutating func requiredLanguageEvent(
+    mutating func requiredLanguageEvent(
         kind: AgentCausalEventKind,
         actorID: AgentID?,
         subjectID: AgentID?,

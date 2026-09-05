@@ -286,6 +286,13 @@ public enum AgentCausalEventKind: String, Codable, CaseIterable, Sendable {
     case oralTransmissionInitialized
     case oralTransmissionAccepted
     case oralProvenanceBoundary
+    case languageWrittenFormsUsed
+    case writingInitialized
+    case writingLiteracyAcquired
+    case writingInscribed
+    case writingAccessed
+    case writingRead
+    case writingProvenanceBoundary
     case communicationTransportInitialized
     case communicationTransportDispatched
     case communicationTransportProgressed
@@ -334,6 +341,7 @@ public enum AgentCausalOrigin: String, Codable, Sendable {
     case languageTransition
     case oralTransition
     case communicationTransportTransition
+    case writingTransition
 }
 
 public enum AgentCausalPayload: Codable, Equatable, Sendable {
@@ -379,6 +387,7 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
         status: String,
         reason: String
     )
+    case writing(recordID: String, detail: String)
     case communicationTransport(
         transportID: String,
         authorID: String?,
@@ -708,6 +717,8 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
             return "oral|\(transmissionID)|"
                 + "\(sourcePropositionID ?? "none")|"
                 + "\(receivedPropositionID ?? "none")|\(status)|\(reason)"
+        case let .writing(recordID, detail):
+            return "writing|\(recordID)|\(detail)"
         case let .communicationTransport(
             transportID, authorID, carrierID, destinationID, status, detail
         ):
@@ -982,6 +993,13 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
              (.oralTransmissionInitialized, .oral),
              (.oralTransmissionAccepted, .oral),
              (.oralProvenanceBoundary, .oral),
+             (.languageWrittenFormsUsed, .language),
+             (.writingInitialized, .writing),
+             (.writingLiteracyAcquired, .writing),
+             (.writingInscribed, .writing),
+             (.writingAccessed, .writing),
+             (.writingRead, .writing),
+             (.writingProvenanceBoundary, .writing),
              (.communicationTransportInitialized, .communicationTransport),
              (.communicationTransportDispatched, .communicationTransport),
              (.communicationTransportProgressed, .communicationTransport),

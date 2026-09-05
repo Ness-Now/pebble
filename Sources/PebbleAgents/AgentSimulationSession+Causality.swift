@@ -25,6 +25,7 @@ extension AgentSimulationSession {
         let originalAgriculture = agricultureState
         let originalKnowledge = knowledgeGraphState
         let originalLanguage = languageState
+        let originalWriting = writingState
         let originalOral = oralTransmissionState
         let originalLongDistanceCommunication =
             longDistanceCommunicationState
@@ -61,6 +62,9 @@ extension AgentSimulationSession {
                 ) {
                     continue
                 }
+                if try appendWritingBoundaryIfNeeded(beforeEvicting: leaving) {
+                    continue
+                }
                 if try appendAgricultureRetentionBoundaryIfNeeded(
                     beforeEvicting: leaving,
                     testFault: testFault
@@ -91,6 +95,7 @@ extension AgentSimulationSession {
             agricultureState = originalAgriculture
             knowledgeGraphState = originalKnowledge
             languageState = originalLanguage
+            writingState = originalWriting
             oralTransmissionState = originalOral
             longDistanceCommunicationState =
                 originalLongDistanceCommunication
@@ -116,6 +121,7 @@ extension AgentSimulationSession {
         let originalAgriculture = agricultureState
         let originalKnowledge = knowledgeGraphState
         let originalLanguage = languageState
+        let originalWriting = writingState
         let originalOral = oralTransmissionState
         let originalLongDistanceCommunication =
             longDistanceCommunicationState
@@ -153,11 +159,29 @@ extension AgentSimulationSession {
             agricultureState = originalAgriculture
             knowledgeGraphState = originalKnowledge
             languageState = originalLanguage
+            writingState = originalWriting
             oralTransmissionState = originalOral
             longDistanceCommunicationState =
                 originalLongDistanceCommunication
             throw error
         }
+    }
+
+    private mutating func appendWritingBoundaryIfNeeded(
+        beforeEvicting leaving: [AgentCausalEvent]
+    ) throws -> Bool {
+        guard let state = writingState, let boundary = state.boundary,
+              leaving.contains(where: { $0.eventID == boundary.eventID }) else { return false }
+        let digest = writingBoundaryDigest(state)
+        guard let event = try causalLedger.append(
+            instant: simulationInstant, kind: .writingProvenanceBoundary,
+            origin: .writingTransition, actorID: nil, subjectID: nil,
+            causes: [boundary.eventID],
+            payload: .writing(recordID: "writing", detail: digest),
+            summary: "writing provenance retention boundary"
+        ) else { throw AgentWritingError.unavailable("causal writing retention") }
+        writingState!.boundary = AgentWritingBoundary(eventID: event.eventID, digest: digest)
+        return true
     }
 
     /// CIV-41's bounded historical authority set always has one exact retained

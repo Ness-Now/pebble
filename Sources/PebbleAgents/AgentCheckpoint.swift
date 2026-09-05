@@ -51,6 +51,7 @@ public enum AgentCheckpointSchema {
     public static let languageVersion = 37
     public static let oralTransmissionVersion = 38
     public static let longDistanceCommunicationVersion = 39
+    public static let writingVersion = 40
 
     public static func familyValidationSemantics(
         for version: Int
@@ -71,7 +72,8 @@ public enum AgentCheckpointSchema {
             || version == knowledgeVersion
             || version == languageVersion
             || version == oralTransmissionVersion
-            || version == longDistanceCommunicationVersion {
+            || version == longDistanceCommunicationVersion
+            || version == writingVersion {
             return .strictDurableConsent
         }
         return nil
@@ -94,7 +96,8 @@ public enum AgentCheckpointSchema {
             || version == knowledgeVersion
             || version == languageVersion
             || version == oralTransmissionVersion
-            || version == longDistanceCommunicationVersion {
+            || version == longDistanceCommunicationVersion
+            || version == writingVersion {
             return .strictDurableSuccessorPlan
         }
         return nil
@@ -126,6 +129,7 @@ public enum AgentCheckpointSchema {
             || version == languageVersion
             || version == oralTransmissionVersion
             || version == longDistanceCommunicationVersion
+            || version == writingVersion
     }
 }
 
@@ -292,6 +296,7 @@ public struct AgentSessionDurableState: Codable {
     public let knowledgeGraphState: AgentKnowledgeGraphState?
     public let languageState: AgentLanguageGraphState?
     public let oralTransmissionState: AgentOralTransmissionState?
+    public let writingState: AgentWritingState?
     public let longDistanceCommunicationState:
         AgentLongDistanceCommunicationState?
     public let physicalEnabled: Bool
@@ -334,7 +339,9 @@ public struct AgentSessionDurableState: Codable {
     public let marketState: AgentMarketState?
 
     init(session: AgentSimulationSession) {
-        if session.longDistanceCommunicationState != nil {
+        if session.writingState != nil {
+            schemaVersion = AgentCheckpointSchema.writingVersion
+        } else if session.longDistanceCommunicationState != nil {
             schemaVersion =
                 AgentCheckpointSchema.longDistanceCommunicationVersion
         } else if session.oralTransmissionState != nil {
@@ -483,6 +490,7 @@ public struct AgentSessionDurableState: Codable {
         knowledgeGraphState = session.knowledgeGraphState
         languageState = session.languageState
         oralTransmissionState = session.oralTransmissionState
+        writingState = session.writingState
         longDistanceCommunicationState =
             session.longDistanceCommunicationState
         physicalEnabled = session.physicalEnabled
@@ -1295,6 +1303,7 @@ extension AgentSimulationSession {
         knowledgeGraphState = state.knowledgeGraphState
         languageState = state.languageState
         oralTransmissionState = state.oralTransmissionState
+        writingState = state.writingState
         longDistanceCommunicationState =
             state.longDistanceCommunicationState
         physicalEnabled = state.physicalEnabled
@@ -1355,11 +1364,13 @@ extension AgentSimulationSession {
         try validateContractStateIfEnabled()
         try validateMarketStateIfEnabled()
         try validateOralProvenanceBoundaryIfInitialized()
+        try validateWritingBoundary()
         try validateLongDistanceCommunicationProvenanceBoundaryIfInitialized()
         try validateKnowledgeGraphStateIfEnabled()
         try validateLanguageStateIfInitialized()
         try validateOralTransmissionStateIfInitialized()
         try validateLongDistanceCommunicationStateIfInitialized()
+        try validateWritingState()
         if let settlementMetricsState {
             try validateSettlementMetricsState(settlementMetricsState)
         }
@@ -1395,7 +1406,8 @@ extension AgentSimulationSession {
             == AgentCheckpointSchema.oralTransmissionVersion
         let longDistanceCommunicationSchema = state.schemaVersion
             == AgentCheckpointSchema.longDistanceCommunicationVersion
-        let latestSchema = renewableSchema || independentReceiptSchema
+        let writingSchema = state.schemaVersion == AgentCheckpointSchema.writingVersion
+        let latestSchema = writingSchema || renewableSchema || independentReceiptSchema
             || productionSchema || barterSchema || contractSchema || marketSchema
             || populationScaleSchema || knowledgeSchema || languageSchema
             || oralSchema || longDistanceCommunicationSchema
@@ -1717,6 +1729,8 @@ extension AgentSimulationSession {
                     && state.knowledgeGraphState != nil
                     && state.languageState != nil
                     && state.oralTransmissionState != nil)
+                || (writingSchema && state.knowledgeGraphState != nil
+                    && state.languageState != nil && state.writingState != nil)
                 || (longDistanceCommunicationSchema
                     && state.knowledgeGraphState != nil
                     && state.languageState != nil
@@ -1725,16 +1739,19 @@ extension AgentSimulationSession {
                 throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
             }
         }
-        guard (knowledgeSchema || languageSchema || oralSchema
+        guard (writingSchema || knowledgeSchema || languageSchema || oralSchema
                 || longDistanceCommunicationSchema)
                 == (state.knowledgeGraphState != nil),
-              (languageSchema || oralSchema
+              (writingSchema || languageSchema || oralSchema
                 || longDistanceCommunicationSchema)
                 == (state.languageState != nil),
-              (oralSchema || longDistanceCommunicationSchema)
+              (oralSchema || longDistanceCommunicationSchema
+                || (writingSchema && state.oralTransmissionState != nil))
                 == (state.oralTransmissionState != nil),
-              longDistanceCommunicationSchema
-                == (state.longDistanceCommunicationState != nil) else {
+              (longDistanceCommunicationSchema
+                || (writingSchema && state.longDistanceCommunicationState != nil))
+                == (state.longDistanceCommunicationState != nil),
+              writingSchema == (state.writingState != nil) else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard state.clock.tick.rawValue >= 0,

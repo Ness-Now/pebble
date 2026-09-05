@@ -42,6 +42,7 @@ public struct AgentSimulationSession {
     public internal(set) var knowledgeGraphState: AgentKnowledgeGraphState?
     public internal(set) var languageState: AgentLanguageGraphState?
     public internal(set) var oralTransmissionState: AgentOralTransmissionState?
+    public internal(set) var writingState: AgentWritingState?
     public internal(set) var longDistanceCommunicationState:
         AgentLongDistanceCommunicationState?
     public internal(set) var physicalEnabled: Bool
@@ -147,6 +148,7 @@ public struct AgentSimulationSession {
         knowledgeGraphState = nil
         languageState = nil
         oralTransmissionState = nil
+        writingState = nil
         longDistanceCommunicationState = nil
         physicalEnabled = false
         physicalSignals = []

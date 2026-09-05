@@ -18,6 +18,9 @@ extension AgentSimulationSession {
         if enabled, !socialEnabled {
             throw AgentSessionError.knowledge(.socialRequired)
         }
+        if !enabled, writingState != nil {
+            throw AgentWritingError.unavailable("knowledge dependency")
+        }
         if !enabled, oralTransmissionState != nil {
             throw AgentSessionError.oral(.knowledgeRequired)
         }
@@ -112,6 +115,10 @@ extension AgentSimulationSession {
                 stances: rows.map(\.stance)
             )
         }
+        let writtenClaimRows: String = claims.map { (claim: AgentKnowledgeSourceClaim) -> String in
+                "c|\(claim.claimID.rawValue)|\(claim.sourceAgentID.rawValue)|\(claim.recipientID.rawValue)|\(claim.propositionID.rawValue)|\(claim.sourceEvidenceID?.rawValue ?? "none")|\(claim.socialMessageID?.rawValue ?? "none")|\(claim.sourceBeliefAuthorityID?.rawValue ?? "none")|\(claim.languageCommunicationID?.rawValue ?? "none")|\(claim.oralTransmissionID?.rawValue ?? "none")|\(claim.receivedEventID.rawValue)" + (claim.writtenSource.map { "|written:" + writingDigest($0) } ?? "")
+            }.joined(separator: ";")
+
         var canonicalRows = [
             "enabled=\(state.enabled ? 1 : 0)",
             propositions.map {
@@ -120,9 +127,7 @@ extension AgentSimulationSession {
             evidence.map {
                 "e|\($0.evidenceID.rawValue)|\($0.observerID.rawValue)|\($0.propositionID.rawValue)|\($0.authority.rawValue)|\($0.authorityEventID.rawValue)|\($0.acquisitionEventID.rawValue)"
             }.joined(separator: ";"),
-            claims.map {
-                "c|\($0.claimID.rawValue)|\($0.sourceAgentID.rawValue)|\($0.recipientID.rawValue)|\($0.propositionID.rawValue)|\($0.sourceEvidenceID?.rawValue ?? "none")|\($0.socialMessageID?.rawValue ?? "none")|\($0.sourceBeliefAuthorityID?.rawValue ?? "none")|\($0.languageCommunicationID?.rawValue ?? "none")|\($0.oralTransmissionID?.rawValue ?? "none")|\($0.receivedEventID.rawValue)"
-            }.joined(separator: ";"),
+            writtenClaimRows,
             understandings.map {
                 "u|\($0.understandingID.rawValue)|\($0.ownerID.rawValue)|\($0.propositionID.rawValue)|\($0.basis.canonicalText)|\($0.interpretation.rawValue)|\($0.formedEventID.rawValue)"
             }.joined(separator: ";"),
@@ -361,6 +366,12 @@ extension AgentSimulationSession {
         state.propositions.append(proposition)
     }
 
+    func knowledgeUnderstandingID(ownerID: AgentID, propositionID: AgentKnowledgePropositionID,
+        basis: AgentKnowledgeUnderstandingBasis) -> AgentKnowledgeUnderstandingID {
+        AgentKnowledgeUnderstandingID(rawValue: "understanding-" + AgentKnowledgeDigest.make(
+            "\(ownerID.rawValue)|\(propositionID.rawValue)|\(basis.canonicalText)"))!
+    }
+
     mutating func formKnowledgeUnderstanding(
         ownerID: AgentID,
         proposition: AgentKnowledgeProposition,
@@ -369,11 +380,8 @@ extension AgentSimulationSession {
         cause: AgentCausalEventID,
         state: inout AgentKnowledgeGraphState
     ) throws -> AgentKnowledgeUnderstanding {
-        let understandingID = AgentKnowledgeUnderstandingID(
-            rawValue: "understanding-" + AgentKnowledgeDigest.make(
-                "\(ownerID.rawValue)|\(proposition.propositionID.rawValue)|\(basis.canonicalText)"
-            )
-        )!
+        let understandingID = knowledgeUnderstandingID(ownerID: ownerID,
+            propositionID: proposition.propositionID, basis: basis)
         if let existing = state.understandings.first(where: {
             $0.understandingID == understandingID
         }) { return existing }
@@ -575,6 +583,8 @@ extension AgentSimulationSession {
         result.formUnion(
             oralTransmissionState?.transmissions.map(\.sourceAuthorityID) ?? []
         )
+        result.formUnion(writingState?.artifacts.map(\.sourceAuthorityID) ?? [])
+        result.formUnion(writingState?.readings.map(\.recipientAuthorityID) ?? [])
         for departed in knowledgeGraphState?.departedBeliefs ?? [] {
             if case let .oralSourceClaim(
                 _, _, authorityID, _, _, _, _, _
@@ -678,7 +688,12 @@ extension AgentSimulationSession {
                         "terminal source claim \(belief.beliefID.rawValue)"
                     ))
                 }
-                if let sourceEvidenceID = claim.sourceEvidenceID,
+                if claim.writtenSource != nil {
+                    guard validWrittenKnowledgeClaim(claim) else {
+                        throw AgentWritingError.invalidState("terminal written claim")
+                    }
+                    historicalBasis = .writtenSourceClaim(claim: claim)
+                } else if let sourceEvidenceID = claim.sourceEvidenceID,
                    let socialMessageID = claim.socialMessageID,
                    let sourceEvidence = evidenceByID[sourceEvidenceID] {
                     historicalBasis = .sourceClaim(
@@ -1316,6 +1331,8 @@ extension AgentSimulationSession {
                     sourceAuthorityEventID, sourceAcquisitionEventID,
                     sentEventID, receivedEventID, acquisitionEventID,
                 ]
+            case let .writtenSourceClaim(claim):
+                basis = [claim.sentEventID, claim.receivedEventID, claim.acquisitionEventID]
             case let .oralSourceClaim(
                 _, _, _, _, _, sentEventID, receivedEventID,
                 acquisitionEventID
@@ -1371,7 +1388,9 @@ extension AgentSimulationSession {
                   record.sentEventID.sequence < record.receivedEventID.sequence,
                   record.receivedEventID.sequence
                     < record.acquisitionEventID.sequence else { return false }
-            if let sourceEvidenceID = record.sourceEvidenceID,
+            if record.writtenSource != nil {
+                guard validWrittenKnowledgeClaim(record) else { return false }
+            } else if let sourceEvidenceID = record.sourceEvidenceID,
                let socialMessageID = record.socialMessageID {
                 guard record.sourceBeliefAuthorityID == nil,
                       record.languageCommunicationID == nil,
@@ -1651,6 +1670,15 @@ extension AgentSimulationSession {
                             == record.proposition.propositionID.rawValue else {
                         return false
                     }
+                }
+            case let .writtenSourceClaim(claim):
+                guard validWrittenKnowledgeClaim(claim),
+                      claim.recipientID == record.ownerID,
+                      claim.propositionID == record.proposition.propositionID,
+                      claim.sentEventID.sequence < claim.receivedEventID.sequence,
+                      claim.receivedEventID.sequence < claim.acquisitionEventID.sequence,
+                      claim.acquisitionEventID.sequence < record.understandingFormedEventID.sequence else {
+                    return false
                 }
             case let .oralSourceClaim(
                 claimID, sourceAgentID, sourceBeliefAuthorityID,
