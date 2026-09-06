@@ -144,11 +144,16 @@ for the compact status. In particular:
 - `CIV-45 — Writing and Literacy V1` is a **LOCAL REVIEW CANDIDATE — NOT
   PUBLISHED** from exact published baseline
   `9a2cfec10b4a0d1b6a5d2f46aac8f3c312ddbb0e`; local product commit
-  `ac38675d88d4b709183e7b26f92a0a45b0e928c1` passed focused debug/release,
-  canonical repository and two-seed/two-process live World proof. Published
+  `ac38675d88d4b709183e7b26f92a0a45b0e928c1` and initial candidate
+  `89cffa47f1e9635e0f44a0fac246e92739501911` remain intact. Senior review
+  returned **CORRECTION REQUIRED** for resident-chunk-only material identity.
+  Correction 01 product/test commit
+  `b68a6aeff106f5a3791279d5bd62b8b2916c9a4c` establishes World-global
+  persistent uniqueness and passed focused Debug/Optimized, the canonical
+  repository gate and the two-seed/two-process live campaign. Published
   progression remains complete through CIV-44. The next authorized action is
-  CIV-45 senior review; CIV-46 and CIV-47 remain unstarted and unauthorized.
-  Gate G remains planned and unevaluated. See
+  CIV-45 independent senior re-review; CIV-46 and CIV-47 remain unstarted and
+  unauthorized. Gate G remains planned and unevaluated. See
   [`CIV_45_PHASE_SUMMARY.md`](docs/pebblelab/CIV_45_PHASE_SUMMARY.md).
 
 Historical Gate B `FAIL` reports and the closure-candidate report are preserved
