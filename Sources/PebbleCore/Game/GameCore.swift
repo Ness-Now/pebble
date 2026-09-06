@@ -391,6 +391,7 @@ public final class GameCore {
         if inWorld { saveAndFlush(synchronous: true) }
         inWorld = false
         worldRec = nil
+        signInscriptionIdentityCatalog = nil
         dragonSpawned = false
         deathScreenShown = false
         worlds.removeAll()
@@ -639,13 +640,11 @@ public final class GameCore {
         nextPhysicalIdentity: Int,
         inscriptionCatalog: SignInscriptionIdentityCatalog?
     ) {
-        if db.putChunks(records) {
-            inscriptionCatalog?.replacePersistentChunkRecords(
-                records,
-                nextPhysicalIdentity: nextPhysicalIdentity
-            )
-            return
-        }
+        if db.putChunks(
+            records,
+            nextPhysicalIdentity: nextPhysicalIdentity,
+            inscriptionCatalog: inscriptionCatalog
+        ) { return }
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             print("[saves] chunk batch failed — re-marking \(records.count) chunks dirty for retry")
@@ -1103,6 +1102,7 @@ public final class GameCore {
                 let record = chunkRecord(rec.id, w.dim, w, c)
                 savedChunkKeys.insert(record.key)
                 pendingChunkSaves[record.key] = record
+                signInscriptionIdentityCatalog?.stageCurrentChunkRecord(record)
             }
         }
         // entities standing in the chunk were captured in the record; drop the live ones

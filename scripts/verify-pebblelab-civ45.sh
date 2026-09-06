@@ -6,6 +6,9 @@ cd "$ROOT_DIR"
 BUILD_CONFIGURATION=${PEBBLELAB_CIV45_BUILD_CONFIGURATION:-release}
 case "$BUILD_CONFIGURATION" in debug|release) ;; *) exit 2 ;; esac
 swift build -c "$BUILD_CONFIGURATION" --product pebsmoke
+PEBBLELAB_CIV45_BUILD_CONFIGURATION="$BUILD_CONFIGURATION" \
+    PEBBLELAB_CIV45_C02_SKIP_BUILD=1 \
+    scripts/verify-pebblelab-civ45-correction02.sh
 TMP_BASE=${TMPDIR:-/tmp}
 TMP_BASE=${TMP_BASE%/}
 PERSISTENCE_HOME=$(mktemp -d "$TMP_BASE/pebblelab-civ45-persistent-identity.XXXXXX")

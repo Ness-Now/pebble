@@ -11,6 +11,7 @@
 // regenerate terrain from seed and re-attach saved entities.
 
 import Foundation
+import CryptoKit
 import SQLite3
 
 public struct DimState: Codable {
@@ -112,8 +113,37 @@ private func sanitizeJSON(_ v: Any) -> Any {
 
 private let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
+public struct SignInscriptionIndexLoadMetrics: Equatable {
+    public let indexedChunkRows: Int
+    public let migratedChunkPayloads: Int
+    public let decodedVoxelCells: Int
+
+    public init(indexedChunkRows: Int = 0, migratedChunkPayloads: Int = 0,
+                decodedVoxelCells: Int = 0) {
+        self.indexedChunkRows = indexedChunkRows
+        self.migratedChunkPayloads = migratedChunkPayloads
+        self.decodedVoxelCells = decodedVoxelCells
+    }
+}
+
+public enum SignInscriptionPersistencePhase: String {
+    case prepared
+    case transactionBegan
+    case beforeCommit
+    case committedBeforeAuthority
+    case authorityAdvanced
+    case failed
+}
+
 public final class SaveDB {
     private var db: OpaquePointer?
+    private let databaseLock = NSRecursiveLock()
+    private var signInscriptionIndexSchemaReady = false
+    public private(set) var lastSignInscriptionIndexLoadMetrics = SignInscriptionIndexLoadMetrics()
+
+    /// Default-nil deterministic fault/concurrency seam used by pebsmoke.
+    /// Returning false asks the current chunk transaction to roll back.
+    public var testingSignInscriptionPersistenceHook: ((SignInscriptionPersistencePhase) -> Bool)?
 
     public init() {
         let url = vcSupportDir().appendingPathComponent("pebble.db")
@@ -131,7 +161,10 @@ public final class SaveDB {
         exec("""
         CREATE TABLE IF NOT EXISTS chunks(
             world TEXT NOT NULL, dim INTEGER NOT NULL, cx INTEGER NOT NULL, cz INTEGER NOT NULL,
-            data BLOB NOT NULL, PRIMARY KEY(world, dim, cx, cz)) WITHOUT ROWID
+            data BLOB NOT NULL,
+            inscriptionIndexVersion INTEGER NOT NULL DEFAULT 0,
+            inscriptionIndexDigest TEXT NOT NULL DEFAULT '',
+            PRIMARY KEY(world, dim, cx, cz)) WITHOUT ROWID
         """)
         exec("CREATE TABLE IF NOT EXISTS player(world TEXT PRIMARY KEY, json TEXT NOT NULL)")
         exec("CREATE TABLE IF NOT EXISTS advancements(world TEXT PRIMARY KEY, json TEXT NOT NULL)")
@@ -140,6 +173,7 @@ public final class SaveDB {
             world TEXT NOT NULL, kind TEXT NOT NULL, receiptID TEXT NOT NULL,
             data BLOB NOT NULL, PRIMARY KEY(world, kind, receiptID)) WITHOUT ROWID
         """)
+        signInscriptionIndexSchemaReady = ensureSignInscriptionIndexSchema()
         migrateLegacySaves()
     }
 
@@ -148,6 +182,8 @@ public final class SaveDB {
     // ---- tiny statement helpers -------------------------------------------------
     @discardableResult
     private func exec(_ sql: String) -> Bool {
+        databaseLock.lock()
+        defer { databaseLock.unlock() }
         if sqlite3_exec(db, sql, nil, nil, nil) != SQLITE_OK {
             print("[saves] exec failed: \(String(cString: sqlite3_errmsg(db))) — \(sql.prefix(60))")
             return false
@@ -161,6 +197,8 @@ public final class SaveDB {
     @discardableResult
     private func run(_ sql: String, bind: ((OpaquePointer) -> Void)? = nil,
                      row: ((OpaquePointer) -> Void)? = nil) -> Bool {
+        databaseLock.lock()
+        defer { databaseLock.unlock() }
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK, let stmt else {
             print("[saves] prepare failed: \(String(cString: sqlite3_errmsg(db))) — \(sql.prefix(60))")
@@ -228,9 +266,12 @@ public final class SaveDB {
         })
     }
     public func deleteWorld(_ id: String) {
+        databaseLock.lock()
+        defer { databaseLock.unlock() }
         exec("BEGIN")
         for table in [
             "worlds", "chunks", "player", "advancements", "world_receipts",
+            "sign_inscription_chunks",
         ] {
             let col = table == "worlds" ? "id" : "world"
             run("DELETE FROM \(table) WHERE \(col)=?", bind: { self.bindText($0, 1, id) })
@@ -367,83 +408,397 @@ public final class SaveDB {
         return rec
     }
 
-    /// Builds the physical identity view from every chunk row, not from the
-    /// currently resident chunk subset. Any unreadable row or malformed
-    /// inscription makes CIV-45 access fail closed without preventing the
-    /// rest of the World from loading under its existing compatibility policy.
+    /// Loads only compact inscription metadata during normal World entry.
+    /// Pre-index saves are migrated once by decoding just their version-zero
+    /// chunk rows; subsequent opens never decode voxel payloads for CIV-45.
     public func loadSignInscriptionIdentityCatalog(
         worldID: String,
         nextPhysicalIdentity: Int
     ) -> SignInscriptionIdentityCatalog {
         let catalog = SignInscriptionIdentityCatalog(worldID: worldID)
-        let ok = run(
-            "SELECT dim,cx,cz,data FROM chunks WHERE world=? ORDER BY dim,cx,cz",
+        databaseLock.lock()
+        defer { databaseLock.unlock() }
+        lastSignInscriptionIndexLoadMetrics = SignInscriptionIndexLoadMetrics()
+        guard signInscriptionIndexSchemaReady,
+              migrateLegacySignInscriptionRows(worldID: worldID) else {
+            catalog.markPersistentSourceInvalid()
+            return catalog
+        }
+
+        var states: [SignInscriptionPersistentChunkKey: SignInscriptionPersistentChunkState] = [:]
+        var indexedRows = 0
+        var sourceValid = true
+        let loaded = run(
+            """
+            SELECT c.dim,c.cx,c.cz,c.inscriptionIndexVersion,c.inscriptionIndexDigest,
+                   i.chunkVersion,i.digest,i.data
+            FROM chunks c
+            LEFT JOIN sign_inscription_chunks i
+              ON i.world=c.world AND i.dim=c.dim AND i.cx=c.cx AND i.cz=c.cz
+            WHERE c.world=? ORDER BY c.dim,c.cx,c.cz
+            """,
             bind: { self.bindText($0, 1, worldID) },
             row: { statement in
-                let dimension = Int(sqlite3_column_int(statement, 0))
-                let cx = Int(sqlite3_column_int(statement, 1))
-                let cz = Int(sqlite3_column_int(statement, 2))
-                guard let data = self.columnData(statement, 3),
-                      let decoded = self.decodeChunk(
-                        data,
-                        key: self.chunkKey(worldID, dimension, cx, cz),
-                        worldId: worldID,
-                        dim: dimension,
-                        cx: cx,
-                        cz: cz
-                      ) else {
-                    catalog.markPersistentChunkInvalid(
-                        dimension: dimension,
-                        cx: cx,
-                        cz: cz
-                    )
-                    return
-                }
-                guard decoded.blockEntitiesValid else {
-                    catalog.markPersistentChunkInvalid(
-                        dimension: dimension,
-                        cx: cx,
-                        cz: cz
-                    )
-                    return
-                }
-                catalog.replacePersistentChunkRecord(
-                    decoded.record,
-                    nextPhysicalIdentity: nextPhysicalIdentity
+                indexedRows += 1
+                let key = SignInscriptionPersistentChunkKey(
+                    dimension: Int(sqlite3_column_int(statement, 0)),
+                    cx: Int(sqlite3_column_int(statement, 1)),
+                    cz: Int(sqlite3_column_int(statement, 2))
                 )
+                let chunkVersion = Int64(sqlite3_column_int64(statement, 3))
+                let chunkDigest = self.columnText(statement, 4)
+                guard sqlite3_column_type(statement, 5) != SQLITE_NULL,
+                      let chunkDigest,
+                      chunkVersion > 0,
+                      Int64(sqlite3_column_int64(statement, 5)) == chunkVersion,
+                      let indexDigest = self.columnText(statement, 6),
+                      indexDigest == chunkDigest,
+                      let data = self.columnData(statement, 7),
+                      self.signInscriptionIndexDigest(data) == chunkDigest,
+                      let envelope = try? JSONDecoder().decode(
+                        SignInscriptionIndexEnvelope.self,
+                        from: data
+                      ),
+                      let state = SignInscriptionIdentityCatalog.state(
+                        from: envelope,
+                        key: key,
+                        nextPhysicalIdentity: nextPhysicalIdentity
+                      ) else {
+                    sourceValid = false
+                    states[key] = SignInscriptionPersistentChunkState(valid: false, claims: [:])
+                    return
+                }
+                states[key] = state
             }
         )
-        if !ok { catalog.markPersistentSourceInvalid() }
+        var extraRows = 0
+        let extrasLoaded = run(
+            """
+            SELECT COUNT(*) FROM sign_inscription_chunks i
+            LEFT JOIN chunks c
+              ON c.world=i.world AND c.dim=i.dim AND c.cx=i.cx AND c.cz=i.cz
+            WHERE i.world=? AND c.world IS NULL
+            """,
+            bind: { self.bindText($0, 1, worldID) },
+            row: { extraRows = Int(sqlite3_column_int64($0, 0)) }
+        )
+        sourceValid = sourceValid && loaded && extrasLoaded && extraRows == 0
+        lastSignInscriptionIndexLoadMetrics = SignInscriptionIndexLoadMetrics(
+            indexedChunkRows: indexedRows,
+            migratedChunkPayloads: lastSignInscriptionIndexLoadMetrics.migratedChunkPayloads,
+            decodedVoxelCells: lastSignInscriptionIndexLoadMetrics.decodedVoxelCells
+        )
+        catalog.replacePersistentStates(states)
+        if !sourceValid { catalog.markPersistentSourceInvalid() }
         return catalog
     }
 
-    /// batch write — one transaction, mirrors the once-per-second save tick.
-    /// false = the batch did not land (rolled back); callers must re-mark the
-    /// chunks dirty or the edits are silently lost
+    /// Chunk payload and compact inscription index commit in one SQLite
+    /// transaction. When a live catalogue is supplied, its lock spans commit
+    /// and one atomic batch advancement, making reads linearizable.
     @discardableResult
-    public func putChunks(_ records: [ChunkRecord]) -> Bool {
+    public func putChunks(
+        _ records: [ChunkRecord],
+        nextPhysicalIdentity: Int? = nil,
+        inscriptionCatalog: SignInscriptionIdentityCatalog? = nil
+    ) -> Bool {
         guard !records.isEmpty else { return true }
-        guard exec("BEGIN") else { return false }
-        var ok = true
-        for r in records {
-            guard let data = encodeChunk(r) else { ok = false; continue }
-            let wrote = run("INSERT OR REPLACE INTO chunks(world, dim, cx, cz, data) VALUES(?,?,?,?,?)", bind: { stmt in
-                self.bindText(stmt, 1, r.worldId)
-                sqlite3_bind_int(stmt, 2, Int32(r.dim))
-                sqlite3_bind_int(stmt, 3, Int32(r.cx))
-                sqlite3_bind_int(stmt, 4, Int32(r.cz))
-                data.withUnsafeBytes { raw in
-                    _ = sqlite3_bind_blob(stmt, 5, raw.baseAddress, Int32(raw.count), SQLITE_TRANSIENT)
+        guard signInscriptionIndexSchemaReady else { return false }
+        var prepared: [(record: ChunkRecord, chunkData: Data,
+                        state: SignInscriptionPersistentChunkState,
+                        indexData: Data, digest: String)] = []
+        for record in records {
+            guard inscriptionCatalog == nil || inscriptionCatalog?.worldID == record.worldId,
+                  let chunkData = encodeChunk(record) else { return false }
+            let state = SignInscriptionIdentityCatalog.scan(
+                record,
+                expectedWorldID: record.worldId
+            )
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.sortedKeys]
+            guard let indexData = try? encoder.encode(
+                SignInscriptionIdentityCatalog.envelope(for: state)
+            ) else { return false }
+            prepared.append((record, chunkData, state, indexData, signInscriptionIndexDigest(indexData)))
+        }
+        if let nextPhysicalIdentity {
+            guard nextPhysicalIdentity > 0,
+                  prepared.allSatisfy({ item in
+                    item.state.claims.keys.allSatisfy { $0 < nextPhysicalIdentity }
+                  }) else { return false }
+        }
+        guard testingSignInscriptionPersistenceHook?(.prepared) ?? true else {
+            _ = testingSignInscriptionPersistenceHook?(.failed)
+            return false
+        }
+
+        let commit = {
+            self.databaseLock.lock()
+            defer { self.databaseLock.unlock() }
+            guard self.exec("BEGIN IMMEDIATE") else {
+                _ = self.testingSignInscriptionPersistenceHook?(.failed)
+                return false
+            }
+            guard self.testingSignInscriptionPersistenceHook?(.transactionBegan) ?? true else {
+                _ = self.exec("ROLLBACK")
+                _ = self.testingSignInscriptionPersistenceHook?(.failed)
+                return false
+            }
+            if let nextPhysicalIdentity {
+                for worldID in Set(prepared.map(\.record.worldId)).sorted() {
+                    guard self.advanceWorldPhysicalIdentity(
+                        worldID: worldID,
+                        toAtLeast: nextPhysicalIdentity
+                    ) else {
+                        _ = self.exec("ROLLBACK")
+                        _ = self.testingSignInscriptionPersistenceHook?(.failed)
+                        return false
+                    }
                 }
-            })
-            ok = ok && wrote
+            }
+            var committedStates: [SignInscriptionPersistentChunkKey: SignInscriptionPersistentChunkState] = [:]
+            var ok = true
+            for item in prepared {
+                let record = item.record
+                var oldVersion: Int64 = 0
+                let readVersion = self.run(
+                    "SELECT inscriptionIndexVersion FROM chunks WHERE world=? AND dim=? AND cx=? AND cz=?",
+                    bind: { statement in
+                        self.bindText(statement, 1, record.worldId)
+                        sqlite3_bind_int(statement, 2, Int32(record.dim))
+                        sqlite3_bind_int(statement, 3, Int32(record.cx))
+                        sqlite3_bind_int(statement, 4, Int32(record.cz))
+                    },
+                    row: { oldVersion = sqlite3_column_int64($0, 0) }
+                )
+                guard readVersion, oldVersion < Int64.max else { ok = false; break }
+                let version = max(1, oldVersion + 1)
+                let wroteChunk = self.run(
+                    """
+                    INSERT INTO chunks(world,dim,cx,cz,data,inscriptionIndexVersion,inscriptionIndexDigest)
+                    VALUES(?,?,?,?,?,?,?)
+                    ON CONFLICT(world,dim,cx,cz) DO UPDATE SET
+                      data=excluded.data,
+                      inscriptionIndexVersion=excluded.inscriptionIndexVersion,
+                      inscriptionIndexDigest=excluded.inscriptionIndexDigest
+                    """,
+                    bind: { statement in
+                        self.bindText(statement, 1, record.worldId)
+                        sqlite3_bind_int(statement, 2, Int32(record.dim))
+                        sqlite3_bind_int(statement, 3, Int32(record.cx))
+                        sqlite3_bind_int(statement, 4, Int32(record.cz))
+                        self.bindData(statement, 5, item.chunkData)
+                        sqlite3_bind_int64(statement, 6, version)
+                        self.bindText(statement, 7, item.digest)
+                    }
+                )
+                let wroteIndex = self.putSignInscriptionIndexRow(
+                    worldID: record.worldId,
+                    key: SignInscriptionIdentityCatalog.key(for: record),
+                    version: version,
+                    digest: item.digest,
+                    data: item.indexData
+                )
+                ok = ok && wroteChunk && wroteIndex
+                committedStates[SignInscriptionIdentityCatalog.key(for: record)] = item.state
+                if !ok { break }
+            }
+            guard ok, self.testingSignInscriptionPersistenceHook?(.beforeCommit) ?? true,
+                  self.exec("COMMIT") else {
+                _ = self.exec("ROLLBACK")
+                _ = self.testingSignInscriptionPersistenceHook?(.failed)
+                return false
+            }
+            _ = self.testingSignInscriptionPersistenceHook?(.committedBeforeAuthority)
+            inscriptionCatalog?.applyCommittedStates(committedStates)
+            _ = self.testingSignInscriptionPersistenceHook?(.authorityAdvanced)
+            return true
         }
-        if ok {
-            ok = exec("COMMIT")
-        } else {
-            exec("ROLLBACK")
+        if let inscriptionCatalog {
+            return inscriptionCatalog.withExclusive(commit)
         }
-        return ok
+        return commit()
+    }
+
+    private func ensureSignInscriptionIndexSchema() -> Bool {
+        databaseLock.lock()
+        defer { databaseLock.unlock() }
+        var columns = Set<String>()
+        guard run("PRAGMA table_info(chunks)", row: { statement in
+            if let name = self.columnText(statement, 1) { columns.insert(name) }
+        }) else { return false }
+        if !columns.contains("inscriptionIndexVersion"),
+           !exec("ALTER TABLE chunks ADD COLUMN inscriptionIndexVersion INTEGER NOT NULL DEFAULT 0") {
+            return false
+        }
+        if !columns.contains("inscriptionIndexDigest"),
+           !exec("ALTER TABLE chunks ADD COLUMN inscriptionIndexDigest TEXT NOT NULL DEFAULT ''") {
+            return false
+        }
+        return exec("""
+        CREATE TABLE IF NOT EXISTS sign_inscription_chunks(
+            world TEXT NOT NULL, dim INTEGER NOT NULL, cx INTEGER NOT NULL, cz INTEGER NOT NULL,
+            chunkVersion INTEGER NOT NULL, digest TEXT NOT NULL, data BLOB NOT NULL,
+            PRIMARY KEY(world, dim, cx, cz)) WITHOUT ROWID
+        """)
+    }
+
+    /// Version-zero means a row predates the compact index. Migration is one
+    /// SQLite transaction: an interruption leaves version zero and retries on
+    /// the next open; a committed migration is never decoded again.
+    private func migrateLegacySignInscriptionRows(worldID: String) -> Bool {
+        databaseLock.lock()
+        defer { databaseLock.unlock() }
+        var legacyRows: [(key: SignInscriptionPersistentChunkKey, data: Data)] = []
+        guard run(
+            """
+            SELECT dim,cx,cz,data FROM chunks
+            WHERE world=? AND inscriptionIndexVersion=0 ORDER BY dim,cx,cz
+            """,
+            bind: { self.bindText($0, 1, worldID) },
+            row: { statement in
+                guard let data = self.columnData(statement, 3) else { return }
+                legacyRows.append((
+                    SignInscriptionPersistentChunkKey(
+                        dimension: Int(sqlite3_column_int(statement, 0)),
+                        cx: Int(sqlite3_column_int(statement, 1)),
+                        cz: Int(sqlite3_column_int(statement, 2))
+                    ),
+                    data
+                ))
+            }
+        ) else { return false }
+        guard !legacyRows.isEmpty else { return true }
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        var prepared: [(key: SignInscriptionPersistentChunkKey,
+                        state: SignInscriptionPersistentChunkState,
+                        data: Data, digest: String)] = []
+        var decodedVoxelCells = 0
+        for row in legacyRows {
+            let decoded = decodeChunk(
+                row.data,
+                key: chunkKey(worldID, row.key.dimension, row.key.cx, row.key.cz),
+                worldId: worldID,
+                dim: row.key.dimension,
+                cx: row.key.cx,
+                cz: row.key.cz
+            )
+            let state: SignInscriptionPersistentChunkState
+            if let decoded, decoded.blockEntitiesValid {
+                decodedVoxelCells += decoded.record.blocks?.count ?? 0
+                state = SignInscriptionIdentityCatalog.scan(
+                    decoded.record,
+                    expectedWorldID: worldID
+                )
+            } else if let decoded, !decoded.signInscriptionPayloadPresent {
+                decodedVoxelCells += decoded.record.blocks?.count ?? 0
+                // The normal loader discards an undecodable unrelated BE
+                // array. If no serialized entry even carries an inscription
+                // field, that corruption cannot conceal a CIV-45 claim.
+                state = SignInscriptionPersistentChunkState(valid: true, claims: [:])
+            } else {
+                state = SignInscriptionPersistentChunkState(valid: false, claims: [:])
+            }
+            guard let data = try? encoder.encode(
+                SignInscriptionIdentityCatalog.envelope(for: state)
+            ) else { return false }
+            prepared.append((row.key, state, data, signInscriptionIndexDigest(data)))
+        }
+
+        guard exec("BEGIN IMMEDIATE") else { return false }
+        var ok = true
+        for item in prepared {
+            let updated = run(
+                """
+                UPDATE chunks SET inscriptionIndexVersion=1, inscriptionIndexDigest=?
+                WHERE world=? AND dim=? AND cx=? AND cz=? AND inscriptionIndexVersion=0
+                """,
+                bind: { statement in
+                    self.bindText(statement, 1, item.digest)
+                    self.bindText(statement, 2, worldID)
+                    sqlite3_bind_int(statement, 3, Int32(item.key.dimension))
+                    sqlite3_bind_int(statement, 4, Int32(item.key.cx))
+                    sqlite3_bind_int(statement, 5, Int32(item.key.cz))
+                }
+            ) && sqlite3_changes(db) == 1
+            ok = ok && updated && putSignInscriptionIndexRow(
+                worldID: worldID,
+                key: item.key,
+                version: 1,
+                digest: item.digest,
+                data: item.data
+            )
+            if !ok { break }
+        }
+        guard ok, exec("COMMIT") else {
+            _ = exec("ROLLBACK")
+            return false
+        }
+        lastSignInscriptionIndexLoadMetrics = SignInscriptionIndexLoadMetrics(
+            indexedChunkRows: 0,
+            migratedChunkPayloads: prepared.count,
+            decodedVoxelCells: decodedVoxelCells
+        )
+        return true
+    }
+
+    private func putSignInscriptionIndexRow(
+        worldID: String,
+        key: SignInscriptionPersistentChunkKey,
+        version: Int64,
+        digest: String,
+        data: Data
+    ) -> Bool {
+        run(
+            """
+            INSERT INTO sign_inscription_chunks(world,dim,cx,cz,chunkVersion,digest,data)
+            VALUES(?,?,?,?,?,?,?)
+            ON CONFLICT(world,dim,cx,cz) DO UPDATE SET
+              chunkVersion=excluded.chunkVersion,
+              digest=excluded.digest,
+              data=excluded.data
+            """,
+            bind: { statement in
+                self.bindText(statement, 1, worldID)
+                sqlite3_bind_int(statement, 2, Int32(key.dimension))
+                sqlite3_bind_int(statement, 3, Int32(key.cx))
+                sqlite3_bind_int(statement, 4, Int32(key.cz))
+                sqlite3_bind_int64(statement, 5, version)
+                self.bindText(statement, 6, digest)
+                self.bindData(statement, 7, data)
+            }
+        )
+    }
+
+    private func advanceWorldPhysicalIdentity(worldID: String, toAtLeast value: Int) -> Bool {
+        var current: WorldRecord?
+        guard run(
+            "SELECT json FROM worlds WHERE id=?",
+            bind: { self.bindText($0, 1, worldID) },
+            row: { statement in
+                guard let json = self.columnText(statement, 0) else { return }
+                current = try? JSONDecoder().decode(WorldRecord.self, from: Data(json.utf8))
+            }
+        ), var record = current else { return false }
+        guard record.nextEntityId > 0 else { return false }
+        if record.nextEntityId >= value { return true }
+        record.nextEntityId = value
+        guard let data = try? JSONEncoder().encode(record),
+              let json = String(data: data, encoding: .utf8) else { return false }
+        let updated = run(
+            "UPDATE worlds SET json=? WHERE id=?",
+            bind: { statement in
+                self.bindText(statement, 1, json)
+                self.bindText(statement, 2, worldID)
+            }
+        )
+        return updated && sqlite3_changes(db) == 1
+    }
+
+    private func signInscriptionIndexDigest(_ data: Data) -> String {
+        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 
     // binary container: "VCK1" | u8 flags | [u32 nBlocks, u16[] LE, u32 nBiomes, u8[]] | u32 jsonLen, json
@@ -485,7 +840,8 @@ public final class SaveDB {
         dim: Int,
         cx: Int,
         cz: Int
-    ) -> (record: ChunkRecord, blockEntitiesValid: Bool)? {
+    ) -> (record: ChunkRecord, blockEntitiesValid: Bool,
+          signInscriptionPayloadPresent: Bool)? {
         var rec = ChunkRecord(key: key, worldId: worldId, dim: dim, cx: cx, cz: cz)
         var off = 0
         func readU32() -> Int? {
@@ -520,7 +876,18 @@ public final class SaveDB {
         else { return nil }
         rec.entities = tail["entities"] as? [[String: Any]] ?? []
         var blockEntitiesValid = true
+        var signInscriptionPayloadPresent = false
         if let rawBE = tail["blockEntities"] {
+            if let values = rawBE as? [Any] {
+                signInscriptionPayloadPresent = values.contains { value in
+                    guard let object = value as? [String: Any],
+                          let inscription = object["signInscription"] else { return false }
+                    return !(inscription is NSNull)
+                }
+            } else {
+                // Unknown container shape could conceal a future inscription.
+                signInscriptionPayloadPresent = true
+            }
             if let bytes = try? JSONSerialization.data(withJSONObject: rawBE),
                let bes = try? JSONDecoder().decode([BlockEntityData].self, from: bytes) {
                 rec.blockEntities = bes
@@ -531,7 +898,7 @@ public final class SaveDB {
                 blockEntitiesValid = false
             }
         }
-        return (rec, blockEntitiesValid)
+        return (rec, blockEntitiesValid, signInscriptionPayloadPresent)
     }
 
     // ---- player / advancements --------------------------------------------------

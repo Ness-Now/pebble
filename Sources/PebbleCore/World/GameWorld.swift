@@ -134,6 +134,7 @@ public final class World {
         info = DIMS[dim.rawValue]
         rng = RandomX(UInt32(bitPattern: Int32(bitPattern: seed) ^ Int32(dim.rawValue * 7919)))
         light = LightEngine(self)
+        signInscriptionIdentityCatalog?.register(self)
     }
 
     @inline(__always) public func rule(_ name: String) -> Bool { (gameRules[name] ?? 0) != 0 }

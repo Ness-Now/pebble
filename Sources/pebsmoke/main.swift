@@ -34,6 +34,28 @@ if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
     exit(failed > 0 ? 1 : 0)
 }
 
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
+    == "civ-45-correction02" {
+    registerAllBlocks(); registerAllItems(); registerAllEntities(); registerAllSystems()
+    runPebbleCoreWritingIdentityCorrection02Smoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
+    == "civ-45-correction02-crash-writer" {
+    runPebbleCoreWritingIdentityCorrection02CrashWriter()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
+    == "civ-45-correction02-crash-reader" {
+    runPebbleCoreWritingIdentityCorrection02CrashReader()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
 if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "civ-45" {
     registerAllBlocks(); registerAllItems(); registerAllEntities(); registerAllSystems()
     runPebbleAgentsWritingSmoke()
