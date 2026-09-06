@@ -361,10 +361,60 @@ public final class SaveDB {
                 let count = Int(sqlite3_column_bytes(stmt, 0))
                 let data = Data(bytes: bytes, count: count)
                 rec = self.decodeChunk(data, key: self.chunkKey(worldId, dim, cx, cz),
-                                       worldId: worldId, dim: dim, cx: cx, cz: cz)
+                                       worldId: worldId, dim: dim, cx: cx, cz: cz)?.record
             }
         }
         return rec
+    }
+
+    /// Builds the physical identity view from every chunk row, not from the
+    /// currently resident chunk subset. Any unreadable row or malformed
+    /// inscription makes CIV-45 access fail closed without preventing the
+    /// rest of the World from loading under its existing compatibility policy.
+    public func loadSignInscriptionIdentityCatalog(
+        worldID: String,
+        nextPhysicalIdentity: Int
+    ) -> SignInscriptionIdentityCatalog {
+        let catalog = SignInscriptionIdentityCatalog(worldID: worldID)
+        let ok = run(
+            "SELECT dim,cx,cz,data FROM chunks WHERE world=? ORDER BY dim,cx,cz",
+            bind: { self.bindText($0, 1, worldID) },
+            row: { statement in
+                let dimension = Int(sqlite3_column_int(statement, 0))
+                let cx = Int(sqlite3_column_int(statement, 1))
+                let cz = Int(sqlite3_column_int(statement, 2))
+                guard let data = self.columnData(statement, 3),
+                      let decoded = self.decodeChunk(
+                        data,
+                        key: self.chunkKey(worldID, dimension, cx, cz),
+                        worldId: worldID,
+                        dim: dimension,
+                        cx: cx,
+                        cz: cz
+                      ) else {
+                    catalog.markPersistentChunkInvalid(
+                        dimension: dimension,
+                        cx: cx,
+                        cz: cz
+                    )
+                    return
+                }
+                guard decoded.blockEntitiesValid else {
+                    catalog.markPersistentChunkInvalid(
+                        dimension: dimension,
+                        cx: cx,
+                        cz: cz
+                    )
+                    return
+                }
+                catalog.replacePersistentChunkRecord(
+                    decoded.record,
+                    nextPhysicalIdentity: nextPhysicalIdentity
+                )
+            }
+        )
+        if !ok { catalog.markPersistentSourceInvalid() }
+        return catalog
     }
 
     /// batch write — one transaction, mirrors the once-per-second save tick.
@@ -428,7 +478,14 @@ public final class SaveDB {
         return data
     }
 
-    private func decodeChunk(_ data: Data, key: String, worldId: String, dim: Int, cx: Int, cz: Int) -> ChunkRecord? {
+    private func decodeChunk(
+        _ data: Data,
+        key: String,
+        worldId: String,
+        dim: Int,
+        cx: Int,
+        cz: Int
+    ) -> (record: ChunkRecord, blockEntitiesValid: Bool)? {
         var rec = ChunkRecord(key: key, worldId: worldId, dim: dim, cx: cx, cz: cz)
         var off = 0
         func readU32() -> Int? {
@@ -462,12 +519,19 @@ public final class SaveDB {
               let tail = try? JSONSerialization.jsonObject(with: data.subdata(in: off..<off + jsonLen)) as? [String: Any]
         else { return nil }
         rec.entities = tail["entities"] as? [[String: Any]] ?? []
-        if let rawBE = tail["blockEntities"],
-           let bytes = try? JSONSerialization.data(withJSONObject: rawBE),
-           let bes = try? JSONDecoder().decode([BlockEntityData].self, from: bytes) {
-            rec.blockEntities = bes
+        var blockEntitiesValid = true
+        if let rawBE = tail["blockEntities"] {
+            if let bytes = try? JSONSerialization.data(withJSONObject: rawBE),
+               let bes = try? JSONDecoder().decode([BlockEntityData].self, from: bytes) {
+                rec.blockEntities = bes
+            } else {
+                // Preserve the historical chunk-loader recovery policy (the
+                // World can still load without malformed block entities), but
+                // expose the integrity loss to stricter physical authorities.
+                blockEntitiesValid = false
+            }
         }
-        return rec
+        return (rec, blockEntitiesValid)
     }
 
     // ---- player / advancements --------------------------------------------------

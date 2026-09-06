@@ -235,6 +235,9 @@ public final class GameCore {
     public var lastChunkUpdates = 0
     /// unload records awaiting the once-per-second batched write
     private var pendingChunkSaves: [String: ChunkRecord] = [:]
+    /// Derived from all persisted chunks at World entry; shared across every
+    /// dimension and refreshed only after successful durable chunk batches.
+    private var signInscriptionIdentityCatalog: SignInscriptionIdentityCatalog?
 
     private let genQueue = DispatchQueue(label: "pebble.gen", qos: .userInitiated, attributes: .concurrent)
     private let meshQueue = DispatchQueue(label: "pebble.mesh", qos: .userInitiated, attributes: .concurrent)
@@ -472,8 +475,17 @@ public final class GameCore {
         dragonSpawned = false
         worlds.removeAll()
         resetEntityIds(max(1, rec.nextEntityId))
+        let inscriptionCatalog = db.loadSignInscriptionIdentityCatalog(
+            worldID: rec.id,
+            nextPhysicalIdentity: max(1, rec.nextEntityId)
+        )
+        signInscriptionIdentityCatalog = inscriptionCatalog
         for d in [Dim.overworld, .nether, .end] {
-            let w = World(dim: d, seed: UInt32(bitPattern: rec.seed))
+            let w = World(
+                dim: d,
+                seed: UInt32(bitPattern: rec.seed),
+                signInscriptionIdentityCatalog: inscriptionCatalog
+            )
             if let ds = rec.dims["\(d.rawValue)"] {
                 w.time = ds.time
                 w.dayTime = ds.dayTime
@@ -597,10 +609,23 @@ public final class GameCore {
         for r in pendingChunkSaves.values { records.append(r) }
         pendingChunkSaves.removeAll()
         for r in records { savedChunkKeys.insert(r.key) }
+        let inscriptionCatalog = signInscriptionIdentityCatalog
         if synchronous {
-            saveQueue.sync { self.writeChunkBatch(records) }
+            saveQueue.sync {
+                self.writeChunkBatch(
+                    records,
+                    nextPhysicalIdentity: rec.nextEntityId,
+                    inscriptionCatalog: inscriptionCatalog
+                )
+            }
         } else {
-            saveQueue.async { [weak self] in self?.writeChunkBatch(records) }
+            saveQueue.async { [weak self] in
+                self?.writeChunkBatch(
+                    records,
+                    nextPhysicalIdentity: rec.nextEntityId,
+                    inscriptionCatalog: inscriptionCatalog
+                )
+            }
         }
         for w in worlds.values {
             for c in w.chunks.values { c.modified = false }
@@ -609,8 +634,18 @@ public final class GameCore {
 
     /// runs ON the save queue; on failure re-marks the chunks dirty (on main)
     /// so the next autosave retries instead of silently losing the edits
-    private func writeChunkBatch(_ records: [ChunkRecord]) {
-        if db.putChunks(records) { return }
+    private func writeChunkBatch(
+        _ records: [ChunkRecord],
+        nextPhysicalIdentity: Int,
+        inscriptionCatalog: SignInscriptionIdentityCatalog?
+    ) {
+        if db.putChunks(records) {
+            inscriptionCatalog?.replacePersistentChunkRecords(
+                records,
+                nextPhysicalIdentity: nextPhysicalIdentity
+            )
+            return
+        }
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             print("[saves] chunk batch failed — re-marking \(records.count) chunks dirty for retry")
@@ -1568,7 +1603,15 @@ public final class GameCore {
         if !pendingChunkSaves.isEmpty && w.time % 20 == 0 {
             let batch = Array(pendingChunkSaves.values)
             pendingChunkSaves.removeAll()
-            saveQueue.async { [weak self] in self?.writeChunkBatch(batch) }
+            let nextPhysicalIdentity = peekNextEntityId()
+            let inscriptionCatalog = signInscriptionIdentityCatalog
+            saveQueue.async { [weak self] in
+                self?.writeChunkBatch(
+                    batch,
+                    nextPhysicalIdentity: nextPhysicalIdentity,
+                    inscriptionCatalog: inscriptionCatalog
+                )
+            }
         }
 
         // autosave
