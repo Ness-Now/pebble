@@ -135,7 +135,7 @@ CIV-38: OPTIONAL — NOT STARTED
 Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
-active CIV phase: CIV-45 — CORRECTION 01 LOCAL REVIEW CANDIDATE — NOT PUBLISHED
+active CIV phase: CIV-45 — CORRECTION 02 LOCAL REVIEW CANDIDATE — NOT PUBLISHED
 completed and published through: CIV-44 (CIV-38 and CIV-40 remain optional and unstarted)
 next eligible action: CIV-45 independent senior re-review
 next authorized action: CIV-45 senior re-review; CIV-46 remains unauthorized
@@ -224,6 +224,8 @@ CIV-45 exact published baseline: 9a2cfec10b4a0d1b6a5d2f46aac8f3c312ddbb0e
 CIV-45 initial product commit: ac38675d88d4b709183e7b26f92a0a45b0e928c1
 CIV-45 initial candidate: 89cffa47f1e9635e0f44a0fac246e92739501911 — CORRECTION REQUIRED
 CIV-45 Correction 01 product/test commit: b68a6aeff106f5a3791279d5bd62b8b2916c9a4c
+CIV-45 Correction 01 candidate: 68bda3e5e7a28af50fed3d9680d2a9a0dfeea4e4 — CORRECTION REQUIRED
+CIV-45 Correction 02 product/test commit: 1e2753586e587a098f3908349d1c647d6b10d253
 CIV-46 / CIV-47: PLANNED — NOT STARTED / NOT AUTHORIZED
 V4-GATE-G-v1: PLANNED / UNEVALUATED
 ```
@@ -654,8 +656,12 @@ is complete through CIV-44. CIV-45 is a **LOCAL REVIEW CANDIDATE — NOT
 PUBLISHED** after initial candidate
 `89cffa47f1e9635e0f44a0fac246e92739501911` received **CORRECTION REQUIRED**.
 Correction 01 product/test commit
-`b68a6aeff106f5a3791279d5bd62b8b2916c9a4c` awaits independent senior
-re-review. CIV-46 and CIV-47 remain unstarted and unauthorized; Gate G remains
+`b68a6aeff106f5a3791279d5bd62b8b2916c9a4c` and candidate
+`68bda3e5e7a28af50fed3d9680d2a9a0dfeea4e4` also received **CORRECTION
+REQUIRED** for dirty-chunk composition, commit/catalogue linearization and the
+steady-state full-World voxel decode. Correction 02 product/test commit
+`1e2753586e587a098f3908349d1c647d6b10d253` supplies the current local review
+candidate. CIV-46 and CIV-47 remain unstarted and unauthorized; Gate G remains
 planned and unevaluated. See
 [`CIV_44_PHASE_SUMMARY.md`](CIV_44_PHASE_SUMMARY.md) and
 [`CIV_45_PHASE_SUMMARY.md`](CIV_45_PHASE_SUMMARY.md).
@@ -1497,6 +1503,8 @@ CIV-45 exact published baseline: 9a2cfec10b4a0d1b6a5d2f46aac8f3c312ddbb0e
 CIV-45 initial product commit: ac38675d88d4b709183e7b26f92a0a45b0e928c1
 CIV-45 initial candidate: 89cffa47f1e9635e0f44a0fac246e92739501911 — CORRECTION REQUIRED
 CIV-45 Correction 01 product/test commit: b68a6aeff106f5a3791279d5bd62b8b2916c9a4c
+CIV-45 Correction 01 candidate: 68bda3e5e7a28af50fed3d9680d2a9a0dfeea4e4 — CORRECTION REQUIRED
+CIV-45 Correction 02 product/test commit: 1e2753586e587a098f3908349d1c647d6b10d253
 CIV-46 / CIV-47 status: PLANNED — NOT STARTED / NOT AUTHORIZED
 V4-GATE-G-v1 status: PLANNED / UNEVALUATED
 ```
@@ -1750,8 +1758,11 @@ complete through CIV-44. CIV-45 is a **LOCAL REVIEW CANDIDATE — NOT
 PUBLISHED** after initial candidate
 `89cffa47f1e9635e0f44a0fac246e92739501911` received **CORRECTION REQUIRED**.
 Correction 01 product/test commit
-`b68a6aeff106f5a3791279d5bd62b8b2916c9a4c` awaits independent senior
-re-review. CIV-46 and CIV-47 remain unstarted and unauthorized. Gate G remains
+`b68a6aeff106f5a3791279d5bd62b8b2916c9a4c` and candidate
+`68bda3e5e7a28af50fed3d9680d2a9a0dfeea4e4` also received **CORRECTION
+REQUIRED**. Correction 02 product/test commit
+`1e2753586e587a098f3908349d1c647d6b10d253` supplies the current local review
+candidate. CIV-46 and CIV-47 remain unstarted and unauthorized. Gate G remains
 planned and unevaluated.
 
 ## Wave 5 — Knowledge, language and culture
@@ -1853,8 +1864,9 @@ long-distance transport, discourse or dialect infrastructure.
 
 Published progression is complete through `CIV-44`, which is **COMPLETE AND
 PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED**. `CIV-45` is a **LOCAL
-REVIEW CANDIDATE — NOT PUBLISHED** after Correction 01 and awaits independent
-senior re-review. Its initial candidate remains **CORRECTION REQUIRED** history.
+REVIEW CANDIDATE — NOT PUBLISHED** after Correction 02 and awaits independent
+senior re-review. Its initial candidate and Correction 01 candidate both remain
+**CORRECTION REQUIRED** historical evidence.
 `CIV-46` and `CIV-47` remain unstarted and unauthorized. Gate G remains planned
 and has not been evaluated.
 

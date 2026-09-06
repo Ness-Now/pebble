@@ -2,21 +2,29 @@
 
 ## Review status and baseline
 
-`CIV-45` is a **LOCAL REVIEW CANDIDATE — NOT PUBLISHED** after Senior Review
-Correction 01. It was implemented from exact published baseline
+`CIV-45` is a **CORRECTION 02 LOCAL REVIEW CANDIDATE — NOT PUBLISHED**. It was
+implemented from exact published baseline
 `9a2cfec10b4a0d1b6a5d2f46aac8f3c312ddbb0e` on local branch
 `codex/civ-45-writing-literacy-v1`. The initial product, test and live-proof
 commit is `ac38675d88d4b709183e7b26f92a0a45b0e928c1`; the initial reviewed candidate
 is `89cffa47f1e9635e0f44a0fac246e92739501911`. Independent senior review
 returned **CORRECTION REQUIRED** because material identity validation saw only
 resident chunks. Correction 01 is product/test commit
-`b68a6aeff106f5a3791279d5bd62b8b2916c9a4c`; the corrected candidate is the
-local HEAD containing this summary and that commit. The initial candidate
-remains intact in history and is not represented as approved.
+`b68a6aeff106f5a3791279d5bd62b8b2916c9a4c`, with candidate
+`68bda3e5e7a28af50fed3d9680d2a9a0dfeea4e4`. Its independent senior re-review
+also returned **CORRECTION REQUIRED**: durable commit and catalogue advancement
+were not linearized, a resident dirty chunk was unioned with rather than
+replacing its durable representation, and normal World entry decoded every
+persisted voxel payload. Correction 02 product/test commit is
+`1e2753586e587a098f3908349d1c647d6b10d253`; the corrected review candidate is
+the local documentation HEAD containing this summary. Both failed candidates
+remain intact, immutable historical evidence and are not represented as
+approved.
 
-The published branch remains complete through CIV-44. Correction 01 has not
-received senior re-review approval and CIV-45 has not been published. CIV-46
-and CIV-47 have not started. `V4-GATE-G-v1` remains **PLANNED / UNEVALUATED**.
+The published branch remains complete through CIV-44. Correction 02 has not
+received independent senior re-review approval and CIV-45 has not been
+published. CIV-46 and CIV-47 have not started. `V4-GATE-G-v1` remains
+**PLANNED / UNEVALUATED**.
 
 ## Ownership and architecture
 
@@ -47,15 +55,21 @@ same inscription still exists: `artifactID`, `materialID`, content digest,
 World/dimension/cell, and the four exact lines. Truth, belief, literacy and
 civilization provenance remain outside Core.
 
-Correction 01 adds no second persisted identity store. `SaveDB`, still inside
-PebbleCore, decodes every persistent chunk row for the World at entry and
-derives one shared cross-dimension `SignInscriptionIdentityCatalog`. The three
-live dimension Worlds receive that same catalogue. Successful durable chunk
-batches replace the affected derived entries only after the SQLite transaction
-commits; failed writes leave the catalogue unchanged and follow the existing
-dirty/requeue retry path. The scan necessarily covers the persisted World
-extent: bounding it by resident or recently accessed chunks would recreate the
-review blocker.
+Correction 02 makes the World `SaveDB` the durable owner of a compact
+per-chunk inscription index. Chunk payload, monotonically advanced index
+version, index digest and compact claim envelope are written in the same
+SQLite transaction. One `SignInscriptionIdentityCatalog` is reconstructed from
+those compact rows and shared by the three dimension Worlds. It remains a
+physical-integrity authority derived and maintained by Core persistence, not a
+civilization registry or a second save engine.
+
+Normal World entry is now `O(persisted chunks + inscription claims)` in compact
+metadata and does not decode voxel arrays for CIV-45. A save created before the
+index has version-zero chunk rows; its first open performs a one-shot payload
+decode and atomically writes the compact index. Subsequent opens use only the
+index. The measured 24-chunk fixture decodes exactly
+`24 × 16 × 16 × 384` voxel cells during migration and zero on both indexed
+steady-state opens.
 
 ## Material identity and lifecycle
 
@@ -74,34 +88,50 @@ different artifact ID. Both current access and lesson/read operations resample
 the real Core sign; a historical CIV-45 row cannot attest that an absent,
 edited or replaced sign is currently readable.
 
-Core access now combines the claims derived from every persistent chunk in
-every dimension with the current resident state. A `materialID` is accepted
-only when that World-global set contains exactly one physical location.
-Therefore a duplicate in an unloaded chunk invalidates both copies regardless
-of load order, unload/reload, restart, or which copy is inspected first.
-Simultaneously resident duplicates retain the same fail-closed behavior.
+The current authority view has an explicit replacement order. It starts from
+the durable compact index, replaces affected keys with staged records for
+dirty chunks that were unloaded before their save completed, then replaces
+those keys with the current state of every resident chunk across all three
+dimensions. Resident physical state is therefore current truth for its chunk;
+it is never added to a stale durable copy of the same chunk. A `materialID` is
+accepted only when this complete World-global view contains exactly one
+physical location. A duplicate in an unloaded chunk invalidates both copies
+regardless of load order, unload/reload, restart or inspection order, while a
+current resident removal or replacement supersedes its older durable row both
+before and after autosave.
 
-Each persisted stamped block entity is checked against its World, dimension,
-chunk, cell, block shape, lines, digest and persisted `nextEntityId`. An
-unreadable persistent chunk row, an undecodable block-entity array, or a
-decodable malformed stamp invalidates the catalogue. CIV-45 then refuses
-current access and new inscription before allocation or cognitive publication,
-while the historical general chunk-loader recovery policy is unchanged.
-Legacy Worlds and signs without CIV-45 stamps form an empty valid catalogue
-and require no migration; valid multi-chunk CIV-45 Worlds with distinct
-identities remain accessible.
+Each compact claim is checked against World/dimension/chunk/cell bounds,
+material identity bounds, index version and SHA-256 digest. Missing, extra,
+mismatched or undecodable index rows invalidate the entire persistent source;
+resident state cannot mask that failure. During one-shot migration, an
+unreadable row or malformed serialized inscription fails closed. An unrelated
+malformed block-entity array containing no serialized `signInscription` field
+follows the existing loader policy and contributes no claim, avoiding global
+denial for corruption that cannot conceal a CIV-45 identity. Legacy text-only
+signs migrate to empty index entries and never acquire material authority.
+Valid multi-chunk Worlds with distinct identities remain accessible, and two
+different World saves may independently reuse the same numeric identity.
 
-The existing adapter transaction ordering is unchanged: prevalidate the
-World-global catalogue, claim exactly the expected Core identity, mutate and
-verify the physical sign, stage cognition, verify the sign again, then commit
-the sole `AgentSimulationSession`. Synchronous failure restores the original
-block entity, lines, identity counter and dirty state before any cognitive
-publication. A refused duplicate or corrupt catalogue is rejected before the
-counter claim. World metadata remains saved before the chunk batch in the
-existing save path; the catalogue advances only after durable chunk commit.
-A failed batch therefore cannot make its new chunk snapshot part of the
-persistent uniqueness authority, cannot overwrite an unrelated World record,
-and leaves its records dirty/requeued for retry.
+The adapter transaction still prevalidates the World-global authority, claims
+exactly the expected Core identity, mutates and verifies the physical sign,
+stages cognition, verifies the sign again, then commits the sole
+`AgentSimulationSession`. Synchronous failure restores the exact block entity,
+lines, identity counter and dirty state before cognitive publication. A
+refused duplicate or corrupt source is rejected before allocation.
+
+For persistence, `SaveDB.putChunks` prepares immutable chunk/index snapshots,
+takes the catalogue lock, starts `BEGIN IMMEDIATE`, advances the persisted
+World physical counter if necessary, writes every payload and index row, and
+commits. Still under the same catalogue lock, it applies the complete
+multi-chunk state dictionary in one generation. Inspections execute their
+validation and return closure under that same lock; no detachable claims
+snapshot can finalize after becoming stale. A reader already validating
+finishes before the database transaction begins, while a reader arriving in
+the post-commit/pre-advancement seam blocks until the full authority batch is
+visible. Failed transactions roll back and follow the existing dirty/requeue
+path. Crash before commit restores the old durable batch; crash immediately
+after commit reconstructs the complete new batch and advanced identity counter
+on restart.
 
 ## Content, assertion and truth
 
@@ -200,14 +230,28 @@ Commands and final results:
 
 ```text
 PEBBLELAB_CIV45_BUILD_CONFIGURATION=debug scripts/verify-pebblelab-civ45.sh
+56 passed, 0 failed # Correction 02 dirty/index/migration/concurrency
+4/4 crash boundaries passed across fresh processes
 26 passed, 0 failed # exact persistent P0 regression
 105 passed, 0 failed
 
-scripts/verify-pebblelab-civ45.sh
-Build of product 'pebsmoke' complete! (377.46s)
+PEBBLELAB_CIV45_BUILD_CONFIGURATION=release scripts/verify-pebblelab-civ45.sh
+56 passed, 0 failed # Correction 02 dirty/index/migration/concurrency
+4/4 crash boundaries passed across fresh processes
 26 passed, 0 failed # exact persistent P0 regression
 105 passed, 0 failed
 ```
+
+The new 56-check Correction 02 suite proves dirty removal, replacement and new
+duplicate addition before/after autosave; resident and staged chunk-key
+replacement; cross-dimension uniqueness; cross-World isolation; relevant and
+unrelated corruption policy; corrupt-index fail-closed behavior even with a
+resident chunk; text-only legacy migration; exact one-shot/steady-state decode
+counts; and both reader/save linearization orders. Four additional fresh
+writer/reader process pairs terminate before transaction, after all writes but
+before commit, immediately after commit and after normal return. Their
+two-chunk batch is always observed as either both old or both new, and restart
+never reuses either allocated identity.
 
 The new 26-check Core/persistence regression writes two real VCK1/SQLite chunk
 records at `(0,0)` and `(20,0)` with physical signs `(1,64,1)` and
@@ -231,9 +275,9 @@ scripts/verify-pebblelab-civ45-live.sh --dry-run
 scripts/verify-pebblelab-civ45-live.sh
 ```
 
-The Correction 01 dry-run passed. The release campaign used the corrected
-Pebble build, then ran two fresh real processes for each of seeds 46 and 73 under disposable
-`CFFIXED_USER_HOME` roots. Process one created an ordinary blank oak sign on a
+The Correction 02 dry-run passed. The release campaign used the Correction 02
+Pebble build, then ran two fresh real processes for each of seeds 46 and 73
+under disposable `CFFIXED_USER_HOME` roots. Process one created an ordinary blank oak sign on a
 natural supported site, observed a real oak log, wrote the false `stone`
 assertion, performed and rolled back an injected late failure, completed one
 local notation lesson, saved World and wrote a schema-40 checkpoint, then
@@ -244,17 +288,17 @@ sign, refused the old artifact without cognitive mutation, restored the
 fixture and stopped.
 
 All four processes exited zero with zero runtime errors and no residual Pebble
-process. The final Correction 01 campaign root is:
+process. The final Correction 02 campaign root is:
 
 ```text
-/tmp/pebblelab-civ45-live.AKQmHG
+/tmp/pebblelab-civ45-live.bii8YI
 ```
 
-Seed 46 used material identity 288, artifact
-`inscription-7c1083910049dfebd9972697cca2ad87f1fb3eb851c8c53d1e07cfc68920d91e`,
+Seed 46 used material identity 289, artifact
+`inscription-f88ad5ffcf7e00764822c160c6f1f1f4385fe1c34556ad152eb9a53fcc148b39`,
 sign `(22,68,-21)` and real oak-log source `(19,66,-24)`. Seed 73 used
 material identity 148, artifact
-`inscription-cb4df5db5d18a4b170f448dfdb7a7afd0353fd605e375c0861b8561dc106dba0`,
+`inscription-1809667fb808ba0919ced70e7bec33a38d8ebc993cbfd6f0d1c593cfe7e54059`,
 sign `(15,64,-8)` and real oak-log source `(12,64,-7)`.
 
 The four 3024×1898 captures were individually inspected. Each visibly shows
@@ -269,20 +313,20 @@ Key evidence SHA-256 values:
 
 | Seed | Artifact | SHA-256 |
 | --- | --- | --- |
-| 46 | `write.log` | `4a919f298f6475a5ee0b2abae0e73f5089b85fa9f476f0e8d142d307d1517819` |
-| 46 | `read.log` | `956ca17cc29f37d1dee8eee630daf8e046782340b7d687dc7102f7641d5f0606` |
-| 46 | `written-sign.json` / byte-identical `reloaded-sign.json` | `7c3743310d2669d7d65adf10e80b04936076f563bb8314c4fca8ccd9d1fb92b3` |
-| 46 | `writing-checkpoint.json` | `a82f83b4f007ec30f8c73efeda5cf90366fbacedd52b8868cc1b09d2d17d5bbd` |
-| 46 | `reading-checkpoint.json` | `bd095fac7316035819acccd2c5f744a45da55a6a9713c7546ec65395afa2bb61` |
-| 46 | `written.png` | `77c12244c03c253ee22b94466baf658562493939d3c01bd0998b09f04261d434` |
-| 46 | `read.png` | `32c5a5e9f74cb26f4b90d1d89b313d80e5b3e62e06473452eaec4df4d21dd6a9` |
-| 73 | `write.log` | `999f5d11bee219afa74b666c35080fec41d5dd4f95f23c127f55e80a74f47c4b` |
-| 73 | `read.log` | `d5dd756a36e715ba312cbc921875bfad4fd82b63642c2f41e0955cc0ac55427a` |
-| 73 | `written-sign.json` / byte-identical `reloaded-sign.json` | `bfd2a6a59bf3b5ab9d7df5fbdee6bae3951a68963026f18a8286289b5d6d68c6` |
-| 73 | `writing-checkpoint.json` | `3e6c7a56fc4c86492d7d9278d7c62508e8d7455cefe1d2625ce77c8b12531645` |
-| 73 | `reading-checkpoint.json` | `c60af63964684d2060f1cb1f45424b71af0025fd70d8bf4d4dfd423f19b3d50f` |
-| 73 | `written.png` | `d5699b2caecf817ef9e7cb64eb02da621b31f5f4f54a862c49d7ea9221b1560f` |
-| 73 | `read.png` | `ab11c05bec3c0ace7e66ff5a8a7edf53670fa7c6fd6ff8558deb72054b653170` |
+| 46 | `write.log` | `96de4fd52f40243083994982986a0506fe0fcb7bbf71e0cf1d571cfe02ceafcb` |
+| 46 | `read.log` | `e385d88256c14a733403cd80580a5d03dbfbe4942163693b4c2a0b3e625aff2d` |
+| 46 | `written-sign.json` / byte-identical `reloaded-sign.json` | `5de594722d1f116d2bcef126d2510207f909baa7a3a96e8ca629e86b38e1dc26` |
+| 46 | `writing-checkpoint.json` | `5972a2a2d661ae10fe93936e373777d729e106f2bbf18e1be9faff7f1e81cac5` |
+| 46 | `reading-checkpoint.json` | `41c4c7e0473faafd2fb4840356a86daf055d3b9352ecd36dd38f8e3e0dd7e8d9` |
+| 46 | `written.png` | `adbd9265d371d51babb5ecc8a6fa39a6b47400c338cc2604548300dc9c46df67` |
+| 46 | `read.png` | `c1f98aea126e60abeac0d1e807e63fb4b423ce7ae5e21e26033464fa5fcc7d0b` |
+| 73 | `write.log` | `184d4f8b2e6096ab95811b111d2a4eb7412c7bf96834dd582ccd2a937970e184` |
+| 73 | `read.log` | `a213dcc9f95b0a09034554c822e56d09a58730cd727da449458308b5a8b69542` |
+| 73 | `written-sign.json` / byte-identical `reloaded-sign.json` | `528973309e0ee8b47a3b557373c0741bba9f7169f16fc940dc415d561a069e10` |
+| 73 | `writing-checkpoint.json` | `79cf903641683c77a4f67738cd89ab08046516c71c2fe547271a27268cffd0be` |
+| 73 | `reading-checkpoint.json` | `e048f13aae2f82fb6c345af902270353b8dc708d9573eef1c78ca4818e31edb5` |
+| 73 | `written.png` | `59bdab670e2fd06894dea40ac7af42133f7370ce48707d99016b19b3052210ba` |
+| 73 | `read.png` | `bd0726c54ae9be1cb3d29287ba34d811fcb862288ae20bed0bc74e8f3ecf6383` |
 
 ## Canonical repository gate and intermediate failures
 
@@ -292,10 +336,10 @@ The final canonical command was:
 scripts/verify-pebblelab.sh
 ```
 
-The final Correction 01 rerun passed all 35 repository steps. The shared
+The final Correction 02 rerun passed all 35 repository steps. The shared
 runtime reported `4644 passed, 0 failed`; deterministic scenario pairs and
 canonical output comparisons all passed. Evidence is retained at
-`/var/folders/23/t4l5dv055dl3x1zqylcpl9wc0000gn/T/PebbleLab-verify.hxNxoC`.
+`/var/folders/23/t4l5dv055dl3x1zqylcpl9wc0000gn/T/PebbleLab-verify.Ms54Tk`.
 Golden regeneration was not attempted.
 
 Failures encountered and retained during development were corrected rather
@@ -328,13 +372,33 @@ than hidden:
   future; they now cover strict schema 40 and reject schema 41. The affected
   focused suites then passed `27/27`, `28/28` and `32/32` before the complete
   gate rerun.
+- Correction 02 first reached `47/48`: corrupt compact-index bytes were
+  detected, but a later assignment accidentally reset the source-valid flag,
+  allowing a resident chunk to mask the corruption. A second `47/48` rerun
+  isolated that overwrite. Source invalidity is now monotone for the load and
+  the permanent regression passes within the final `56/56` suite.
+- an early multi-process crash fixture assumed material identity 1 remained
+  available after `GameCore.loadWorld`; the loaded player had legitimately
+  consumed it. All four writers therefore exited 2 at fixture setup. The
+  fixture now allocates through the actual counter and additionally mutates
+  two chunks atomically; this was a test defect, not a product failure.
+- one ad hoc Correction 02 run reused the developer SaveDB and crashed its
+  forced fixture unwrap after prior rows polluted the named World. Every
+  durable runner now uses a fresh `CFFIXED_USER_HOME`; the hermetic rerun
+  passed `56/56`.
+- two shell commands were rejected before execution because they included
+  inline cleanup forms; reruns without those command forms passed. A
+  `swift test list` discovery was also stopped after confirming that the empty
+  `Tests` directory defines no test target; it had only begun redundant builds.
 
 ## Deliberate V1 limits and non-claims
 
 CIV-45 provides one immutable inscription on an existing standing sign. It
 does not implement books, manuscripts, loose carried pages, copying,
-inventories of texts, archives, libraries, catalogues, indexes, institutional
-conservation, global retrieval or historiography. It does not implement
+inventories of texts, archives, libraries, cognitive catalogues, general
+content indexes, institutional conservation, global retrieval or
+historiography. The compact SaveDB index is only physical identity-integrity
+metadata. CIV-45 does not implement
 general free-form semantic generation: the provider-off V1 path writes the
 small existing resource-presence semantic family and a bounded explicit
 counter assertion. It creates no culture, norm, ritual, organization, law,
@@ -350,7 +414,7 @@ its existence alone.
 
 ```text
 published progression: COMPLETE THROUGH CIV-44
-CIV-45: LOCAL REVIEW CANDIDATE — NOT PUBLISHED
+CIV-45: CORRECTION 02 LOCAL REVIEW CANDIDATE — NOT PUBLISHED
 CIV-46: PLANNED — NOT STARTED / NOT AUTHORIZED
 CIV-47: PLANNED — NOT STARTED / NOT AUTHORIZED
 V4-GATE-G-v1: PLANNED / UNEVALUATED
