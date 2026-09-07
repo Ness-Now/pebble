@@ -47,7 +47,7 @@ These documents form the minimal permanent memory of the project:
 | [`CIV_42_PHASE_SUMMARY.md`](CIV_42_PHASE_SUMMARY.md) | Published CIV-42 architecture, language-independent semantics, French seed/prior, sparse lexical learning, provider-off realization, schema-37 persistence/replay, Senior Review Corrections 01–02, retained-boundary provenance, attacks A–G, validation, publication history and non-claims. |
 | [`CIV_43_PHASE_SUMMARY.md`](CIV_43_PHASE_SUMMARY.md) | Published CIV-43 architecture, Social-local oral composition, immediate-speaker attribution, deterministic faithful/distorted transmission, CIV-41 acquisition/revision, schema-38 persistence/replay, terminal compaction coordination, exact empty-set oral authority, Senior Review Corrections 01–02, validation, publication history and non-claims. |
 | [`CIV_44_PHASE_SUMMARY.md`](CIV_44_PHASE_SUMMARY.md) | Published CIV-44 architecture, embodied carrier composition, immutable pickup commitment, accepted-movement provenance, post-arrival CIV-43 handoff, schema-39 restart/replay, lifecycle, bounds, Senior Review Corrections 01–02, validation, publication history and deliberate V1 limits. |
-| [`CIV_45_PHASE_SUMMARY.md`](CIV_45_PHASE_SUMMARY.md) | Local, unpublished CIV-45 Correction 02 review candidate: compact SaveDB-owned inscription index, atomic payload/index persistence, linearized live authority, resident dirty replacement, one-shot legacy migration without steady-state full-voxel decode, preserved historical Correction Required verdicts, schema-40 cognition and fresh-process live proof. |
+| [`CIV_45_PHASE_SUMMARY.md`](CIV_45_PHASE_SUMMARY.md) | Local, unpublished CIV-45 Correction 03 review candidate: compact SaveDB-owned inscription index, atomic payload/index persistence, stale-safe physical-authority/cognitive-publication finalization, resident dirty replacement, one-shot legacy migration without steady-state full-voxel decode, three preserved historical Correction Required verdicts, schema-40 cognition and fresh-process live proof. |
 | [`GATE_F_BLOCKER_01_SETTLEMENT_ADMISSION_CAPACITY.md`](GATE_F_BLOCKER_01_SETTLEMENT_ADMISSION_CAPACITY.md) | Published, independently remote-verified Blocker 01 correction record; preserves Gate F Evaluation 01 historical FAIL and documents shared publication/restore per-settlement admission capacity, atomic refusal and two-process schema-35 proof. |
 | [`GATE_F_BLOCKER_02_MIGRATION_DESTINATION_CAPACITY.md`](GATE_F_BLOCKER_02_MIGRATION_DESTINATION_CAPACITY.md) | Published, independently remote-verified Blocker 02 correction record; preserves Evaluation 02 historical FAIL and documents derived durable destination-slot authority, atomic full-destination refusal, exact arrival/death/failure release, schema-35 restart and two-process proof. |
 | [`GATE_F_BLOCKER_03_DYNAMIC_FIDELITY_AUTHORITY.md`](GATE_F_BLOCKER_03_DYNAMIC_FIDELITY_AUTHORITY.md) | Published, independently remote-verified Blocker 03 correction record; preserves Evaluation 03 historical FAIL and documents shared dynamic-member fidelity composition, exact birth refusal/retry, legacy migration, mortality, rotation and two-process schema-35 proof. |
@@ -106,7 +106,7 @@ CIV-37: COMPLETE AND PUBLISHED
 CIV-38: OPTIONAL — NOT STARTED
 V4-GATE-E-v1: ACQUIRED AND PUBLISHED
 V4-GATE-E-v1 acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f76744f83
-active phase: CIV-45 — CORRECTION 02 LOCAL REVIEW CANDIDATE — NOT PUBLISHED
+active phase: CIV-45 — CORRECTION 03 LOCAL REVIEW CANDIDATE — NOT PUBLISHED
 completed through: CIV-44 (CIV-38 and CIV-40 optional and unstarted)
 next eligible action: CIV-45 independent senior re-review
 Gate E Evaluation 01: FAIL — HISTORICAL IMMUTABLE EVIDENCE
@@ -118,7 +118,7 @@ V4-GATE-E-v1 Blocker 03: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 04: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 04: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 05: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
-next authorized action: CIV-45 senior re-review; CIV-46 remains unauthorized
+next authorized action: CIV-45 independent senior re-review; CIV-46 remains unauthorized
 CIV-39: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 V4-GATE-F-v1: ACQUIRED AND PUBLISHED — REMOTE VERIFIED
@@ -157,13 +157,16 @@ CIV-43 published canonical product HEAD: 9690538a5cfd2a871750ffa839a404f7d19818d
 CIV-43 final review archive SHA-256: 1c22063677e95430bb6f220a95c75e07e0512d532d0273accf7c442a9b6fd54a
 CIV-44: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 CIV-44 published canonical HEAD: 0c6a6e88ce838266897526a74d067532163cb06f
-CIV-45: LOCAL REVIEW CANDIDATE — NOT PUBLISHED
+CIV-45: CORRECTION 03 LOCAL REVIEW CANDIDATE — NOT PUBLISHED
 CIV-45 exact published baseline: 9a2cfec10b4a0d1b6a5d2f46aac8f3c312ddbb0e
 CIV-45 initial product commit: ac38675d88d4b709183e7b26f92a0a45b0e928c1
 CIV-45 initial candidate: 89cffa47f1e9635e0f44a0fac246e92739501911 — CORRECTION REQUIRED
 CIV-45 Correction 01 product/test commit: b68a6aeff106f5a3791279d5bd62b8b2916c9a4c
 CIV-45 Correction 01 candidate: 68bda3e5e7a28af50fed3d9680d2a9a0dfeea4e4 — CORRECTION REQUIRED
 CIV-45 Correction 02 product/test commit: 1e2753586e587a098f3908349d1c647d6b10d253
+CIV-45 Correction 02 pre-reconciliation documentation commit: 9b5607a4c2713fdc94937b4855665ea52e83cb08
+CIV-45 Correction 02 candidate: b9fdccd7c8bef0c5bfc39d40d09e32920a3f4ac2 — CORRECTION REQUIRED
+CIV-45 Correction 03 product/test commit: b29faa532e3f1909e7955015a8f4067e47c21a40
 CIV-46 / CIV-47: PLANNED — NOT STARTED / NOT AUTHORIZED
 V4-GATE-G-v1: PLANNED / UNEVALUATED
 ```
@@ -443,12 +446,13 @@ PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical product
 HEAD `0c6a6e88ce838266897526a74d067532163cb06f`, from exact implementation
 baseline `50d0f73fb9b2a29fd1c3aa80395d20df862a0048`. Its Senior Review blocker and
 Corrections 01–02 remain recorded in the published phase summary. Published
-progression remains complete through CIV-44. CIV-45 is a Correction 02 local
+progression remains complete through CIV-44. CIV-45 is a Correction 03 local
 review candidate at product/test commit
-`1e2753586e587a098f3908349d1c647d6b10d253`, is not published and awaits
+`b29faa532e3f1909e7955015a8f4067e47c21a40`, is not published and awaits
 independent senior re-review. Initial candidate
 `89cffa47f1e9635e0f44a0fac246e92739501911` and Correction 01 candidate
-`68bda3e5e7a28af50fed3d9680d2a9a0dfeea4e4` remain **CORRECTION REQUIRED**
+`68bda3e5e7a28af50fed3d9680d2a9a0dfeea4e4` and Correction 02 candidate
+`b9fdccd7c8bef0c5bfc39d40d09e32920a3f4ac2` remain **CORRECTION REQUIRED**
 historical evidence. CIV-46 and CIV-47 remain unstarted and unauthorized; Gate
 G remains planned and unevaluated. See
 [`CIV_45_PHASE_SUMMARY.md`](CIV_45_PHASE_SUMMARY.md).

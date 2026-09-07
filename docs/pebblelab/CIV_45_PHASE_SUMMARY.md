@@ -2,7 +2,7 @@
 
 ## Review status and baseline
 
-`CIV-45` is a **CORRECTION 02 LOCAL REVIEW CANDIDATE — NOT PUBLISHED**. It was
+`CIV-45` is a **CORRECTION 03 LOCAL REVIEW CANDIDATE — NOT PUBLISHED**. It was
 implemented from exact published baseline
 `9a2cfec10b4a0d1b6a5d2f46aac8f3c312ddbb0e` on local branch
 `codex/civ-45-writing-literacy-v1`. The initial product, test and live-proof
@@ -16,12 +16,26 @@ also returned **CORRECTION REQUIRED**: durable commit and catalogue advancement
 were not linearized, a resident dirty chunk was unioned with rather than
 replacing its durable representation, and normal World entry decoded every
 persisted voxel payload. Correction 02 product/test commit is
-`1e2753586e587a098f3908349d1c647d6b10d253`; the corrected review candidate is
-the local documentation HEAD containing this summary. Both failed candidates
-remain intact, immutable historical evidence and are not represented as
-approved.
+`1e2753586e587a098f3908349d1c647d6b10d253`, its pre-reconciliation
+documentation commit is `9b5607a4c2713fdc94937b4855665ea52e83cb08`, and its
+reconciled candidate is `b9fdccd7c8bef0c5bfc39d40d09e32920a3f4ac2`.
+Final independent senior re-review returned **CORRECTION REQUIRED** because a
+physical authority receipt inspected at generation N could still publish
+cognition after a conflicting physical commit advanced authority to N+1.
+Correction 03 product/test commit is
+`b29faa532e3f1909e7955015a8f4067e47c21a40`; the corrected review candidate is
+the local documentation HEAD containing this summary. All three failed
+candidates remain intact, immutable historical evidence and are not
+represented as approved.
 
-The published branch remains complete through CIV-44. Correction 02 has not
+```text
+Initial CIV-45 candidate: CORRECTION REQUIRED
+Correction 01 candidate: CORRECTION REQUIRED
+Correction 02 candidate: CORRECTION REQUIRED
+Correction 03: LOCAL REVIEW CANDIDATE — NOT PUBLISHED
+```
+
+The published branch remains complete through CIV-44. Correction 03 has not
 received independent senior re-review approval and CIV-45 has not been
 published. CIV-46 and CIV-47 have not started. `V4-GATE-G-v1` remains
 **PLANNED / UNEVALUATED**.
@@ -37,9 +51,10 @@ PebbleAgents.
   World-persisted physical identity counter.
 - Pebble owns the transactional live adapter. It requires a real registered
   probe, a loaded supported sign within two Manhattan cells, an exact World
-  identity, and a freshly inspected Core inscription before publishing
-  cognition. It verifies success and performs an exact rollback on synchronous
-  failure.
+  identity, and a freshly inspected Core inscription. It prepares a candidate
+  civilization session, then commits that candidate only inside Core's
+  stale-safe physical-authority finalization closure. It verifies success and
+  performs an exact rollback on synchronous failure.
 - PebbleAgents owns the deterministic plan, literacy history and accepted
   historical inscription/read records. It receives physical receipts and
   never reads or mutates World.
@@ -123,15 +138,40 @@ For persistence, `SaveDB.putChunks` prepares immutable chunk/index snapshots,
 takes the catalogue lock, starts `BEGIN IMMEDIATE`, advances the persisted
 World physical counter if necessary, writes every payload and index row, and
 commits. Still under the same catalogue lock, it applies the complete
-multi-chunk state dictionary in one generation. Inspections execute their
-validation and return closure under that same lock; no detachable claims
-snapshot can finalize after becoming stale. A reader already validating
+multi-chunk state dictionary in one generation. Correction 02 made inspection
+itself linearizable, but its returned result could outlive that generation and
+was the Correction 03 blocker. A reader already validating
 finishes before the database transaction begins, while a reader arriving in
 the post-commit/pre-advancement seam blocks until the full authority batch is
 visible. Failed transactions roll back and follow the existing dirty/requeue
 path. Crash before commit restores the old durable batch; crash immediately
 after commit reconstructs the complete new batch and advanced identity counter
 on restart.
+
+Correction 03 keeps `authorityGeneration` exclusively in Core. A detachable
+`SignInscriptionAuthorityObservation` is an opaque, World/catalogue-bound test
+token, not a durable PebbleAgents receipt. Production read, notation practice
+and final writing publication instead call
+`World.withCurrentSignInscriptionAuthority`: Core takes the catalogue's
+recursive lock, reconstructs and validates current physical authority, and
+holds that same critical section while an opaque Pebble closure assigns the
+already prepared candidate `AgentSimulationSession`. This closure execution is
+the physical-authority-to-cognitive-publication linearization point. Core never
+interprets the closure, and PebbleAgents receives neither World access nor an
+authority generation. The explicit token finalizer exists for deterministic
+hostile testing: an observation from generation N is rejected before its
+closure runs after authority advances to N+1.
+
+The authority generation is World-global, so an unrelated physical catalogue
+advance conservatively stales an explicit observation token. Production does
+not loop on such tokens: it obtains and publishes within one current-authority
+closure, so autosave either completes before the fresh validation or waits
+behind publication; there is no retry livelock. On a failed write, the adapter
+restores the candidate physical state only when that state is still exactly the
+operation-owned state. It never overwrites a later external mutation. If an
+identity may have crossed a durable visibility boundary, exact abandonment
+removes only the still-owned candidate and conservatively burns the identity
+rather than making it reusable.
 
 ## Content, assertion and truth
 
@@ -233,14 +273,24 @@ PEBBLELAB_CIV45_BUILD_CONFIGURATION=debug scripts/verify-pebblelab-civ45.sh
 56 passed, 0 failed # Correction 02 dirty/index/migration/concurrency
 4/4 crash boundaries passed across fresh processes
 26 passed, 0 failed # exact persistent P0 regression
+11 passed, 0 failed # Correction 03 stale read/practice/write/finalization
 105 passed, 0 failed
 
 PEBBLELAB_CIV45_BUILD_CONFIGURATION=release scripts/verify-pebblelab-civ45.sh
 56 passed, 0 failed # Correction 02 dirty/index/migration/concurrency
 4/4 crash boundaries passed across fresh processes
 26 passed, 0 failed # exact persistent P0 regression
+11 passed, 0 failed # Correction 03 stale read/practice/write/finalization
 105 passed, 0 failed
 ```
+
+The Correction 03 suite forces the exact deterministic order `T1 observe N →
+T2 commit N+1 → T1 finalize N`. Stale read, notation practice and final
+writing publication all return `staleAuthority`; their finalization closures
+do not execute, and byte-for-byte serialized cognitive state remains unchanged.
+The tests additionally prove no claim, understanding, revision, belief,
+historical read, lesson, guided-use count, literacy grant or ordinal is
+consumed. A fresh observation under N+1 then follows the legitimate path.
 
 The new 56-check Correction 02 suite proves dirty removal, replacement and new
 duplicate addition before/after autosave; resident and staged chunk-key
@@ -271,11 +321,11 @@ CIV-42 compaction, schema-40 restore/replay, and hostile signed state.
 The canonical live entry point is:
 
 ```bash
-scripts/verify-pebblelab-civ45-live.sh --dry-run
-scripts/verify-pebblelab-civ45-live.sh
+scripts/verify-pebblelab-live.sh --dry-run --writing
+scripts/verify-pebblelab-live.sh --writing
 ```
 
-The Correction 02 dry-run passed. The release campaign used the Correction 02
+The Correction 03 dry-run passed. The release campaign used the Correction 03
 Pebble build, then ran two fresh real processes for each of seeds 46 and 73
 under disposable `CFFIXED_USER_HOME` roots. Process one created an ordinary blank oak sign on a
 natural supported site, observed a real oak log, wrote the false `stone`
@@ -288,17 +338,21 @@ sign, refused the old artifact without cognitive mutation, restored the
 fixture and stopped.
 
 All four processes exited zero with zero runtime errors and no residual Pebble
-process. The final Correction 02 campaign root is:
+process. Read, practice and writing in that live binary route through
+`withCurrentSignInscriptionAuthority`, the same Correction 03 finalization
+primitive covered by the deterministic stale tests. The live campaign proves
+the legitimate current-authority path; it does not substitute for the hostile
+N→N+1 proof. The final Correction 03 campaign root is:
 
 ```text
-/tmp/pebblelab-civ45-live.bii8YI
+/tmp/pebblelab-civ45-live.HSrP8Z
 ```
 
-Seed 46 used material identity 289, artifact
-`inscription-f88ad5ffcf7e00764822c160c6f1f1f4385fe1c34556ad152eb9a53fcc148b39`,
+Seed 46 used material identity 288, artifact
+`inscription-18fa7ce6acceda61b05ba4d60e9b732b357067b74888eb23f27d97110c2ee2e8`,
 sign `(22,68,-21)` and real oak-log source `(19,66,-24)`. Seed 73 used
 material identity 148, artifact
-`inscription-1809667fb808ba0919ced70e7bec33a38d8ebc993cbfd6f0d1c593cfe7e54059`,
+`inscription-7752131de7b52e775bb89f8185f0234c22ff054fd6585e60f0c62c9c092225b3`,
 sign `(15,64,-8)` and real oak-log source `(12,64,-7)`.
 
 The four 3024×1898 captures were individually inspected. Each visibly shows
@@ -313,20 +367,20 @@ Key evidence SHA-256 values:
 
 | Seed | Artifact | SHA-256 |
 | --- | --- | --- |
-| 46 | `write.log` | `96de4fd52f40243083994982986a0506fe0fcb7bbf71e0cf1d571cfe02ceafcb` |
-| 46 | `read.log` | `e385d88256c14a733403cd80580a5d03dbfbe4942163693b4c2a0b3e625aff2d` |
-| 46 | `written-sign.json` / byte-identical `reloaded-sign.json` | `5de594722d1f116d2bcef126d2510207f909baa7a3a96e8ca629e86b38e1dc26` |
-| 46 | `writing-checkpoint.json` | `5972a2a2d661ae10fe93936e373777d729e106f2bbf18e1be9faff7f1e81cac5` |
-| 46 | `reading-checkpoint.json` | `41c4c7e0473faafd2fb4840356a86daf055d3b9352ecd36dd38f8e3e0dd7e8d9` |
-| 46 | `written.png` | `adbd9265d371d51babb5ecc8a6fa39a6b47400c338cc2604548300dc9c46df67` |
-| 46 | `read.png` | `c1f98aea126e60abeac0d1e807e63fb4b423ce7ae5e21e26033464fa5fcc7d0b` |
-| 73 | `write.log` | `184d4f8b2e6096ab95811b111d2a4eb7412c7bf96834dd582ccd2a937970e184` |
-| 73 | `read.log` | `a213dcc9f95b0a09034554c822e56d09a58730cd727da449458308b5a8b69542` |
-| 73 | `written-sign.json` / byte-identical `reloaded-sign.json` | `528973309e0ee8b47a3b557373c0741bba9f7169f16fc940dc415d561a069e10` |
-| 73 | `writing-checkpoint.json` | `79cf903641683c77a4f67738cd89ab08046516c71c2fe547271a27268cffd0be` |
-| 73 | `reading-checkpoint.json` | `e048f13aae2f82fb6c345af902270353b8dc708d9573eef1c78ca4818e31edb5` |
-| 73 | `written.png` | `59bdab670e2fd06894dea40ac7af42133f7370ce48707d99016b19b3052210ba` |
-| 73 | `read.png` | `bd0726c54ae9be1cb3d29287ba34d811fcb862288ae20bed0bc74e8f3ecf6383` |
+| 46 | `write.log` | `13293413fdba69de8290ed0ed5e1dd5d9ed369c0bdd3c1410ec3b99fc02637bd` |
+| 46 | `read.log` | `e3b616d4b0e3b3b70dadc0e99944d4f269bfac905f08ea4168997fa47440546b` |
+| 46 | `written-sign.json` / byte-identical `reloaded-sign.json` | `3a284c2068fe89901d75f06f8ed91ab52f583d341a89d18c268ca1ceadd33a76` |
+| 46 | `writing-checkpoint.json` | `aa4d20b4d90958d92d6828852d4f36c08ffa8ac4b3f6f4c59bd4fe4d8fa083c5` |
+| 46 | `reading-checkpoint.json` | `373db58f10b6c219c2d332066d97cb37db4f0eed1ee5e90ce6d8282ce90e66fc` |
+| 46 | `written.png` | `1119294b263e5cc06d978c82cee06ead97f32e28c5d5cca7e72bc3b8be591d18` |
+| 46 | `read.png` | `9d2ade925005fe344d4ce230b4c33c3d192a352a6b579bf2ba8bdc771a0df3e1` |
+| 73 | `write.log` | `2de765ebc1399358c9f41a1ac23f30fd5a9e5a7d17b2837ee2030d58e8038c30` |
+| 73 | `read.log` | `f66c73b3889aba9ced7a84a653607a8b1dc71e22a500d4e9fbbba17cceba6ae6` |
+| 73 | `written-sign.json` / byte-identical `reloaded-sign.json` | `73e1dcbccd9a6ab509b40cf8ce946d988ab853a096c50223972d33b9c7e955fd` |
+| 73 | `writing-checkpoint.json` | `f8a85545b4c7e184ed96be348422d576e898f7717c8f0aeaece139cf7594357a` |
+| 73 | `reading-checkpoint.json` | `edb0bd53407de015c31a1b8adf581674f7a1344e5e0351f100314c0316014b5b` |
+| 73 | `written.png` | `ddf475e387c67a979b8bd71272afe82259fc724b7a6930b1a44111dbe96caa4d` |
+| 73 | `read.png` | `b05486b30d5cbabe80a9e53ce0a3ad63ed8db46535da8f25f5fbb0d27a001143` |
 
 ## Canonical repository gate and intermediate failures
 
@@ -336,10 +390,10 @@ The final canonical command was:
 scripts/verify-pebblelab.sh
 ```
 
-The final Correction 02 rerun passed all 35 repository steps. The shared
+The final Correction 03 rerun passed all 35 repository steps. The shared
 runtime reported `4644 passed, 0 failed`; deterministic scenario pairs and
 canonical output comparisons all passed. Evidence is retained at
-`/var/folders/23/t4l5dv055dl3x1zqylcpl9wc0000gn/T/PebbleLab-verify.Ms54Tk`.
+`/var/folders/23/t4l5dv055dl3x1zqylcpl9wc0000gn/T/PebbleLab-verify.h01tSO`.
 Golden regeneration was not attempted.
 
 Failures encountered and retained during development were corrected rather
@@ -390,6 +444,12 @@ than hidden:
   inline cleanup forms; reruns without those command forms passed. A
   `swift test list` discovery was also stopped after confirming that the empty
   `Tests` directory defines no test target; it had only begun redundant builds.
+- the first Correction 03 canonical-gate evidence stream ended during
+  PebbleLab Release compilation when the Codex quota interrupted the task. It
+  contained no compiler diagnostic and no final gate result; on resumption no
+  Swift or verifier process remained, so that incomplete log was retained and
+  only the canonical gate was rerun. The rerun passed `35/35`. This was an
+  orchestration interruption, not a product/test failure.
 
 ## Deliberate V1 limits and non-claims
 
@@ -414,8 +474,9 @@ its existence alone.
 
 ```text
 published progression: COMPLETE THROUGH CIV-44
-CIV-45: CORRECTION 02 LOCAL REVIEW CANDIDATE — NOT PUBLISHED
+CIV-45: CORRECTION 03 LOCAL REVIEW CANDIDATE — NOT PUBLISHED
 CIV-46: PLANNED — NOT STARTED / NOT AUTHORIZED
 CIV-47: PLANNED — NOT STARTED / NOT AUTHORIZED
 V4-GATE-G-v1: PLANNED / UNEVALUATED
+next action: CIV-45 INDEPENDENT SENIOR RE-REVIEW
 ```

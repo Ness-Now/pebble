@@ -141,7 +141,7 @@ for the compact status. In particular:
   AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical
   product HEAD `0c6a6e88ce838266897526a74d067532163cb06f`. Published progression is
   complete through `CIV-44`.
-- `CIV-45 — Writing and Literacy V1` is a **CORRECTION 02 LOCAL REVIEW
+- `CIV-45 — Writing and Literacy V1` is a **CORRECTION 03 LOCAL REVIEW
   CANDIDATE — NOT PUBLISHED** from exact published baseline
   `9a2cfec10b4a0d1b6a5d2f46aac8f3c312ddbb0e`; local product commit
   `ac38675d88d4b709183e7b26f92a0a45b0e928c1` and initial candidate
@@ -150,9 +150,15 @@ for the compact status. In particular:
   `b68a6aeff106f5a3791279d5bd62b8b2916c9a4c` and candidate
   `68bda3e5e7a28af50fed3d9680d2a9a0dfeea4e4` likewise remain intact;
   independent re-review also returned **CORRECTION REQUIRED**. Correction 02
-  product/test commit `1e2753586e587a098f3908349d1c647d6b10d253`
-  supplies the current local candidate. Published progression remains complete
-  through CIV-44. The next authorized action is CIV-45 independent senior
+  product/test commit `1e2753586e587a098f3908349d1c647d6b10d253`,
+  pre-reconciliation documentation commit
+  `9b5607a4c2713fdc94937b4855665ea52e83cb08` and reconciled candidate
+  `b9fdccd7c8bef0c5bfc39d40d09e32920a3f4ac2` remain intact; its final senior
+  re-review returned **CORRECTION REQUIRED** because physical authority could
+  become stale before cognitive publication. Correction 03 product/test commit
+  `b29faa532e3f1909e7955015a8f4067e47c21a40` supplies the current local
+  candidate with Core-held stale-safe finalization. Published progression
+  remains complete through CIV-44. The next authorized action is CIV-45 independent senior
   re-review; CIV-46 and CIV-47 remain unstarted and unauthorized. Gate G
   remains planned and unevaluated. See
   [`CIV_45_PHASE_SUMMARY.md`](docs/pebblelab/CIV_45_PHASE_SUMMARY.md).
