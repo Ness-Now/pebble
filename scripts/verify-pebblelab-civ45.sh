@@ -19,4 +19,7 @@ trap cleanup EXIT
 CFFIXED_USER_HOME="$PERSISTENCE_HOME" \
     PEBBLELAB_SMOKE_ONLY=civ-45-persistent-identity \
     ".build/$BUILD_CONFIGURATION/pebsmoke"
+CFFIXED_USER_HOME="$PERSISTENCE_HOME" \
+    PEBBLELAB_SMOKE_ONLY=civ-45-correction03 \
+    ".build/$BUILD_CONFIGURATION/pebsmoke"
 PEBBLELAB_SMOKE_ONLY=civ-45 ".build/$BUILD_CONFIGURATION/pebsmoke"

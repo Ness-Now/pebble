@@ -31,8 +31,32 @@ extension PebbleAgentController {
             guard condition else { throw WritingProofError.failed(label) }
             trace("CIV45_LIVE check=\(label) result=PASS")
         }
-        func receipt(_ artifact: AgentWrittenArtifact, _ actor: LabCoreAgentEntity) throws -> AgentWritingPhysicalReceipt {
-            try adapter.observe(plan: artifact.plan, actor: actor, world: world, worldID: worldID, tick: current.tick)
+        func inspect(_ artifact: AgentWrittenArtifact, _ actor: LabCoreAgentEntity) throws {
+            try adapter.inspect(
+                plan: artifact.plan,
+                actor: actor,
+                world: world,
+                worldID: worldID,
+                tick: current.tick
+            )
+        }
+        func practice(
+            _ artifact: AgentWrittenArtifact,
+            teacher: LabCoreAgentEntity,
+            learner: LabCoreAgentEntity
+        ) throws {
+            try adapter.practice(
+                artifact: artifact,
+                teacher: teacher,
+                learner: learner,
+                world: world,
+                worldID: worldID,
+                session: current,
+                commit: { committed in
+                    current = committed
+                    self.session = committed
+                }
+            )
         }
         do {
             if phase == "write" {
@@ -94,7 +118,10 @@ extension PebbleAgentController {
                 let before = try current.durableStateBytes()
                 do {
                     _ = try adapter.inscribe(plan: plan, actor: author, world: world, worldID: worldID,
-                        session: &current, failAfterMutation: true)
+                        session: current, failAfterMutation: true, commit: { committed in
+                            current = committed
+                            self.session = committed
+                        })
                     throw WritingProofError.failed("injected_mutation_unexpectedly_passed")
                 } catch PebbleAgentWritingAdapterError.injected { }
                 try require(try current.durableStateBytes() == before
@@ -103,17 +130,22 @@ extension PebbleAgentController {
                     && world.getBlockEntity(sign.x, sign.y, sign.z)?.signInscription == nil,
                     "late_failure_exact_rollback")
                 let artifact = try adapter.inscribe(plan: plan, actor: author, world: world,
-                    worldID: worldID, session: &current)
+                    worldID: worldID, session: current, commit: { committed in
+                        current = committed
+                        self.session = committed
+                    })
                 try require(peekNextEntityId() == plan.materialID + 1, "Core_physical_identity_consumed_once")
                 if let remote = probesByAgentId["agent_2"] {
                     do {
-                        _ = try adapter.observe(plan: plan, actor: remote, world: world, worldID: worldID, tick: current.tick)
+                        try adapter.inspect(plan: plan, actor: remote, world: world,
+                            worldID: worldID, tick: current.tick)
                         throw WritingProofError.failed("remote_material_access_accepted")
                     } catch PebbleAgentWritingAdapterError.unavailable { }
                     trace("CIV45_LIVE check=remote_material_access_refused result=PASS")
                 }
                 do {
-                    _ = try adapter.observe(plan: plan, actor: reader, world: world, worldID: "incompatible-world", tick: current.tick)
+                    try adapter.inspect(plan: plan, actor: reader, world: world,
+                        worldID: "incompatible-world", tick: current.tick)
                     throw WritingProofError.failed("foreign_world_access_accepted")
                 } catch PebbleAgentWritingAdapterError.unavailable { }
                 trace("CIV45_LIVE check=foreign_world_access_refused result=PASS")
@@ -121,13 +153,14 @@ extension PebbleAgentController {
                             "false_inscription_world_unchanged")
                 do {
                     _ = try adapter.read(artifact: artifact, actor: reader, world: world,
-                        worldID: worldID, session: &current)
+                        worldID: worldID, session: current, commit: { committed in
+                            current = committed
+                            self.session = committed
+                        })
                     throw WritingProofError.failed("unlearned_reader_accepted")
                 } catch AgentWritingError.unavailable { }
                 try require(!current.canUseWritingNotation(readerID), "oral_only_reader_refused")
-                try current.practiceWritingNotation(artifactID: artifact.artifactID,
-                    teacherID: authorID, learnerID: readerID,
-                    teacherReceipt: receipt(artifact, author), learnerReceipt: receipt(artifact, reader))
+                try practice(artifact, teacher: author, learner: reader)
                 try require(!current.canUseWritingNotation(readerID), "first_local_lesson_incomplete")
                 try AgentCheckpointCodec.encode(current.makeCheckpoint()).write(to: checkpointURL, options: .atomic)
                 try AgentCheckpointCodec.encode(world.inspectSignInscription(at: sign.x, sign.y, sign.z))
@@ -164,7 +197,7 @@ extension PebbleAgentController {
                 }
                 current = restored
                 guard let artifact = current.writingState?.artifacts.first else { throw WritingProofError.failed("missing_inscription") }
-                _ = try receipt(artifact, reader)
+                try inspect(artifact, reader)
                 let loadedSignBytes = try AgentCheckpointCodec.encode(world.inspectSignInscription(
                     at: fixture.sign.x, fixture.sign.y, fixture.sign.z))
                 try require(try loadedSignBytes == Data(contentsOf: directory.appendingPathComponent("written-sign.json")),
@@ -174,12 +207,13 @@ extension PebbleAgentController {
                 try require(world.getBlock(fixture.source.x, fixture.source.y, fixture.source.z) == Int(bid("oak_log")) << 4,
                             "saved_world_still_wood")
                 _ = try current.advanceTick(perceptions: [])
-                try current.practiceWritingNotation(artifactID: artifact.artifactID,
-                    teacherID: authorID, learnerID: readerID,
-                    teacherReceipt: receipt(artifact, author), learnerReceipt: receipt(artifact, reader))
+                try practice(artifact, teacher: author, learner: reader)
                 try require(current.canUseWritingNotation(readerID), "second_local_lesson_learns")
                 let reading = try adapter.read(artifact: artifact, actor: reader, world: world,
-                    worldID: worldID, session: &current)
+                    worldID: worldID, session: current, commit: { committed in
+                        current = committed
+                        self.session = committed
+                    })
                 try require(current.knowledgeSnapshot().claims.contains { $0.claimID == reading.claimID
                     && $0.writtenSource?.artifactID == artifact.artifactID && $0.sourceEvidenceID == nil }, "CIV41_attributed_written_claim")
                 try require(current.knowledgeSnapshot().beliefs.contains { $0.ownerID == readerID
@@ -198,7 +232,7 @@ extension PebbleAgentController {
             guard let be = world.getBlockEntity(cell.x, cell.y, cell.z) else { throw WritingProofError.failed("missing_material_sign") }
             be.lines = ["changed", "", "", ""]
             be.lines = artifact.plan.lines
-            do { _ = try receipt(artifact, reader); throw WritingProofError.failed("edit_resurrected_identity") }
+            do { try inspect(artifact, reader); throw WritingProofError.failed("edit_resurrected_identity") }
             catch SignInscriptionError.unavailable { }
             try require(be.signInscription == nil, "normal_edit_invalidates_identity")
             world.setBlock(cell.x, cell.y, cell.z, 0)
@@ -208,7 +242,10 @@ extension PebbleAgentController {
             let before = try current.durableStateBytes()
             do {
                 _ = try adapter.read(artifact: artifact, actor: reader, world: world,
-                    worldID: worldID, session: &current)
+                    worldID: worldID, session: current, commit: { committed in
+                        current = committed
+                        self.session = committed
+                    })
                 throw WritingProofError.failed("replacement_resurrected_identity")
             } catch SignInscriptionError.unavailable { }
             try require(try current.durableStateBytes() == before, "replacement_refuses_without_cognition")

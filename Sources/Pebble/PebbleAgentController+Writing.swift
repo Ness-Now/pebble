@@ -43,43 +43,79 @@ extension PebbleAgentController {
                 let plan = try current.prepareWriting(authorID: author, propositionID: proposition,
                     materialID: peekNextEntityId(), dimension: String(world.dim.rawValue), cell: AgentPosition(x: x, y: y, z: z))
                 _ = try adapter.inscribe(plan: plan, actor: actor, world: world, worldID: worldID,
-                    session: &current, publication: { candidate, receipt in
+                    session: current, publication: { candidate, receipt in
                         if try self.applyRecordedOperationIfActive(.acceptWriting(plan: plan, receipt: receipt),
                             session: &candidate, recorder: &commandRecorder) != nil {
                             return candidate.writingState!.artifacts.last!
                         }
                         return try candidate.acceptWriting(plan, receipt: receipt)
+                    }, commit: { committed in
+                        current = committed
+                        self.session = committed
+                        self.replayRecorder = commandRecorder
                     })
             case "read" where arguments.count == 3:
                 let (id, artifactID) = (arguments[1], arguments[2])
                 guard let actor = probesByAgentId[id], let artifact = current.writingState?.artifacts.first(where: {
                     $0.artifactID == artifactID
                 }) else { throw AgentWritingError.unavailable("reader or inscription") }
-                let receipt = try adapter.observe(plan: artifact.plan, actor: actor, world: world,
-                    worldID: worldID, tick: current.tick)
-                if try !recorded(.readWriting(artifactID: artifactID, readerID: receipt.actorID, receipt: receipt)) {
-                    _ = try current.readWriting(artifactID: artifactID, readerID: receipt.actorID, receipt: receipt)
-                }
+                _ = try adapter.read(artifact: artifact, actor: actor, world: world,
+                    worldID: worldID, session: current, publication: { candidate, receipt in
+                        if try self.applyRecordedOperationIfActive(
+                            .readWriting(artifactID: artifactID, readerID: receipt.actorID, receipt: receipt),
+                            session: &candidate,
+                            recorder: &commandRecorder
+                        ) != nil {
+                            return candidate.writingState!.readings.last!
+                        }
+                        return try candidate.readWriting(
+                            artifactID: artifactID,
+                            readerID: receipt.actorID,
+                            receipt: receipt
+                        )
+                    }, commit: { committed in
+                        current = committed
+                        self.session = committed
+                        self.replayRecorder = commandRecorder
+                    })
             case "practice" where arguments.count == 4:
                 let (teacher, learner, artifactID) = (arguments[1], arguments[2], arguments[3])
                 guard let teacherActor = probesByAgentId[teacher], let learnerActor = probesByAgentId[learner],
                       let artifact = current.writingState?.artifacts.first(where: { $0.artifactID == artifactID }) else {
                     throw AgentWritingError.unavailable("lesson participants or inscription")
                 }
-                let teacherReceipt = try adapter.observe(plan: artifact.plan, actor: teacherActor,
-                    world: world, worldID: worldID, tick: current.tick)
-                let learnerReceipt = try adapter.observe(plan: artifact.plan, actor: learnerActor,
-                    world: world, worldID: worldID, tick: current.tick)
-                if try !recorded(.practiceWritingNotation(artifactID: artifactID, teacherID: teacherReceipt.actorID,
-                    learnerID: learnerReceipt.actorID, teacherReceipt: teacherReceipt, learnerReceipt: learnerReceipt)) {
-                    try current.practiceWritingNotation(artifactID: artifactID, teacherID: teacherReceipt.actorID,
-                        learnerID: learnerReceipt.actorID, teacherReceipt: teacherReceipt, learnerReceipt: learnerReceipt)
-                }
+                try adapter.practice(artifact: artifact, teacher: teacherActor, learner: learnerActor,
+                    world: world, worldID: worldID, session: current,
+                    publication: { candidate, teacherReceipt, learnerReceipt in
+                        if try self.applyRecordedOperationIfActive(
+                            .practiceWritingNotation(
+                                artifactID: artifactID,
+                                teacherID: teacherReceipt.actorID,
+                                learnerID: learnerReceipt.actorID,
+                                teacherReceipt: teacherReceipt,
+                                learnerReceipt: learnerReceipt
+                            ),
+                            session: &candidate,
+                            recorder: &commandRecorder
+                        ) == nil {
+                            try candidate.practiceWritingNotation(
+                                artifactID: artifactID,
+                                teacherID: teacherReceipt.actorID,
+                                learnerID: learnerReceipt.actorID,
+                                teacherReceipt: teacherReceipt,
+                                learnerReceipt: learnerReceipt
+                            )
+                        }
+                    }, commit: { committed in
+                        current = committed
+                        self.session = committed
+                        self.replayRecorder = commandRecorder
+                    })
             case "status" where arguments.count == 2:
                 let id = arguments[1]
                 guard let actor = probesByAgentId[id] else { throw AgentWritingError.unavailable("actor") }
                 for artifact in current.writingState?.artifacts ?? [] {
-                    let present = (try? adapter.observe(plan: artifact.plan, actor: actor,
+                    let present = (try? adapter.inspect(plan: artifact.plan, actor: actor,
                         world: world, worldID: worldID, tick: current.tick)) != nil
                     trace("writing inspection artifact=\(artifact.artifactID) localMaterialAccess=\(present ? "verified" : "unavailable") historicalOnly=1")
                 }

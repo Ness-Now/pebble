@@ -8,100 +8,299 @@ enum PebbleAgentWritingAdapterError: Error {
     case injected
 }
 
-/// Owns the entire physical inscription transaction. It owns no cognition and
-/// has no object registry. Every access samples the real local Core block entity;
-/// historical civilization rows never attest current material existence.
+private struct PebbleAgentWritingPhysicalAccess {
+    let actorID: AgentID
+    let actorPosition: AgentPosition
+}
+
+/// Owns the entire physical inscription transaction and the physical-to-
+/// cognitive publication boundary. It owns no cognition and has no object
+/// registry. Core validates only current material authority and holds that
+/// authority while an opaque candidate session is committed by Pebble.
 struct PebbleAgentWritingAdapter {
-    func inscribe(plan: AgentWritingPlan, actor: LabCoreAgentEntity,
-        world: World, worldID: String, session: inout AgentSimulationSession,
+    func inscribe(
+        plan: AgentWritingPlan,
+        actor: LabCoreAgentEntity,
+        world: World,
+        worldID: String,
+        session: AgentSimulationSession,
         failAfterMutation: Bool = false,
-        publication: ((inout AgentSimulationSession, AgentWritingPhysicalReceipt) throws -> AgentWrittenArtifact)? = nil
+        publication: ((inout AgentSimulationSession, AgentWritingPhysicalReceipt) throws -> AgentWrittenArtifact)? = nil,
+        commit: (AgentSimulationSession) -> Void
     ) throws -> AgentWrittenArtifact {
-        let position = try actorPosition(actor, world: world)
-        guard worldID == plan.worldID, plan.dimension == String(world.dim.rawValue),
-              try session.prepareWriting(authorID: plan.authorID,
-                propositionID: plan.sourcePropositionID, materialID: plan.materialID, dimension: plan.dimension,
-                cell: plan.cell, assertion: plan.assertion) == plan,
-              actor.labAgentId == plan.authorID.rawValue else {
+        let access = try physicalAccess(actor, plan: plan, world: world, worldID: worldID)
+        guard try session.prepareWriting(
+            authorID: plan.authorID,
+            propositionID: plan.sourcePropositionID,
+            materialID: plan.materialID,
+            dimension: plan.dimension,
+            cell: plan.cell,
+            assertion: plan.assertion
+        ) == plan, actor.labAgentId == plan.authorID.rawValue else {
             throw PebbleAgentWritingAdapterError.unavailable("plan/World/actor")
         }
-        try local(position, to: plan.cell, world: world)
+
         let (x, y, z) = (plan.cell.x, plan.cell.y, plan.cell.z)
-        guard let be = world.getBlockEntity(x, y, z), let chunk = world.getChunkAt(x, z) else {
+        guard let blockEntity = world.getBlockEntity(x, y, z),
+              let chunk = world.getChunkAt(x, z) else {
             throw PebbleAgentWritingAdapterError.unavailable("blank support missing")
         }
-        let before = try bytes(be)
+        let before = try bytes(blockEntity)
         let modifiedBefore = chunk.modified
         let blockBefore = world.getBlock(x, y, z)
         let identityBefore = peekNextEntityId()
         guard plan.materialID == identityBefore else {
             throw PebbleAgentWritingAdapterError.unavailable("stale physical identity reservation")
         }
-        let stamp = try SignInscription(artifactID: plan.artifactID, materialID: plan.materialID, contentDigest: plan.contentDigest,
-            worldID: worldID, dimension: world.dim.rawValue, x: x, y: y, z: z, lines: plan.lines)
+        let stamp = try SignInscription(
+            artifactID: plan.artifactID,
+            materialID: plan.materialID,
+            contentDigest: plan.contentDigest,
+            worldID: worldID,
+            dimension: world.dim.rawValue,
+            x: x,
+            y: y,
+            z: z,
+            lines: plan.lines
+        )
+
         var inscribed = false
         do {
             try world.inscribeSign(stamp)
             inscribed = true
-            if failAfterMutation { throw PebbleAgentWritingAdapterError.injected }
-            let receipt = try observe(plan: plan, actor: actor, world: world,
-                                      worldID: worldID, tick: session.tick)
-            var candidate = session
-            let accepted: AgentWrittenArtifact
-            if let publication { accepted = try publication(&candidate, receipt) }
-            else { accepted = try candidate.acceptWriting(plan, receipt: receipt) }
-            guard candidate.writingState?.artifacts.last == accepted,
-                  accepted.plan == plan, accepted.physicalReceipt == receipt else {
-                throw PebbleAgentWritingAdapterError.unavailable("publication receipt")
+            return try withCurrentReceipt(
+                plan: plan,
+                access: access,
+                world: world,
+                worldID: worldID,
+                tick: session.tick
+            ) { receipt in
+                do {
+                    if failAfterMutation { throw PebbleAgentWritingAdapterError.injected }
+                    var candidate = session
+                    let accepted: AgentWrittenArtifact
+                    if let publication {
+                        accepted = try publication(&candidate, receipt)
+                    } else {
+                        accepted = try candidate.acceptWriting(plan, receipt: receipt)
+                    }
+                    guard candidate.writingState?.artifacts.last == accepted,
+                          accepted.plan == plan,
+                          accepted.physicalReceipt == receipt,
+                          try world.inspectSignInscription(at: x, y, z) == stamp,
+                          world.getBlock(x, y, z) == blockBefore else {
+                        throw PebbleAgentWritingAdapterError.unavailable("publication verification")
+                    }
+
+                    // This callback is the publication point. It is the final
+                    // throwing-free step and still runs under Core authority.
+                    commit(candidate)
+                    return accepted
+                } catch {
+                    // Publication did not occur. This catch still runs under
+                    // Core's recursive authority lock, so exact rollback and
+                    // identity release cannot race an index advancement.
+                    do {
+                        try world.rollbackSignInscription(stamp)
+                        chunk.modified = modifiedBefore
+                        inscribed = false
+                        guard peekNextEntityId() == identityBefore,
+                              let restored = world.getBlockEntity(x, y, z),
+                              try bytes(restored) == before,
+                              world.getBlock(x, y, z) == blockBefore else {
+                            throw PebbleAgentWritingAdapterError.rollbackUnverified
+                        }
+                    } catch {
+                        throw PebbleAgentWritingAdapterError.rollbackUnverified
+                    }
+                    throw error
+                }
             }
-            guard try world.inspectSignInscription(at: x, y, z) == stamp,
-                  world.getBlock(x, y, z) == blockBefore else {
-                throw PebbleAgentWritingAdapterError.unavailable("post-publication verification")
-            }
-            session = candidate
-            return accepted
         } catch {
-            // This synchronous operation never moves blocks, inventories or actors.
-            // Verify the complete original BE and the original physical block.
-            guard world.getBlock(x, y, z) == blockBefore else {
+            guard inscribed else { throw error }
+            // Authority could not be established (for example, an external
+            // replacement). Never overwrite such later physical state.
+            guard world.getBlock(x, y, z) == blockBefore,
+                  world.getBlockEntity(x, y, z)?.signInscription == stamp,
+                  world.getBlockEntity(x, y, z)?.lines == stamp.lines else {
                 throw PebbleAgentWritingAdapterError.rollbackUnverified
             }
-            if inscribed { try world.rollbackSignInscription(stamp) }
-            world.setBlockEntity(try JSONDecoder().decode(BlockEntityData.self, from: before))
-            guard peekNextEntityId() == identityBefore,
-                  let restored = world.getBlockEntity(x, y, z), try bytes(restored) == before else {
+            do {
+                // The candidate may already have crossed a save boundary.
+                // Restore its exact material state but burn the identity.
+                try world.abandonSignInscription(stamp)
+                guard peekNextEntityId() == identityBefore + 1,
+                      let restored = world.getBlockEntity(x, y, z),
+                      try bytes(restored) == before else {
+                    throw PebbleAgentWritingAdapterError.rollbackUnverified
+                }
+            } catch {
                 throw PebbleAgentWritingAdapterError.rollbackUnverified
             }
-            chunk.modified = modifiedBefore
             throw error
         }
     }
 
-    func observe(plan: AgentWritingPlan, actor: LabCoreAgentEntity,
-        world: World, worldID: String, tick: Int) throws -> AgentWritingPhysicalReceipt {
-        let position = try actorPosition(actor, world: world)
-        try local(position, to: plan.cell, world: world)
-        guard worldID == plan.worldID, plan.dimension == String(world.dim.rawValue) else {
-            throw PebbleAgentWritingAdapterError.unavailable("different World")
-        }
-        let stamp = try world.inspectSignInscription(at: plan.cell.x, plan.cell.y, plan.cell.z)
-        guard stamp.worldID == worldID, stamp.artifactID == plan.artifactID,
-              stamp.materialID == plan.materialID,
-              stamp.contentDigest == plan.contentDigest, stamp.lines == plan.lines else {
-            throw PebbleAgentWritingAdapterError.unavailable("replaced or edited material inscription")
-        }
-        return AgentWritingPhysicalReceipt(worldID: worldID, dimension: plan.dimension,
-            cell: plan.cell, blockKey: blockDefs[world.getBlock(plan.cell.x, plan.cell.y, plan.cell.z) >> 4].name,
-            artifactID: stamp.artifactID, materialID: stamp.materialID, contentDigest: stamp.contentDigest, lines: stamp.lines,
-            actorID: AgentID(rawValue: actor.labAgentId)!, actorPosition: position, observedAtTick: tick)
+    func inspect(
+        plan: AgentWritingPlan,
+        actor: LabCoreAgentEntity,
+        world: World,
+        worldID: String,
+        tick: Int
+    ) throws {
+        let access = try physicalAccess(actor, plan: plan, world: world, worldID: worldID)
+        try withCurrentReceipt(
+            plan: plan,
+            access: access,
+            world: world,
+            worldID: worldID,
+            tick: tick
+        ) { _ in () }
     }
 
-    func read(artifact: AgentWrittenArtifact, actor: LabCoreAgentEntity,
-        world: World, worldID: String, session: inout AgentSimulationSession) throws -> AgentWritingReading {
-        let receipt = try observe(plan: artifact.plan, actor: actor, world: world,
-                                   worldID: worldID, tick: session.tick)
-        return try session.readWriting(artifactID: artifact.artifactID,
-                                       readerID: receipt.actorID, receipt: receipt)
+    func read(
+        artifact: AgentWrittenArtifact,
+        actor: LabCoreAgentEntity,
+        world: World,
+        worldID: String,
+        session: AgentSimulationSession,
+        publication: ((inout AgentSimulationSession, AgentWritingPhysicalReceipt) throws -> AgentWritingReading)? = nil,
+        commit: (AgentSimulationSession) -> Void
+    ) throws -> AgentWritingReading {
+        let plan = artifact.plan
+        let access = try physicalAccess(actor, plan: plan, world: world, worldID: worldID)
+        return try withCurrentReceipt(
+            plan: plan,
+            access: access,
+            world: world,
+            worldID: worldID,
+            tick: session.tick
+        ) { receipt in
+            var candidate = session
+            let reading: AgentWritingReading
+            if let publication {
+                reading = try publication(&candidate, receipt)
+            } else {
+                reading = try candidate.readWriting(
+                    artifactID: artifact.artifactID,
+                    readerID: receipt.actorID,
+                    receipt: receipt
+                )
+            }
+            guard candidate.writingState?.readings.last == reading else {
+                throw PebbleAgentWritingAdapterError.unavailable("reading publication")
+            }
+            commit(candidate)
+            return reading
+        }
+    }
+
+    func practice(
+        artifact: AgentWrittenArtifact,
+        teacher: LabCoreAgentEntity,
+        learner: LabCoreAgentEntity,
+        world: World,
+        worldID: String,
+        session: AgentSimulationSession,
+        publication: ((inout AgentSimulationSession, AgentWritingPhysicalReceipt, AgentWritingPhysicalReceipt) throws -> Void)? = nil,
+        commit: (AgentSimulationSession) -> Void
+    ) throws {
+        let plan = artifact.plan
+        let teacherAccess = try physicalAccess(teacher, plan: plan, world: world, worldID: worldID)
+        let learnerAccess = try physicalAccess(learner, plan: plan, world: world, worldID: worldID)
+        try world.withCurrentSignInscriptionAuthority(at: plan.cell.x, plan.cell.y, plan.cell.z) { stamp in
+            try require(stamp, matches: plan, worldID: worldID)
+            let teacherReceipt = try receipt(
+                stamp: stamp, access: teacherAccess, world: world, tick: session.tick
+            )
+            let learnerReceipt = try receipt(
+                stamp: stamp, access: learnerAccess, world: world, tick: session.tick
+            )
+            var candidate = session
+            if let publication {
+                try publication(&candidate, teacherReceipt, learnerReceipt)
+            } else {
+                try candidate.practiceWritingNotation(
+                    artifactID: artifact.artifactID,
+                    teacherID: teacherReceipt.actorID,
+                    learnerID: learnerReceipt.actorID,
+                    teacherReceipt: teacherReceipt,
+                    learnerReceipt: learnerReceipt
+                )
+            }
+            commit(candidate)
+        }
+    }
+
+    private func withCurrentReceipt<T>(
+        plan: AgentWritingPlan,
+        access: PebbleAgentWritingPhysicalAccess,
+        world: World,
+        worldID: String,
+        tick: Int,
+        _ body: (AgentWritingPhysicalReceipt) throws -> T
+    ) throws -> T {
+        try world.withCurrentSignInscriptionAuthority(at: plan.cell.x, plan.cell.y, plan.cell.z) { stamp in
+            try require(stamp, matches: plan, worldID: worldID)
+            return try body(try receipt(stamp: stamp, access: access, world: world, tick: tick))
+        }
+    }
+
+    private func require(
+        _ stamp: SignInscription,
+        matches plan: AgentWritingPlan,
+        worldID: String
+    ) throws {
+        guard stamp.worldID == worldID,
+              stamp.artifactID == plan.artifactID,
+              stamp.materialID == plan.materialID,
+              stamp.contentDigest == plan.contentDigest,
+              stamp.lines == plan.lines else {
+            throw PebbleAgentWritingAdapterError.unavailable("replaced or edited material inscription")
+        }
+    }
+
+    private func receipt(
+        stamp: SignInscription,
+        access: PebbleAgentWritingPhysicalAccess,
+        world: World,
+        tick: Int
+    ) throws -> AgentWritingPhysicalReceipt {
+        let blockID = world.getBlock(stamp.x, stamp.y, stamp.z) >> 4
+        guard blockDefs.indices.contains(blockID) else {
+            throw PebbleAgentWritingAdapterError.unavailable("physical block")
+        }
+        return AgentWritingPhysicalReceipt(
+            worldID: stamp.worldID,
+            dimension: String(stamp.dimension),
+            cell: AgentPosition(x: stamp.x, y: stamp.y, z: stamp.z),
+            blockKey: blockDefs[blockID].name,
+            artifactID: stamp.artifactID,
+            materialID: stamp.materialID,
+            contentDigest: stamp.contentDigest,
+            lines: stamp.lines,
+            actorID: access.actorID,
+            actorPosition: access.actorPosition,
+            observedAtTick: tick
+        )
+    }
+
+    private func physicalAccess(
+        _ actor: LabCoreAgentEntity,
+        plan: AgentWritingPlan,
+        world: World,
+        worldID: String
+    ) throws -> PebbleAgentWritingPhysicalAccess {
+        guard worldID == plan.worldID,
+              plan.dimension == String(world.dim.rawValue) else {
+            throw PebbleAgentWritingAdapterError.unavailable("different World")
+        }
+        let position = try actorPosition(actor, world: world)
+        try local(position, to: plan.cell, world: world)
+        return PebbleAgentWritingPhysicalAccess(
+            actorID: AgentID(rawValue: actor.labAgentId)!,
+            actorPosition: position
+        )
     }
 
     private func actorPosition(_ actor: LabCoreAgentEntity, world: World) throws -> AgentPosition {
@@ -126,7 +325,8 @@ struct PebbleAgentWritingAdapter {
     }
 
     private func bytes(_ value: BlockEntityData) throws -> Data {
-        let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
         return try encoder.encode(value)
     }
 }

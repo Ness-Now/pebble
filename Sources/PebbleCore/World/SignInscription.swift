@@ -40,7 +40,35 @@ public struct SignInscription: Codable, Equatable {
     }
 }
 
-public enum SignInscriptionError: Error { case invalid, unavailable, occupied }
+public enum SignInscriptionError: Error {
+    case invalid
+    case unavailable
+    case occupied
+    case staleAuthority
+}
+
+/// Opaque proof of a physical inscription observation. The generation is
+/// diagnostic only: callers cannot construct or validate this token. A World
+/// must revalidate it while holding its physical-authority critical section.
+public struct SignInscriptionAuthorityObservation {
+    public let inscription: SignInscription
+    public let generation: UInt64
+
+    fileprivate let worldIdentifier: ObjectIdentifier
+    fileprivate let catalogIdentifier: ObjectIdentifier?
+
+    fileprivate init(
+        inscription: SignInscription,
+        generation: UInt64,
+        world: World,
+        catalog: SignInscriptionIdentityCatalog?
+    ) {
+        self.inscription = inscription
+        self.generation = generation
+        worldIdentifier = ObjectIdentifier(world)
+        catalogIdentifier = catalog.map(ObjectIdentifier.init)
+    }
+}
 
 struct SignInscriptionMaterialLocation: Hashable, Codable {
     let dimension: Int
@@ -79,8 +107,9 @@ private final class WeakInscriptionWorld {
 /// World-global material-identity authority. Durable per-chunk claims come
 /// from SaveDB's transactionally maintained compact index. Dirty unloaded
 /// chunks stage an override, and every resident chunk supersedes both durable
-/// and staged state. Readers execute inside the same critical section used by
-/// chunk commit/index advancement, so no detachable stale snapshot exists.
+/// and staged state. Physical observations carry a generation token; only a
+/// revalidation/finalization closure under this same critical section may use
+/// one to authorize an external publication.
 public final class SignInscriptionIdentityCatalog {
     public let worldID: String
 
@@ -374,12 +403,10 @@ extension World {
     }
 
     private func withGloballyUniqueMaterialIdentityClaims<T>(
-        _ body: ([Int: Set<SignInscriptionMaterialLocation>]) throws -> T
+        _ body: ([Int: Set<SignInscriptionMaterialLocation>], UInt64) throws -> T
     ) throws -> T {
         if let catalog = signInscriptionIdentityCatalog {
-            return try catalog.withCurrentClaims(nextPhysicalIdentity: peekNextEntityId()) { claims, _ in
-                try body(claims)
-            }
+            return try catalog.withCurrentClaims(nextPhysicalIdentity: peekNextEntityId(), body)
         }
         let states = signInscriptionResidentChunkStates(expectedWorldID: nil)
         guard states.values.allSatisfy(\.valid) else { throw SignInscriptionError.invalid }
@@ -393,7 +420,7 @@ extension World {
               claims.values.allSatisfy({ $0.count == 1 }) else {
             throw SignInscriptionError.invalid
         }
-        return try body(claims)
+        return try body(claims, 0)
     }
 
     private func withInscriptionAuthorityLock<T>(_ body: () throws -> T) rethrows -> T {
@@ -413,7 +440,12 @@ extension World {
         }
     }
 
-    public func inspectSignInscription(at x: Int, _ y: Int, _ z: Int) throws -> SignInscription {
+    private func validatedSignInscription(
+        at x: Int,
+        _ y: Int,
+        _ z: Int,
+        claims: [Int: Set<SignInscriptionMaterialLocation>]
+    ) throws -> SignInscription {
         guard [x, y, z].allSatisfy({ (-30_000_000...30_000_000).contains($0) }),
               let chunk = getChunkAt(x, z), chunk.inYRange(y),
               blockDefs.indices.contains(getBlock(x, y, z) >> 4),
@@ -422,15 +454,81 @@ extension World {
               be.x == x, be.y == y, be.z == z,
               let inscription = be.signInscription else { throw SignInscriptionError.unavailable }
         try inscription.validate()
-        return try withGloballyUniqueMaterialIdentityClaims { claims in
-            try ensureAllClaimsUnique(claims)
-            guard claims[inscription.materialID]?.count == 1,
-                  inscription.x == x, inscription.y == y, inscription.z == z,
-                  inscription.dimension == dim.rawValue, inscription.lines == be.lines else {
-                throw SignInscriptionError.invalid
-            }
-            return inscription
+        try ensureAllClaimsUnique(claims)
+        guard claims[inscription.materialID]?.count == 1,
+              inscription.x == x, inscription.y == y, inscription.z == z,
+              inscription.dimension == dim.rawValue, inscription.lines == be.lines else {
+            throw SignInscriptionError.invalid
         }
+        return inscription
+    }
+
+    public func observeSignInscriptionAuthority(
+        at x: Int,
+        _ y: Int,
+        _ z: Int
+    ) throws -> SignInscriptionAuthorityObservation {
+        try withGloballyUniqueMaterialIdentityClaims { claims, generation in
+            let inscription = try validatedSignInscription(at: x, y, z, claims: claims)
+            return SignInscriptionAuthorityObservation(
+                inscription: inscription,
+                generation: generation,
+                world: self,
+                catalog: signInscriptionIdentityCatalog
+            )
+        }
+    }
+
+    /// Executes against the current physical authority without allowing its
+    /// validation to escape the critical section. The closure is opaque to
+    /// Core and must be owned by the adapter that bridges to an external state.
+    public func withCurrentSignInscriptionAuthority<T>(
+        at x: Int,
+        _ y: Int,
+        _ z: Int,
+        _ body: (SignInscription) throws -> T
+    ) throws -> T {
+        try withGloballyUniqueMaterialIdentityClaims { claims, _ in
+            let inscription = try validatedSignInscription(at: x, y, z, claims: claims)
+            return try body(inscription)
+        }
+    }
+
+    /// Linearization point for any publication authorized by observed physical
+    /// inscriptions. Core revalidates only physical state, then runs an opaque
+    /// closure while save/index authority remains locked. A generation change
+    /// refuses before the closure can execute.
+    public func withValidatedSignInscriptionAuthorities<T>(
+        _ observations: [SignInscriptionAuthorityObservation],
+        _ body: () throws -> T
+    ) throws -> T {
+        guard !observations.isEmpty,
+              observations.allSatisfy({
+                  $0.worldIdentifier == ObjectIdentifier(self)
+                    && $0.catalogIdentifier == signInscriptionIdentityCatalog.map(ObjectIdentifier.init)
+              }) else {
+            throw SignInscriptionError.invalid
+        }
+        return try withGloballyUniqueMaterialIdentityClaims { claims, generation in
+            guard observations.allSatisfy({ $0.generation == generation }) else {
+                throw SignInscriptionError.staleAuthority
+            }
+            for observation in observations {
+                let inscription = observation.inscription
+                let current = try validatedSignInscription(
+                    at: inscription.x,
+                    inscription.y,
+                    inscription.z,
+                    claims: claims
+                )
+                guard current == inscription else { throw SignInscriptionError.staleAuthority }
+            }
+            return try body()
+        }
+    }
+
+    public func inspectSignInscription(at x: Int, _ y: Int, _ z: Int) throws -> SignInscription {
+        try observeSignInscriptionAuthority(at: x, y, z).inscription
     }
 
     /// Writes no block and creates no item. The blank material support must
@@ -447,7 +545,7 @@ extension World {
         guard be.signInscription == nil, be.lines == ["", "", "", ""] else {
             throw SignInscriptionError.occupied
         }
-        try withGloballyUniqueMaterialIdentityClaims { claims in
+        try withGloballyUniqueMaterialIdentityClaims { claims, _ in
             try ensureAllClaimsUnique(claims)
             guard claims[inscription.materialID] == nil,
                   signInscriptionIdentityCatalog == nil
@@ -472,6 +570,24 @@ extension World {
             try rollbackPhysicalIdentity(inscription.materialID)
             be.lines = ["", "", "", ""]
             be.signInscription = nil
+        }
+    }
+
+    /// Clears an exact failed candidate without releasing its identity. This is
+    /// the conservative rollback used after authority could not be established:
+    /// a concurrent save may already have made the identity externally visible.
+    public func abandonSignInscription(_ inscription: SignInscription) throws {
+        let (x, y, z) = (inscription.x, inscription.y, inscription.z)
+        try withInscriptionAuthorityLock {
+            guard let chunk = getChunkAt(x, z),
+                  let be = getBlockEntity(x, y, z),
+                  be.signInscription == inscription,
+                  be.lines == inscription.lines else {
+                throw PhysicalIdentityError.rollbackUnverified
+            }
+            be.lines = ["", "", "", ""]
+            be.signInscription = nil
+            chunk.modified = true
         }
     }
 }

@@ -587,3 +587,253 @@ private func writingTerminalPressureProof() throws {
         .durableStateBytes() == session.durableStateBytes() && session.writingState!.artifacts.count == 1
         && session.writingState!.readings.count == 1 && !session.canUseWritingNotation(writingReader))
 }
+
+private func c03AdvanceAuthority(_ game: GameCore) {
+    game.world.getChunkAt(writingCell.x, writingCell.z)!.modified = true
+    game.saveAndFlush(synchronous: true)
+}
+
+/// Correction 03 exercises the detachable-token contract directly. Product
+/// Pebble code does not detach these tokens: it uses Core's current-authority
+/// closure and commits its candidate session while the closure is still held.
+func runPebbleAgentsWritingAuthorityFinalizationCorrection03Smoke() {
+    let originalPhysicalCounter = peekNextEntityId()
+    defer { resetEntityIds(originalPhysicalCounter) }
+    section("CIV-45 Correction 03 stale physical-authority finalization")
+    do {
+        var record = WorldRecord(
+            id: "civ45-world",
+            name: "CIV-45 Correction 03",
+            seed: 45,
+            gameMode: 1,
+            difficulty: 2
+        )
+        record.spawnX = 0
+        record.spawnY = 64
+        record.spawnZ = 0
+        record.nextEntityId = 1
+        let game = GameCore()
+        game.db.putWorld(record)
+        game.loadWorld(record.id)
+
+        let world = game.world
+        world.setChunk(Chunk(cx: 0, cz: 0, minY: GEN_MIN_Y, height: WORLD_H))
+        world.setBlock(1, 63, 0, Int(bid("stone")) << 4, SET_SILENT)
+        world.setBlock(1, 64, 0, Int(bid("oak_sign")) << 4, SET_SILENT)
+        world.setBlockEntity(makeSignBE(1, 64, 0))
+        world.getChunkAt(1, 0)!.modified = true
+
+        var (session, proposition) = try writingPrepared()
+        try session.seedWritingEducationalPrior(for: writingAuthor)
+        let plan = try session.prepareWriting(
+            authorID: writingAuthor,
+            propositionID: proposition,
+            materialID: peekNextEntityId(),
+            dimension: "0",
+            cell: writingCell
+        )
+        let stamp = try SignInscription(
+            artifactID: plan.artifactID,
+            materialID: plan.materialID,
+            contentDigest: plan.contentDigest,
+            worldID: plan.worldID,
+            dimension: 0,
+            x: writingCell.x,
+            y: writingCell.y,
+            z: writingCell.z,
+            lines: plan.lines
+        )
+        try world.inscribeSign(stamp)
+
+        // WRITE: a receipt observed at N cannot accept the writing after an
+        // otherwise unrelated durable authority advancement to N+1.
+        let staleWriteAuthority = try world.observeSignInscriptionAuthority(
+            at: writingCell.x, writingCell.y, writingCell.z
+        )
+        let staleWriteReceipt = writingReceipt(plan, actorID: writingAuthor, tick: session.tick)
+        let writeBefore = try session.durableStateBytes()
+        var staleWriteClosureRan = false
+        c03AdvanceAuthority(game)
+        let writeAdvancedGeneration = world.signInscriptionIdentityCatalog!.generation
+        var staleWriteRefused = false
+        do {
+            try world.withValidatedSignInscriptionAuthorities([staleWriteAuthority]) {
+                staleWriteClosureRan = true
+                _ = try session.acceptWriting(plan, receipt: staleWriteReceipt)
+            }
+        } catch SignInscriptionError.staleAuthority {
+            staleWriteRefused = true
+        }
+        check("stale WRITE finalization refuses N after N+1",
+              staleWriteRefused && !staleWriteClosureRan
+                && writeAdvancedGeneration != staleWriteAuthority.generation)
+        check("stale WRITE publishes zero cognition and consumes no ordinal",
+              try session.durableStateBytes() == writeBefore
+                && session.writingState?.artifacts.isEmpty == true
+                && session.writingState?.nextArtifactOrdinal == 1)
+        print("CIV45_C03_STALE_WRITE receiptGeneration=\(staleWriteAuthority.generation) authorityGeneration=\(writeAdvancedGeneration) finalization=REFUSED cognitiveMutation=ZERO")
+
+        let freshWriteAuthority = try world.observeSignInscriptionAuthority(
+            at: writingCell.x, writingCell.y, writingCell.z
+        )
+        let artifact = try world.withValidatedSignInscriptionAuthorities([freshWriteAuthority]) {
+            try session.acceptWriting(
+                plan,
+                receipt: writingReceipt(plan, actorID: writingAuthor, tick: session.tick)
+            )
+        }
+        check("fresh WRITE finalization under N+1 succeeds",
+              session.writingState?.artifacts == [artifact])
+
+        // PRACTICE: neither a lesson row nor its causal/guided-use events may
+        // survive a stale physical observation.
+        let stalePracticeAuthority = try world.observeSignInscriptionAuthority(
+            at: writingCell.x, writingCell.y, writingCell.z
+        )
+        let staleTeacherReceipt = writingReceipt(plan, actorID: writingAuthor, tick: session.tick)
+        let staleLearnerReceipt = writingReceipt(plan, actorID: writingReader, tick: session.tick)
+        let practiceBefore = try session.durableStateBytes()
+        var stalePracticeClosureRan = false
+        c03AdvanceAuthority(game)
+        let practiceAdvancedGeneration = world.signInscriptionIdentityCatalog!.generation
+        var stalePracticeRefused = false
+        do {
+            try world.withValidatedSignInscriptionAuthorities(
+                [stalePracticeAuthority, stalePracticeAuthority]
+            ) {
+                stalePracticeClosureRan = true
+                try session.practiceWritingNotation(
+                    artifactID: artifact.artifactID,
+                    teacherID: writingAuthor,
+                    learnerID: writingReader,
+                    teacherReceipt: staleTeacherReceipt,
+                    learnerReceipt: staleLearnerReceipt
+                )
+            }
+        } catch SignInscriptionError.staleAuthority {
+            stalePracticeRefused = true
+        }
+        check("stale PRACTICE finalization refuses N after N+1",
+              stalePracticeRefused && !stalePracticeClosureRan
+                && practiceAdvancedGeneration != stalePracticeAuthority.generation)
+        check("stale PRACTICE accepts no lesson, guided use, literacy or cause",
+              try session.durableStateBytes() == practiceBefore
+                && !session.canUseWritingNotation(writingReader)
+                && !session.writingState!.literacyRecords.contains(where: {
+                    $0.ownerID == writingReader
+                }))
+        print("CIV45_C03_STALE_PRACTICE receiptGeneration=\(stalePracticeAuthority.generation) authorityGeneration=\(practiceAdvancedGeneration) finalization=REFUSED cognitiveMutation=ZERO")
+
+        let freshPracticeAuthority = try world.observeSignInscriptionAuthority(
+            at: writingCell.x, writingCell.y, writingCell.z
+        )
+        try world.withValidatedSignInscriptionAuthorities(
+            [freshPracticeAuthority, freshPracticeAuthority]
+        ) {
+            try session.practiceWritingNotation(
+                artifactID: artifact.artifactID,
+                teacherID: writingAuthor,
+                learnerID: writingReader,
+                teacherReceipt: writingReceipt(plan, actorID: writingAuthor, tick: session.tick),
+                learnerReceipt: writingReceipt(plan, actorID: writingReader, tick: session.tick)
+            )
+        }
+        check("fresh PRACTICE accepts exactly one lesson",
+              session.writingState!.literacyRecords.first(where: {
+                  $0.ownerID == writingReader
+              })?.lessons.count == 1 && !session.canUseWritingNotation(writingReader))
+        _ = try session.advanceTick(perceptions: [])
+        try world.withCurrentSignInscriptionAuthority(
+            at: writingCell.x, writingCell.y, writingCell.z
+        ) { _ in
+            try session.practiceWritingNotation(
+                artifactID: artifact.artifactID,
+                teacherID: writingAuthor,
+                learnerID: writingReader,
+                teacherReceipt: writingReceipt(plan, actorID: writingAuthor, tick: session.tick),
+                learnerReceipt: writingReceipt(plan, actorID: writingReader, tick: session.tick)
+            )
+        }
+        check("current-authority PRACTICE completes literacy without retry",
+              session.canUseWritingNotation(writingReader))
+
+        // READ + deterministic concurrency: T1 obtains N and pauses without a
+        // lock; T2 commits N+1; only then may T1 attempt finalization.
+        let readerObserved = DispatchSemaphore(value: 0)
+        let resumeReader = DispatchSemaphore(value: 0)
+        let readerFinished = DispatchSemaphore(value: 0)
+        var concurrentSession = session
+        let readBefore = try concurrentSession.durableStateBytes()
+        let readCountBefore = concurrentSession.writingState!.readings.count
+        var staleReadGeneration: UInt64 = 0
+        var staleReadClosureRan = false
+        var staleReadRefused = false
+        var staleReadFailure: Error?
+        DispatchQueue.global().async {
+            do {
+                let authority = try world.observeSignInscriptionAuthority(
+                    at: writingCell.x, writingCell.y, writingCell.z
+                )
+                staleReadGeneration = authority.generation
+                let receipt = writingReceipt(
+                    plan,
+                    actorID: writingReader,
+                    tick: concurrentSession.tick
+                )
+                readerObserved.signal()
+                guard resumeReader.wait(timeout: .now() + 5) == .success else {
+                    throw SignInscriptionError.unavailable
+                }
+                do {
+                    try world.withValidatedSignInscriptionAuthorities([authority]) {
+                        staleReadClosureRan = true
+                        _ = try concurrentSession.readWriting(
+                            artifactID: artifact.artifactID,
+                            readerID: writingReader,
+                            receipt: receipt
+                        )
+                    }
+                } catch SignInscriptionError.staleAuthority {
+                    staleReadRefused = true
+                }
+            } catch {
+                staleReadFailure = error
+            }
+            readerFinished.signal()
+        }
+        guard readerObserved.wait(timeout: .now() + 5) == .success else {
+            throw SignInscriptionError.unavailable
+        }
+        c03AdvanceAuthority(game)
+        let readAdvancedGeneration = world.signInscriptionIdentityCatalog!.generation
+        resumeReader.signal()
+        guard readerFinished.wait(timeout: .now() + 5) == .success else {
+            throw SignInscriptionError.unavailable
+        }
+        check("deterministic T1 observe N / T2 commit N+1 / T1 stale READ",
+              staleReadFailure == nil && staleReadRefused && !staleReadClosureRan
+                && readAdvancedGeneration != staleReadGeneration)
+        check("stale READ creates no claim, understanding, revision, belief, history or ordinal",
+              try concurrentSession.durableStateBytes() == readBefore
+                && concurrentSession.writingState!.readings.count == readCountBefore
+                && concurrentSession.writingState!.nextReadingOrdinal == 1)
+        print("CIV45_C03_STALE_READ receiptGeneration=\(staleReadGeneration) authorityGeneration=\(readAdvancedGeneration) finalization=REFUSED cognitiveMutation=ZERO ordering=T1-observe,T2-commit,T1-finalize")
+
+        let freshReadAuthority = try world.observeSignInscriptionAuthority(
+            at: writingCell.x, writingCell.y, writingCell.z
+        )
+        let reading = try world.withValidatedSignInscriptionAuthorities([freshReadAuthority]) {
+            try concurrentSession.readWriting(
+                artifactID: artifact.artifactID,
+                readerID: writingReader,
+                receipt: writingReceipt(plan, actorID: writingReader, tick: concurrentSession.tick)
+            )
+        }
+        check("fresh READ after conservative unrelated generation succeeds",
+              concurrentSession.writingState!.readings.last == reading)
+        check("unrelated global generation change needs one fresh observation, not retry loop",
+              freshReadAuthority.generation == readAdvancedGeneration)
+    } catch {
+        check("Correction 03 stale-authority regression completes", false, "\(error)")
+    }
+}
