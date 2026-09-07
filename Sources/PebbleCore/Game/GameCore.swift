@@ -242,6 +242,16 @@ public final class GameCore {
     private let genQueue = DispatchQueue(label: "pebble.gen", qos: .userInitiated, attributes: .concurrent)
     private let meshQueue = DispatchQueue(label: "pebble.mesh", qos: .userInitiated, attributes: .concurrent)
     private let saveQueue = DispatchQueue(label: "pebble.save", qos: .utility)
+    /// Orders live capture and save-queue submission. Inscription snapshots are
+    /// additionally captured under their catalogue authority, so a candidate
+    /// publication/rollback and persistence capture have one serial order.
+    private let saveCaptureLock = NSRecursiveLock()
+    /// Default-nil deterministic seam: invoked after save ordering is owned
+    /// and immediately before inscription authority is acquired for capture.
+    public var testingSignInscriptionPersistenceCaptureHook: (() -> Void)?
+    /// Default-nil deterministic seam invoked on the owning main queue after
+    /// a failed batch has restored its resident dirty/pending retry state.
+    public var testingSignInscriptionSaveRecoveryHook: (([ChunkRecord]) -> Void)?
 
     // input
     private var keys = Set<String>()
@@ -580,36 +590,51 @@ public final class GameCore {
     }
 
     public func saveAndFlush(synchronous: Bool = false) {
+        saveCaptureLock.lock()
+        defer { saveCaptureLock.unlock() }
         guard inWorld, var rec = worldRec else { return }
-        rec.lastPlayed = Date().timeIntervalSince1970 * 1000
-        rec.gameMode = player.gameMode
-        rec.nextEntityId = peekNextEntityId()
-        for (d, w) in worlds {
-            rec.dims["\(d.rawValue)"] = DimState(
-                time: w.time, dayTime: w.dayTime,
-                raining: w.raining, thundering: w.thundering, weatherTimer: w.weatherTimer)
-        }
-        // rules/difficulty are world-global (kept in sync across dims by
-        // setGameRule/setDifficulty) — read one deterministic source
-        if let cur = worlds[dim] {
-            rec.difficulty = cur.difficulty
-            rec.gameRules = cur.gameRules
-        }
-        worldRec = rec
-        db.putWorld(rec)
-        db.putPlayer(rec.id, ["dim": dim.rawValue, "data": player.save()])
-        db.putAdvancements(rec.id, advancements.save())
-        // all modified chunks across all dims
+        testingSignInscriptionPersistenceCaptureHook?()
+
         var records: [ChunkRecord] = []
-        for (d, w) in worlds {
-            for c in w.chunks.values where c.modified {
-                records.append(chunkRecord(rec.id, d, w, c))
+        let capture = {
+            rec.lastPlayed = Date().timeIntervalSince1970 * 1000
+            rec.gameMode = self.player.gameMode
+            rec.nextEntityId = peekNextEntityId()
+            for (d, w) in self.worlds {
+                rec.dims["\(d.rawValue)"] = DimState(
+                    time: w.time, dayTime: w.dayTime,
+                    raining: w.raining, thundering: w.thundering, weatherTimer: w.weatherTimer)
+            }
+            // rules/difficulty are world-global (kept in sync across dims by
+            // setGameRule/setDifficulty) — read one deterministic source
+            if let cur = self.worlds[self.dim] {
+                rec.difficulty = cur.difficulty
+                rec.gameRules = cur.gameRules
+            }
+            self.worldRec = rec
+            self.db.putWorld(rec)
+            self.db.putPlayer(rec.id, ["dim": self.dim.rawValue, "data": self.player.save()])
+            self.db.putAdvancements(rec.id, self.advancements.save())
+            // all modified chunks across all dims
+            for (d, w) in self.worlds {
+                for c in w.chunks.values where c.modified {
+                    records.append(self.chunkRecord(rec.id, d, w, c))
+                }
+            }
+            // include any unload records still waiting in the batch buffer
+            for record in self.pendingChunkSaves.values { records.append(record) }
+            self.pendingChunkSaves.removeAll()
+            for record in records { self.savedChunkKeys.insert(record.key) }
+            for world in self.worlds.values {
+                for chunk in world.chunks.values { chunk.modified = false }
             }
         }
-        // include any unload records still waiting in the batch buffer
-        for r in pendingChunkSaves.values { records.append(r) }
-        pendingChunkSaves.removeAll()
-        for r in records { savedChunkKeys.insert(r.key) }
+        if let inscriptionCatalog = signInscriptionIdentityCatalog {
+            inscriptionCatalog.withExclusive(capture)
+        } else {
+            capture()
+        }
+
         let inscriptionCatalog = signInscriptionIdentityCatalog
         if synchronous {
             saveQueue.sync {
@@ -628,9 +653,6 @@ public final class GameCore {
                 )
             }
         }
-        for w in worlds.values {
-            for c in w.chunks.values { c.modified = false }
-        }
     }
 
     /// runs ON the save queue; on failure re-marks the chunks dirty (on main)
@@ -647,6 +669,8 @@ public final class GameCore {
         ) { return }
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
+            self.saveCaptureLock.lock()
+            defer { self.saveCaptureLock.unlock() }
             print("[saves] chunk batch failed — re-marking \(records.count) chunks dirty for retry")
             for r in records {
                 guard let d = Dim(rawValue: r.dim), let w = self.worlds[d] else { continue }
@@ -657,6 +681,7 @@ public final class GameCore {
                     self.pendingChunkSaves[r.key] = r
                 }
             }
+            self.testingSignInscriptionSaveRecoveryHook?(records)
         }
     }
 
@@ -1087,33 +1112,47 @@ public final class GameCore {
     }
 
     private func unloadChunk(_ w: World, _ c: Chunk) {
-        // persist if edited, if live entities stand in it, or if a stale record exists
-        var hasEntities = false
-        for e in w.entities {
-            guard let ent = e as? Entity, !ent.isPlayer, !ent.dead, ent.shouldSaveToChunk else { continue }
-            if floorDiv(ifloor(ent.x), 16) == c.cx && floorDiv(ifloor(ent.z), 16) == c.cz {
-                hasEntities = true
-                break
+        do {
+            saveCaptureLock.lock()
+            defer { saveCaptureLock.unlock() }
+            let captureAndRemove = {
+                // persist if edited, if live entities stand in it, or if a stale record exists
+                var hasEntities = false
+                for e in w.entities {
+                    guard let ent = e as? Entity, !ent.isPlayer, !ent.dead,
+                          ent.shouldSaveToChunk else { continue }
+                    if floorDiv(ifloor(ent.x), 16) == c.cx
+                        && floorDiv(ifloor(ent.z), 16) == c.cz {
+                        hasEntities = true
+                        break
+                    }
+                }
+                if let rec = self.worldRec {
+                    let dbKey = self.db.chunkKey(rec.id, w.dim.rawValue, c.cx, c.cz)
+                    if c.modified || hasEntities || self.savedChunkKeys.contains(dbKey) {
+                        let record = self.chunkRecord(rec.id, w.dim, w, c)
+                        self.savedChunkKeys.insert(record.key)
+                        self.pendingChunkSaves[record.key] = record
+                        self.signInscriptionIdentityCatalog?.stageCurrentChunkRecord(record)
+                    }
+                }
+                // entities standing in the chunk were captured in the record; drop the live ones
+                for e in Array(w.entities) {
+                    guard let ent = e as? Entity, !ent.isPlayer, !ent.dead else { continue }
+                    if floorDiv(ifloor(ent.x), 16) == c.cx
+                        && floorDiv(ifloor(ent.z), 16) == c.cz {
+                        w.removeEntity(e)
+                    }
+                }
+                w.releaseChunkBlockEntities(c)
+                w.removeChunk(c.cx, c.cz)
+            }
+            if let inscriptionCatalog = signInscriptionIdentityCatalog {
+                inscriptionCatalog.withExclusive(captureAndRemove)
+            } else {
+                captureAndRemove()
             }
         }
-        if let rec = worldRec {
-            let dbKey = db.chunkKey(rec.id, w.dim.rawValue, c.cx, c.cz)
-            if c.modified || hasEntities || savedChunkKeys.contains(dbKey) {
-                let record = chunkRecord(rec.id, w.dim, w, c)
-                savedChunkKeys.insert(record.key)
-                pendingChunkSaves[record.key] = record
-                signInscriptionIdentityCatalog?.stageCurrentChunkRecord(record)
-            }
-        }
-        // entities standing in the chunk were captured in the record; drop the live ones
-        for e in Array(w.entities) {
-            guard let ent = e as? Entity, !ent.isPlayer, !ent.dead else { continue }
-            if floorDiv(ifloor(ent.x), 16) == c.cx && floorDiv(ifloor(ent.z), 16) == c.cz {
-                w.removeEntity(e)
-            }
-        }
-        w.releaseChunkBlockEntities(c)
-        w.removeChunk(c.cx, c.cz)
         if w.dim == dim { host?.removeChunkMeshes(c.cx, c.cz, c.sections) }
         lightQueue[w.dim]!.remove(chunkKey(c.cx, c.cz))
         for s in 0..<c.sections {
@@ -1600,17 +1639,31 @@ public final class GameCore {
         portalWarp += (targetWarp - portalWarp) * 0.1
 
         // batched unload writes — one transaction per second at most
-        if !pendingChunkSaves.isEmpty && w.time % 20 == 0 {
-            let batch = Array(pendingChunkSaves.values)
-            pendingChunkSaves.removeAll()
-            let nextPhysicalIdentity = peekNextEntityId()
+        if w.time % 20 == 0 {
+            saveCaptureLock.lock()
+            defer { saveCaptureLock.unlock() }
+            var batch: [ChunkRecord] = []
+            var nextPhysicalIdentity = 0
+            let capture = {
+                guard !self.pendingChunkSaves.isEmpty else { return }
+                batch = Array(self.pendingChunkSaves.values)
+                self.pendingChunkSaves.removeAll()
+                nextPhysicalIdentity = peekNextEntityId()
+            }
             let inscriptionCatalog = signInscriptionIdentityCatalog
-            saveQueue.async { [weak self] in
-                self?.writeChunkBatch(
-                    batch,
-                    nextPhysicalIdentity: nextPhysicalIdentity,
-                    inscriptionCatalog: inscriptionCatalog
-                )
+            if let inscriptionCatalog {
+                inscriptionCatalog.withExclusive(capture)
+            } else {
+                capture()
+            }
+            if !batch.isEmpty {
+                saveQueue.async { [weak self] in
+                    self?.writeChunkBatch(
+                        batch,
+                        nextPhysicalIdentity: nextPhysicalIdentity,
+                        inscriptionCatalog: inscriptionCatalog
+                    )
+                }
             }
         }
 

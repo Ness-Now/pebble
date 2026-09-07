@@ -494,6 +494,21 @@ extension World {
         }
     }
 
+    /// Owns the physical candidate from identity allocation through the
+    /// adapter's opaque publication-or-rollback decision. Persistence capture
+    /// uses this same authority, so it can observe only the state before the
+    /// candidate or the final state after the decision, never the candidate in
+    /// between.
+    public func withCandidateSignInscriptionAuthority<T>(
+        _ inscription: SignInscription,
+        _ body: (SignInscription) throws -> T
+    ) throws -> T {
+        try withInscriptionAuthorityLock {
+            try inscribeSign(inscription)
+            return try body(inscription)
+        }
+    }
+
     /// Linearization point for any publication authorized by observed physical
     /// inscriptions. Core revalidates only physical state, then runs an opaque
     /// closure while save/index authority remains locked. A generation change

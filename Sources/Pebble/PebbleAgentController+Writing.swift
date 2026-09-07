@@ -3,7 +3,12 @@ import PebbleAgents
 import PebbleCore
 
 extension PebbleAgentController {
-    func handleWriting(_ arguments: [String], world: World, player: Player) -> PebbleAgentCommandResult {
+    func handleWriting(
+        _ arguments: [String],
+        world: World,
+        player: Player,
+        game: GameCore?
+    ) -> PebbleAgentCommandResult {
         guard environment["PEBBLELAB_APP_AGENTS_WRITING"] == "1",
               activeWorld === world, var current = session,
               let worldID = persistenceWorldID, isPaused, !movementEnabled else {
@@ -122,7 +127,7 @@ extension PebbleAgentController {
             case "proof" where arguments.count == 2:
                 let phase = arguments[1]
                 guard commandRecorder == nil else { throw AgentWritingError.unavailable("proof while recording") }
-                return runWritingProof(phase: phase, world: world, player: player)
+                return runWritingProof(phase: phase, world: world, player: player, game: game)
             default:
                 return failure("Usage: /lab writing on|prior <agent>|inscribe <agent> <proposition> <x> <y> <z>|read <agent> <artifact>|practice <teacher> <learner> <artifact>|status <agent>")
             }

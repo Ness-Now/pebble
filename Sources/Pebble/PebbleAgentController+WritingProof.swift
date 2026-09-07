@@ -10,10 +10,24 @@ private struct WritingProofFixture: Codable {
     let sourceOriginal: Int
 }
 
+private struct WritingCorrection04Fixture: Codable {
+    let worldID: String
+    let original: AgentPosition
+    let allocation: AgentPosition
+    let materialID: Int
+    let burnedMaterialID: Int
+    let externalLines: [String]
+}
+
 private enum WritingProofError: Error { case failed(String) }
 
 extension PebbleAgentController {
-    func runWritingProof(phase: String, world: World, player: Player) -> PebbleAgentCommandResult {
+    func runWritingProof(
+        phase: String,
+        world: World,
+        player: Player,
+        game: GameCore?
+    ) -> PebbleAgentCommandResult {
         guard environment["PEBBLELAB_DISPOSABLE_WORLD_PROOF"] == "1",
               environment["PEBBLELAB_APP_AGENTS_WRITING"] == "1",
               let root = environment["PEBBLELAB_CIV45_PROOF_DIR"],
@@ -26,6 +40,7 @@ extension PebbleAgentController {
         let directory = URL(fileURLWithPath: root, isDirectory: true)
         let checkpointURL = directory.appendingPathComponent("writing-checkpoint.json")
         let fixtureURL = directory.appendingPathComponent("writing-fixture.json")
+        let correction04URL = directory.appendingPathComponent("writing-correction04.json")
         let adapter = PebbleAgentWritingAdapter()
         func require(_ condition: Bool, _ label: String) throws {
             guard condition else { throw WritingProofError.failed(label) }
@@ -59,7 +74,73 @@ extension PebbleAgentController {
             )
         }
         do {
-            if phase == "write" {
+            if phase == "correction04-restart" {
+                guard let game,
+                      let fixtureBytes = try? Data(contentsOf: correction04URL),
+                      let fixture = try? AgentCheckpointCodec.decode(
+                        WritingCorrection04Fixture.self,
+                        from: fixtureBytes
+                      ), fixture.worldID == worldID else {
+                    throw WritingProofError.failed("Correction_04_restart_fixture")
+                }
+                let residentOriginal = world.getBlockEntity(
+                    fixture.original.x,
+                    fixture.original.y,
+                    fixture.original.z
+                )
+                let residentAllocation = try world.inspectSignInscription(
+                    at: fixture.allocation.x,
+                    fixture.allocation.y,
+                    fixture.allocation.z
+                )
+                let durable = game.db.getChunk(
+                    worldID,
+                    world.dim.rawValue,
+                    floorDiv(fixture.original.x, CHUNK_W),
+                    floorDiv(fixture.original.z, CHUNK_W)
+                )
+                let durableOriginal = durable?.blockEntities?.first(where: {
+                    $0.x == fixture.original.x
+                        && $0.y == fixture.original.y
+                        && $0.z == fixture.original.z
+                })
+                let durableAllocation = durable?.blockEntities?.first(where: {
+                    $0.x == fixture.allocation.x
+                        && $0.y == fixture.allocation.y
+                        && $0.z == fixture.allocation.z
+                })?.signInscription
+                try require(
+                    residentOriginal?.signInscription == nil
+                        && residentOriginal?.lines == fixture.externalLines
+                        && residentAllocation.materialID == fixture.materialID
+                        && durableOriginal?.signInscription == nil
+                        && durableOriginal?.lines == fixture.externalLines
+                        && durableAllocation?.materialID == fixture.materialID,
+                    "c04_separate_process_resident_equals_durable"
+                )
+                try require(
+                    game.worldRec?.nextEntityId ?? 0 > fixture.burnedMaterialID
+                        && peekNextEntityId() > fixture.burnedMaterialID
+                        && game.db.lastSignInscriptionIndexLoadMetrics.indexedChunkRows > 0
+                        && game.db.lastSignInscriptionIndexLoadMetrics.migratedChunkPayloads == 0
+                        && game.db.lastSignInscriptionIndexLoadMetrics.decodedVoxelCells == 0,
+                    "c04_separate_process_identity_and_compact_index"
+                )
+                try require(
+                    current.writingState?.artifacts.isEmpty != false,
+                    "c04_separate_process_has_no_accepted_cognition"
+                )
+                trace(
+                    "CIV45_C04_RESTART process=2 resident=durable originalGhost=NO "
+                        + "allocation=\(fixture.materialID) burned=\(fixture.burnedMaterialID) "
+                        + "worldNext=\(game.worldRec?.nextEntityId ?? -1) "
+                        + "liveNext=\(peekNextEntityId()) compactIndexRows="
+                        + "\(game.db.lastSignInscriptionIndexLoadMetrics.indexedChunkRows) "
+                        + "cognitiveMutation=ZERO status=PASS"
+                )
+                return success("CIV-45 Correction 04 separate-process restart passed.")
+            }
+            if phase == "write" || phase == "correction04" {
                 let a = current.snapshot().agents.first { $0.id == author.labAgentId }!.position
                 let b = current.snapshot().agents.first { $0.id == reader.labAgentId }!.position
                 let occupied = current.snapshot().agents.map(\.position)
@@ -116,6 +197,427 @@ extension PebbleAgentController {
                     materialID: peekNextEntityId(), dimension: String(world.dim.rawValue), cell: sign,
                     assertion: .deliberateCounterAssertion(.resource(kind: .stone, fingerprint: nil)))
                 let before = try current.durableStateBytes()
+                if phase == "correction04" {
+                    guard let game else { throw WritingProofError.failed("missing_GameCore") }
+                    game.saveAndFlush(synchronous: true)
+                    world.getChunkAt(sign.x, sign.z)!.modified = true
+
+                    let captureAttempted = DispatchSemaphore(value: 0)
+                    let prepared = DispatchSemaphore(value: 0)
+                    let saveReturned = DispatchSemaphore(value: 0)
+                    let saveCommitted = DispatchSemaphore(value: 0)
+                    let eventLock = NSLock()
+                    var events: [String] = []
+                    var preparedObservedFinalPhysicalState = false
+                    game.testingSignInscriptionPersistenceCaptureHook = {
+                        eventLock.lock()
+                        events.append("capture-attempt")
+                        eventLock.unlock()
+                        captureAttempted.signal()
+                    }
+                    game.db.testingSignInscriptionPersistenceHook = { boundary in
+                        if boundary == .prepared {
+                            eventLock.lock()
+                            events.append("prepared-after-rollback")
+                            preparedObservedFinalPhysicalState =
+                                peekNextEntityId() == plan.materialID
+                                && world.getBlockEntity(sign.x, sign.y, sign.z)?.signInscription == nil
+                            eventLock.unlock()
+                            prepared.signal()
+                        }
+                        if boundary == .authorityAdvanced {
+                            eventLock.lock()
+                            events.append("committed-after-rollback")
+                            eventLock.unlock()
+                            saveCommitted.signal()
+                        }
+                        return true
+                    }
+                    do {
+                        _ = try adapter.inscribe(
+                            plan: plan,
+                            actor: author,
+                            world: world,
+                            worldID: worldID,
+                            session: current,
+                            publication: { _, _ in
+                                DispatchQueue.global().async {
+                                    game.saveAndFlush(synchronous: false)
+                                    saveReturned.signal()
+                                }
+                                guard captureAttempted.wait(timeout: .now() + 10) == .success else {
+                                    throw WritingProofError.failed("capture_attempt_not_reached")
+                                }
+                                eventLock.lock()
+                                events.append("cognitive-refusal")
+                                eventLock.unlock()
+                                throw PebbleAgentWritingAdapterError.injected
+                            },
+                            commit: { _ in }
+                        )
+                        throw WritingProofError.failed("injected_mutation_unexpectedly_passed")
+                    } catch PebbleAgentWritingAdapterError.injected { }
+                    guard saveReturned.wait(timeout: .now() + 10) == .success else {
+                        throw WritingProofError.failed("save_call_did_not_return")
+                    }
+                    guard prepared.wait(timeout: .now() + 10) == .success else {
+                        throw WritingProofError.failed("post_rollback_snapshot_not_prepared")
+                    }
+                    guard saveCommitted.wait(timeout: .now() + 10) == .success else {
+                        throw WritingProofError.failed("post_rollback_snapshot_did_not_commit")
+                    }
+                    game.testingSignInscriptionPersistenceCaptureHook = nil
+                    game.db.testingSignInscriptionPersistenceHook = nil
+                    let durable = game.db.getChunk(
+                        worldID,
+                        world.dim.rawValue,
+                        floorDiv(sign.x, CHUNK_W),
+                        floorDiv(sign.z, CHUNK_W)
+                    )
+                    let durableInscription = durable?.blockEntities?.first(where: {
+                        $0.x == sign.x && $0.y == sign.y && $0.z == sign.z
+                    })?.signInscription
+                    let durableWorldNext = game.db.getWorld(worldID)?.nextEntityId
+                    try require(
+                        try current.durableStateBytes() == before
+                            && current.writingState?.artifacts.isEmpty == true
+                            && current.writingState?.nextArtifactOrdinal == 1,
+                        "c04_no_cognition_or_writing_ordinal"
+                    )
+                    eventLock.lock()
+                    let capturedEvents = events
+                    let preparedWasFinal = preparedObservedFinalPhysicalState
+                    eventLock.unlock()
+                    try require(
+                        peekNextEntityId() == plan.materialID
+                            && world.getBlockEntity(sign.x, sign.y, sign.z)?.signInscription == nil
+                            && durableInscription == nil
+                            && durableWorldNext == plan.materialID
+                            && preparedWasFinal
+                            && capturedEvents == [
+                                "capture-attempt",
+                                "cognitive-refusal",
+                                "prepared-after-rollback",
+                                "committed-after-rollback",
+                            ],
+                        "c04_capture_serializes_after_exact_rollback"
+                    )
+                    guard let reuse = sites.first(where: { $0 != sign && $0 != source }) else {
+                        throw WritingProofError.failed("reuse_site_unavailable")
+                    }
+                    world.setBlock(
+                        reuse.x,
+                        reuse.y,
+                        reuse.z,
+                        Int(bid("oak_sign")) << 4
+                    )
+                    world.setBlockEntity(makeSignBE(reuse.x, reuse.y, reuse.z))
+                    let reused = try SignInscription(
+                        artifactID: plan.artifactID,
+                        materialID: plan.materialID,
+                        contentDigest: plan.contentDigest,
+                        worldID: worldID,
+                        dimension: world.dim.rawValue,
+                        x: reuse.x,
+                        y: reuse.y,
+                        z: reuse.z,
+                        lines: plan.lines
+                    )
+                    try world.inscribeSign(reused)
+                    try require(
+                        peekNextEntityId() == plan.materialID + 1
+                            && world.getBlockEntity(reuse.x, reuse.y, reuse.z)?.signInscription == reused
+                            && durableInscription == nil,
+                        "c04_immediate_allocation_reuses_only_uncaptured_X"
+                    )
+                    game.saveAndFlush(synchronous: true)
+
+                    let restarted = GameCore()
+                    restarted.loadWorld(worldID)
+                    guard restarted.hasWorld(), let persisted = restarted.db.getChunk(
+                        worldID,
+                        world.dim.rawValue,
+                        floorDiv(sign.x, CHUNK_W),
+                        floorDiv(sign.z, CHUNK_W)
+                    ), let blocks = persisted.blocks, let biomes = persisted.biomes else {
+                        throw WritingProofError.failed("fresh_GameCore_reload_unavailable")
+                    }
+                    let loadedChunk = Chunk(
+                        cx: persisted.cx,
+                        cz: persisted.cz,
+                        minY: DIMS[persisted.dim].minY,
+                        height: DIMS[persisted.dim].height
+                    )
+                    loadedChunk.blocks = blocks
+                    loadedChunk.biomes = biomes
+                    restarted.world.setChunk(loadedChunk)
+                    for blockEntity in persisted.blockEntities ?? [] {
+                        restarted.world.setBlockEntity(blockEntity)
+                    }
+                    let restartedOriginal = try? restarted.world.inspectSignInscription(
+                        at: sign.x, sign.y, sign.z
+                    )
+                    let restartedAllocation = try restarted.world.inspectSignInscription(
+                        at: reuse.x, reuse.y, reuse.z
+                    )
+                    try require(
+                        restartedOriginal == nil
+                            && restartedAllocation == reused
+                            && restarted.worldRec?.nextEntityId == plan.materialID + 1
+                            && restarted.db.lastSignInscriptionIndexLoadMetrics.indexedChunkRows > 0
+                            && restarted.db.lastSignInscriptionIndexLoadMetrics.migratedChunkPayloads == 0
+                            && restarted.db.lastSignInscriptionIndexLoadMetrics.decodedVoxelCells == 0,
+                        "c04_restart_has_no_ghost_and_one_legitimate_X"
+                    )
+
+                    let abortPlan = try current.prepareWriting(
+                        authorID: authorID,
+                        propositionID: proposition,
+                        materialID: peekNextEntityId(),
+                        dimension: String(world.dim.rawValue),
+                        cell: sign,
+                        assertion: .deliberateCounterAssertion(.resource(kind: .stone, fingerprint: nil))
+                    )
+                    world.getChunkAt(sign.x, sign.z)!.modified = true
+                    let abortCaptureAttempted = DispatchSemaphore(value: 0)
+                    let abortPrepared = DispatchSemaphore(value: 0)
+                    let abortFailed = DispatchSemaphore(value: 0)
+                    let abortSaveReturned = DispatchSemaphore(value: 0)
+                    var abortPreparedWasBlank = false
+                    game.testingSignInscriptionSaveRecoveryHook = { recoveredRecords in
+                        let recovered = recoveredRecords.contains(where: {
+                            $0.worldId == worldID
+                                && $0.dim == world.dim.rawValue
+                                && $0.cx == floorDiv(sign.x, CHUNK_W)
+                                && $0.cz == floorDiv(sign.z, CHUNK_W)
+                        }) && world.getChunkAt(sign.x, sign.z)?.modified == true
+                        self.trace(
+                            "CIV45_C04_DIRTY failedPreparedSnapshot=blank "
+                                + "retryDirty=\(recovered ? "YES" : "NO") "
+                                + "result=\(recovered ? "PASS" : "FAIL")"
+                        )
+                        game.testingSignInscriptionSaveRecoveryHook = nil
+                    }
+                    game.testingSignInscriptionPersistenceCaptureHook = {
+                        abortCaptureAttempted.signal()
+                    }
+                    game.db.testingSignInscriptionPersistenceHook = { boundary in
+                        if boundary == .prepared {
+                            abortPreparedWasBlank =
+                                peekNextEntityId() == abortPlan.materialID
+                                && world.getBlockEntity(sign.x, sign.y, sign.z)?.signInscription == nil
+                            abortPrepared.signal()
+                            return false
+                        }
+                        if boundary == .failed { abortFailed.signal() }
+                        return true
+                    }
+                    do {
+                        _ = try adapter.inscribe(
+                            plan: abortPlan,
+                            actor: author,
+                            world: world,
+                            worldID: worldID,
+                            session: current,
+                            publication: { _, _ in
+                                DispatchQueue.global().async {
+                                    game.saveAndFlush(synchronous: true)
+                                    abortSaveReturned.signal()
+                                }
+                                guard abortCaptureAttempted.wait(timeout: .now() + 10) == .success else {
+                                    throw WritingProofError.failed("abort_capture_attempt_not_reached")
+                                }
+                                throw PebbleAgentWritingAdapterError.injected
+                            },
+                            commit: { _ in }
+                        )
+                        throw WritingProofError.failed("abort_injected_mutation_unexpectedly_passed")
+                    } catch PebbleAgentWritingAdapterError.injected { }
+                    guard abortPrepared.wait(timeout: .now() + 10) == .success,
+                          abortFailed.wait(timeout: .now() + 10) == .success,
+                          abortSaveReturned.wait(timeout: .now() + 10) == .success else {
+                        throw WritingProofError.failed("aborted_save_did_not_finish")
+                    }
+                    game.testingSignInscriptionPersistenceCaptureHook = nil
+                    game.db.testingSignInscriptionPersistenceHook = nil
+                    let afterAbort = game.db.getChunk(
+                        worldID,
+                        world.dim.rawValue,
+                        floorDiv(sign.x, CHUNK_W),
+                        floorDiv(sign.z, CHUNK_W)
+                    )
+                    let afterAbortOriginal = afterAbort?.blockEntities?.first(where: {
+                        $0.x == sign.x && $0.y == sign.y && $0.z == sign.z
+                    })?.signInscription
+                    try require(
+                        abortPreparedWasBlank
+                            && peekNextEntityId() == abortPlan.materialID
+                            && afterAbortOriginal == nil
+                            && (try current.durableStateBytes()) == before,
+                        "c04_aborted_post_rollback_snapshot_stays_blank"
+                    )
+
+                    let externalLines = ["external", "edit", "wins", "here"]
+                    let externalCaptureAttempted = DispatchSemaphore(value: 0)
+                    let externalPrepared = DispatchSemaphore(value: 0)
+                    let externalCommitted = DispatchSemaphore(value: 0)
+                    let externalSaveReturned = DispatchSemaphore(value: 0)
+                    var externalPreparedWasFinal = false
+                    game.testingSignInscriptionPersistenceCaptureHook = {
+                        externalCaptureAttempted.signal()
+                    }
+                    game.db.testingSignInscriptionPersistenceHook = { boundary in
+                        if boundary == .prepared {
+                            externalPreparedWasFinal =
+                                peekNextEntityId() == abortPlan.materialID + 1
+                                && world.getBlockEntity(sign.x, sign.y, sign.z)?.lines == externalLines
+                                && world.getBlockEntity(sign.x, sign.y, sign.z)?.signInscription == nil
+                            externalPrepared.signal()
+                        }
+                        if boundary == .authorityAdvanced { externalCommitted.signal() }
+                        return true
+                    }
+                    do {
+                        _ = try adapter.inscribe(
+                            plan: abortPlan,
+                            actor: author,
+                            world: world,
+                            worldID: worldID,
+                            session: current,
+                            publication: { _, _ in
+                                DispatchQueue.global().async {
+                                    game.saveAndFlush(synchronous: false)
+                                    externalSaveReturned.signal()
+                                }
+                                guard externalCaptureAttempted.wait(timeout: .now() + 10) == .success else {
+                                    throw WritingProofError.failed("external_capture_attempt_not_reached")
+                                }
+                                world.getBlockEntity(sign.x, sign.y, sign.z)!.lines = externalLines
+                                throw PebbleAgentWritingAdapterError.injected
+                            },
+                            commit: { _ in }
+                        )
+                        throw WritingProofError.failed("external_edit_unexpectedly_passed")
+                    } catch PebbleAgentWritingAdapterError.rollbackUnverified { }
+                    guard externalSaveReturned.wait(timeout: .now() + 10) == .success,
+                          externalPrepared.wait(timeout: .now() + 10) == .success,
+                          externalCommitted.wait(timeout: .now() + 10) == .success else {
+                        throw WritingProofError.failed("external_snapshot_did_not_commit")
+                    }
+                    game.testingSignInscriptionPersistenceCaptureHook = nil
+                    game.db.testingSignInscriptionPersistenceHook = nil
+                    try require(
+                        externalPreparedWasFinal
+                            && world.getBlockEntity(sign.x, sign.y, sign.z)?.lines == externalLines
+                            && world.getBlockEntity(sign.x, sign.y, sign.z)?.signInscription == nil
+                            && peekNextEntityId() == abortPlan.materialID + 1
+                            && (try current.durableStateBytes()) == before,
+                        "c04_external_edit_capture_preserved_and_identity_burned"
+                    )
+
+                    let olderPrepared = DispatchSemaphore(value: 0)
+                    let continueOlder = DispatchSemaphore(value: 0)
+                    let newerPrepared = DispatchSemaphore(value: 0)
+                    let orderedCommits = DispatchSemaphore(value: 0)
+                    let queueHookLock = NSLock()
+                    var preparedOrdinal = 0
+                    var commitOrdinal = 0
+                    game.db.testingSignInscriptionPersistenceHook = { boundary in
+                        if boundary == .prepared {
+                            queueHookLock.lock()
+                            preparedOrdinal += 1
+                            let ordinal = preparedOrdinal
+                            queueHookLock.unlock()
+                            if ordinal == 1 {
+                                olderPrepared.signal()
+                                return continueOlder.wait(timeout: .now() + 10) == .success
+                            }
+                            if ordinal == 2 { newerPrepared.signal() }
+                        }
+                        if boundary == .authorityAdvanced {
+                            queueHookLock.lock()
+                            commitOrdinal += 1
+                            let finished = commitOrdinal == 2
+                            queueHookLock.unlock()
+                            if finished { orderedCommits.signal() }
+                        }
+                        return true
+                    }
+                    world.getBlockEntity(sign.x, sign.y, sign.z)!.lines = [
+                        "older", "queued", "snapshot", "first",
+                    ]
+                    world.getChunkAt(sign.x, sign.z)!.modified = true
+                    game.saveAndFlush(synchronous: false)
+                    guard olderPrepared.wait(timeout: .now() + 10) == .success else {
+                        throw WritingProofError.failed("older_snapshot_not_prepared")
+                    }
+                    world.getBlockEntity(sign.x, sign.y, sign.z)!.lines = externalLines
+                    world.getChunkAt(sign.x, sign.z)!.modified = true
+                    game.saveAndFlush(synchronous: false)
+                    continueOlder.signal()
+                    guard newerPrepared.wait(timeout: .now() + 10) == .success,
+                          orderedCommits.wait(timeout: .now() + 10) == .success else {
+                        throw WritingProofError.failed("ordered_snapshots_did_not_commit")
+                    }
+                    game.db.testingSignInscriptionPersistenceHook = nil
+                    let orderedDurable = game.db.getChunk(
+                        worldID,
+                        world.dim.rawValue,
+                        floorDiv(sign.x, CHUNK_W),
+                        floorDiv(sign.z, CHUNK_W)
+                    )
+                    try require(
+                        orderedDurable?.blockEntities?.first(where: {
+                            $0.x == sign.x && $0.y == sign.y && $0.z == sign.z
+                        })?.lines == externalLines,
+                        "c04_newer_queued_snapshot_wins_durably"
+                    )
+
+                    let finalRestart = GameCore()
+                    finalRestart.loadWorld(worldID)
+                    guard finalRestart.hasWorld(), let finalPersisted = finalRestart.db.getChunk(
+                        worldID,
+                        world.dim.rawValue,
+                        floorDiv(sign.x, CHUNK_W),
+                        floorDiv(sign.z, CHUNK_W)
+                    ), let finalBlocks = finalPersisted.blocks,
+                          let finalBiomes = finalPersisted.biomes else {
+                        throw WritingProofError.failed("final_fresh_GameCore_reload_unavailable")
+                    }
+                    let finalChunk = Chunk(
+                        cx: finalPersisted.cx,
+                        cz: finalPersisted.cz,
+                        minY: DIMS[finalPersisted.dim].minY,
+                        height: DIMS[finalPersisted.dim].height
+                    )
+                    finalChunk.blocks = finalBlocks
+                    finalChunk.biomes = finalBiomes
+                    finalRestart.world.setChunk(finalChunk)
+                    for blockEntity in finalPersisted.blockEntities ?? [] {
+                        finalRestart.world.setBlockEntity(blockEntity)
+                    }
+                    try require(
+                        (try? finalRestart.world.inspectSignInscription(
+                            at: sign.x, sign.y, sign.z
+                        )) == nil
+                            && finalRestart.world.getBlockEntity(sign.x, sign.y, sign.z)?.lines == externalLines
+                            && finalRestart.worldRec?.nextEntityId == abortPlan.materialID + 1
+                            && (try finalRestart.world.inspectSignInscription(
+                                at: reuse.x, reuse.y, reuse.z
+                            )) == reused,
+                        "c04_final_restart_converges_without_ghost_or_external_overwrite"
+                    )
+                    try AgentCheckpointCodec.encode(WritingCorrection04Fixture(
+                        worldID: worldID,
+                        original: sign,
+                        allocation: reuse,
+                        materialID: reused.materialID,
+                        burnedMaterialID: abortPlan.materialID,
+                        externalLines: externalLines
+                    )).write(to: correction04URL, options: .atomic)
+                    trace("CIV45_C04 ordering=\(capturedEvents.joined(separator: ",")) candidate=\(plan.materialID) preparedCandidate=NO immediateAllocation=\(reused.materialID) restartGhost=NO abortPreparedCandidate=NO abortDirty=YES externalCapture=final-only externalIdentity=\(abortPlan.materialID) externalIdentityBurned=YES compactIndexRows=\(finalRestart.db.lastSignInscriptionIndexLoadMetrics.indexedChunkRows) cognitiveMutation=ZERO status=PASS")
+                    return success("CIV-45 Correction 04 capture, rollback, abort, reload and external-mutation regressions passed.")
+                }
                 do {
                     _ = try adapter.inscribe(plan: plan, actor: author, world: world, worldID: worldID,
                         session: current, failAfterMutation: true, commit: { committed in

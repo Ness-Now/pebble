@@ -64,18 +64,15 @@ struct PebbleAgentWritingAdapter {
             lines: plan.lines
         )
 
-        var inscribed = false
-        do {
-            try world.inscribeSign(stamp)
-            inscribed = true
-            return try withCurrentReceipt(
-                plan: plan,
-                access: access,
-                world: world,
-                worldID: worldID,
-                tick: session.tick
-            ) { receipt in
-                do {
+        return try world.withCandidateSignInscriptionAuthority(stamp) { _ in
+            do {
+                return try withCurrentReceipt(
+                    plan: plan,
+                    access: access,
+                    world: world,
+                    worldID: worldID,
+                    tick: session.tick
+                ) { receipt in
                     if failAfterMutation { throw PebbleAgentWritingAdapterError.injected }
                     var candidate = session
                     let accepted: AgentWrittenArtifact
@@ -96,48 +93,26 @@ struct PebbleAgentWritingAdapter {
                     // throwing-free step and still runs under Core authority.
                     commit(candidate)
                     return accepted
-                } catch {
-                    // Publication did not occur. This catch still runs under
-                    // Core's recursive authority lock, so exact rollback and
-                    // identity release cannot race an index advancement.
-                    do {
-                        try world.rollbackSignInscription(stamp)
-                        chunk.modified = modifiedBefore
-                        inscribed = false
-                        guard peekNextEntityId() == identityBefore,
-                              let restored = world.getBlockEntity(x, y, z),
-                              try bytes(restored) == before,
-                              world.getBlock(x, y, z) == blockBefore else {
-                            throw PebbleAgentWritingAdapterError.rollbackUnverified
-                        }
-                    } catch {
-                        throw PebbleAgentWritingAdapterError.rollbackUnverified
-                    }
-                    throw error
-                }
-            }
-        } catch {
-            guard inscribed else { throw error }
-            // Authority could not be established (for example, an external
-            // replacement). Never overwrite such later physical state.
-            guard world.getBlock(x, y, z) == blockBefore,
-                  world.getBlockEntity(x, y, z)?.signInscription == stamp,
-                  world.getBlockEntity(x, y, z)?.lines == stamp.lines else {
-                throw PebbleAgentWritingAdapterError.rollbackUnverified
-            }
-            do {
-                // The candidate may already have crossed a save boundary.
-                // Restore its exact material state but burn the identity.
-                try world.abandonSignInscription(stamp)
-                guard peekNextEntityId() == identityBefore + 1,
-                      let restored = world.getBlockEntity(x, y, z),
-                      try bytes(restored) == before else {
-                    throw PebbleAgentWritingAdapterError.rollbackUnverified
                 }
             } catch {
-                throw PebbleAgentWritingAdapterError.rollbackUnverified
+                // No persistence capture can run between inscription and this
+                // exact rollback: Core keeps the candidate authority locked.
+                do {
+                    try world.rollbackSignInscription(stamp)
+                    chunk.modified = modifiedBefore
+                    guard peekNextEntityId() == identityBefore,
+                          let restored = world.getBlockEntity(x, y, z),
+                          try bytes(restored) == before,
+                          world.getBlock(x, y, z) == blockBefore else {
+                        throw PebbleAgentWritingAdapterError.rollbackUnverified
+                    }
+                } catch {
+                    // An external mutation or later allocation is never
+                    // overwritten. Its identity remains consumed fail-closed.
+                    throw PebbleAgentWritingAdapterError.rollbackUnverified
+                }
+                throw error
             }
-            throw error
         }
     }
 

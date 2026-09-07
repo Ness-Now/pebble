@@ -305,7 +305,7 @@ func runCommand(_ game: GameCore, _ raw: String) {
         guard let controller = gAppDelegate?.agentController else {
             return fail("PebbleAgents controller unavailable.")
         }
-        let result = controller.handleCommand(args, world: world, player: p)
+        let result = controller.handleCommand(args, world: world, player: p, game: game)
         if result.succeeded { ok(result.message) } else { fail(result.message) }
     case "meshmode":
         let mode = arg(0)

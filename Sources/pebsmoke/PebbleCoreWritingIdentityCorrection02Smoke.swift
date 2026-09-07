@@ -466,6 +466,7 @@ private func runC02GameCoreConcurrencyChecks() {
         let generationBefore = catalog.generation
         let readerValidated = DispatchSemaphore(value: 0)
         let releaseReader = DispatchSemaphore(value: 0)
+        let captureAttempted = DispatchSemaphore(value: 0)
         let transactionBegan = DispatchSemaphore(value: 0)
         let committed = DispatchSemaphore(value: 0)
         let releaseCommit = DispatchSemaphore(value: 0)
@@ -473,6 +474,9 @@ private func runC02GameCoreConcurrencyChecks() {
         catalog.testingReadCriticalSectionHook = {
             readerValidated.signal()
             _ = releaseReader.wait(timeout: .now() + 5)
+        }
+        game.testingSignInscriptionPersistenceCaptureHook = {
+            captureAttempted.signal()
         }
         game.db.testingSignInscriptionPersistenceHook = { phase in
             if phase == .transactionBegan { transactionBegan.signal() }
@@ -493,17 +497,28 @@ private func runC02GameCoreConcurrencyChecks() {
         guard readerValidated.wait(timeout: .now() + 5) == .success else {
             check("reader reaches validated pre-finalization seam", false)
             catalog.testingReadCriticalSectionHook = nil
+            game.testingSignInscriptionPersistenceCaptureHook = nil
             game.db.testingSignInscriptionPersistenceHook = nil
             return
         }
         check("reader reaches validated pre-finalization seam", true)
-        game.saveAndFlush(synchronous: false)
+        DispatchQueue.global().async {
+            game.saveAndFlush(synchronous: false)
+        }
+        guard captureAttempted.wait(timeout: .now() + 5) == .success else {
+            check("save reaches capture authority seam", false)
+            catalog.testingReadCriticalSectionHook = nil
+            game.testingSignInscriptionPersistenceCaptureHook = nil
+            game.db.testingSignInscriptionPersistenceHook = nil
+            return
+        }
         check("save transaction cannot begin inside reader authority view",
               transactionBegan.wait(timeout: .now() + 0.1) == .timedOut)
         releaseReader.signal()
         check("pre-save reader finalizes before authority mutation",
               firstReaderDone.wait(timeout: .now() + 5) == .success && firstReaderAccepted)
         catalog.testingReadCriticalSectionHook = nil
+        game.testingSignInscriptionPersistenceCaptureHook = nil
         check("save transaction begins after reader finalizes",
               transactionBegan.wait(timeout: .now() + 5) == .success)
         guard committed.wait(timeout: .now() + 5) == .success else {

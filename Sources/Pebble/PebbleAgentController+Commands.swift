@@ -3,7 +3,12 @@ import PebbleAgents
 import PebbleCore
 
 extension PebbleAgentController {
-    func handleCommand(_ arguments: [String], world: World, player: Player) -> PebbleAgentCommandResult {
+    func handleCommand(
+        _ arguments: [String],
+        world: World,
+        player: Player,
+        game: GameCore? = nil
+    ) -> PebbleAgentCommandResult {
         let command = arguments.first?.lowercased() ?? "status"
         if passiveObserverBootstrapComplete {
             let productive = isManualProductiveCommand(arguments)
@@ -159,7 +164,12 @@ extension PebbleAgentController {
                 player: player
             )
         case "writing":
-            return handleWriting(Array(arguments.dropFirst()), world: world, player: player)
+            return handleWriting(
+                Array(arguments.dropFirst()),
+                world: world,
+                player: player,
+                game: game
+            )
         case "rights":
             return handleMaterialRights(Array(arguments.dropFirst()), world: world)
         case "observer":
