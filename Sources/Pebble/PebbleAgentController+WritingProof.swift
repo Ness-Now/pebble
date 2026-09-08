@@ -26,6 +26,13 @@ private struct WritingCorrection05Fixture: Codable {
     let lines: [String]
 }
 
+private struct WritingCorrection06Fixture: Codable {
+    let worldID: String
+    let sign: AgentPosition
+    let materialID: Int
+    let lines: [String]
+}
+
 private enum WritingProofError: Error { case failed(String) }
 
 extension PebbleAgentController {
@@ -51,6 +58,8 @@ extension PebbleAgentController {
         let correction05URL = directory.appendingPathComponent("writing-correction05.json")
         let correction05CompletionURL = directory.appendingPathComponent("writing-correction05.status")
         let correction05CheckpointURL = directory.appendingPathComponent("writing-correction05-checkpoint.json")
+        let correction06URL = directory.appendingPathComponent("writing-correction06.json")
+        let correction06CheckpointURL = directory.appendingPathComponent("writing-correction06-checkpoint.json")
         let adapter = PebbleAgentWritingAdapter()
         func require(_ condition: Bool, _ label: String) throws {
             guard condition else { throw WritingProofError.failed(label) }
@@ -84,6 +93,63 @@ extension PebbleAgentController {
             )
         }
         do {
+            if phase == "correction06-restart" {
+                guard let game,
+                      let fixtureBytes = try? Data(contentsOf: correction06URL),
+                      let fixture = try? AgentCheckpointCodec.decode(
+                        WritingCorrection06Fixture.self,
+                        from: fixtureBytes
+                      ), fixture.worldID == worldID,
+                      let checkpointBytes = try? Data(contentsOf: correction06CheckpointURL),
+                      let checkpoint = try? AgentCheckpointCodec.decode(
+                        AgentSessionCheckpoint.self,
+                        from: checkpointBytes
+                      ), let restored = try? AgentSimulationSession.restoring(checkpoint),
+                      (try? AgentCheckpointCodec.encode(restored.makeCheckpoint())) == checkpointBytes else {
+                    throw WritingProofError.failed("Correction_06_restart_fixture")
+                }
+                let resident = try world.inspectSignInscription(
+                    at: fixture.sign.x,
+                    fixture.sign.y,
+                    fixture.sign.z
+                )
+                let durable = game.db.getChunk(
+                    worldID,
+                    world.dim.rawValue,
+                    floorDiv(fixture.sign.x, CHUNK_W),
+                    floorDiv(fixture.sign.z, CHUNK_W)
+                )
+                let durableInscription = durable?.blockEntities?.first(where: {
+                    $0.x == fixture.sign.x && $0.y == fixture.sign.y && $0.z == fixture.sign.z
+                })?.signInscription
+                let cognitive = restored.writingState?.artifacts.first(where: {
+                    $0.plan.materialID == fixture.materialID
+                })
+                try require(
+                    resident.materialID == fixture.materialID
+                        && resident.lines == fixture.lines
+                        && durableInscription == resident,
+                    "c06_separate_process_resident_equals_durable_B"
+                )
+                try require(
+                    cognitive?.plan.materialID == fixture.materialID
+                        && cognitive?.plan.lines == fixture.lines
+                        && restored.writingState?.nextArtifactOrdinal == 2,
+                    "c06_separate_process_cognition_matches_physical_B"
+                )
+                try require(
+                    (game.worldRec?.nextEntityId ?? 0) > fixture.materialID
+                        && peekNextEntityId() > fixture.materialID
+                        && game.db.lastSignInscriptionIndexLoadMetrics.indexedChunkRows > 0
+                        && game.db.lastSignInscriptionIndexLoadMetrics.migratedChunkPayloads == 0
+                        && game.db.lastSignInscriptionIndexLoadMetrics.decodedVoxelCells == 0,
+                    "c06_separate_process_identity_and_compact_index"
+                )
+                trace("CIV45_C06_RESTART process=2 resident=B durable=B cognition=B "
+                    + "material=\(fixture.materialID) worldNext=\(game.worldRec?.nextEntityId ?? -1) "
+                    + "compactIndexRows=\(game.db.lastSignInscriptionIndexLoadMetrics.indexedChunkRows) status=PASS")
+                return success("CIV-45 Correction 06 separate-process restart passed.")
+            }
             if phase == "correction05-finish" {
                 guard let game,
                       let statusBytes = try? Data(contentsOf: correction05CompletionURL),
@@ -238,7 +304,8 @@ extension PebbleAgentController {
                 )
                 return success("CIV-45 Correction 04 separate-process restart passed.")
             }
-            if phase == "write" || phase == "correction04" || phase == "correction05" {
+            if phase == "write" || phase == "correction04" || phase == "correction05"
+                || phase == "correction06" {
                 let a = current.snapshot().agents.first { $0.id == author.labAgentId }!.position
                 let b = current.snapshot().agents.first { $0.id == reader.labAgentId }!.position
                 let occupied = current.snapshot().agents.map(\.position)
@@ -295,6 +362,128 @@ extension PebbleAgentController {
                     materialID: peekNextEntityId(), dimension: String(world.dim.rawValue), cell: sign,
                     assertion: .deliberateCounterAssertion(.resource(kind: .stone, fingerprint: nil)))
                 let before = try current.durableStateBytes()
+                if phase == "correction06" {
+                    guard let game else { throw WritingProofError.failed("missing_GameCore") }
+                    try require(game.saveAndFlush(synchronous: true), "c06_blank_A_durable")
+
+                    let artifact = try adapter.inscribe(
+                        plan: plan,
+                        actor: author,
+                        world: world,
+                        worldID: worldID,
+                        session: current,
+                        commit: { committed in
+                            current = committed
+                            self.session = committed
+                        }
+                    )
+                    let targetCX = floorDiv(sign.x, CHUNK_W)
+                    let targetCZ = floorDiv(sign.z, CHUNK_W)
+                    let key = game.db.chunkKey(worldID, world.dim.rawValue, targetCX, targetCZ)
+                    player.setPos(10_000.5, 80, 10_000.5)
+                    try require(
+                        game.testingUnloadChunkForPersistenceFreshness(
+                            world,
+                            cx: targetCX,
+                            cz: targetCZ
+                        ),
+                        "c06_accepted_WRITE_B_enters_real_unload_path"
+                    )
+                    let captureB = game.testingPendingChunkSaveSequence(key: key)
+                    let pendingInscription = game.testingPendingChunkSaveRecord(key: key)?
+                        .blockEntities?.first(where: {
+                            $0.x == sign.x && $0.y == sign.y && $0.z == sign.z
+                        })?.signInscription
+                    try require(
+                        pendingInscription?.materialID == plan.materialID && captureB != nil,
+                        "c06_unload_capture_is_accepted_WRITE_B"
+                    )
+
+                    let prepared = DispatchSemaphore(value: 0)
+                    let releaseFailure = DispatchSemaphore(value: 0)
+                    let failed = DispatchSemaphore(value: 0)
+                    var failureReleased = false
+                    defer {
+                        if !failureReleased { releaseFailure.signal() }
+                        game.db.testingSignInscriptionPersistenceHook = nil
+                    }
+                    game.db.testingSignInscriptionPersistenceHook = { boundary in
+                        if boundary == .prepared {
+                            prepared.signal()
+                            _ = releaseFailure.wait(timeout: .now() + 10)
+                            return false
+                        }
+                        if boundary == .failed { failed.signal() }
+                        return true
+                    }
+                    _ = game.saveAndFlush(synchronous: false)
+                    guard prepared.wait(timeout: .now() + 10) == .success else {
+                        throw WritingProofError.failed("c06_B_not_in_flight")
+                    }
+                    try require(
+                        game.testingPendingChunkSaveRecord(key: key) == nil
+                            && game.testingUnresolvedChunkSaveSequence(key: key) == captureB,
+                        "c06_pending_empty_but_unresolved_horizon_retains_B"
+                    )
+
+                    player.setPos(Double(sign.x) + 0.5, Double(sign.y) + 1, Double(sign.z) + 0.5)
+                    game.testingEnsureChunkLoadedForPersistenceFreshness(
+                        world,
+                        cx: targetCX,
+                        cz: targetCZ
+                    )
+                    guard world.getChunk(targetCX, targetCZ) != nil else {
+                        throw WritingProofError.failed("c06_return_target_chunk_not_loaded")
+                    }
+                    let returnedBE = world.getBlockEntity(sign.x, sign.y, sign.z)
+                    trace("CIV45_C06_RETURN residentLines=\(returnedBE?.lines ?? []) "
+                        + "residentMaterial=\(returnedBE?.signInscription?.materialID ?? -1) "
+                        + "unresolved=\(game.testingUnresolvedChunkSaveSequence(key: key) ?? 0)")
+                    let returned = try world.inspectSignInscription(at: sign.x, sign.y, sign.z)
+                    try require(
+                        returned.materialID == plan.materialID
+                            && returned.lines == plan.lines
+                            && current.writingState?.artifacts == [artifact]
+                            && current.writingState?.nextArtifactOrdinal == 2,
+                        "c06_return_before_resolution_materializes_B_with_cognition"
+                    )
+
+                    releaseFailure.signal()
+                    failureReleased = true
+                    guard failed.wait(timeout: .now() + 10) == .success else {
+                        throw WritingProofError.failed("c06_B_failure_not_observed")
+                    }
+                    game.db.testingSignInscriptionPersistenceHook = nil
+                    try require(
+                        game.saveAndFlush(synchronous: true),
+                        "c06_failed_B_retries_synchronously"
+                    )
+                    let durable = game.db.getChunk(worldID, world.dim.rawValue, targetCX, targetCZ)
+                    let durableInscription = durable?.blockEntities?.first(where: {
+                        $0.x == sign.x && $0.y == sign.y && $0.z == sign.z
+                    })?.signInscription
+                    try require(
+                        durableInscription == returned
+                            && (game.db.getWorld(worldID)?.nextEntityId ?? 0) > plan.materialID
+                            && game.testingUnresolvedChunkSaveRecord(key: key) == nil,
+                        "c06_retry_commits_B_index_and_identity"
+                    )
+                    try AgentCheckpointCodec.encode(WritingCorrection06Fixture(
+                        worldID: worldID,
+                        sign: sign,
+                        materialID: plan.materialID,
+                        lines: plan.lines
+                    )).write(to: correction06URL, options: .atomic)
+                    try AgentCheckpointCodec.encode(current.makeCheckpoint()).write(
+                        to: correction06CheckpointURL,
+                        options: .atomic
+                    )
+                    session = current
+                    trace("CIV45_C06_LIVE process=1 durableA=blank captureB=\(captureB ?? 0) "
+                        + "pendingEmpty=YES returnBeforeResolve=B failure=B retry=B "
+                        + "cognition=B material=\(plan.materialID) status=PASS")
+                    return success("CIV-45 Correction 06 accepted-WRITE streaming recovery passed.")
+                }
                 if phase == "correction05" {
                     guard let game else { throw WritingProofError.failed("missing_GameCore") }
                     game.saveAndFlush(synchronous: true)

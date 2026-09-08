@@ -59,6 +59,14 @@ if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
 }
 
 if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
+    == "civ-45-correction06" {
+    registerAllBlocks(); registerAllItems(); registerAllEntities(); registerAllSystems()
+    runPebbleCorePersistenceCorrection06Smoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
     == "civ-45-correction02-crash-writer" {
     runPebbleCoreWritingIdentityCorrection02CrashWriter()
     print("\n\(passed) passed, \(failed) failed")

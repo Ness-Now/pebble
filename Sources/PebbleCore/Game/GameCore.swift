@@ -255,6 +255,11 @@ public final class GameCore {
     /// Unload records awaiting the once-per-second batched write. Capture age
     /// travels with the immutable record through pending, submission and retry.
     private var pendingChunkSaves: [String: ChunkSaveCapture] = [:]
+    /// Freshest captured physical state that has not yet become durable. Unlike
+    /// `pendingChunkSaves`, this horizon survives queue submission so streaming
+    /// can never re-adopt an older SQLite row while the current record is queued,
+    /// in flight, committing or awaiting failed-save recovery.
+    private var unresolvedChunkSaveCaptures: [String: ChunkSaveCapture] = [:]
     /// Process-local causal order assigned while `saveCaptureLock` is held.
     /// Restart needs no persisted counter: no pending/in-flight callback crosses
     /// a process boundary, and SQLite is then the sole durable authority.
@@ -302,6 +307,18 @@ public final class GameCore {
         return latestChunkSaveCaptureSequence[key]
     }
 
+    public func testingUnresolvedChunkSaveRecord(key: String) -> ChunkRecord? {
+        saveCaptureLock.lock()
+        defer { saveCaptureLock.unlock() }
+        return unresolvedChunkSaveCaptures[key]?.record
+    }
+
+    public func testingUnresolvedChunkSaveSequence(key: String) -> UInt64? {
+        saveCaptureLock.lock()
+        defer { saveCaptureLock.unlock() }
+        return unresolvedChunkSaveCaptures[key]?.sequence
+    }
+
     /// Deterministic proof seam that invokes the production unload path.
     @discardableResult
     public func testingUnloadChunkForPersistenceFreshness(
@@ -314,6 +331,25 @@ public final class GameCore {
         }
         unloadChunk(world, chunk)
         return world.getChunk(cx, cz) == nil
+    }
+
+    /// Deterministic proof seam that invokes the production streaming loader.
+    public func testingRequestChunkForPersistenceFreshness(
+        _ world: World,
+        cx: Int,
+        cz: Int
+    ) {
+        requestChunk(world, cx, cz, ignoringGenerationLimit: true)
+    }
+
+    /// Deterministic application-proof seam for the synchronous production
+    /// streaming path used by portal and respawn placement.
+    public func testingEnsureChunkLoadedForPersistenceFreshness(
+        _ world: World,
+        cx: Int,
+        cz: Int
+    ) {
+        ensureChunksLoaded(world, cx, cz, 0)
     }
 
     // input
@@ -459,9 +495,15 @@ public final class GameCore {
         p.portalTicks = 0
     }
 
-    public func exitToTitle() {
+    @discardableResult
+    public func exitToTitle() -> Bool {
+        let exitingWorldID = worldRec?.id
+        guard prepareForTermination() else {
+            host?.pushChat("§cSave failed — staying in this World so retry state is preserved.")
+            host?.showActionBar("§cSave failed — exit refused", 200)
+            return false
+        }
         clearLabCoreAgentProbes()
-        if inWorld { saveAndFlush(synchronous: true) }
         inWorld = false
         worldRec = nil
         signInscriptionIdentityCatalog = nil
@@ -475,6 +517,7 @@ public final class GameCore {
         genInFlight.removeAll()
         savedChunkKeys.removeAll()
         savedFullKeys.removeAll()
+        if let exitingWorldID { clearChunkSaveTracking(worldID: exitingWorldID) }
         clearEntityTimeouts()
         host?.clearAllSections()
         host?.setBossBars([])
@@ -482,6 +525,7 @@ public final class GameCore {
         host?.releasePointer()
         host?.closeAllScreens()
         host?.openTitleScreen()
+        return true
     }
 
     // ---- MenuHost ----
@@ -490,6 +534,7 @@ public final class GameCore {
     }
 
     public func createWorld(name: String, seedText: String, mode: Int, difficulty: Int) {
+        guard prepareForWorldReplacement() else { return }
         let trimmed = seedText.trimmingCharacters(in: .whitespaces)
         var seed: Int32
         if trimmed.isEmpty {
@@ -528,6 +573,7 @@ public final class GameCore {
     }
 
     public func loadWorld(_ id: String) {
+        guard prepareForWorldReplacement() else { return }
         guard let rec = db.getWorld(id) else { return }
         let playerData = db.getPlayer(id)
         let adv = db.getAdvancements(id)
@@ -652,10 +698,33 @@ public final class GameCore {
         w.hooks = hooks
     }
 
-    public func saveAndFlush(synchronous: Bool = false) {
+    @discardableResult
+    public func saveAndFlush(synchronous: Bool = false) -> Bool {
+        let firstSucceeded = submitChunkSave(synchronous: synchronous)
+        guard synchronous else { return firstSucceeded }
+        guard let worldID = worldRec?.id else { return firstSucceeded }
+        if firstSucceeded && !hasUnresolvedChunkSaves(worldID: worldID) { return true }
+
+        // The first queue barrier also observes failures from older asynchronous
+        // batches. Retry once from the synchronously retained pending horizon.
+        // A repeated failure remains in memory and is reported to lifecycle.
+        let retrySucceeded = submitChunkSave(synchronous: true)
+        return retrySucceeded && !hasUnresolvedChunkSaves(worldID: worldID)
+    }
+
+    /// Lifecycle owners use the synchronous result to refuse destruction or
+    /// termination. Failure never exists solely in an unexecuted main callback.
+    @discardableResult
+    public func prepareForTermination() -> Bool {
+        !inWorld || saveAndFlush(synchronous: true)
+    }
+
+    private func submitChunkSave(synchronous: Bool) -> Bool {
         saveCaptureLock.lock()
-        defer { saveCaptureLock.unlock() }
-        guard inWorld, var rec = worldRec else { return }
+        guard inWorld, var rec = worldRec else {
+            saveCaptureLock.unlock()
+            return true
+        }
         testingSignInscriptionPersistenceCaptureHook?()
 
         var captures: [ChunkSaveCapture] = []
@@ -708,23 +777,28 @@ public final class GameCore {
         }
 
         let inscriptionCatalog = signInscriptionIdentityCatalog
-        if synchronous {
-            saveQueue.sync {
-                self.writeChunkBatch(
-                    captures,
-                    nextPhysicalIdentity: rec.nextEntityId,
-                    inscriptionCatalog: inscriptionCatalog
-                )
-            }
-        } else {
-            saveQueue.async { [weak self] in
-                self?.writeChunkBatch(
-                    captures,
-                    nextPhysicalIdentity: rec.nextEntityId,
-                    inscriptionCatalog: inscriptionCatalog
-                )
-            }
+        let completion = synchronous ? DispatchSemaphore(value: 0) : nil
+        let resultLock = NSLock()
+        var result = true
+        saveQueue.async { [weak self] in
+            let succeeded = self?.writeChunkBatch(
+                captures,
+                nextPhysicalIdentity: rec.nextEntityId,
+                inscriptionCatalog: inscriptionCatalog
+            ) ?? false
+            resultLock.lock()
+            result = succeeded
+            resultLock.unlock()
+            completion?.signal()
         }
+        // Queue submission is ordered before another capture can acquire the
+        // lock, but the worker may now maintain unresolved/retry state itself.
+        saveCaptureLock.unlock()
+        guard let completion else { return true }
+        completion.wait()
+        resultLock.lock()
+        defer { resultLock.unlock() }
+        return result
     }
 
     /// runs ON the save queue; on failure re-marks the chunks dirty (on main)
@@ -733,46 +807,60 @@ public final class GameCore {
         _ captures: [ChunkSaveCapture],
         nextPhysicalIdentity: Int,
         inscriptionCatalog: SignInscriptionIdentityCatalog?
-    ) {
+    ) -> Bool {
         let records = captures.map(\.record)
         if db.putChunks(
             records,
             nextPhysicalIdentity: nextPhysicalIdentity,
             inscriptionCatalog: inscriptionCatalog
-        ) { return }
+        ) {
+            saveCaptureLock.lock()
+            for capture in captures
+                where unresolvedChunkSaveCaptures[capture.record.key]?.sequence == capture.sequence {
+                unresolvedChunkSaveCaptures.removeValue(forKey: capture.record.key)
+            }
+            saveCaptureLock.unlock()
+            return true
+        }
+        // Retain retry authority synchronously on the save worker. The main
+        // callback below is now only resident dirty marking and diagnostics.
+        saveCaptureLock.lock()
+        print("[saves] chunk batch failed — retaining \(records.count) captures for retry")
+        for capture in captures {
+            let latest = latestChunkSaveCaptureSequence[capture.record.key] ?? capture.sequence
+            guard capture.sequence == latest else {
+                emitChunkSaveFreshness(
+                    .recoveryRejectedStale,
+                    capture: capture,
+                    latestSequence: latest
+                )
+                continue
+            }
+            if (pendingChunkSaves[capture.record.key]?.sequence ?? 0) <= capture.sequence {
+                pendingChunkSaves[capture.record.key] = capture
+            }
+            emitChunkSaveFreshness(.recoveryRequeued, capture: capture)
+        }
+        saveCaptureLock.unlock()
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             self.saveCaptureLock.lock()
             defer { self.saveCaptureLock.unlock() }
-            print("[saves] chunk batch failed — re-marking \(records.count) chunks dirty for retry")
             for capture in captures {
                 let r = capture.record
-                guard let d = Dim(rawValue: r.dim), let w = self.worlds[d] else { continue }
+                guard r.worldId == self.worldRec?.id,
+                      let d = Dim(rawValue: r.dim), let w = self.worlds[d] else { continue }
                 if let c = w.chunks[chunkKey(r.cx, r.cz)] {
                     c.modified = true
                     self.emitChunkSaveFreshness(
                         .residentRecoveryMarkedDirty,
                         capture: capture
                     )
-                } else {
-                    let latest = self.latestChunkSaveCaptureSequence[r.key] ?? capture.sequence
-                    guard capture.sequence == latest else {
-                        self.emitChunkSaveFreshness(
-                            .recoveryRejectedStale,
-                            capture: capture,
-                            latestSequence: latest
-                        )
-                        continue
-                    }
-                    // Already unloaded: retry only the still-current capture.
-                    if (self.pendingChunkSaves[r.key]?.sequence ?? 0) <= capture.sequence {
-                        self.pendingChunkSaves[r.key] = capture
-                    }
-                    self.emitChunkSaveFreshness(.recoveryRequeued, capture: capture)
                 }
             }
             self.testingSignInscriptionSaveRecoveryHook?(records)
         }
+        return false
     }
 
     private func makeChunkSaveCapture(_ record: ChunkRecord) -> ChunkSaveCapture {
@@ -785,8 +873,41 @@ public final class GameCore {
             sequence: nextChunkSaveCaptureSequence
         )
         latestChunkSaveCaptureSequence[record.key] = capture.sequence
+        unresolvedChunkSaveCaptures[record.key] = capture
         emitChunkSaveFreshness(.captured, capture: capture)
         return capture
+    }
+
+    private func hasUnresolvedChunkSaves(worldID: String) -> Bool {
+        saveCaptureLock.lock()
+        defer { saveCaptureLock.unlock() }
+        return unresolvedChunkSaveCaptures.values.contains { $0.record.worldId == worldID }
+    }
+
+    private func clearChunkSaveTracking(worldID: String) {
+        saveCaptureLock.lock()
+        defer { saveCaptureLock.unlock() }
+        pendingChunkSaves = pendingChunkSaves.filter { $0.value.record.worldId != worldID }
+        unresolvedChunkSaveCaptures = unresolvedChunkSaveCaptures.filter {
+            $0.value.record.worldId != worldID
+        }
+        let prefix = worldID + ":"
+        latestChunkSaveCaptureSequence = latestChunkSaveCaptureSequence.filter {
+            !$0.key.hasPrefix(prefix)
+        }
+    }
+
+    private func prepareForWorldReplacement() -> Bool {
+        guard inWorld else { return true }
+        let previousWorldID = worldRec?.id
+        guard saveAndFlush(synchronous: true) else {
+            host?.pushChat("§cSave failed — World switch refused.")
+            host?.showActionBar("§cSave failed — World switch refused", 200)
+            return false
+        }
+        clearLabCoreAgentProbes()
+        if let previousWorldID { clearChunkSaveTracking(worldID: previousWorldID) }
+        return true
     }
 
     private func emitChunkSaveFreshness(
@@ -850,11 +971,16 @@ public final class GameCore {
     // ===========================================================================
     // Chunk streaming
     // ===========================================================================
-    private func requestChunk(_ w: World, _ cx: Int, _ cz: Int) {
+    private func requestChunk(
+        _ w: World,
+        _ cx: Int,
+        _ cz: Int,
+        ignoringGenerationLimit: Bool = false
+    ) {
         let key = chunkKey(cx, cz)
         let flight = DimChunk(dim: w.dim.rawValue, key: key)
         if w.chunks[key] != nil || genInFlight.contains(flight) { return }
-        if genInFlight.count >= MAX_GEN_INFLIGHT { return }
+        if !ignoringGenerationLimit && genInFlight.count >= MAX_GEN_INFLIGHT { return }
         guard let rec = worldRec else { return }
         genInFlight.insert(flight)
         let worldId = rec.id
@@ -862,12 +988,17 @@ public final class GameCore {
         let seed = w.seed
         let height = w.info.height
         let hasSky = w.info.hasSky
-        let saved = savedChunkKeys.contains(db.chunkKey(worldId, d.rawValue, cx, cz))
+        let dbKey = db.chunkKey(worldId, d.rawValue, cx, cz)
+        saveCaptureLock.lock()
+        let unresolved = unresolvedChunkSaveCaptures[dbKey]?.record
+        let selectedSequence = latestChunkSaveCaptureSequence[dbKey] ?? 0
+        let saved = unresolved != nil || savedChunkKeys.contains(dbKey)
+        saveCaptureLock.unlock()
         let db = self.db
         let minY = w.info.minY
         genQueue.async { [weak self] in
-            var savedRec: ChunkRecord? = nil
-            if saved { savedRec = db.getChunk(worldId, d.rawValue, cx, cz) }
+            var savedRec = unresolved
+            if savedRec == nil, saved { savedRec = db.getChunk(worldId, d.rawValue, cx, cz) }
             let c: Chunk
             var beSpecs: [BESpec]? = nil
             var entitySpecs: [EntitySpec]? = nil
@@ -890,7 +1021,14 @@ public final class GameCore {
                 guard let self else { return }
                 self.genInFlight.remove(flight)
                 guard self.inWorld, self.worlds[d] === w, w.chunks[key] == nil else { return }
-                if loadedFull { self.savedFullKeys.insert(db.chunkKey(worldId, d.rawValue, cx, cz)) }
+                self.saveCaptureLock.lock()
+                guard (self.latestChunkSaveCaptureSequence[dbKey] ?? 0) == selectedSequence else {
+                    self.saveCaptureLock.unlock()
+                    self.requestChunk(w, cx, cz)
+                    return
+                }
+                defer { self.saveCaptureLock.unlock() }
+                if loadedFull { self.savedFullKeys.insert(dbKey) }
                 self.adoptChunk(w, c, beSpecs, entitySpecs, savedFinal)
                 self.enqueueLightAround(w, cx, cz)
             }
@@ -1170,9 +1308,15 @@ public final class GameCore {
             for dx in -radius...radius {
                 let cx = ccx + dx, cz = ccz + dz
                 if w.chunks[chunkKey(cx, cz)] != nil { continue }
+                saveCaptureLock.lock()
+                defer { saveCaptureLock.unlock() }
                 var saved: ChunkRecord? = nil
-                if let worldId, savedChunkKeys.contains(db.chunkKey(worldId, w.dim.rawValue, cx, cz)) {
-                    saved = db.getChunk(worldId, w.dim.rawValue, cx, cz)
+                if let worldId {
+                    let dbKey = db.chunkKey(worldId, w.dim.rawValue, cx, cz)
+                    saved = unresolvedChunkSaveCaptures[dbKey]?.record
+                    if saved == nil, savedChunkKeys.contains(dbKey) {
+                        saved = db.getChunk(worldId, w.dim.rawValue, cx, cz)
+                    }
                     if let s = saved, Self.recordUsable(s, height: w.info.height) {
                         let light = computeLocalLight(blocks: s.blocks!, height: w.info.height, hasSky: w.info.hasSky)
                         adoptChunk(w, Self.makeChunk(cx, cz, w.info.minY, w.info.height, s.blocks!, s.biomes!, light.sky, light.blk),
@@ -1766,7 +1910,20 @@ public final class GameCore {
             var nextPhysicalIdentity = 0
             let capture = {
                 guard !self.pendingChunkSaves.isEmpty else { return }
-                batch = self.pendingChunkSaves.values.sorted { $0.record.key < $1.record.key }
+                batch = self.pendingChunkSaves.values.map { pending in
+                    let record = pending.record
+                    guard record.worldId == self.worldRec?.id,
+                          let dimension = Dim(rawValue: record.dim),
+                          let residentWorld = self.worlds[dimension],
+                          let resident = residentWorld.getChunk(record.cx, record.cz),
+                          resident.modified else { return pending }
+                    // A failed older capture can coexist with a newer resident
+                    // mutation before this retry. Capture the current physical
+                    // authority; never mint a newer age for the old payload.
+                    return self.makeChunkSaveCapture(
+                        self.chunkRecord(record.worldId, dimension, residentWorld, resident)
+                    )
+                }.sorted { $0.record.key < $1.record.key }
                 self.pendingChunkSaves.removeAll()
                 nextPhysicalIdentity = peekNextEntityId()
             }
@@ -1778,7 +1935,7 @@ public final class GameCore {
             }
             if !batch.isEmpty {
                 saveQueue.async { [weak self] in
-                    self?.writeChunkBatch(
+                    _ = self?.writeChunkBatch(
                         batch,
                         nextPhysicalIdentity: nextPhysicalIdentity,
                         inscriptionCatalog: inscriptionCatalog

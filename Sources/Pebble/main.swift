@@ -401,6 +401,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
     private var fps = 0
     private var uncappedMode = false
     private var uncapTimer: Timer?
+    private var persistenceReadyForTermination = false
     var bot: PhysicsBot?
     var passiveObserverInputProof: PlayableObserverInputProof?
     var booth: PhotoBooth?
@@ -648,12 +649,62 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
                 booth = PhotoBooth(game: game, renderer: renderer)
             }
         }
+        if ProcessInfo.processInfo.environment[
+            "PEBBLELAB_CIV45_C06_TERMINATION_PROOF"
+        ] == "1" {
+            DispatchQueue.main.async { [weak self] in
+                self?.runCorrection06TerminationBoundaryProof()
+            }
+        }
+    }
+
+    private func runCorrection06TerminationBoundaryProof() {
+        guard game.hasWorld(), let worldID = game.worldRec?.id,
+              let chunk = game.world.getChunkAt(
+                Int(floor(game.player.x)),
+                Int(floor(game.player.z))
+              ) else {
+            preconditionFailure("Correction 06 termination proof World unavailable")
+        }
+        chunk.modified = true
+        let key = game.db.chunkKey(worldID, game.world.dim.rawValue, chunk.cx, chunk.cz)
+        game.db.testingSignInscriptionPersistenceHook = { phase in phase != .prepared }
+        // This invokes AppKit's real termination decision callback. Its first
+        // attempt must return to us because persistence failure cancels exit.
+        NSApp.terminate(nil)
+        let retained = game.hasWorld()
+            && game.testingUnresolvedChunkSaveRecord(key: key) != nil
+        game.db.testingSignInscriptionPersistenceHook = nil
+        let recovered = game.prepareForTermination()
+            && game.testingUnresolvedChunkSaveRecord(key: key) == nil
+        print("CIV45_C06_APP_TERMINATION firstReply=cancel WorldRetained="
+            + "\(retained ? "YES" : "NO") retry=\(recovered ? "COMMITTED" : "FAILED") "
+            + "status=\(retained && recovered ? "PASS" : "FAIL")")
+        fflush(stdout)
+        precondition(retained && recovered, "Correction 06 termination boundary failed")
+        NSApp.terminate(nil)
+    }
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        _ = agentController.shutdown()
+        game.clearLabCoreAgentProbes()
+        guard game.prepareForTermination() else {
+            persistenceReadyForTermination = false
+            print("[saves] application termination refused — unresolved persistence retained")
+            return .terminateCancel
+        }
+        persistenceReadyForTermination = true
+        return .terminateNow
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        guard !persistenceReadyForTermination else { return }
         _ = agentController.shutdown()
         game.clearLabCoreAgentProbes()
-        if game.hasWorld() { game.saveAndFlush(synchronous: true) }
+        precondition(
+            game.prepareForTermination(),
+            "application termination reached without durable persistence"
+        )
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 
