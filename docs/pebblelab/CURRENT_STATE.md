@@ -107,7 +107,7 @@ SHA of the documentation commit that contains it.
   Final review archive SHA-256:
   `570df1fd45349de684b47a0c30fcb1452137b86d5d40174146126333e6f51683`.
   Published progression remains complete through CIV-44. CIV-45 is now a
-  **CORRECTION 04 LOCAL REVIEW CANDIDATE — NOT PUBLISHED** after its initial candidate
+  **CORRECTION 05 LOCAL REVIEW CANDIDATE — NOT PUBLISHED** after its initial candidate
   `89cffa47f1e9635e0f44a0fac246e92739501911` received **CORRECTION REQUIRED**
   for resident-chunk-only material identity. Senior Review Correction 01 is
   local product/test commit `b68a6aeff106f5a3791279d5bd62b8b2916c9a4c`;
@@ -121,7 +121,10 @@ SHA of the documentation commit that contains it.
   product/test commit `b29faa532e3f1909e7955015a8f4067e47c21a40` and candidate
   `b502d272998834a6bc70a5c5fc0740924d03caa1` remain historical **CORRECTION
   REQUIRED** evidence for persistence capture before WRITE rollback. Correction
-  04 product/test commit `ff68b1d60f7159fec17d0bb98433235f75e767d1`
+  04 product/test commit `ff68b1d60f7159fec17d0bb98433235f75e767d1` and candidate
+  `2a83631ee642e2bc71f7da4c82b01172f35c7bdc` remain historical **CORRECTION
+  REQUIRED** evidence for stale failed-snapshot recovery. Correction 05
+  product/test commit `01b9826afc4ca96efb0f07556c53073524cbbf97`
   supplies the local candidate;
   its next authorized action is independent senior re-review. CIV-46 and
   CIV-47 remain unstarted and unauthorized. Gate G remains planned and
@@ -325,15 +328,16 @@ Gate F correction history:
 - `CIV-44 — Compositional and Long-Distance Communication V1` is **COMPLETE
   AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical HEAD
   `0c6a6e88ce838266897526a74d067532163cb06f`. Published canonical progression
-  remains complete through CIV-44. CIV-45 is a Correction 04 local review
+  remains complete through CIV-44. CIV-45 is a Correction 05 local review
   candidate at product/test commit
-  `ff68b1d60f7159fec17d0bb98433235f75e767d1`, is not published, and awaits
+  `01b9826afc4ca96efb0f07556c53073524cbbf97`, is not published, and awaits
   independent senior re-review. Its initial candidate
   `89cffa47f1e9635e0f44a0fac246e92739501911` remains the **CORRECTION
   REQUIRED** historical candidate. Correction 01 candidate
   `68bda3e5e7a28af50fed3d9680d2a9a0dfeea4e4` and Correction 02 candidate
   `b9fdccd7c8bef0c5bfc39d40d09e32920a3f4ac2` and Correction 03 candidate
-  `b502d272998834a6bc70a5c5fc0740924d03caa1` also remain **CORRECTION
+  `b502d272998834a6bc70a5c5fc0740924d03caa1` and Correction 04 candidate
+  `2a83631ee642e2bc71f7da4c82b01172f35c7bdc` also remain **CORRECTION
   REQUIRED** historical evidence. Gate G remains planned and unevaluated.
 
 Published Gate E history:
@@ -731,7 +735,7 @@ the Gate E acquisition are now published and independently remote verified.
 ## Current program position
 
 ```text
-active CIV phase: CIV-45 — CORRECTION 04 LOCAL REVIEW CANDIDATE — NOT PUBLISHED
+active CIV phase: CIV-45 — CORRECTION 05 LOCAL REVIEW CANDIDATE — NOT PUBLISHED
 completed and published through: CIV-44 (CIV-38 and CIV-40 remain optional and unstarted)
 next eligible action: CIV-45 independent senior re-review
 next authorized action: CIV-45 independent senior re-review; CIV-46 remains unauthorized
@@ -816,7 +820,7 @@ CIV-43 final review archive SHA-256: 1c22063677e95430bb6f220a95c75e07e0512d532d0
 CIV-44 status: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 CIV-44 published canonical HEAD: 0c6a6e88ce838266897526a74d067532163cb06f
 CIV-44 final review archive SHA-256: 570df1fd45349de684b47a0c30fcb1452137b86d5d40174146126333e6f51683
-CIV-45 status: CORRECTION 04 LOCAL REVIEW CANDIDATE — NOT PUBLISHED
+CIV-45 status: CORRECTION 05 LOCAL REVIEW CANDIDATE — NOT PUBLISHED
 CIV-45 exact published baseline: 9a2cfec10b4a0d1b6a5d2f46aac8f3c312ddbb0e
 CIV-45 initial product commit: ac38675d88d4b709183e7b26f92a0a45b0e928c1
 CIV-45 initial candidate: 89cffa47f1e9635e0f44a0fac246e92739501911 — CORRECTION REQUIRED
@@ -828,6 +832,8 @@ CIV-45 Correction 02 candidate: b9fdccd7c8bef0c5bfc39d40d09e32920a3f4ac2 — COR
 CIV-45 Correction 03 product/test commit: b29faa532e3f1909e7955015a8f4067e47c21a40
 CIV-45 Correction 03 candidate: b502d272998834a6bc70a5c5fc0740924d03caa1 — CORRECTION REQUIRED
 CIV-45 Correction 04 product/test commit: ff68b1d60f7159fec17d0bb98433235f75e767d1
+CIV-45 Correction 04 candidate: 2a83631ee642e2bc71f7da4c82b01172f35c7bdc — CORRECTION REQUIRED
+CIV-45 Correction 05 product/test commit: 01b9826afc4ca96efb0f07556c53073524cbbf97
 CIV-45 next authorized action: INDEPENDENT SENIOR RE-REVIEW
 CIV-46 / CIV-47 status: PLANNED — NOT STARTED / NOT AUTHORIZED
 V4-GATE-G-v1 status: PLANNED / UNEVALUATED
@@ -1264,14 +1270,15 @@ SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical product HEAD
 PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical HEAD
 `0c6a6e88ce838266897526a74d067532163cb06f`, from exact implementation baseline
 `50d0f73fb9b2a29fd1c3aa80395d20df862a0048`. Published progression is complete
-through CIV-44. CIV-45 is a **CORRECTION 04 LOCAL REVIEW CANDIDATE — NOT PUBLISHED** at
-Correction 04 product/test commit `ff68b1d60f7159fec17d0bb98433235f75e767d1`
+through CIV-44. CIV-45 is a **CORRECTION 05 LOCAL REVIEW CANDIDATE — NOT PUBLISHED** at
+Correction 05 product/test commit `01b9826afc4ca96efb0f07556c53073524cbbf97`
 and awaits independent senior re-review. Initial candidate
 `89cffa47f1e9635e0f44a0fac246e92739501911` remains historical **CORRECTION
 REQUIRED** evidence. Correction 01 candidate
 `68bda3e5e7a28af50fed3d9680d2a9a0dfeea4e4` and Correction 02 candidate
 `b9fdccd7c8bef0c5bfc39d40d09e32920a3f4ac2` and Correction 03 candidate
-`b502d272998834a6bc70a5c5fc0740924d03caa1` likewise remain historical
+`b502d272998834a6bc70a5c5fc0740924d03caa1` and Correction 04 candidate
+`2a83631ee642e2bc71f7da4c82b01172f35c7bdc` likewise remain historical
 **CORRECTION REQUIRED** evidence. CIV-46 and CIV-47 remain unstarted and
 unauthorized. Gate G remains planned and unevaluated. See
 [`CIV_45_PHASE_SUMMARY.md`](CIV_45_PHASE_SUMMARY.md).
