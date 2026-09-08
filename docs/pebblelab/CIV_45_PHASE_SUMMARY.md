@@ -2,7 +2,7 @@
 
 ## Review status and baseline
 
-`CIV-45` is a **CORRECTION 03 LOCAL REVIEW CANDIDATE — NOT PUBLISHED**. It was
+`CIV-45` is a **CORRECTION 04 LOCAL REVIEW CANDIDATE — NOT PUBLISHED**. It was
 implemented from exact published baseline
 `9a2cfec10b4a0d1b6a5d2f46aac8f3c312ddbb0e` on local branch
 `codex/civ-45-writing-literacy-v1`. The initial product, test and live-proof
@@ -23,19 +23,25 @@ Final independent senior re-review returned **CORRECTION REQUIRED** because a
 physical authority receipt inspected at generation N could still publish
 cognition after a conflicting physical commit advanced authority to N+1.
 Correction 03 product/test commit is
-`b29faa532e3f1909e7955015a8f4067e47c21a40`; the corrected review candidate is
-the local documentation HEAD containing this summary. All three failed
-candidates remain intact, immutable historical evidence and are not
-represented as approved.
+`b29faa532e3f1909e7955015a8f4067e47c21a40`, with candidate
+`b502d272998834a6bc70a5c5fc0740924d03caa1`. Its final independent senior
+re-review returned **CORRECTION REQUIRED** because a save could capture a
+candidate inscription and its advanced physical identity before a later
+cognitive refusal rolled both back in the live World. Correction 04
+product/test commit is `ff68b1d60f7159fec17d0bb98433235f75e767d1`; the
+corrected review candidate is the local documentation HEAD containing this
+summary. All four failed candidates remain intact, immutable historical
+evidence and are not represented as approved.
 
 ```text
 Initial CIV-45 candidate: CORRECTION REQUIRED
 Correction 01 candidate: CORRECTION REQUIRED
 Correction 02 candidate: CORRECTION REQUIRED
-Correction 03: LOCAL REVIEW CANDIDATE — NOT PUBLISHED
+Correction 03 candidate: CORRECTION REQUIRED
+Correction 04: LOCAL REVIEW CANDIDATE — NOT PUBLISHED
 ```
 
-The published branch remains complete through CIV-44. Correction 03 has not
+The published branch remains complete through CIV-44. Correction 04 has not
 received independent senior re-review approval and CIV-45 has not been
 published. CIV-46 and CIV-47 have not started. `V4-GATE-G-v1` remains
 **PLANNED / UNEVALUATED**.
@@ -51,10 +57,11 @@ PebbleAgents.
   World-persisted physical identity counter.
 - Pebble owns the transactional live adapter. It requires a real registered
   probe, a loaded supported sign within two Manhattan cells, an exact World
-  identity, and a freshly inspected Core inscription. It prepares a candidate
-  civilization session, then commits that candidate only inside Core's
-  stale-safe physical-authority finalization closure. It verifies success and
-  performs an exact rollback on synchronous failure.
+  identity and a freshly inspected Core inscription. It asks Core to own the
+  physical candidate from identity allocation through the opaque Pebble
+  publication-or-rollback closure. It prepares and commits the candidate
+  civilization session inside that closure, verifies success and performs an
+  exact rollback on synchronous failure.
 - PebbleAgents owns the deterministic plan, literacy history and accepted
   historical inscription/read records. It receives physical receipts and
   never reads or mutates World.
@@ -127,12 +134,14 @@ signs migrate to empty index entries and never acquire material authority.
 Valid multi-chunk Worlds with distinct identities remain accessible, and two
 different World saves may independently reuse the same numeric identity.
 
-The adapter transaction still prevalidates the World-global authority, claims
-exactly the expected Core identity, mutates and verifies the physical sign,
-stages cognition, verifies the sign again, then commits the sole
-`AgentSimulationSession`. Synchronous failure restores the exact block entity,
-lines, identity counter and dirty state before cognitive publication. A
-refused duplicate or corrupt source is rejected before allocation.
+The adapter transaction still prevalidates the World-global authority, then
+calls `World.withCandidateSignInscriptionAuthority`. Core takes its recursive
+physical-authority lock before claiming the expected identity and mutating the
+sign, and keeps it while Pebble stages cognition, revalidates the sign, commits
+the sole `AgentSimulationSession`, or rolls the physical candidate back. A
+synchronous exact failure restores the block entity, lines, identity counter
+and previous dirty state. A refused duplicate or corrupt source is rejected
+before allocation.
 
 For persistence, `SaveDB.putChunks` prepares immutable chunk/index snapshots,
 takes the catalogue lock, starts `BEGIN IMMEDIATE`, advances the persisted
@@ -147,6 +156,18 @@ visible. Failed transactions roll back and follow the existing dirty/requeue
 path. Crash before commit restores the old durable batch; crash immediately
 after commit reconstructs the complete new batch and advanced identity counter
 on restart.
+
+Correction 04 also serializes the earlier persistence-capture boundary.
+`GameCore.saveAndFlush` now holds a save-capture ordering lock while it acquires
+the same catalogue authority, snapshots `WorldRecord.nextEntityId`, deep-copies
+all modified resident chunks, merges pending unloaded records, clears the
+captured dirty bits and submits the immutable batch to the serial save queue.
+Unload staging and periodic pending-batch submission use the same lock and
+authority. Thus capture and candidate publication/rollback have one order: a
+save captures the pre-candidate World, or it waits and captures the final
+post-decision World; it cannot capture the transient candidate. Holding the
+capture-order lock through queue submission also prevents an older snapshot of
+one chunk from committing after a newer compensating snapshot.
 
 Correction 03 keeps `authorityGeneration` exclusively in Core. A detachable
 `SignInscriptionAuthorityObservation` is an opaque, World/catalogue-bound test
@@ -168,10 +189,13 @@ not loop on such tokens: it obtains and publishes within one current-authority
 closure, so autosave either completes before the fresh validation or waits
 behind publication; there is no retry livelock. On a failed write, the adapter
 restores the candidate physical state only when that state is still exactly the
-operation-owned state. It never overwrites a later external mutation. If an
-identity may have crossed a durable visibility boundary, exact abandonment
-removes only the still-owned candidate and conservatively burns the identity
-rather than making it reusable.
+operation-owned state. Because persistence capture cannot enter during that
+candidate interval, an exact rollback may safely return the last identity to
+the allocator. It never overwrites a later external mutation; if exact rollback
+is no longer provable, the operation fails closed and the identity remains
+consumed. Failed save batches restore either the current resident dirty bit or
+the exact pending unloaded record under the capture-order lock before the next
+batch can supersede them.
 
 ## Content, assertion and truth
 
@@ -269,6 +293,10 @@ scripts/verify-pebblelab-civ45.sh
 Commands and final results:
 
 ```text
+PEBBLELAB_CIV45_BUILD_CONFIGURATION=debug scripts/verify-pebblelab-civ45-correction04.sh
+8/8 in-process capture/rollback/save checks passed
+3/3 separate-process restart checks passed
+
 PEBBLELAB_CIV45_BUILD_CONFIGURATION=debug scripts/verify-pebblelab-civ45.sh
 56 passed, 0 failed # Correction 02 dirty/index/migration/concurrency
 4/4 crash boundaries passed across fresh processes
@@ -282,7 +310,35 @@ PEBBLELAB_CIV45_BUILD_CONFIGURATION=release scripts/verify-pebblelab-civ45.sh
 26 passed, 0 failed # exact persistent P0 regression
 11 passed, 0 failed # Correction 03 stale read/practice/write/finalization
 105 passed, 0 failed
+
+PEBBLELAB_CIV45_BUILD_CONFIGURATION=release scripts/verify-pebblelab-civ45-correction04.sh
+8/8 in-process capture/rollback/save checks passed
+3/3 separate-process restart checks passed
 ```
+
+The deterministic pre-fix reproduction used the real production WRITE adapter
+and `testingSignInscriptionPersistenceHook(.prepared)` with semaphores and no
+sleep. It forced `T1 inscribe X → T2 capture/prepare X → T1 cognitive refusal
+and rollback → T2 commit`, then observed resident blank state and reusable
+`X = 503` while SQLite and the compact index retained `material-503`; a fresh
+GameCore reload resurrected that ghost. This confirms the Correction 03 P0
+rather than merely modeling it. The retained trace is
+`/tmp/pebblelab-civ45-c04-prefix-final.Zfbu1h/prefix-final.log`.
+
+The Correction 04 proof now forces `T2` to attempt capture while `T1` owns the
+candidate authority. The observed order is `capture-attempt →
+cognitive-refusal → prepared-after-rollback → committed-after-rollback`, and
+the prepared record is blank. Exact rollback may reuse that uncaptured
+identity immediately; restart contains exactly that legitimate allocation and
+no ghost. A prepared save that subsequently aborts restores its dirty retry
+state. A committed save cannot precede failure while containing the candidate,
+because capture is blocked until the decision. The external-mutation variant
+fails rollback closed, preserves only the external edit in the captured and
+durable state, and burns its material identity. Two queued snapshots of one
+chunk commit in capture order, so the newer state wins after restart.
+The final Debug and Optimized two-process evidence roots are respectively
+`/tmp/pebblelab-civ45-correction04.u0XcKO` and
+`/tmp/pebblelab-civ45-correction04.39Ynku`.
 
 The Correction 03 suite forces the exact deterministic order `T1 observe N →
 T2 commit N+1 → T1 finalize N`. Stale read, notation practice and final
@@ -325,7 +381,7 @@ scripts/verify-pebblelab-live.sh --dry-run --writing
 scripts/verify-pebblelab-live.sh --writing
 ```
 
-The Correction 03 dry-run passed. The release campaign used the Correction 03
+The Correction 04 dry-run passed. The release campaign used the Correction 04
 Pebble build, then ran two fresh real processes for each of seeds 46 and 73
 under disposable `CFFIXED_USER_HOME` roots. Process one created an ordinary blank oak sign on a
 natural supported site, observed a real oak log, wrote the false `stone`
@@ -342,17 +398,18 @@ process. Read, practice and writing in that live binary route through
 `withCurrentSignInscriptionAuthority`, the same Correction 03 finalization
 primitive covered by the deterministic stale tests. The live campaign proves
 the legitimate current-authority path; it does not substitute for the hostile
-N→N+1 proof. The final Correction 03 campaign root is:
+N→N+1 or Correction 04 capture-order proofs. The final Correction 04 campaign
+root is:
 
 ```text
-/tmp/pebblelab-civ45-live.HSrP8Z
+/tmp/pebblelab-civ45-live.QEUb4H
 ```
 
 Seed 46 used material identity 288, artifact
-`inscription-18fa7ce6acceda61b05ba4d60e9b732b357067b74888eb23f27d97110c2ee2e8`,
+`inscription-0d45bd0d3b7bb9c470c9ac4290a842d1e0ae21cbccf2132ee4428b888221137d`,
 sign `(22,68,-21)` and real oak-log source `(19,66,-24)`. Seed 73 used
-material identity 148, artifact
-`inscription-7752131de7b52e775bb89f8185f0234c22ff054fd6585e60f0c62c9c092225b3`,
+material identity 147, artifact
+`inscription-37fb76d4ff53009d818b137ff45c6a20205cea70018858f3780a88ea03bb9246`,
 sign `(15,64,-8)` and real oak-log source `(12,64,-7)`.
 
 The four 3024×1898 captures were individually inspected. Each visibly shows
@@ -367,20 +424,20 @@ Key evidence SHA-256 values:
 
 | Seed | Artifact | SHA-256 |
 | --- | --- | --- |
-| 46 | `write.log` | `13293413fdba69de8290ed0ed5e1dd5d9ed369c0bdd3c1410ec3b99fc02637bd` |
-| 46 | `read.log` | `e3b616d4b0e3b3b70dadc0e99944d4f269bfac905f08ea4168997fa47440546b` |
-| 46 | `written-sign.json` / byte-identical `reloaded-sign.json` | `3a284c2068fe89901d75f06f8ed91ab52f583d341a89d18c268ca1ceadd33a76` |
-| 46 | `writing-checkpoint.json` | `aa4d20b4d90958d92d6828852d4f36c08ffa8ac4b3f6f4c59bd4fe4d8fa083c5` |
-| 46 | `reading-checkpoint.json` | `373db58f10b6c219c2d332066d97cb37db4f0eed1ee5e90ce6d8282ce90e66fc` |
-| 46 | `written.png` | `1119294b263e5cc06d978c82cee06ead97f32e28c5d5cca7e72bc3b8be591d18` |
-| 46 | `read.png` | `9d2ade925005fe344d4ce230b4c33c3d192a352a6b579bf2ba8bdc771a0df3e1` |
-| 73 | `write.log` | `2de765ebc1399358c9f41a1ac23f30fd5a9e5a7d17b2837ee2030d58e8038c30` |
-| 73 | `read.log` | `f66c73b3889aba9ced7a84a653607a8b1dc71e22a500d4e9fbbba17cceba6ae6` |
-| 73 | `written-sign.json` / byte-identical `reloaded-sign.json` | `73e1dcbccd9a6ab509b40cf8ce946d988ab853a096c50223972d33b9c7e955fd` |
-| 73 | `writing-checkpoint.json` | `f8a85545b4c7e184ed96be348422d576e898f7717c8f0aeaece139cf7594357a` |
-| 73 | `reading-checkpoint.json` | `edb0bd53407de015c31a1b8adf581674f7a1344e5e0351f100314c0316014b5b` |
-| 73 | `written.png` | `ddf475e387c67a979b8bd71272afe82259fc724b7a6930b1a44111dbe96caa4d` |
-| 73 | `read.png` | `b05486b30d5cbabe80a9e53ce0a3ad63ed8db46535da8f25f5fbb0d27a001143` |
+| 46 | `write.log` | `d5012798391524313c08f51a28dbd59527d4d4eb132c2b2ff64879bd40566f46` |
+| 46 | `read.log` | `e5353c5e485c01b51fa803b9c276e17cb41da2342ff4d21441bb4d1dc78872ba` |
+| 46 | `written-sign.json` / byte-identical `reloaded-sign.json` | `2d7cac9db0189b3f5b55b61d27b49f647d7b831436ddae1cfbcf3261a831ffb2` |
+| 46 | `writing-checkpoint.json` | `88ad427311a3ce2eb80f590a006fcb71765ef151689cc14176465a2fb496780b` |
+| 46 | `reading-checkpoint.json` | `01ee577c43a94c7ad9a4cf4964b2591f78ca64d3fceba4c841558dd0d5f3e187` |
+| 46 | `written.png` | `135b082f8cccd3027f31ffd8951f8fb83b93cc0402c7a202708ecfc4518994e9` |
+| 46 | `read.png` | `73bd2508a26415e6eaee73f1d8d9ea1c9159d6697a2ae8e95860e30a3e4de314` |
+| 73 | `write.log` | `fd7523a114cc7771cde40d65a10696a8dfbb3b578218ab646647ae5b6b2e18bb` |
+| 73 | `read.log` | `155be2dd879a98fb6b501ce6a999c97f3d88c7934623c0ba1a516e8048dba914` |
+| 73 | `written-sign.json` / byte-identical `reloaded-sign.json` | `5fcd580be3fbcdc0d4a6901d3b3e0a5664c629c4b2103989b144933bc078bdeb` |
+| 73 | `writing-checkpoint.json` | `17b5313414368a137b128e6396b66432a0968264e68d2541a8afe064cfc82b68` |
+| 73 | `reading-checkpoint.json` | `3559e30ce504c81014256d3394702b182bbe999d8da8676876c2ae4f50cef7e1` |
+| 73 | `written.png` | `462ed317e571817c547f008c4958b1e0b99e3a658e6316a3bb192d3882749fb7` |
+| 73 | `read.png` | `724ad54527f3b3bcf315ac35719e87ec1f8031d61d80c2b21b5a1ae4ed95110e` |
 
 ## Canonical repository gate and intermediate failures
 
@@ -390,10 +447,13 @@ The final canonical command was:
 scripts/verify-pebblelab.sh
 ```
 
-The final Correction 03 rerun passed all 35 repository steps. The shared
+The final Correction 04 run passed all 35 repository steps against exact
+product/test commit `ff68b1d60f7159fec17d0bb98433235f75e767d1`. The shared
 runtime reported `4644 passed, 0 failed`; deterministic scenario pairs and
 canonical output comparisons all passed. Evidence is retained at
-`/var/folders/23/t4l5dv055dl3x1zqylcpl9wc0000gn/T/PebbleLab-verify.h01tSO`.
+`/var/folders/23/t4l5dv055dl3x1zqylcpl9wc0000gn/T/PebbleLab-verify.rvITSM`,
+with the captured console log at
+`/tmp/pebblelab-civ45-c04-repository-gate.pYo1Vb/repository-gate.log`.
 Golden regeneration was not attempted.
 
 Failures encountered and retained during development were corrected rather
@@ -450,6 +510,22 @@ than hidden:
   Swift or verifier process remained, so that incomplete log was retained and
   only the canonical gate was rerun. The rerun passed `35/35`. This was an
   orchestration interruption, not a product/test failure.
+- the first Correction 04 proof used a wrong disposable World name and was
+  refused by the existing proof guard before the concurrency scenario;
+- an intermediate pre-fix harness used a second save as a completion barrier,
+  which legitimately lowered its synthetic `WorldRecord` and invalidated the
+  catalogue. The retained final reproduction waits for the intended save
+  directly and reproduces the P0 without that extra capture;
+- the first Correction 04 compile referenced a nonexistent convenience field
+  on the plan; the proof now compares the explicit physical fields;
+- one proof harness attempted to wait for a main-queue recovery callback by
+  running a non-reentrant run loop and stalled. Stack inspection identified the
+  harness issue; the final deterministic callback seam avoids that wait and
+  proves dirty recovery;
+- the first Correction 02 rerun reached `54/56` because its old test assumed
+  `saveAndFlush` returned before capture. The test was synchronized at the new
+  capture seam and the unchanged behavioral assertions then passed `56/56`.
+  These were test-orchestration failures, not hidden product results.
 
 ## Deliberate V1 limits and non-claims
 
@@ -474,7 +550,7 @@ its existence alone.
 
 ```text
 published progression: COMPLETE THROUGH CIV-44
-CIV-45: CORRECTION 03 LOCAL REVIEW CANDIDATE — NOT PUBLISHED
+CIV-45: CORRECTION 04 LOCAL REVIEW CANDIDATE — NOT PUBLISHED
 CIV-46: PLANNED — NOT STARTED / NOT AUTHORIZED
 CIV-47: PLANNED — NOT STARTED / NOT AUTHORIZED
 V4-GATE-G-v1: PLANNED / UNEVALUATED
