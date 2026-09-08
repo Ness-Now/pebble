@@ -198,6 +198,25 @@ final class MeshJobState {
     var dirtyAgain = false
 }
 
+private struct ChunkSaveCapture {
+    let record: ChunkRecord
+    let sequence: UInt64
+}
+
+public enum ChunkSaveFreshnessPhase: String {
+    case captured
+    case recoveryRequeued
+    case recoveryRejectedStale
+    case residentRecoveryMarkedDirty
+}
+
+public struct ChunkSaveFreshnessEvent {
+    public let phase: ChunkSaveFreshnessPhase
+    public let key: String
+    public let sequence: UInt64
+    public let latestSequence: UInt64
+}
+
 // =============================================================================
 // The Game
 // =============================================================================
@@ -233,8 +252,16 @@ public final class GameCore {
     private var meshJobs: [DimSection: MeshJobState] = [:]
     public private(set) var meshedThisSecond = 0
     public var lastChunkUpdates = 0
-    /// unload records awaiting the once-per-second batched write
-    private var pendingChunkSaves: [String: ChunkRecord] = [:]
+    /// Unload records awaiting the once-per-second batched write. Capture age
+    /// travels with the immutable record through pending, submission and retry.
+    private var pendingChunkSaves: [String: ChunkSaveCapture] = [:]
+    /// Process-local causal order assigned while `saveCaptureLock` is held.
+    /// Restart needs no persisted counter: no pending/in-flight callback crosses
+    /// a process boundary, and SQLite is then the sole durable authority.
+    private var nextChunkSaveCaptureSequence: UInt64 = 0
+    /// Latest capture observed per durable chunk key in this GameCore lifetime.
+    /// A failed older batch may retry only while it is still this generation.
+    private var latestChunkSaveCaptureSequence: [String: UInt64] = [:]
     /// Derived from all persisted chunks at World entry; shared across every
     /// dimension and refreshed only after successful durable chunk batches.
     private var signInscriptionIdentityCatalog: SignInscriptionIdentityCatalog?
@@ -252,6 +279,42 @@ public final class GameCore {
     /// Default-nil deterministic seam invoked on the owning main queue after
     /// a failed batch has restored its resident dirty/pending retry state.
     public var testingSignInscriptionSaveRecoveryHook: (([ChunkRecord]) -> Void)?
+    /// Default-nil deterministic trace seam for freshness regression proofs.
+    public var testingChunkSaveFreshnessHook: ((ChunkSaveFreshnessEvent) -> Void)?
+
+    /// Read-only deterministic seam for persistence regression proofs.
+    /// Production ownership and mutation remain private to GameCore.
+    public func testingPendingChunkSaveRecord(key: String) -> ChunkRecord? {
+        saveCaptureLock.lock()
+        defer { saveCaptureLock.unlock() }
+        return pendingChunkSaves[key]?.record
+    }
+
+    public func testingPendingChunkSaveSequence(key: String) -> UInt64? {
+        saveCaptureLock.lock()
+        defer { saveCaptureLock.unlock() }
+        return pendingChunkSaves[key]?.sequence
+    }
+
+    public func testingLatestChunkSaveSequence(key: String) -> UInt64? {
+        saveCaptureLock.lock()
+        defer { saveCaptureLock.unlock() }
+        return latestChunkSaveCaptureSequence[key]
+    }
+
+    /// Deterministic proof seam that invokes the production unload path.
+    @discardableResult
+    public func testingUnloadChunkForPersistenceFreshness(
+        _ world: World,
+        cx: Int,
+        cz: Int
+    ) -> Bool {
+        guard worlds[world.dim] === world, let chunk = world.getChunk(cx, cz) else {
+            return false
+        }
+        unloadChunk(world, chunk)
+        return world.getChunk(cx, cz) == nil
+    }
 
     // input
     private var keys = Set<String>()
@@ -595,7 +658,7 @@ public final class GameCore {
         guard inWorld, var rec = worldRec else { return }
         testingSignInscriptionPersistenceCaptureHook?()
 
-        var records: [ChunkRecord] = []
+        var captures: [ChunkSaveCapture] = []
         let capture = {
             rec.lastPlayed = Date().timeIntervalSince1970 * 1000
             rec.gameMode = self.player.gameMode
@@ -615,16 +678,25 @@ public final class GameCore {
             self.db.putWorld(rec)
             self.db.putPlayer(rec.id, ["dim": self.dim.rawValue, "data": self.player.save()])
             self.db.putAdvancements(rec.id, self.advancements.save())
-            // all modified chunks across all dims
-            for (d, w) in self.worlds {
-                for c in w.chunks.values where c.modified {
-                    records.append(self.chunkRecord(rec.id, d, w, c))
+            // Pending captures retain their original causal age. A resident
+            // capture made now is newer and replaces the same key in this batch.
+            var capturesByKey = self.pendingChunkSaves
+            let residentChunks = self.worlds.flatMap { dimension, world in
+                world.chunks.values.compactMap { chunk in
+                    chunk.modified ? (dimension, world, chunk) : nil
                 }
+            }.sorted {
+                if $0.0.rawValue != $1.0.rawValue { return $0.0.rawValue < $1.0.rawValue }
+                if $0.2.cx != $1.2.cx { return $0.2.cx < $1.2.cx }
+                return $0.2.cz < $1.2.cz
             }
-            // include any unload records still waiting in the batch buffer
-            for record in self.pendingChunkSaves.values { records.append(record) }
+            for (dimension, world, chunk) in residentChunks {
+                let record = self.chunkRecord(rec.id, dimension, world, chunk)
+                capturesByKey[record.key] = self.makeChunkSaveCapture(record)
+            }
             self.pendingChunkSaves.removeAll()
-            for record in records { self.savedChunkKeys.insert(record.key) }
+            captures = capturesByKey.values.sorted { $0.record.key < $1.record.key }
+            for capture in captures { self.savedChunkKeys.insert(capture.record.key) }
             for world in self.worlds.values {
                 for chunk in world.chunks.values { chunk.modified = false }
             }
@@ -639,7 +711,7 @@ public final class GameCore {
         if synchronous {
             saveQueue.sync {
                 self.writeChunkBatch(
-                    records,
+                    captures,
                     nextPhysicalIdentity: rec.nextEntityId,
                     inscriptionCatalog: inscriptionCatalog
                 )
@@ -647,7 +719,7 @@ public final class GameCore {
         } else {
             saveQueue.async { [weak self] in
                 self?.writeChunkBatch(
-                    records,
+                    captures,
                     nextPhysicalIdentity: rec.nextEntityId,
                     inscriptionCatalog: inscriptionCatalog
                 )
@@ -658,10 +730,11 @@ public final class GameCore {
     /// runs ON the save queue; on failure re-marks the chunks dirty (on main)
     /// so the next autosave retries instead of silently losing the edits
     private func writeChunkBatch(
-        _ records: [ChunkRecord],
+        _ captures: [ChunkSaveCapture],
         nextPhysicalIdentity: Int,
         inscriptionCatalog: SignInscriptionIdentityCatalog?
     ) {
+        let records = captures.map(\.record)
         if db.putChunks(
             records,
             nextPhysicalIdentity: nextPhysicalIdentity,
@@ -672,17 +745,63 @@ public final class GameCore {
             self.saveCaptureLock.lock()
             defer { self.saveCaptureLock.unlock() }
             print("[saves] chunk batch failed — re-marking \(records.count) chunks dirty for retry")
-            for r in records {
+            for capture in captures {
+                let r = capture.record
                 guard let d = Dim(rawValue: r.dim), let w = self.worlds[d] else { continue }
                 if let c = w.chunks[chunkKey(r.cx, r.cz)] {
                     c.modified = true
+                    self.emitChunkSaveFreshness(
+                        .residentRecoveryMarkedDirty,
+                        capture: capture
+                    )
                 } else {
-                    // already unloaded — requeue the record itself
-                    self.pendingChunkSaves[r.key] = r
+                    let latest = self.latestChunkSaveCaptureSequence[r.key] ?? capture.sequence
+                    guard capture.sequence == latest else {
+                        self.emitChunkSaveFreshness(
+                            .recoveryRejectedStale,
+                            capture: capture,
+                            latestSequence: latest
+                        )
+                        continue
+                    }
+                    // Already unloaded: retry only the still-current capture.
+                    if (self.pendingChunkSaves[r.key]?.sequence ?? 0) <= capture.sequence {
+                        self.pendingChunkSaves[r.key] = capture
+                    }
+                    self.emitChunkSaveFreshness(.recoveryRequeued, capture: capture)
                 }
             }
             self.testingSignInscriptionSaveRecoveryHook?(records)
         }
+    }
+
+    private func makeChunkSaveCapture(_ record: ChunkRecord) -> ChunkSaveCapture {
+        guard nextChunkSaveCaptureSequence < UInt64.max else {
+            fatalError("chunk save capture sequence exhausted")
+        }
+        nextChunkSaveCaptureSequence += 1
+        let capture = ChunkSaveCapture(
+            record: record,
+            sequence: nextChunkSaveCaptureSequence
+        )
+        latestChunkSaveCaptureSequence[record.key] = capture.sequence
+        emitChunkSaveFreshness(.captured, capture: capture)
+        return capture
+    }
+
+    private func emitChunkSaveFreshness(
+        _ phase: ChunkSaveFreshnessPhase,
+        capture: ChunkSaveCapture,
+        latestSequence: UInt64? = nil
+    ) {
+        testingChunkSaveFreshnessHook?(ChunkSaveFreshnessEvent(
+            phase: phase,
+            key: capture.record.key,
+            sequence: capture.sequence,
+            latestSequence: latestSequence
+                ?? latestChunkSaveCaptureSequence[capture.record.key]
+                ?? capture.sequence
+        ))
     }
 
     /// Difficulty is world-global: apply to every dimension so the value can't
@@ -1131,8 +1250,9 @@ public final class GameCore {
                     let dbKey = self.db.chunkKey(rec.id, w.dim.rawValue, c.cx, c.cz)
                     if c.modified || hasEntities || self.savedChunkKeys.contains(dbKey) {
                         let record = self.chunkRecord(rec.id, w.dim, w, c)
+                        let capture = self.makeChunkSaveCapture(record)
                         self.savedChunkKeys.insert(record.key)
-                        self.pendingChunkSaves[record.key] = record
+                        self.pendingChunkSaves[record.key] = capture
                         self.signInscriptionIdentityCatalog?.stageCurrentChunkRecord(record)
                     }
                 }
@@ -1642,11 +1762,11 @@ public final class GameCore {
         if w.time % 20 == 0 {
             saveCaptureLock.lock()
             defer { saveCaptureLock.unlock() }
-            var batch: [ChunkRecord] = []
+            var batch: [ChunkSaveCapture] = []
             var nextPhysicalIdentity = 0
             let capture = {
                 guard !self.pendingChunkSaves.isEmpty else { return }
-                batch = Array(self.pendingChunkSaves.values)
+                batch = self.pendingChunkSaves.values.sorted { $0.record.key < $1.record.key }
                 self.pendingChunkSaves.removeAll()
                 nextPhysicalIdentity = peekNextEntityId()
             }
