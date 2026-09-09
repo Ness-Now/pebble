@@ -404,6 +404,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
     private var persistenceReadyForTermination = false
     private var correction07TerminationAttempt = 0
     private var correction07TerminationCompletionArmed = false
+    private var correction08TerminationAttempt = 0
+    private var correction08TerminationCompletionArmed = false
     var bot: PhysicsBot?
     var passiveObserverInputProof: PlayableObserverInputProof?
     var booth: PhotoBooth?
@@ -678,6 +680,229 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
                 self?.runCorrection07TerminationBoundaryProof()
             }
         }
+        if ProcessInfo.processInfo.environment[
+            "PEBBLELAB_CIV45_C08_PREFX_STREAMING_REPRO"
+        ] == "1" {
+            DispatchQueue.main.async { [weak self] in
+                self?.runCorrection08PreFixStreamingReproduction()
+            }
+        }
+        if ProcessInfo.processInfo.environment[
+            "PEBBLELAB_CIV45_C08_TERMINATION_PROOF"
+        ] == "1" {
+            DispatchQueue.main.async { [weak self] in
+                self?.runCorrection08TerminationBoundaryProof()
+            }
+        }
+    }
+
+    private func correction08CobblestoneItems(in world: World) -> [ItemEntity] {
+        world.entities.compactMap { $0 as? ItemEntity }.filter {
+            itemDef($0.stack.id).name == "cobblestone"
+        }
+    }
+
+    private func correction08CobblestoneQuantity(in world: World) -> Int {
+        correction08CobblestoneItems(in: world).reduce(0) {
+            $0 + $1.stack.count
+        }
+    }
+
+    private func runCorrection08TerminationBoundaryProof() {
+        guard game.hasWorld() else {
+            preconditionFailure("Correction 08 termination proof World unavailable")
+        }
+        game.settings.renderDistance = 4
+        let started = agentController.start(world: game.world, player: game.player)
+        guard started.succeeded,
+              let agentID = agentController.probesByAgentId.keys.sorted().first,
+              let boundProbe = agentController.probesByAgentId[agentID] else {
+            preconditionFailure("Correction 08 termination proof civilization unavailable")
+        }
+        // Structural fail-closed proof for the historical detached-binding
+        // shape. Production reproduction uses streaming above; this deliberate
+        // mismatch establishes that lifecycle can never again pass vacuously.
+        game.world.removeEntity(boundProbe)
+        let detachedBindingRefused = !agentController.prepareForLifecyclePersistence(
+            world: game.world
+        )
+        game.world.addEntity(boundProbe)
+        guard detachedBindingRefused,
+              agentController.probesByAgentId[agentID] === boundProbe,
+              game.world.entities.filter({ $0 === boundProbe }).count == 1,
+              game.world.entityById[boundProbe.id] === boundProbe,
+              let acquisition = try? agentController.acquireStreamingCustodyProofItem(
+                  world: game.world,
+                  agentID: agentID,
+                  itemName: "cobblestone",
+                  count: 7,
+                  transactionID: "civ45-c08-appkit-streaming-acquisition"
+              ) else {
+            preconditionFailure("Correction 08 lifecycle binding defense failed")
+        }
+        let world = game.world
+        let probe = acquisition.probe
+        let probeEntityID = probe.id
+        let probeChunk = world.getChunkAt(Int(floor(probe.x)), Int(floor(probe.z)))
+        let playerOrigin = (x: game.player.x, z: game.player.z)
+        let simulationID = agentController.session?.simulationID
+        let registryIDs = agentController.probesByAgentId.mapValues(\.id)
+        agentController.update(
+            world: world,
+            player: game.player,
+            worldID: game.worldRec?.id,
+            dimension: world.dim.rawValue
+        )
+        var streamingExact = true
+        for _ in 0..<3 {
+            game.player.setPos(
+                probe.x + Double((game.settings.renderDistance + 8) * 16),
+                game.player.y,
+                probe.z
+            )
+            _ = game.frame(dtMs: TICK_MS)
+            streamingExact = streamingExact
+                && world.entities.filter({ $0 === probe }).count == 1
+                && world.entityById[probeEntityID] === probe
+                && agentController.probesByAgentId[agentID] === probe
+                && world.getChunkAt(Int(floor(probe.x)), Int(floor(probe.z)))
+                    === probeChunk
+                && correction08CobblestoneItems(in: world).isEmpty
+                && probe.carriedItems[0] == ItemStack(iid("cobblestone"), 7)
+            game.player.setPos(playerOrigin.x, game.player.y, playerOrigin.z)
+            _ = game.frame(dtMs: TICK_MS)
+            streamingExact = streamingExact
+                && world.entities.filter({ $0 === probe }).count == 1
+                && world.entityById[probeEntityID] === probe
+                && agentController.probesByAgentId.mapValues(\.id) == registryIDs
+                && probe.carriedItems[0] == ItemStack(iid("cobblestone"), 7)
+        }
+        game.player.setPos(
+            probe.x + Double((game.settings.renderDistance + 8) * 16),
+            game.player.y,
+            probe.z
+        )
+        _ = game.frame(dtMs: TICK_MS)
+        guard streamingExact,
+              world.entities.contains(where: { $0 === probe }),
+              agentController.probesByAgentId[agentID] === probe else {
+            preconditionFailure("Correction 08 streaming retention failed")
+        }
+
+        game.db.testingSignInscriptionPersistenceHook = { $0 != .prepared }
+        NSApp.terminate(nil)
+        let tickBeforeFirstUpdate = agentController.session?.tick ?? -1
+        let firstItems = correction08CobblestoneItems(in: world)
+        let firstCoherent = game.hasWorld()
+            && agentController.session?.simulationID == simulationID
+            && agentController.activeWorld === world
+            && agentController.probesByAgentId.mapValues(\.id) == registryIDs
+            && world.entities.contains(where: { $0 === probe })
+            && probe.carriedItems.allSatisfy { $0 == nil }
+            && firstItems.count == 1
+            && correction08CobblestoneQuantity(in: world) == 7
+        world.time += 20
+        agentController.update(
+            world: world,
+            player: game.player,
+            worldID: game.worldRec?.id,
+            dimension: world.dim.rawValue
+        )
+        let firstUpdateContinued = (agentController.session?.tick ?? -1)
+            > tickBeforeFirstUpdate
+
+        NSApp.terminate(nil)
+        let tickBeforeSecondUpdate = agentController.session?.tick ?? -1
+        let secondItems = correction08CobblestoneItems(in: world)
+        let secondCoherent = game.hasWorld()
+            && agentController.session?.simulationID == simulationID
+            && agentController.activeWorld === world
+            && agentController.probesByAgentId.mapValues(\.id) == registryIDs
+            && world.entities.contains(where: { $0 === probe })
+            && probe.carriedItems.allSatisfy { $0 == nil }
+            && secondItems.count == 1
+            && secondItems.first?.id == firstItems.first?.id
+            && correction08CobblestoneQuantity(in: world) == 7
+        world.time += 20
+        agentController.update(
+            world: world,
+            player: game.player,
+            worldID: game.worldRec?.id,
+            dimension: world.dim.rawValue
+        )
+        let secondUpdateContinued = (agentController.session?.tick ?? -1)
+            > tickBeforeSecondUpdate
+        let coherent = firstCoherent && firstUpdateContinued
+            && secondCoherent && secondUpdateContinued
+        print(
+            "CIV45_C08_APPKIT_CANCEL firstReply=terminateCancel "
+                + "secondReply=terminateCancel session=SAME updates=CONTINUED "
+                + "detachedRefusal=PASS "
+                + "probeBinding=SAME custody=7 spillEntity=SAME "
+                + "duplicateSpill=NO "
+                + "status=\(coherent ? "PASS" : "FAIL")"
+        )
+        fflush(stdout)
+        precondition(coherent, "Correction 08 AppKit cancellation coherence failed")
+        game.db.testingSignInscriptionPersistenceHook = nil
+        correction08TerminationCompletionArmed = true
+        NSApp.terminate(nil)
+    }
+
+    private func runCorrection08PreFixStreamingReproduction() {
+        guard game.hasWorld(), let worldID = game.worldRec?.id else {
+            preconditionFailure("Correction 08 pre-fix reproduction World unavailable")
+        }
+        let started = agentController.start(world: game.world, player: game.player)
+        guard started.succeeded,
+              let agentID = agentController.probesByAgentId.keys.sorted().first,
+              let acquisition = try? agentController.acquireStreamingCustodyProofItem(
+                  world: game.world,
+                  agentID: agentID,
+                  itemName: "cobblestone",
+                  count: 7,
+                  transactionID: "civ45-c08-prefx-streaming-acquisition"
+              ) else {
+            preconditionFailure("Correction 08 pre-fix custody acquisition failed")
+        }
+        let world = game.world
+        let probe = acquisition.probe
+        let beforeWorld = world.entities.contains(where: { $0 === probe })
+        let beforeRegistry = agentController.probesByAgentId[agentID] === probe
+        let beforeCarried = probe.carriedItems.compactMap({ $0 }).reduce(0) {
+            $0 + (itemDef($1.id).name == "cobblestone" ? $1.count : 0)
+        }
+        let farDistance = Double((game.settings.renderDistance + 8) * 16)
+        game.player.setPos(probe.x + farDistance, game.player.y, probe.z)
+        _ = game.frame(dtMs: TICK_MS)
+        let afterWorld = world.entities.contains(where: { $0 === probe })
+        let afterRegistry = agentController.probesByAgentId[agentID] === probe
+        let afterCarried = probe.carriedItems.compactMap({ $0 }).reduce(0) {
+            $0 + (itemDef($1.id).name == "cobblestone" ? $1.count : 0)
+        }
+        print(
+            "CIV45_C08_PREFX_STREAMING beforeWorld=\(beforeWorld ? "YES" : "NO") "
+                + "beforeRegistry=\(beforeRegistry ? "YES" : "NO") carriedBefore=\(beforeCarried) "
+                + "afterWorld=\(afterWorld ? "YES" : "NO") "
+                + "afterRegistry=\(afterRegistry ? "YES" : "NO") carriedAfter=\(afterCarried)"
+        )
+        let exited = game.exitToTitle()
+        game.loadWorld(worldID)
+        let restartCustody = game.world.entities.compactMap { $0 as? ItemEntity }
+            .reduce(0) {
+                $0 + (itemDef($1.stack.id).name == "cobblestone" ? $1.stack.count : 0)
+            }
+        let reproduced = beforeWorld && beforeRegistry && beforeCarried == 7
+            && !afterWorld && afterRegistry && afterCarried == 7
+            && exited && restartCustody == 0
+        print(
+            "CIV45_C08_PREFX_EXIT lifecycleBarrier=\(exited ? "PASS" : "FAIL") "
+                + "restartCustody=\(restartCustody) expected=0 "
+                + "status=\(reproduced ? "REPRODUCED" : "NOT_REPRODUCED")"
+        )
+        fflush(stdout)
+        precondition(reproduced, "Correction 08 pre-fix streaming finding not reproduced")
+        NSApp.terminate(nil)
     }
 
     private func runCorrection07TerminationBoundaryProof() {
@@ -802,6 +1027,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         ] == "1" {
             correction07TerminationAttempt += 1
         }
+        if ProcessInfo.processInfo.environment[
+            "PEBBLELAB_CIV45_C08_TERMINATION_PROOF"
+        ] == "1" {
+            correction08TerminationAttempt += 1
+        }
         guard game.prepareForTermination() else {
             persistenceReadyForTermination = false
             print("[lifecycle] application termination refused — active physical state or unresolved persistence retained")
@@ -820,6 +1050,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
                 + "probesFinal=0 status=\(finalState ? "PASS" : "FAIL")")
             fflush(stdout)
             precondition(finalState, "Correction 07 AppKit successful termination failed")
+        }
+        if correction08TerminationCompletionArmed {
+            let items = correction08CobblestoneItems(in: game.world)
+            let finalState = correction08TerminationAttempt == 3
+                && agentController.session == nil
+                && agentController.activeWorld == nil
+                && agentController.probesByAgentId.isEmpty
+                && game.world.entities.compactMap({ $0 as? LabCoreAgentEntity }).isEmpty
+                && items.count == 1
+                && correction08CobblestoneQuantity(in: game.world) == 7
+            print(
+                "CIV45_C08_APPKIT_SUCCESS thirdReply=terminateNow sessionFinal=nil "
+                    + "probesFinal=0 custody=7 itemEntities=\(items.count) "
+                    + "status=\(finalState ? "PASS" : "FAIL")"
+            )
+            fflush(stdout)
+            precondition(finalState, "Correction 08 AppKit successful termination failed")
         }
         persistenceReadyForTermination = true
         return .terminateNow

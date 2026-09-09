@@ -1450,7 +1450,8 @@ public final class GameCore {
         // unload far chunks (tight radius — chunk arrays are ~400KB each)
         let dropR = R + 2
         for c in Array(w.chunks.values) {
-            if abs(c.cx - pcx) > dropR || abs(c.cz - pcz) > dropR {
+            if (abs(c.cx - pcx) > dropR || abs(c.cz - pcz) > dropR)
+                && !containsLabCoreAgentProbe(w, c) {
                 unloadChunk(w, c)
             }
         }
@@ -1458,9 +1459,26 @@ public final class GameCore {
         if w.time % 100 == 0 {
             for (d, other) in worlds {
                 if d == dim { continue }
-                for c in Array(other.chunks.values) { unloadChunk(other, c) }
+                for c in Array(other.chunks.values)
+                    where !containsLabCoreAgentProbe(other, c) {
+                    unloadChunk(other, c)
+                }
             }
         }
+    }
+
+    private func containsLabCoreAgentProbe(_ w: World, _ c: Chunk) -> Bool {
+        // Lab probes are the live physical incarnation of Civilization agents.
+        // They are intentionally excluded from chunk persistence, so technical
+        // camera streaming must keep their resident chunk instead of detaching
+        // a still-bound physical holder from World authority. Lifecycle,
+        // mortality, reset and dimension travel remain the semantic owners of
+        // probe removal and custody transfer.
+        return w.entities.contains(where: { entity in
+            guard entity is LabCoreAgentEntity else { return false }
+            return floorDiv(ifloor(entity.x), 16) == c.cx
+                && floorDiv(ifloor(entity.z), 16) == c.cz
+        })
     }
 
     private func unloadChunk(_ w: World, _ c: Chunk) {

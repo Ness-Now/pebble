@@ -15,6 +15,16 @@ extension PebbleAgentController {
         lifecyclePreparedWorld = nil
         guard session != nil || activeWorld != nil else { return true }
         guard session != nil, activeWorld === world else { return false }
+        // The registry is a binding cache, never an out-of-World custody
+        // authority. Refuse before mutation unless every current cognitive
+        // agent resolves to exactly one identical live World probe and no
+        // stale or extra binding exists.
+        guard lifecycleProbeBindingsReconciled(in: world) else {
+            runtimeErrorCount += 1
+            lastError = "lifecycle refused: physical probe bindings are not reconciled"
+            trace("error lifecycle preparation refused reason=unreconciledProbeBindings")
+            return false
+        }
         // Proof fixtures and an in-progress construction/interaction carry
         // coupled cognitive state. Refuse before mutation instead of leaving a
         // surviving session pointed at cleanup that only shutdown can forget.
@@ -36,7 +46,8 @@ extension PebbleAgentController {
             remove: false,
             includeCustodyHandoff: true
         )
-        guard outcome.processed == expected else {
+        guard outcome.processed == expected,
+              lifecycleProbeBindingsReconciled(in: world) else {
             runtimeErrorCount += 1
             lastError = "physical custody preparation failed; session retained"
             trace("error physical custody preparation failed hardFailure=1")
@@ -56,8 +67,10 @@ extension PebbleAgentController {
     func finalizeLifecycleAfterPersistence() {
         guard let preparedWorld = lifecyclePreparedWorld,
               activeWorld === preparedWorld,
-              preparedWorld.entities.compactMap({ $0 as? LabCoreAgentEntity })
-                .allSatisfy({ $0.carriedItems.allSatisfy { $0 == nil } }),
+              lifecycleProbeBindingsReconciled(in: preparedWorld),
+              probesByAgentId.values.allSatisfy({
+                  $0.carriedItems.allSatisfy { $0 == nil }
+              }),
               passiveSocietyFixture == nil,
               rightsProofFixture == nil,
               livestockProofFixture == nil,
@@ -78,6 +91,21 @@ extension PebbleAgentController {
             session == nil && activeWorld == nil,
             "lifecycle runtime shutdown did not complete"
         )
+    }
+
+    private func lifecycleProbeBindingsReconciled(in world: World) -> Bool {
+        guard let session, activeWorld === world else { return false }
+        let agentIDs = session.snapshot().agents.map(\.id).sorted()
+        let worldProbes = world.entities.compactMap { $0 as? LabCoreAgentEntity }
+        guard worldProbes.map(\.labAgentId).sorted() == agentIDs,
+              worldProbes.allSatisfy({ world.entityById[$0.id] === $0 }),
+              probesByAgentId.keys.sorted() == agentIDs,
+              let resolved = try? PebbleAgentEmbodiment.resolveAll(
+                  agentIDs: agentIDs,
+                  in: world,
+                  mappedByAgentID: probesByAgentId
+              ) else { return false }
+        return resolved.count == agentIDs.count
     }
 
     func start(world: World, player: Player) -> PebbleAgentCommandResult {
