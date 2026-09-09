@@ -7,6 +7,79 @@ extension PebbleAgentController {
         stop(reason: "termination")
     }
 
+    /// Performs every adapter-owned physical cleanup while retaining the live
+    /// session and probe bindings. Probe custody becomes persistent ItemEntity
+    /// state, but probes remain present so a cancelled AppKit termination can
+    /// continue coherently and a retry cannot duplicate the spill.
+    func prepareForLifecyclePersistence(world: World) -> Bool {
+        lifecyclePreparedWorld = nil
+        guard session != nil || activeWorld != nil else { return true }
+        guard session != nil, activeWorld === world else { return false }
+        // Proof fixtures and an in-progress construction/interaction carry
+        // coupled cognitive state. Refuse before mutation instead of leaving a
+        // surviving session pointed at cleanup that only shutdown can forget.
+        guard passiveSocietyFixture == nil,
+              rightsProofFixture == nil,
+              livestockProofFixture == nil,
+              wildSubsistenceProofFixture == nil,
+              agricultureProofFixture == nil,
+              ecologicalObservationProofFixture == nil,
+              constructionExecutor.state.projectId == nil,
+              !interactionExecutor.state(gateEnabled: interactionFeatureEnabled).active else {
+            lastError = "lifecycle preparation refused while physical activity cleanup is active"
+            trace("error lifecycle preparation refused reason=activePhysicalCleanup")
+            return false
+        }
+        let expected = world.entities.compactMap { $0 as? LabCoreAgentEntity }.count
+        let outcome = processLifecycleProbes(
+            in: world,
+            remove: false,
+            includeCustodyHandoff: true
+        )
+        guard outcome.processed == expected else {
+            runtimeErrorCount += 1
+            lastError = "physical custody preparation failed; session retained"
+            trace("error physical custody preparation failed hardFailure=1")
+            return false
+        }
+        lifecyclePreparedWorld = world
+        trace(
+            "lifecycle physical preparation probesRetained=\(outcome.processed) "
+                + "taggedCustodySpills=\(outcome.taggedCustodySpills)"
+        )
+        return session != nil && activeWorld === world
+    }
+
+    /// Runs only after GameCore has durably covered the prepared physical
+    /// state. Probe inventories are required to be empty before the normal,
+    /// irreversible runtime shutdown removes the transient probes.
+    func finalizeLifecycleAfterPersistence() {
+        guard let preparedWorld = lifecyclePreparedWorld,
+              activeWorld === preparedWorld,
+              preparedWorld.entities.compactMap({ $0 as? LabCoreAgentEntity })
+                .allSatisfy({ $0.carriedItems.allSatisfy { $0 == nil } }),
+              passiveSocietyFixture == nil,
+              rightsProofFixture == nil,
+              livestockProofFixture == nil,
+              wildSubsistenceProofFixture == nil,
+              agricultureProofFixture == nil,
+              ecologicalObservationProofFixture == nil,
+              constructionExecutor.state.projectId == nil,
+              !interactionExecutor.state(gateEnabled: interactionFeatureEnabled).active else {
+            precondition(
+                session == nil && activeWorld == nil,
+                "lifecycle runtime finalized without physical preparation"
+            )
+            return
+        }
+        lifecyclePreparedWorld = nil
+        _ = stop(reason: "termination", fallbackWorld: preparedWorld)
+        precondition(
+            session == nil && activeWorld == nil,
+            "lifecycle runtime shutdown did not complete"
+        )
+    }
+
     func start(world: World, player: Player) -> PebbleAgentCommandResult {
         if let candidatePhysicalHardFailure {
             return failure(
@@ -619,68 +692,26 @@ extension PebbleAgentController {
         let expectedProbeRemovals = cleanupWorld?.entities.compactMap {
             $0 as? LabCoreAgentEntity
         }.count ?? 0
-        let orderedCleanupProbes = cleanupWorld?.entities.compactMap {
-            $0 as? LabCoreAgentEntity
-        }.sorted { $0.labAgentId < $1.labAgentId } ?? []
-        let custodyHandoff = reason == "termination"
-            ? checkpointCustodyHandoff : nil
-        let custodyHandoffFreshness: PebbleAgentCheckpointCustodyHandoffFreshness
-        if let custodyHandoff, let cleanupWorld {
-            custodyHandoffFreshness = checkpointCustodyHandoffFreshness(
-                custodyHandoff,
-                world: cleanupWorld
+        let outcome = cleanupWorld.map {
+            processLifecycleProbes(
+                in: $0,
+                remove: true,
+                includeCustodyHandoff: reason == "termination"
             )
-        } else {
-            custodyHandoffFreshness = .stale("absent")
-        }
-        let custodyHandoffExact = custodyHandoffFreshness.isExact
-        let provenanceByAgentAndSlot: [String: [Int: String]]
-        if custodyHandoffExact, let exactHandoff = custodyHandoff {
-            provenanceByAgentAndSlot = Dictionary(uniqueKeysWithValues:
-                exactHandoff.custodyByAgentID.keys.sorted().map { agentID in
-                    let evidence = exactHandoff.custodyByAgentID[
-                        agentID
-                    ]?.evidence.items ?? []
-                    return (agentID, Dictionary(uniqueKeysWithValues:
-                        evidence.map { item in
-                            (item.slotOrdinal, checkpointCustodySpillToken(
-                                checkpointID: exactHandoff.checkpoint
-                                    .checkpointID,
-                                boundaryDigest: exactHandoff
-                                    .manifestIntegrityDigest,
-                                agentID: agentID,
-                                item: item
-                            ))
-                        }
-                    ))
-                }
-            )
-        } else {
-            provenanceByAgentAndSlot = [:]
-        }
-        var taggedCustodySpills = 0
-        let removed = cleanupWorld.map { cleanupWorld in
-            orderedCleanupProbes.reduce(0) { count, probe in
-                let didRemove = removeLabCoreAgentProbe(
-                    probe,
-                    from: cleanupWorld,
-                    spillProvenance: custodyHandoffExact ? { slot, stack in
-                        guard let token = provenanceByAgentAndSlot[
-                            probe.labAgentId
-                        ]?[slot] else { return nil }
-                        taggedCustodySpills += 1
-                        return token
-                    } : nil
-                )
-                return count + (didRemove ? 1 : 0)
-            }
-        } ?? 0
-        guard removed == expectedProbeRemovals else {
+        } ?? (
+            processed: 0,
+            taggedCustodySpills: 0,
+            custodyHandoffProtected: false,
+            custodyHandoffFreshnessTrace: "stale_absent"
+        )
+        let processed = outcome.processed
+        guard processed == expectedProbeRemovals else {
             runtimeErrorCount += 1
             lastError = "physical custody cleanup failed; session retained"
             trace("error physical custody cleanup failed reason=\(reason.replacingOccurrences(of: " ", with: "_")) hardFailure=1")
             return 0
         }
+        let removed = processed
         if let snapshot {
             let movementCount = snapshot.agents.reduce(0) { $0 + $1.movementCount }
             let retrieved = snapshot.agents.reduce(0) { $0 + $1.memoryRetrievalCount }
@@ -771,6 +802,7 @@ extension PebbleAgentController {
         productionGateway.reset()
         session = nil
         activeWorld = nil
+        lifecyclePreparedWorld = nil
         probesByAgentId.removeAll()
         isPaused = false
         credit = 0
@@ -827,10 +859,84 @@ extension PebbleAgentController {
         lastError = nil
         trace(
             "stop probesRemoved=\(removed) reason=\(reason) "
-                + "custodyHandoff=\(custodyHandoffExact ? "protected" : "none") "
-                + "handoffFreshness=\(custodyHandoffFreshness.traceValue) "
-                + "taggedCustodySpills=\(taggedCustodySpills)"
+                + "custodyHandoff=\(outcome.custodyHandoffProtected ? "protected" : "none") "
+                + "handoffFreshness=\(outcome.custodyHandoffFreshnessTrace) "
+                + "taggedCustodySpills=\(outcome.taggedCustodySpills)"
         )
         return removed
+    }
+
+    private func processLifecycleProbes(
+        in world: World,
+        remove: Bool,
+        includeCustodyHandoff: Bool
+    ) -> (
+        processed: Int,
+        taggedCustodySpills: Int,
+        custodyHandoffProtected: Bool,
+        custodyHandoffFreshnessTrace: String
+    ) {
+        let orderedProbes = world.entities.compactMap {
+            $0 as? LabCoreAgentEntity
+        }.sorted { $0.labAgentId < $1.labAgentId }
+        let custodyHandoff = includeCustodyHandoff
+            ? checkpointCustodyHandoff : nil
+        let custodyHandoffFreshness = custodyHandoff.map {
+            checkpointCustodyHandoffFreshness($0, world: world)
+        } ?? .stale("absent")
+        let custodyHandoffExact = custodyHandoffFreshness.isExact
+        let provenanceByAgentAndSlot: [String: [Int: String]]
+        if custodyHandoffExact, let exactHandoff = custodyHandoff {
+            provenanceByAgentAndSlot = Dictionary(uniqueKeysWithValues:
+                exactHandoff.custodyByAgentID.keys.sorted().map { agentID in
+                    let evidence = exactHandoff.custodyByAgentID[
+                        agentID
+                    ]?.evidence.items ?? []
+                    return (agentID, Dictionary(uniqueKeysWithValues:
+                        evidence.map { item in
+                            (item.slotOrdinal, checkpointCustodySpillToken(
+                                checkpointID: exactHandoff.checkpoint
+                                    .checkpointID,
+                                boundaryDigest: exactHandoff
+                                    .manifestIntegrityDigest,
+                                agentID: agentID,
+                                item: item
+                            ))
+                        }
+                    ))
+                }
+            )
+        } else {
+            provenanceByAgentAndSlot = [:]
+        }
+        var taggedCustodySpills = 0
+        let processed = orderedProbes.reduce(0) { count, probe in
+            let provenance: ((Int, ItemStack) -> String?)? = custodyHandoffExact
+                ? { slot, _ in
+                    guard let token = provenanceByAgentAndSlot[
+                        probe.labAgentId
+                    ]?[slot] else { return nil }
+                    taggedCustodySpills += 1
+                    return token
+                } : nil
+            let succeeded = remove
+                ? removeLabCoreAgentProbe(
+                    probe,
+                    from: world,
+                    spillProvenance: provenance
+                )
+                : prepareLabCoreAgentProbeForLifecycle(
+                    probe,
+                    in: world,
+                    spillProvenance: provenance
+                )
+            return count + (succeeded ? 1 : 0)
+        }
+        return (
+            processed,
+            taggedCustodySpills,
+            custodyHandoffExact,
+            custodyHandoffFreshness.traceValue
+        )
     }
 }

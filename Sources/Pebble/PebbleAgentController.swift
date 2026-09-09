@@ -41,6 +41,7 @@ final class PebbleAgentController {
     var lastInfluencedTracesByAgentId: [String: AgentFeedbackDecisionTrace] = [:]
     var movementWasEverEnabledSinceReset = false
     var activeWorld: World?
+    weak var lifecyclePreparedWorld: World?
     var overlayModeByCommand: PebbleAgentOverlayMode?
     var observerUIState = PebbleObserverUIState()
     var followMode: PebbleAgentFollowMode = .off

@@ -402,6 +402,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
     private var uncappedMode = false
     private var uncapTimer: Timer?
     private var persistenceReadyForTermination = false
+    private var correction07TerminationAttempt = 0
+    private var correction07TerminationCompletionArmed = false
     var bot: PhysicsBot?
     var passiveObserverInputProof: PlayableObserverInputProof?
     var booth: PhotoBooth?
@@ -526,6 +528,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         game = GameCore()
         game.host = host
         agentController.worldSideReceiptDatabase = game.db
+        game.prepareExternalLifecycleState = { [weak self] in
+            guard let self else { return false }
+            guard self.game.hasWorld() else {
+                return self.agentController.session == nil
+                    && self.agentController.activeWorld == nil
+            }
+            return self.agentController.prepareForLifecyclePersistence(
+                world: self.game.world
+            )
+        }
+        game.finalizeExternalLifecycleState = { [weak self] in
+            self?.agentController.finalizeLifecycleAfterPersistence()
+        }
         host.app = self
         print(String(format: "registries: %.0fms (%d blocks, %d items, %d biomes)",
                      (CFAbsoluteTimeGetCurrent() - t0) * 1000, blockDefs.count, itemDefs.count, BIOMES.count))
@@ -656,6 +671,102 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
                 self?.runCorrection06TerminationBoundaryProof()
             }
         }
+        if ProcessInfo.processInfo.environment[
+            "PEBBLELAB_CIV45_C07_TERMINATION_PROOF"
+        ] == "1" {
+            DispatchQueue.main.async { [weak self] in
+                self?.runCorrection07TerminationBoundaryProof()
+            }
+        }
+    }
+
+    private func runCorrection07TerminationBoundaryProof() {
+        guard game.hasWorld(),
+              let chunk = game.world.getChunkAt(
+                Int(floor(game.player.x)), Int(floor(game.player.z))
+              ) else {
+            preconditionFailure("Correction 07 termination proof World unavailable")
+        }
+        let started = agentController.start(world: game.world, player: game.player)
+        guard started.succeeded, agentController.session != nil,
+              !agentController.probesByAgentId.isEmpty else {
+            preconditionFailure("Correction 07 termination proof civilization unavailable")
+        }
+        guard let carryingProbe = agentController.probesByAgentId.values.sorted(by: {
+            $0.labAgentId < $1.labAgentId
+        }).first else {
+            preconditionFailure("Correction 07 termination proof probe unavailable")
+        }
+        carryingProbe.carriedItems[0] = ItemStack(iid("cobblestone"), 2)
+        let world = game.world
+        let probeIDsBefore = agentController.probesByAgentId.mapValues(\.id)
+        let simulationIDBefore = agentController.session?.simulationID
+        let focusBefore = agentController.focusedAgentId
+        let followModeBefore = agentController.followMode
+        let replayWasActive = agentController.replayRecorder != nil
+        let sessionBefore = agentController.session != nil
+        agentController.update(
+            world: world,
+            player: game.player,
+            worldID: game.worldRec?.id,
+            dimension: world.dim.rawValue
+        )
+        let tickBefore = agentController.session?.tick ?? -1
+        chunk.modified = true
+        game.db.testingSignInscriptionPersistenceHook = { phase in phase != .prepared }
+        NSApp.terminate(nil)
+        let firstCoherent = game.hasWorld()
+            && agentController.session != nil
+            && agentController.session?.simulationID == simulationIDBefore
+            && agentController.activeWorld === world
+            && agentController.probesByAgentId.mapValues(\.id) == probeIDsBefore
+            && agentController.focusedAgentId == focusBefore
+            && agentController.followMode == followModeBefore
+            && carryingProbe.carriedItems.allSatisfy { $0 == nil }
+            && world.entities.compactMap { $0 as? ItemEntity }.filter {
+                itemDef($0.stack.id).name == "cobblestone"
+            }.reduce(0, { $0 + $1.stack.count }) == 2
+        world.time += 20
+        agentController.update(
+            world: world,
+            player: game.player,
+            worldID: game.worldRec?.id,
+            dimension: world.dim.rawValue
+        )
+        let firstUpdateContinued = (agentController.session?.tick ?? -1) > tickBefore
+
+        NSApp.terminate(nil)
+        let secondTickBefore = agentController.session?.tick ?? -1
+        let secondCoherent = game.hasWorld()
+            && agentController.session != nil
+            && agentController.session?.simulationID == simulationIDBefore
+            && agentController.activeWorld === world
+            && agentController.probesByAgentId.mapValues(\.id) == probeIDsBefore
+            && agentController.focusedAgentId == focusBefore
+            && agentController.followMode == followModeBefore
+            && world.entities.compactMap { $0 as? ItemEntity }.filter {
+                itemDef($0.stack.id).name == "cobblestone"
+            }.reduce(0, { $0 + $1.stack.count }) == 2
+            && (agentController.replayRecorder != nil) == replayWasActive
+        world.time += 20
+        agentController.update(
+            world: world,
+            player: game.player,
+            worldID: game.worldRec?.id,
+            dimension: world.dim.rawValue
+        )
+        let secondUpdateContinued = (agentController.session?.tick ?? -1) > secondTickBefore
+        let coherent = sessionBefore && firstCoherent && firstUpdateContinued
+            && secondCoherent && secondUpdateContinued
+        print("CIV45_C07_APPKIT_CANCEL firstReply=terminateCancel secondReply=terminateCancel "
+            + "WorldRetained=\(game.hasWorld() ? "YES" : "NO") session=present "
+            + "updates=CONTINUED duplicateSession=NO duplicateProbe=NO duplicateSpill=NO "
+            + "status=\(coherent ? "PASS" : "FAIL")")
+        fflush(stdout)
+        precondition(coherent, "Correction 07 AppKit cancellation coherence failed")
+        game.db.testingSignInscriptionPersistenceHook = nil
+        correction07TerminationCompletionArmed = true
+        NSApp.terminate(nil)
     }
 
     private func runCorrection06TerminationBoundaryProof() {
@@ -686,12 +797,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        _ = agentController.shutdown()
-        game.clearLabCoreAgentProbes()
+        if ProcessInfo.processInfo.environment[
+            "PEBBLELAB_CIV45_C07_TERMINATION_PROOF"
+        ] == "1" {
+            correction07TerminationAttempt += 1
+        }
         guard game.prepareForTermination() else {
             persistenceReadyForTermination = false
-            print("[saves] application termination refused — unresolved persistence retained")
+            print("[lifecycle] application termination refused — active physical state or unresolved persistence retained")
             return .terminateCancel
+        }
+        precondition(
+            game.completePreparedLifecycle(),
+            "application termination lifecycle finalization failed"
+        )
+        if correction07TerminationCompletionArmed {
+            let finalState = correction07TerminationAttempt == 3
+                && agentController.session == nil
+                && agentController.activeWorld == nil
+                && agentController.probesByAgentId.isEmpty
+            print("CIV45_C07_APPKIT_SUCCESS thirdReply=terminateNow sessionFinal=nil "
+                + "probesFinal=0 status=\(finalState ? "PASS" : "FAIL")")
+            fflush(stdout)
+            precondition(finalState, "Correction 07 AppKit successful termination failed")
         }
         persistenceReadyForTermination = true
         return .terminateNow
@@ -699,11 +827,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
 
     func applicationWillTerminate(_ notification: Notification) {
         guard !persistenceReadyForTermination else { return }
-        _ = agentController.shutdown()
-        game.clearLabCoreAgentProbes()
         precondition(
             game.prepareForTermination(),
             "application termination reached without durable persistence"
+        )
+        precondition(
+            game.completePreparedLifecycle(),
+            "application termination reached without lifecycle finalization"
         )
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }

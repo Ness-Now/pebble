@@ -203,6 +203,13 @@ private struct ChunkSaveCapture {
     let sequence: UInt64
 }
 
+private struct SaveSubmissionResult {
+    let requiredWritesSucceeded: Bool
+    let chunkBatchSucceeded: Bool
+
+    var succeeded: Bool { requiredWritesSucceeded && chunkBatchSucceeded }
+}
+
 public enum ChunkSaveFreshnessPhase: String {
     case captured
     case recoveryRequeued
@@ -225,6 +232,11 @@ public final class GameCore {
     public let db = SaveDB()
     public var settings: Settings
     public var keybinds: [String: String]
+    /// Pebble may prepare adapter-owned physical cleanup before Core's final
+    /// lifecycle save, while irreversible runtime teardown remains post-save.
+    public var prepareExternalLifecycleState: (() -> Bool)?
+    public var finalizeExternalLifecycleState: (() -> Void)?
+    private var lifecyclePersistencePrepared = false
 
     // world state
     public var worlds: [Dim: World] = [:]
@@ -286,6 +298,7 @@ public final class GameCore {
     public var testingSignInscriptionSaveRecoveryHook: (([ChunkRecord]) -> Void)?
     /// Default-nil deterministic trace seam for freshness regression proofs.
     public var testingChunkSaveFreshnessHook: ((ChunkSaveFreshnessEvent) -> Void)?
+    public private(set) var testingLastSubmittedChunkRecordCount = 0
 
     /// Read-only deterministic seam for persistence regression proofs.
     /// Production ownership and mutation remain private to GameCore.
@@ -503,7 +516,11 @@ public final class GameCore {
             host?.showActionBar("§cSave failed — exit refused", 200)
             return false
         }
-        clearLabCoreAgentProbes()
+        guard completePreparedLifecycle() else {
+            host?.pushChat("§cLifecycle cleanup failed — exit refused.")
+            host?.showActionBar("§cLifecycle cleanup failed — exit refused", 200)
+            return false
+        }
         inWorld = false
         worldRec = nil
         signInscriptionIdentityCatalog = nil
@@ -534,6 +551,8 @@ public final class GameCore {
     }
 
     public func createWorld(name: String, seedText: String, mode: Int, difficulty: Int) {
+        let replacingWorld = inWorld
+        let previousWorldID = worldRec?.id
         guard prepareForWorldReplacement() else { return }
         let trimmed = seedText.trimmingCharacters(in: .whitespaces)
         var seed: Int32
@@ -568,15 +587,30 @@ public final class GameCore {
         rec.spawnX = sx
         rec.spawnZ = sz
         rec.spawnY = gen.heightEstimate(Double(sx), Double(sz)) + 1
-        db.putWorld(rec)
+        guard db.putWorld(rec) else {
+            host?.pushChat("§cNew World could not be saved — current World retained.")
+            host?.showActionBar("§cWorld creation refused — save failed", 200)
+            return
+        }
+        if replacingWorld {
+            guard completePreparedLifecycle() else { return }
+            if let previousWorldID { clearChunkSaveTracking(worldID: previousWorldID) }
+        }
         enterWorld(rec, nil, nil)
     }
 
     public func loadWorld(_ id: String) {
+        guard db.getWorld(id) != nil else { return }
+        let replacingWorld = inWorld
+        let previousWorldID = worldRec?.id
         guard prepareForWorldReplacement() else { return }
         guard let rec = db.getWorld(id) else { return }
         let playerData = db.getPlayer(id)
         let adv = db.getAdvancements(id)
+        if replacingWorld {
+            guard completePreparedLifecycle() else { return }
+            if let previousWorldID { clearChunkSaveTracking(worldID: previousWorldID) }
+        }
         enterWorld(rec, playerData, adv)
     }
 
@@ -700,34 +734,73 @@ public final class GameCore {
 
     @discardableResult
     public func saveAndFlush(synchronous: Bool = false) -> Bool {
-        let firstSucceeded = submitChunkSave(synchronous: synchronous)
-        guard synchronous else { return firstSucceeded }
-        guard let worldID = worldRec?.id else { return firstSucceeded }
-        if firstSucceeded && !hasUnresolvedChunkSaves(worldID: worldID) { return true }
+        let first = submitChunkSave(synchronous: synchronous)
+        guard synchronous else { return first.succeeded }
+        guard first.requiredWritesSucceeded else { return false }
+        guard let worldID = worldRec?.id else { return first.succeeded }
+        if first.chunkBatchSucceeded && !hasUnresolvedChunkSaves(worldID: worldID) {
+            return true
+        }
 
         // The first queue barrier also observes failures from older asynchronous
         // batches. Retry once from the synchronously retained pending horizon.
         // A repeated failure remains in memory and is reported to lifecycle.
-        let retrySucceeded = submitChunkSave(synchronous: true)
-        return retrySucceeded && !hasUnresolvedChunkSaves(worldID: worldID)
+        let retry = submitChunkSave(synchronous: true)
+        return retry.succeeded && !hasUnresolvedChunkSaves(worldID: worldID)
     }
 
     /// Lifecycle owners use the synchronous result to refuse destruction or
-    /// termination. Failure never exists solely in an unexecuted main callback.
+    /// termination, then immediately call `completePreparedLifecycle()` before
+    /// destruction. Failure never exists solely in an unexecuted main callback.
     @discardableResult
     public func prepareForTermination() -> Bool {
-        !inWorld || saveAndFlush(synchronous: true)
+        lifecyclePersistencePrepared = false
+        guard prepareExternalLifecycleState?() ?? true else { return false }
+        if inWorld {
+            for dimension in worlds.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
+                guard let world = worlds[dimension],
+                      prepareLabCoreAgentProbesForLifecycle(in: world) else {
+                    return false
+                }
+            }
+            guard saveAndFlush(synchronous: true) else { return false }
+        }
+        lifecyclePersistencePrepared = true
+        return true
     }
 
-    private func submitChunkSave(synchronous: Bool) -> Bool {
+    /// Completes only the non-persistable teardown authorized by a successful
+    /// lifecycle barrier. Every probe must already have empty custody.
+    @discardableResult
+    public func completePreparedLifecycle() -> Bool {
+        guard lifecyclePersistencePrepared else { return false }
+        lifecyclePersistencePrepared = false
+        let probes = worlds.values.flatMap { world in
+            world.entities.compactMap { $0 as? LabCoreAgentEntity }
+        }
+        guard probes.allSatisfy({ $0.carriedItems.allSatisfy { $0 == nil } }) else {
+            return false
+        }
+        finalizeExternalLifecycleState?()
+        let remaining = worlds.values.reduce(0) { count, world in
+            count + world.entities.compactMap { $0 as? LabCoreAgentEntity }.count
+        }
+        return clearLabCoreAgentProbes() == remaining
+    }
+
+    private func submitChunkSave(synchronous: Bool) -> SaveSubmissionResult {
         saveCaptureLock.lock()
         guard inWorld, var rec = worldRec else {
             saveCaptureLock.unlock()
-            return true
+            return SaveSubmissionResult(
+                requiredWritesSucceeded: true,
+                chunkBatchSucceeded: true
+            )
         }
         testingSignInscriptionPersistenceCaptureHook?()
 
         var captures: [ChunkSaveCapture] = []
+        var requiredWritesSucceeded = false
         let capture = {
             rec.lastPlayed = Date().timeIntervalSince1970 * 1000
             rec.gameMode = self.player.gameMode
@@ -744,9 +817,19 @@ public final class GameCore {
                 rec.gameRules = cur.gameRules
             }
             self.worldRec = rec
-            self.db.putWorld(rec)
-            self.db.putPlayer(rec.id, ["dim": self.dim.rawValue, "data": self.player.save()])
-            self.db.putAdvancements(rec.id, self.advancements.save())
+            let worldWriteOK = self.db.putWorld(rec)
+            let playerWriteOK = self.db.putPlayer(
+                rec.id,
+                ["dim": self.dim.rawValue, "data": self.player.save()]
+            )
+            let advancementsWriteOK = self.db.putAdvancements(
+                rec.id,
+                self.advancements.save()
+            )
+            requiredWritesSucceeded = worldWriteOK
+                && playerWriteOK
+                && advancementsWriteOK
+            guard requiredWritesSucceeded else { return }
             // Pending captures retain their original causal age. A resident
             // capture made now is newer and replaces the same key in this batch.
             var capturesByKey = self.pendingChunkSaves
@@ -777,6 +860,7 @@ public final class GameCore {
         }
 
         let inscriptionCatalog = signInscriptionIdentityCatalog
+        testingLastSubmittedChunkRecordCount = captures.count
         let completion = synchronous ? DispatchSemaphore(value: 0) : nil
         let resultLock = NSLock()
         var result = true
@@ -794,11 +878,19 @@ public final class GameCore {
         // Queue submission is ordered before another capture can acquire the
         // lock, but the worker may now maintain unresolved/retry state itself.
         saveCaptureLock.unlock()
-        guard let completion else { return true }
+        guard let completion else {
+            return SaveSubmissionResult(
+                requiredWritesSucceeded: requiredWritesSucceeded,
+                chunkBatchSucceeded: true
+            )
+        }
         completion.wait()
         resultLock.lock()
         defer { resultLock.unlock() }
-        return result
+        return SaveSubmissionResult(
+            requiredWritesSucceeded: requiredWritesSucceeded,
+            chunkBatchSucceeded: result
+        )
     }
 
     /// runs ON the save queue; on failure re-marks the chunks dirty (on main)
@@ -899,14 +991,11 @@ public final class GameCore {
 
     private func prepareForWorldReplacement() -> Bool {
         guard inWorld else { return true }
-        let previousWorldID = worldRec?.id
-        guard saveAndFlush(synchronous: true) else {
+        guard prepareForTermination() else {
             host?.pushChat("§cSave failed — World switch refused.")
             host?.showActionBar("§cSave failed — World switch refused", 200)
             return false
         }
-        clearLabCoreAgentProbes()
-        if let previousWorldID { clearChunkSaveTracking(worldID: previousWorldID) }
         return true
     }
 

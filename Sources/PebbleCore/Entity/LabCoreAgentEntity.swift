@@ -114,6 +114,61 @@ public final class LabCoreAgentEntity: Entity {
     }
 }
 
+/// Moves transient probe custody into ordinary persistent World entities while
+/// keeping the probe live. Lifecycle callers run this before their final save;
+/// a refused lifecycle can therefore continue with one coherent physical state
+/// and a repeated attempt cannot spill the same stack twice.
+@discardableResult
+public func prepareLabCoreAgentProbeForLifecycle(
+    _ probe: LabCoreAgentEntity,
+    in world: World,
+    spillProvenance: ((Int, ItemStack) -> String?)? = nil
+) -> Bool {
+    guard probe.world === world,
+          world.entities.contains(where: { $0 === probe }) else {
+        return false
+    }
+    let before = copyItemInventory(probe.carriedItems)
+    var spilled: [ItemEntity] = []
+    for (slot, optionalStack) in before.enumerated() {
+        guard let stack = optionalStack else { continue }
+        let item = spawnItem(world, probe.x, probe.y + 0.5, probe.z, stack.copy())
+        item.custodyProvenance = spillProvenance?(slot, stack)
+        world.getChunkAt(ifloor(item.x), ifloor(item.z))?.modified = true
+        if item.custodyProvenance != nil {
+            item.pickupDelay = Int.max
+            item.lifeTime = Int.max
+            item.noGravity = true
+            item.vx = 0; item.vy = 0; item.vz = 0
+        }
+        spilled.append(item)
+    }
+    probe.carriedItems = Array(
+        repeating: nil,
+        count: LabCoreAgentEntity.carriedItemSlotCount
+    )
+    let originalStacks = before.compactMap { $0 }
+    let verified = spilled.count == originalStacks.count
+        && zip(spilled, originalStacks).allSatisfy { item, original in
+            world.entities.contains(where: { $0 === item }) && item.stack == original
+        }
+        && probe.carriedItems.allSatisfy { $0 == nil }
+    guard verified else {
+        for item in spilled { world.removeEntity(item) }
+        probe.carriedItems = copyItemInventory(before)
+        return false
+    }
+    return true
+}
+
+/// Prepares every probe in deterministic agent order without removing it.
+@discardableResult
+public func prepareLabCoreAgentProbesForLifecycle(in world: World) -> Bool {
+    world.entities.compactMap { $0 as? LabCoreAgentEntity }
+        .sorted { $0.labAgentId < $1.labAgentId }
+        .allSatisfy { prepareLabCoreAgentProbeForLifecycle($0, in: world) }
+}
+
 /// Removes one probe without silently destroying material in its custody.
 ///
 /// Non-empty slots are spilled as real ItemEntity instances before the probe is

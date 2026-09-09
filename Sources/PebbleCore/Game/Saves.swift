@@ -135,6 +135,12 @@ public enum SignInscriptionPersistencePhase: String {
     case failed
 }
 
+public enum RequiredPersistenceWrite: String {
+    case world
+    case player
+    case advancements
+}
+
 public final class SaveDB {
     private var db: OpaquePointer?
     private let databaseLock = NSRecursiveLock()
@@ -144,6 +150,8 @@ public final class SaveDB {
     /// Default-nil deterministic fault/concurrency seam used by pebsmoke.
     /// Returning false asks the current chunk transaction to roll back.
     public var testingSignInscriptionPersistenceHook: ((SignInscriptionPersistencePhase) -> Bool)?
+    /// Default-nil deterministic seam for required non-chunk lifecycle writes.
+    public var testingRequiredPersistenceWriteHook: ((RequiredPersistenceWrite) -> Bool)?
 
     public init() {
         let url = vcSupportDir().appendingPathComponent("pebble.db")
@@ -257,9 +265,12 @@ public final class SaveDB {
         }
         return rec
     }
-    public func putWorld(_ rec: WorldRecord) {
-        guard let data = try? JSONEncoder().encode(rec), let json = String(data: data, encoding: .utf8) else { return }
-        run("INSERT OR REPLACE INTO worlds(id, json, lastPlayed) VALUES(?,?,?)", bind: { stmt in
+    @discardableResult
+    public func putWorld(_ rec: WorldRecord) -> Bool {
+        guard testingRequiredPersistenceWriteHook?(.world) ?? true else { return false }
+        guard let data = try? JSONEncoder().encode(rec),
+              let json = String(data: data, encoding: .utf8) else { return false }
+        return run("INSERT OR REPLACE INTO worlds(id, json, lastPlayed) VALUES(?,?,?)", bind: { stmt in
             self.bindText(stmt, 1, rec.id)
             self.bindText(stmt, 2, json)
             sqlite3_bind_double(stmt, 3, rec.lastPlayed)
@@ -911,10 +922,12 @@ public final class SaveDB {
         }
         return out
     }
-    public func putPlayer(_ worldId: String, _ data: [String: Any]) {
+    @discardableResult
+    public func putPlayer(_ worldId: String, _ data: [String: Any]) -> Bool {
+        guard testingRequiredPersistenceWriteHook?(.player) ?? true else { return false }
         guard let bytes = try? JSONSerialization.data(withJSONObject: sanitizeJSON(data)),
-              let json = String(data: bytes, encoding: .utf8) else { return }
-        run("INSERT OR REPLACE INTO player(world, json) VALUES(?,?)", bind: { stmt in
+              let json = String(data: bytes, encoding: .utf8) else { return false }
+        return run("INSERT OR REPLACE INTO player(world, json) VALUES(?,?)", bind: { stmt in
             self.bindText(stmt, 1, worldId)
             self.bindText(stmt, 2, json)
         })
@@ -928,10 +941,12 @@ public final class SaveDB {
         }
         return out
     }
-    public func putAdvancements(_ worldId: String, _ ids: [String]) {
+    @discardableResult
+    public func putAdvancements(_ worldId: String, _ ids: [String]) -> Bool {
+        guard testingRequiredPersistenceWriteHook?(.advancements) ?? true else { return false }
         guard let bytes = try? JSONSerialization.data(withJSONObject: ids),
-              let json = String(data: bytes, encoding: .utf8) else { return }
-        run("INSERT OR REPLACE INTO advancements(world, json) VALUES(?,?)", bind: { stmt in
+              let json = String(data: bytes, encoding: .utf8) else { return false }
+        return run("INSERT OR REPLACE INTO advancements(world, json) VALUES(?,?)", bind: { stmt in
             self.bindText(stmt, 1, worldId)
             self.bindText(stmt, 2, json)
         })
