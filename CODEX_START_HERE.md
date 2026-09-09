@@ -141,7 +141,7 @@ for the compact status. In particular:
   AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical
   product HEAD `0c6a6e88ce838266897526a74d067532163cb06f`. Published progression is
   complete through `CIV-44`.
-- `CIV-45 — Writing and Literacy V1` is a **CORRECTION 06 LOCAL REVIEW
+- `CIV-45 — Writing and Literacy V1` is a **CORRECTION 07 LOCAL REVIEW
   CANDIDATE — NOT PUBLISHED** from exact published baseline
   `9a2cfec10b4a0d1b6a5d2f46aac8f3c312ddbb0e`; local product commit
   `ac38675d88d4b709183e7b26f92a0a45b0e928c1` and initial candidate
@@ -174,9 +174,17 @@ for the compact status. In particular:
   `d551a5e9b9d57c64c9ae5bc408949fd8f7b2c0d5` retains the maximum unresolved
   physical capture across pending, queue and in-flight states, routes chunk
   materialization through that horizon, and makes exit, World replacement and
-  AppKit termination fail closed until persistence resolves. It supplies the
-  current local candidate. Published progression remains complete through
-  CIV-44. The next
+  AppKit termination fail closed until persistence resolves. Candidate
+  `a8f153715cf02ec28225cd86e7ba045b715d9323` received **CORRECTION REQUIRED**:
+  lifecycle cleanup could mutate physical state after the last barrier,
+  cancelled AppKit termination could already have destroyed the civilization,
+  and non-chunk write failures could be reported as success. Correction 07
+  product/test commit `6890eab1f460a09b2fe01bf02d4a0fd248528ea9`
+  moves idempotent physical custody preparation before a final barrier covering
+  WorldRecord, Player, Advancements, chunks/index and unresolved persistence;
+  irreversible runtime shutdown and World destruction/replacement occur only
+  after success. It supplies the current local candidate. Published progression
+  remains complete through CIV-44. The next
   authorized action is CIV-45 independent senior re-review; CIV-46 and CIV-47
   remain unstarted and unauthorized. Gate G remains planned and unevaluated. See
   [`CIV_45_PHASE_SUMMARY.md`](docs/pebblelab/CIV_45_PHASE_SUMMARY.md).
