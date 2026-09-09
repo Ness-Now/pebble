@@ -135,7 +135,7 @@ CIV-38: OPTIONAL — NOT STARTED
 Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
-active CIV phase: CIV-45 — CORRECTION 05 LOCAL REVIEW CANDIDATE — NOT PUBLISHED
+active CIV phase: CIV-45 — CORRECTION 06 LOCAL REVIEW CANDIDATE — NOT PUBLISHED
 completed and published through: CIV-44 (CIV-38 and CIV-40 remain optional and unstarted)
 next eligible action: CIV-45 independent senior re-review
 next authorized action: CIV-45 independent senior re-review; CIV-46 remains unauthorized
@@ -219,7 +219,7 @@ CIV-43 final review archive SHA-256: 1c22063677e95430bb6f220a95c75e07e0512d532d0
 CIV-44: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 CIV-44 published canonical HEAD: 0c6a6e88ce838266897526a74d067532163cb06f
 CIV-44 final review archive SHA-256: 570df1fd45349de684b47a0c30fcb1452137b86d5d40174146126333e6f51683
-CIV-45: CORRECTION 05 LOCAL REVIEW CANDIDATE — NOT PUBLISHED
+CIV-45: CORRECTION 06 LOCAL REVIEW CANDIDATE — NOT PUBLISHED
 CIV-45 exact published baseline: 9a2cfec10b4a0d1b6a5d2f46aac8f3c312ddbb0e
 CIV-45 initial product commit: ac38675d88d4b709183e7b26f92a0a45b0e928c1
 CIV-45 initial candidate: 89cffa47f1e9635e0f44a0fac246e92739501911 — CORRECTION REQUIRED
@@ -233,6 +233,8 @@ CIV-45 Correction 03 candidate: b502d272998834a6bc70a5c5fc0740924d03caa1 — COR
 CIV-45 Correction 04 product/test commit: ff68b1d60f7159fec17d0bb98433235f75e767d1
 CIV-45 Correction 04 candidate: 2a83631ee642e2bc71f7da4c82b01172f35c7bdc — CORRECTION REQUIRED
 CIV-45 Correction 05 product/test commit: 01b9826afc4ca96efb0f07556c53073524cbbf97
+CIV-45 Correction 05 candidate: cf80aa1f789edd74417bf225ef34a5fad3eac588 — CORRECTION REQUIRED
+CIV-45 Correction 06 product/test commit: d551a5e9b9d57c64c9ae5bc408949fd8f7b2c0d5
 CIV-46 / CIV-47: PLANNED — NOT STARTED / NOT AUTHORIZED
 V4-GATE-G-v1: PLANNED / UNEVALUATED
 ```
@@ -659,7 +661,7 @@ PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical HEAD
 `50d0f73fb9b2a29fd1c3aa80395d20df862a0048`. Its initial product commit was
 `6d8a3a99f3c0a80333a3e5f8c97cfd32a44e9ae4`; the two senior-review corrections
 and their blockers remain recorded in the phase summary. Published progression
-is complete through CIV-44. CIV-45 is a **CORRECTION 05 LOCAL REVIEW CANDIDATE
+is complete through CIV-44. CIV-45 is a **CORRECTION 06 LOCAL REVIEW CANDIDATE
 — NOT PUBLISHED** after initial candidate
 `89cffa47f1e9635e0f44a0fac246e92739501911` received **CORRECTION REQUIRED**.
 Correction 01 product/test commit
@@ -673,8 +675,13 @@ for stale physical-authority finalization. Correction 03 candidate
 for persistence capture before WRITE rollback. Correction 04 candidate
 `2a83631ee642e2bc71f7da4c82b01172f35c7bdc` received **CORRECTION REQUIRED**
 for stale failed-snapshot recovery. Correction 05 product/test commit
-`01b9826afc4ca96efb0f07556c53073524cbbf97` supplies the current local review
-candidate. CIV-46 and CIV-47 remain unstarted and unauthorized; Gate G remains
+`01b9826afc4ca96efb0f07556c53073524cbbf97` and candidate
+`cf80aa1f789edd74417bf225ef34a5fad3eac588` remain **CORRECTION REQUIRED**
+historical evidence for stale SQLite re-adoption while newer physical state
+remained in flight and for lifecycle recovery abandonment. Correction 06
+product/test commit `d551a5e9b9d57c64c9ae5bc408949fd8f7b2c0d5` supplies the
+current local review candidate. CIV-46 and CIV-47 remain unstarted and
+unauthorized; Gate G remains
 planned and unevaluated. See
 [`CIV_44_PHASE_SUMMARY.md`](CIV_44_PHASE_SUMMARY.md) and
 [`CIV_45_PHASE_SUMMARY.md`](CIV_45_PHASE_SUMMARY.md).
@@ -1511,7 +1518,7 @@ CIV-43 final review archive SHA-256: 1c22063677e95430bb6f220a95c75e07e0512d532d0
 CIV-44 status: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 CIV-44 published canonical HEAD: 0c6a6e88ce838266897526a74d067532163cb06f
 CIV-44 final review archive SHA-256: 570df1fd45349de684b47a0c30fcb1452137b86d5d40174146126333e6f51683
-CIV-45 status: CORRECTION 05 LOCAL REVIEW CANDIDATE — NOT PUBLISHED
+CIV-45 status: CORRECTION 06 LOCAL REVIEW CANDIDATE — NOT PUBLISHED
 CIV-45 exact published baseline: 9a2cfec10b4a0d1b6a5d2f46aac8f3c312ddbb0e
 CIV-45 initial product commit: ac38675d88d4b709183e7b26f92a0a45b0e928c1
 CIV-45 initial candidate: 89cffa47f1e9635e0f44a0fac246e92739501911 — CORRECTION REQUIRED
@@ -1525,6 +1532,8 @@ CIV-45 Correction 03 candidate: b502d272998834a6bc70a5c5fc0740924d03caa1 — COR
 CIV-45 Correction 04 product/test commit: ff68b1d60f7159fec17d0bb98433235f75e767d1
 CIV-45 Correction 04 candidate: 2a83631ee642e2bc71f7da4c82b01172f35c7bdc — CORRECTION REQUIRED
 CIV-45 Correction 05 product/test commit: 01b9826afc4ca96efb0f07556c53073524cbbf97
+CIV-45 Correction 05 candidate: cf80aa1f789edd74417bf225ef34a5fad3eac588 — CORRECTION REQUIRED
+CIV-45 Correction 06 product/test commit: d551a5e9b9d57c64c9ae5bc408949fd8f7b2c0d5
 CIV-46 / CIV-47 status: PLANNED — NOT STARTED / NOT AUTHORIZED
 V4-GATE-G-v1 status: PLANNED / UNEVALUATED
 ```
@@ -1774,7 +1783,7 @@ HEAD `9690538a5cfd2a871750ffa839a404f7d19818d5`; final review archive SHA-256 is
 CIV-44 is **COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED**
 at canonical HEAD `0c6a6e88ce838266897526a74d067532163cb06f`, from exact implementation
 baseline `50d0f73fb9b2a29fd1c3aa80395d20df862a0048`. Published progression is
-complete through CIV-44. CIV-45 is a **CORRECTION 05 LOCAL REVIEW CANDIDATE —
+complete through CIV-44. CIV-45 is a **CORRECTION 06 LOCAL REVIEW CANDIDATE —
 NOT PUBLISHED** after initial candidate
 `89cffa47f1e9635e0f44a0fac246e92739501911` received **CORRECTION REQUIRED**.
 Correction 01 product/test commit
@@ -1787,7 +1796,10 @@ REQUIRED** for stale physical-authority finalization. Correction 03 candidate
 for persistence capture before WRITE rollback. Correction 04 candidate
 `2a83631ee642e2bc71f7da4c82b01172f35c7bdc` received **CORRECTION REQUIRED**
 for stale failed-snapshot recovery. Correction 05 product/test commit
-`01b9826afc4ca96efb0f07556c53073524cbbf97` supplies the current local review
+`01b9826afc4ca96efb0f07556c53073524cbbf97` and candidate
+`cf80aa1f789edd74417bf225ef34a5fad3eac588` remain **CORRECTION REQUIRED**.
+Correction 06 product/test commit
+`d551a5e9b9d57c64c9ae5bc408949fd8f7b2c0d5` supplies the current local review
 candidate. CIV-46 and CIV-47 remain unstarted and unauthorized. Gate G remains
 planned and unevaluated.
 
@@ -1890,8 +1902,8 @@ long-distance transport, discourse or dialect infrastructure.
 
 Published progression is complete through `CIV-44`, which is **COMPLETE AND
 PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED**. `CIV-45` is a
-**CORRECTION 05 LOCAL REVIEW CANDIDATE — NOT PUBLISHED** and awaits independent
-senior re-review. Its initial and Correction 01 through Correction 04
+**CORRECTION 06 LOCAL REVIEW CANDIDATE — NOT PUBLISHED** and awaits independent
+senior re-review. Its initial and Correction 01 through Correction 05
 candidates all remain **CORRECTION REQUIRED** historical evidence.
 `CIV-46` and `CIV-47` remain unstarted and unauthorized. Gate G remains planned
 and has not been evaluated.

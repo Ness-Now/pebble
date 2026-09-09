@@ -2,7 +2,7 @@
 
 ## Review status and baseline
 
-`CIV-45` is a **CORRECTION 05 LOCAL REVIEW CANDIDATE — NOT PUBLISHED**. It was
+`CIV-45` is a **CORRECTION 06 LOCAL REVIEW CANDIDATE — NOT PUBLISHED**. It was
 implemented from exact published baseline
 `9a2cfec10b4a0d1b6a5d2f46aac8f3c312ddbb0e` on local branch
 `codex/civ-45-writing-literacy-v1`. The initial product, test and live-proof
@@ -33,8 +33,16 @@ candidate `2a83631ee642e2bc71f7da4c82b01172f35c7bdc`. Its final independent seni
 re-review returned **CORRECTION REQUIRED** because a failed older chunk
 snapshot could be reinserted after a newer unloaded snapshot and later win a
 retry. Correction 05 product/test commit is
-`01b9826afc4ca96efb0f07556c53073524cbbf97`; the corrected review candidate is
-the local documentation HEAD containing this summary. All five failed
+`01b9826afc4ca96efb0f07556c53073524cbbf97`, with candidate
+`cf80aa1f789edd74417bf225ef34a5fad3eac588`. Its final independent senior
+re-review returned **CORRECTION REQUIRED** because newer physical snapshot B
+was forgotten by the streaming load path after pending submission but before
+durable commit, allowing old SQLite A to become resident and receive a newer
+capture sequence; synchronous lifecycle failure recovery could also remain
+only in a main-queue callback that World destruction or process termination
+could abandon. Correction 06 product/test commit is
+`d551a5e9b9d57c64c9ae5bc408949fd8f7b2c0d5`; the corrected review candidate is
+the local documentation HEAD containing this summary. All six failed
 candidates remain intact, immutable historical evidence and are not
 represented as approved.
 
@@ -44,10 +52,11 @@ Correction 01 candidate: CORRECTION REQUIRED
 Correction 02 candidate: CORRECTION REQUIRED
 Correction 03 candidate: CORRECTION REQUIRED
 Correction 04 candidate: CORRECTION REQUIRED
-Correction 05: LOCAL REVIEW CANDIDATE — NOT PUBLISHED
+Correction 05 candidate: CORRECTION REQUIRED
+Correction 06: LOCAL REVIEW CANDIDATE — NOT PUBLISHED
 ```
 
-The published branch remains complete through CIV-44. Correction 05 has not
+The published branch remains complete through CIV-44. Correction 06 has not
 received independent senior re-review approval and CIV-45 has not been
 published. CIV-46 and CIV-47 have not started. `V4-GATE-G-v1` remains
 **PLANNED / UNEVALUATED**.
@@ -190,6 +199,39 @@ randomness-based. It is intentionally not persisted: pending records,
 in-flight batches and callbacks cannot survive process termination, after
 which SQLite and the compact inscription index are the sole durable authority.
 
+Correction 06 extends that causal order with a Core-owned unresolved horizon.
+For each true physical key (`World ID + dimension + chunk coordinates`),
+`unresolvedChunkSaveCaptures` retains the maximum captured record while it is
+pending, queued, in flight, committing or awaiting failed-save recovery. A
+pending entry may be removed for submission without removing this record. Both
+the asynchronous `requestChunk` path and the synchronous portal/respawn loader
+prefer the horizon record to an older SQLite row. An asynchronous load also
+rechecks the latest sequence before adoption and discards/reissues work if a
+newer generation appeared. Thus durable A cannot be transformed into a fresh
+resident capture while unresolved B exists; with B and C outstanding, C is
+the only streaming authority.
+
+The horizon stops owning a capture only after its exact sequence commits and
+SQLite plus the compact catalogue have caught up, or when a newer capture
+safely supersedes the retained record. Merely materializing it as resident does
+not erase the unresolved horizon. Failed
+batches synchronously retain and requeue their still-current capture on the
+serial save worker; the main-queue callback only marks a matching current-World
+resident dirty and cannot inject an old payload or touch a replacement World.
+`saveAndFlush(synchronous: true)` is a queue barrier, observes earlier async
+failure, retries once from the retained horizon and returns failure while any
+capture for that World remains unresolved.
+
+Lifecycle owners now consume that result. `exitToTitle` and World replacement
+are refused with the World and horizon intact when persistence cannot resolve.
+AppKit's `applicationShouldTerminate` likewise returns termination-cancel on
+the first failed attempt; after retry commits, a second attempt returns
+termination-now. `applicationWillTerminate` retains a fail-closed assertion as
+a fallback rather than treating persistence failure as success. Correction 06
+does not add a journal and does not promise recovery after a forced process
+kill: it prevents normal lifecycle teardown from silently discarding the sole
+in-memory recovery state.
+
 Correction 03 keeps `authorityGeneration` exclusively in Core. A detachable
 `SignInscriptionAuthorityObservation` is an opaque, World/catalogue-bound test
 token, not a durable PebbleAgents receipt. Production read, notation practice
@@ -314,6 +356,10 @@ scripts/verify-pebblelab-civ45.sh
 Commands and final results:
 
 ```text
+PEBBLELAB_CIV45_BUILD_CONFIGURATION=debug scripts/verify-pebblelab-civ45-correction06.sh
+24 passed, 0 failed # unresolved streaming/lifecycle Core
+accepted WRITE B / separate-process restart B / AppKit termination passed
+
 PEBBLELAB_CIV45_BUILD_CONFIGURATION=debug scripts/verify-pebblelab-civ45-correction04.sh
 8/8 in-process capture/rollback/save checks passed
 3/3 separate-process restart checks passed
@@ -324,6 +370,7 @@ PEBBLELAB_CIV45_BUILD_CONFIGURATION=debug scripts/verify-pebblelab-civ45.sh
 26 passed, 0 failed # exact persistent P0 regression
 11 passed, 0 failed # Correction 03 stale read/practice/write/finalization
 23 passed, 0 failed # Correction 05 stale recovery freshness
+24 passed, 0 failed # Correction 06 unresolved streaming/lifecycle freshness
 105 passed, 0 failed
 
 PEBBLELAB_CIV45_BUILD_CONFIGURATION=release scripts/verify-pebblelab-civ45.sh
@@ -332,7 +379,12 @@ PEBBLELAB_CIV45_BUILD_CONFIGURATION=release scripts/verify-pebblelab-civ45.sh
 26 passed, 0 failed # exact persistent P0 regression
 11 passed, 0 failed # Correction 03 stale read/practice/write/finalization
 23 passed, 0 failed # Correction 05 stale recovery freshness
+24 passed, 0 failed # Correction 06 unresolved streaming/lifecycle freshness
 105 passed, 0 failed
+
+PEBBLELAB_CIV45_BUILD_CONFIGURATION=release scripts/verify-pebblelab-civ45-correction06.sh
+24 passed, 0 failed # unresolved streaming/lifecycle Core
+accepted WRITE B / separate-process restart B / AppKit termination passed
 
 PEBBLELAB_CIV45_BUILD_CONFIGURATION=release scripts/verify-pebblelab-civ45-correction05.sh
 23 passed, 0 failed # stale recovery freshness
@@ -342,6 +394,27 @@ PEBBLELAB_CIV45_BUILD_CONFIGURATION=release scripts/verify-pebblelab-civ45-corre
 8/8 in-process capture/rollback/save checks passed
 3/3 separate-process restart checks passed
 ```
+
+The retained Correction 06 pre-fix reproduction uses deterministic semaphores
+around the production unload, queue and streaming path. With SQLite A durable,
+it captures B through legitimate unload, submits B so the pending map is empty
+while the worker is unresolved, returns the player and observes `requestChunk`
+adopt A. That A is then recaptured with a sequence newer than B and wins both
+durability and fresh-GameCore restart: `resident=A durable=A restart=A
+status=REPRODUCED`. The immutable pre-fix log is
+`/tmp/pebblelab-civ45-c06-prefix.bpULwp/pre-fix.log`.
+
+The final 24-check Core suite proves return-before-commit, B success and B
+failure after return, pending-empty/in-flight authority, deletion, external
+edit, maximum B/C generation, true World isolation, exit refusal, synchronous
+termination refusal and safe World-switch callbacks. Debug focused evidence is
+`/tmp/pebblelab-civ45-correction06.arTtjn`; Optimized focused evidence is
+`/tmp/pebblelab-civ45-correction06.Ak3QY5`. The real application proof accepts
+WRITE B from blank durable A, unloads through production streaming, returns
+while B is unresolved, materializes B, injects failure, retries B and restores
+the same material identity and cognition in a second OS process. The real
+AppKit callback reports `firstReply=cancel WorldRetained=YES retry=COMMITTED
+status=PASS`; only the second termination attempt proceeds.
 
 The retained pre-fix Correction 05 reproduction forced old capture A to fail
 only after newer unload capture B was pending. Before the fix it observed
@@ -355,14 +428,16 @@ late A/B callbacks cannot displace maximum-sequence C.
 
 The final real-app proof starts from blank capture A, accepts CIV-45 WRITE B,
 moves the player outside the chunk keep radius, enters the production unload
-path, then releases A's late persistence failure. It reports
-`captureA=111`, `captureB=112`, pending B before and after recovery, stale A
-rejected as `111/112`, durable B, restart B and cognition B. A second OS
+path, then releases A's late persistence failure. The authoritative bundled
+final raw run reports `captureA=112`, `captureB=113`, pending B before and
+after recovery, stale A rejected as `112/113`, durable B, restart B and
+cognition B. Absolute process-local values are not contractual. A second OS
 process opens the same SQLite store, restores the explicit cognition
 checkpoint byte-exactly and verifies resident B, durable B, material identity,
 compact index and `WorldRecord`. Release evidence is retained at
-`/tmp/pebblelab-civ45-correction05-live-release.aGwvsv` and the focused
-Optimized wrapper evidence at `/tmp/pebblelab-civ45-correction05.ofTxxv`.
+`/tmp/pebblelab-civ45-correction05.ofTxxv`. The older raw run at
+`/tmp/pebblelab-civ45-correction05-live-release.aGwvsv` remains unchanged and
+is not the final bundled run.
 
 The deterministic pre-fix reproduction used the real production WRITE adapter
 and `testingSignInscriptionPersistenceHook(.prepared)` with semaphores and no
@@ -429,8 +504,9 @@ scripts/verify-pebblelab-live.sh --dry-run --writing
 scripts/verify-pebblelab-live.sh --writing
 ```
 
-The Correction 05 dry-run passed. The release campaign used the Correction 05
-product/test commit, then ran two fresh real processes for each of seeds 46 and 73
+The Correction 06 dry-run passed. The release campaign used exact Correction 06
+product/test commit `d551a5e9b9d57c64c9ae5bc408949fd8f7b2c0d5`, then ran two
+fresh real processes for each of seeds 46 and 73
 under disposable `CFFIXED_USER_HOME` roots. Process one created an ordinary blank oak sign on a
 natural supported site, observed a real oak log, wrote the false `stone`
 assertion, performed and rolled back an injected late failure, completed one
@@ -446,18 +522,19 @@ process. Read, practice and writing in that live binary route through
 `withCurrentSignInscriptionAuthority`, the same Correction 03 finalization
 primitive covered by the deterministic stale tests. The live campaign proves
 the legitimate current-authority path; it does not substitute for the hostile
-N→N+1 or Correction 04 capture-order proofs. The final Correction 05 campaign
+N→N+1, Correction 04 capture-order or Correction 06 unresolved-horizon proofs.
+The final Correction 06 campaign
 root is:
 
 ```text
-/tmp/pebblelab-civ45-live.YArN4D
+/tmp/pebblelab-civ45-live.J7SPHK
 ```
 
-Seed 46 used material identity 289, artifact
-`inscription-a7e922b6edc9422d0498e69daa6543ef794a096e64606bdeb2efa4436798ac30`,
+Seed 46 used material identity 288, artifact
+`inscription-d5c6f17a760ecc0066aa6f1c5612ff970153681f55bbe76dd397ccbc1bc73b4f`,
 sign `(22,68,-21)` and real oak-log source `(19,66,-24)`. Seed 73 used
 material identity 147, artifact
-`inscription-18c6914489060964917f7795ea07835e863792ae32f5ad139b0c6ab639aba799`,
+`inscription-07fdd5726db1ef1ff7b002716a4a57102b6f964a423aefc8ff4ebcba7d9b6892`,
 sign `(15,64,-8)` and real oak-log source `(12,64,-7)`.
 
 The four 3024×1898 captures were individually inspected. Each visibly shows
@@ -472,20 +549,20 @@ Key evidence SHA-256 values:
 
 | Seed | Artifact | SHA-256 |
 | --- | --- | --- |
-| 46 | `write.log` | `926b8e158e4faea1d29a6d9a48d3fe05fe9cbeaaf8f4faef7cd2b5cd56d9e424` |
-| 46 | `read.log` | `961f03b92aeace6cdc2817b45809aa4b39a8542b2dced80cef8716df463f5fe9` |
-| 46 | `written-sign.json` / byte-identical `reloaded-sign.json` | `1c20d9d3d5e2c2235e0ea84ea3cb52927d102cd1ef6ab65ec2f8a9c02a9fb3e0` |
-| 46 | `writing-checkpoint.json` | `45a5a0227d8809af70d0320622d89e5bf55cacd34b47d0206d648b3d4caa86f2` |
-| 46 | `reading-checkpoint.json` | `e5cfa42b087298eef300d20c2aa449aeace919fcce975b9f83bd2fc1b4f0bcf1` |
-| 46 | `written.png` | `25e9e9383dcf907b85beecd55de27e285e0326f17586456b15bd993e43bcf0d9` |
-| 46 | `read.png` | `3b5be0e84b16657c4e9cf988b5053651a70f5a97ea91bb2be39053c0420a8fc0` |
-| 73 | `write.log` | `1e565c179c2b0eed29043cea01a829ff3be7b3b77092928fef3892cabe6cf319` |
-| 73 | `read.log` | `937d865f549b54cea90a272fead0c7a2a939d162c64e303a992030ddcebfc1e7` |
-| 73 | `written-sign.json` / byte-identical `reloaded-sign.json` | `01c5f1c3025ea9570be2bb0c4a9117e2bdc144f607a1f97b3a68036b7f12b5b6` |
-| 73 | `writing-checkpoint.json` | `5886959aca13a2c1a915ce47bc60f01bd458acf710283c19c1dfcb71c6623415` |
-| 73 | `reading-checkpoint.json` | `85d260cd64220698df7c867fa30ca125b2f40a4e92a9f7d936cdbe63a4f396ea` |
-| 73 | `written.png` | `b051105fe4c7d8187829e7ace8b8b89870e4d29e9bdb5a939638e658c4c58f00` |
-| 73 | `read.png` | `ca0d13f88543771fcb614d2fd92a54b1da76332f26a24196c44f6583109f6bd5` |
+| 46 | `write.log` | `482beb2b95850ce15571fdd0e66055823a30a2ca4ba7fef4f6db43080de3bca5` |
+| 46 | `read.log` | `72049a2fa8d382a1d8061ac4ecdccdc72ba78bd1bf3329a48789e9ac722472da` |
+| 46 | `written-sign.json` / byte-identical `reloaded-sign.json` | `151b105364c782aec2b797032439e8be2a6f636ea57a09340f6d04ddf209b3aa` |
+| 46 | `writing-checkpoint.json` | `970dcf4df12a0db9e8f025036336ddc11bcb7ebdbd15f2d2ae1d7c6152f56824` |
+| 46 | `reading-checkpoint.json` | `e39ee9643e0e10de59d86884bedb23fd0d25e9434c51a370876adb09cfbd9e92` |
+| 46 | `written.png` | `0e7a55cc4920ebc38199006fb96640bd4363ee4f9ece8d62e2622b44f0c50cdf` |
+| 46 | `read.png` | `23a01be03408fd8a81ffc61914f8c56bf6b9372bda616f98915202c8b88e5fda` |
+| 73 | `write.log` | `34f49036a3d19fc1b8c444bc67fd60b54111d3ac05a85fb4192555fd59a637ef` |
+| 73 | `read.log` | `9aa6ad86d43a92780fec95f34ed06b7641d20821f0eef77da34b1017ebf51b77` |
+| 73 | `written-sign.json` / byte-identical `reloaded-sign.json` | `c103c61dc856ec629fe93d655aacef1e23c80574430808f727492efe226e03bd` |
+| 73 | `writing-checkpoint.json` | `45ce6fff4c8e5727fad3a001774c4082b2a32a3cb589ff063c43d5842109e5c2` |
+| 73 | `reading-checkpoint.json` | `d14687b4da6677f5f0fa77522f87a76c015a6debc3ce768f41ac337d378c241a` |
+| 73 | `written.png` | `ba634fcc532b591b4c2d17e56b2196e6d71164e992e87aa893aed0e58631cb22` |
+| 73 | `read.png` | `eb8268c53b53ce11abd7b43de08e8298f5d0667ca8d3afe130a6c39907bb34e5` |
 
 ## Canonical repository gate and intermediate failures
 
@@ -495,13 +572,13 @@ The final canonical command was:
 scripts/verify-pebblelab.sh
 ```
 
-The final Correction 05 run passed all 35 repository steps against exact
-product/test commit `01b9826afc4ca96efb0f07556c53073524cbbf97`. The shared
+The final Correction 06 run passed all 35 repository steps against exact
+product/test commit `d551a5e9b9d57c64c9ae5bc408949fd8f7b2c0d5`. The shared
 runtime reported `4644 passed, 0 failed`; deterministic scenario pairs and
 canonical output comparisons all passed. Evidence is retained at
-`/var/folders/23/t4l5dv055dl3x1zqylcpl9wc0000gn/T/PebbleLab-verify.9N80Kf`,
+`/var/folders/23/t4l5dv055dl3x1zqylcpl9wc0000gn/T/PebbleLab-verify.tfHzZO`,
 with the captured console log at
-`/tmp/pebblelab-civ45-correction05-repository-gate.log`.
+`/tmp/pebblelab-civ45-correction06-repository-gate.log`.
 Golden regeneration was not attempted.
 
 Failures encountered and retained during development were corrected rather
@@ -591,6 +668,24 @@ than hidden:
   nonempty compact index after deletion even though an empty claim index is
   valid; the final test instead checks identity, migration and zero voxel
   decode. Neither intermediate issue changed product behavior.
+- three intermediate Correction 06 application-proof runs failed before the
+  final assertion because the proof asked the saturated Debug generation queue
+  to service an asynchronous target load while the deterministic save worker
+  was blocked. Their evidence roots are
+  `/tmp/pebblelab-civ45-correction06.bBYgtM`,
+  `/tmp/pebblelab-civ45-correction06.671Ltk` and
+  `/tmp/pebblelab-civ45-correction06.73HzRq`. The application proof now invokes
+  the existing synchronous production portal/respawn chunk loader; the async
+  `requestChunk` path remains independently covered by the 24-check Core suite.
+  Debug and Optimized affected proofs then passed, including separate-process
+  restart and the real AppKit termination callback.
+- the final Correction 06 repository gate was still compiling PebbleLab Release
+  when the Codex quota interrupted the conversation. The verifier process
+  continued independently and completed the same log with `35/35` and
+  `4644/0`; on resumption no verifier, Swift or PebbleLab process remained.
+  Because the log was complete and the worktree still pointed exactly at
+  `d551a5e9b9d57c64c9ae5bc408949fd8f7b2c0d5`, it was retained rather than
+  redundantly rerun.
 
 ## Deliberate V1 limits and non-claims
 
@@ -615,7 +710,7 @@ its existence alone.
 
 ```text
 published progression: COMPLETE THROUGH CIV-44
-CIV-45: CORRECTION 05 LOCAL REVIEW CANDIDATE — NOT PUBLISHED
+CIV-45: CORRECTION 06 LOCAL REVIEW CANDIDATE — NOT PUBLISHED
 CIV-46: PLANNED — NOT STARTED / NOT AUTHORIZED
 CIV-47: PLANNED — NOT STARTED / NOT AUTHORIZED
 V4-GATE-G-v1: PLANNED / UNEVALUATED

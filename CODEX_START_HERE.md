@@ -141,7 +141,7 @@ for the compact status. In particular:
   AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical
   product HEAD `0c6a6e88ce838266897526a74d067532163cb06f`. Published progression is
   complete through `CIV-44`.
-- `CIV-45 — Writing and Literacy V1` is a **CORRECTION 05 LOCAL REVIEW
+- `CIV-45 — Writing and Literacy V1` is a **CORRECTION 06 LOCAL REVIEW
   CANDIDATE — NOT PUBLISHED** from exact published baseline
   `9a2cfec10b4a0d1b6a5d2f46aac8f3c312ddbb0e`; local product commit
   `ac38675d88d4b709183e7b26f92a0a45b0e928c1` and initial candidate
@@ -165,9 +165,18 @@ for the compact status. In particular:
   `2a83631ee642e2bc71f7da4c82b01172f35c7bdc` remain intact; its final review
   returned **CORRECTION REQUIRED** because late recovery of an older failed
   chunk snapshot could replace a newer pending snapshot. Correction 05
-  product/test commit `01b9826afc4ca96efb0f07556c53073524cbbf97`
-  adds process-local causal capture freshness and supplies the current local
-  candidate. Published progression remains complete through CIV-44. The next
+  product/test commit `01b9826afc4ca96efb0f07556c53073524cbbf97` and candidate
+  `cf80aa1f789edd74417bf225ef34a5fad3eac588` remain intact; independent
+  re-review returned **CORRECTION REQUIRED** because streaming could re-adopt
+  older durable SQLite state after newer B left the pending map but remained
+  in flight, and lifecycle recovery could be abandoned by World destruction.
+  Correction 06 product/test commit
+  `d551a5e9b9d57c64c9ae5bc408949fd8f7b2c0d5` retains the maximum unresolved
+  physical capture across pending, queue and in-flight states, routes chunk
+  materialization through that horizon, and makes exit, World replacement and
+  AppKit termination fail closed until persistence resolves. It supplies the
+  current local candidate. Published progression remains complete through
+  CIV-44. The next
   authorized action is CIV-45 independent senior re-review; CIV-46 and CIV-47
   remain unstarted and unauthorized. Gate G remains planned and unevaluated. See
   [`CIV_45_PHASE_SUMMARY.md`](docs/pebblelab/CIV_45_PHASE_SUMMARY.md).
