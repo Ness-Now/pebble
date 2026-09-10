@@ -26,6 +26,7 @@ extension AgentSimulationSession {
         let originalKnowledge = knowledgeGraphState
         let originalLanguage = languageState
         let originalWriting = writingState
+        let originalArchive = archiveState
         let originalOral = oralTransmissionState
         let originalLongDistanceCommunication =
             longDistanceCommunicationState
@@ -65,6 +66,9 @@ extension AgentSimulationSession {
                 if try appendWritingBoundaryIfNeeded(beforeEvicting: leaving) {
                     continue
                 }
+                if try appendArchiveBoundaryIfNeeded(beforeEvicting: leaving) {
+                    continue
+                }
                 if try appendAgricultureRetentionBoundaryIfNeeded(
                     beforeEvicting: leaving,
                     testFault: testFault
@@ -96,6 +100,7 @@ extension AgentSimulationSession {
             knowledgeGraphState = originalKnowledge
             languageState = originalLanguage
             writingState = originalWriting
+            archiveState = originalArchive
             oralTransmissionState = originalOral
             longDistanceCommunicationState =
                 originalLongDistanceCommunication
@@ -122,6 +127,7 @@ extension AgentSimulationSession {
         let originalKnowledge = knowledgeGraphState
         let originalLanguage = languageState
         let originalWriting = writingState
+        let originalArchive = archiveState
         let originalOral = oralTransmissionState
         let originalLongDistanceCommunication =
             longDistanceCommunicationState
@@ -160,6 +166,7 @@ extension AgentSimulationSession {
             knowledgeGraphState = originalKnowledge
             languageState = originalLanguage
             writingState = originalWriting
+            archiveState = originalArchive
             oralTransmissionState = originalOral
             longDistanceCommunicationState =
                 originalLongDistanceCommunication
@@ -181,6 +188,33 @@ extension AgentSimulationSession {
             summary: "writing provenance retention boundary"
         ) else { throw AgentWritingError.unavailable("causal writing retention") }
         writingState!.boundary = AgentWritingBoundary(eventID: event.eventID, digest: digest)
+        return true
+    }
+
+    private mutating func appendArchiveBoundaryIfNeeded(
+        beforeEvicting leaving: [AgentCausalEvent]
+    ) throws -> Bool {
+        guard let state = archiveState, let boundary = state.boundary,
+              leaving.contains(where: { $0.eventID == boundary.eventID }) else {
+            return false
+        }
+        let digest = archiveBoundaryDigest(state)
+        guard let event = try causalLedger.append(
+            instant: simulationInstant,
+            kind: .archiveProvenanceBoundary,
+            origin: .archiveTransition,
+            actorID: nil,
+            subjectID: nil,
+            causes: [boundary.eventID],
+            payload: .archive(recordID: "archive", detail: digest),
+            summary: "archive provenance retention boundary"
+        ) else {
+            throw AgentArchiveError.unavailable("causal archive retention")
+        }
+        archiveState!.boundary = AgentArchiveBoundary(
+            eventID: event.eventID,
+            digest: digest
+        )
         return true
     }
 

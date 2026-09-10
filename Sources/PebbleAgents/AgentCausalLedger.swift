@@ -293,6 +293,11 @@ public enum AgentCausalEventKind: String, Codable, CaseIterable, Sendable {
     case writingAccessed
     case writingRead
     case writingProvenanceBoundary
+    case archiveInitialized
+    case archiveCollectionCreated
+    case archiveManuscriptCatalogued
+    case archiveManuscriptRetrieved
+    case archiveProvenanceBoundary
     case communicationTransportInitialized
     case communicationTransportDispatched
     case communicationTransportProgressed
@@ -342,6 +347,7 @@ public enum AgentCausalOrigin: String, Codable, Sendable {
     case oralTransition
     case communicationTransportTransition
     case writingTransition
+    case archiveTransition
 }
 
 public enum AgentCausalPayload: Codable, Equatable, Sendable {
@@ -388,6 +394,7 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
         reason: String
     )
     case writing(recordID: String, detail: String)
+    case archive(recordID: String, detail: String)
     case communicationTransport(
         transportID: String,
         authorID: String?,
@@ -719,6 +726,8 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
                 + "\(receivedPropositionID ?? "none")|\(status)|\(reason)"
         case let .writing(recordID, detail):
             return "writing|\(recordID)|\(detail)"
+        case let .archive(recordID, detail):
+            return "archive|\(recordID)|\(detail)"
         case let .communicationTransport(
             transportID, authorID, carrierID, destinationID, status, detail
         ):
@@ -1000,6 +1009,11 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
              (.writingAccessed, .writing),
              (.writingRead, .writing),
              (.writingProvenanceBoundary, .writing),
+             (.archiveInitialized, .archive),
+             (.archiveCollectionCreated, .archive),
+             (.archiveManuscriptCatalogued, .archive),
+             (.archiveManuscriptRetrieved, .archive),
+             (.archiveProvenanceBoundary, .archive),
              (.communicationTransportInitialized, .communicationTransport),
              (.communicationTransportDispatched, .communicationTransport),
              (.communicationTransportProgressed, .communicationTransport),

@@ -5,6 +5,14 @@ set -euo pipefail
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 ROOT_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd -P)
 RUNBOOK="$ROOT_DIR/docs/pebblelab-3d-live-prototype.md"
+# CIV-46 uses its bounded two-process archive campaign.
+if [ "${1:-}" = "--archive" ] || [ "${2:-}" = "--archive" ]; then
+    case "${1:-} ${2:-}" in
+        --archive) exec "$SCRIPT_DIR/verify-pebblelab-civ46-live.sh" ;;
+        "--archive --dry-run"|"--dry-run --archive") exec "$SCRIPT_DIR/verify-pebblelab-civ46-live.sh" --dry-run ;;
+        *) exit 2 ;;
+    esac
+fi
 # CIV-45 uses its bounded two-process material-writing campaign.
 if [ "${1:-}" = "--writing" ] || [ "${2:-}" = "--writing" ]; then
     case "$*" in
@@ -35,6 +43,7 @@ retained trace and capture using $RUNBOOK.
 
 Options:
   --writing Run CIV-45 two-process physical inscriptions and local literacy.
+  --archive Run CIV-46 two-process physical archive retrieval and loss proof.
   --dry-run  Print the environment, commands, and manual steps; do not launch.
   --survival Run the Phase J hunger, consumption, and rest proof (default).
   --economy  Run the preserved Phase I closed-economy proof.

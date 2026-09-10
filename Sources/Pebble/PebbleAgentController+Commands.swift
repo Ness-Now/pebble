@@ -170,6 +170,11 @@ extension PebbleAgentController {
                 player: player,
                 game: game
             )
+        case "archive":
+            return handleArchive(
+                Array(arguments.dropFirst()),
+                world: world
+            )
         case "rights":
             return handleMaterialRights(Array(arguments.dropFirst()), world: world)
         case "observer":

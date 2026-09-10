@@ -3,6 +3,9 @@ extension AgentSimulationSession {
         _ enabled: Bool, worldID: String,
         configuration: AgentWritingConfiguration = .live
     ) throws {
+        if !enabled, archiveState != nil {
+            throw AgentArchiveError.unavailable("archive dependency")
+        }
         guard causalLedger.isEnabled, knowledgeGraphEnabled,
               languageState?.enabled == true,
               isValidLanguageText(worldID, maximum: 128) else {

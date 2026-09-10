@@ -8,7 +8,7 @@ enum PebbleAgentWritingAdapterError: Error {
     case injected
 }
 
-private struct PebbleAgentWritingPhysicalAccess {
+struct PebbleAgentWritingPhysicalAccess {
     let actorID: AgentID
     let actorPosition: AgentPosition
 }
@@ -18,6 +18,43 @@ private struct PebbleAgentWritingPhysicalAccess {
 /// registry. Core validates only current material authority and holds that
 /// authority while an opaque candidate session is committed by Pebble.
 struct PebbleAgentWritingAdapter {
+    /// Captures a revocable observation plus the corresponding local receipt.
+    /// A caller must pass the observation to Core's batch revalidation before
+    /// publishing any state derived from the receipt.
+    func observeCurrent(
+        artifact: AgentWrittenArtifact,
+        actor: LabCoreAgentEntity,
+        world: World,
+        worldID: String,
+        tick: Int
+    ) throws -> (
+        observation: SignInscriptionAuthorityObservation,
+        receipt: AgentWritingPhysicalReceipt
+    ) {
+        let plan = artifact.plan
+        let access = try physicalAccess(
+            actor,
+            plan: plan,
+            world: world,
+            worldID: worldID
+        )
+        let observation = try world.observeSignInscriptionAuthority(
+            at: plan.cell.x,
+            plan.cell.y,
+            plan.cell.z
+        )
+        try require(observation.inscription, matches: plan, worldID: worldID)
+        return (
+            observation,
+            try receipt(
+                stamp: observation.inscription,
+                access: access,
+                world: world,
+                tick: tick
+            )
+        )
+    }
+
     func inscribe(
         plan: AgentWritingPlan,
         actor: LabCoreAgentEntity,

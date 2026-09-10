@@ -118,6 +118,13 @@ if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "civ-45" {
     exit(failed > 0 ? 1 : 0)
 }
 
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "civ-46" {
+    registerAllBlocks(); registerAllItems(); registerAllEntities(); registerAllSystems()
+    runPebbleAgentsArchiveSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
 if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
     == "civ-44-restart-write" {
     runPebbleAgentsLongDistanceCommunicationRestartWriteSmoke()
@@ -2822,6 +2829,7 @@ runPebbleAgentsLanguageSmoke()
 runPebbleAgentsOralTransmissionSmoke()
 runPebbleAgentsLongDistanceCommunicationSmoke()
 runPebbleAgentsWritingSmoke()
+runPebbleAgentsArchiveSmoke()
 runPebbleAgentsPhysicalChannelSmoke()
 runPebbleAgentsCooperationSmoke()
 runPebbleAgentsPersistenceReplaySmoke()

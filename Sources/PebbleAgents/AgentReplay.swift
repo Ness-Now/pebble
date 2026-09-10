@@ -41,6 +41,7 @@ public enum AgentReplaySchema {
     public static let oralTransmissionVersion = 38
     public static let longDistanceCommunicationVersion = 39
     public static let writingVersion = 40
+    public static let archiveVersion = 41
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -69,6 +70,7 @@ public enum AgentReplaySchema {
             || version == oralTransmissionVersion
             || version == longDistanceCommunicationVersion
             || version == writingVersion
+            || version == archiveVersion
     }
 }
 
@@ -221,6 +223,10 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case writingFeature
     case writingInscription
     case writingReading
+    case archiveFeature
+    case archiveCollection
+    case archiveManuscript
+    case archiveRetrieval
     case longDistanceCommunicationFeature
     case longDistanceCommunicationDispatch
     case longDistanceCommunicationDelivery
@@ -274,6 +280,34 @@ public enum AgentReplayOperation: Codable {
     case setWritingEnabled(enabled: Bool, worldID: String, configuration: AgentWritingConfiguration)
     case acceptWriting(plan: AgentWritingPlan, receipt: AgentWritingPhysicalReceipt)
     case readWriting(artifactID: String, readerID: AgentID, receipt: AgentWritingPhysicalReceipt)
+    case setArchiveEnabled(
+        enabled: Bool,
+        worldID: String,
+        configuration: AgentArchiveConfiguration
+    )
+    case createArchiveCollection(
+        operationID: String,
+        kind: AgentArchiveCollectionKind,
+        catalogueArtifactID: String,
+        curatorID: AgentID,
+        catalogueReceipt: AgentWritingPhysicalReceipt
+    )
+    case catalogueArchiveManuscript(
+        operationID: String,
+        collectionID: AgentArchiveCollectionID,
+        artifactID: String,
+        relationship: AgentArchiveRelationship,
+        cataloguerID: AgentID,
+        catalogueReceipt: AgentWritingPhysicalReceipt,
+        artifactReceipt: AgentWritingPhysicalReceipt,
+        parentReceipt: AgentWritingPhysicalReceipt?
+    )
+    case retrieveArchiveManuscript(
+        operationID: String,
+        selection: AgentArchiveSelection,
+        readerID: AgentID,
+        receipt: AgentWritingPhysicalReceipt
+    )
     case setLongDistanceCommunicationEnabled(
         Bool,
         configuration: AgentLongDistanceCommunicationConfiguration
@@ -575,6 +609,10 @@ public enum AgentReplayOperation: Codable {
         case .setWritingEnabled: return .writingFeature
         case .acceptWriting: return .writingInscription
         case .readWriting: return .writingReading
+        case .setArchiveEnabled: return .archiveFeature
+        case .createArchiveCollection: return .archiveCollection
+        case .catalogueArchiveManuscript: return .archiveManuscript
+        case .retrieveArchiveManuscript: return .archiveRetrieval
         case .setLongDistanceCommunicationEnabled:
             return .longDistanceCommunicationFeature
         case .beginLongDistanceCommunication:
@@ -748,6 +786,10 @@ public enum AgentReplayOperation: Codable {
         ):
             raw = "communication-transport-deliver:"
                 + "\(transportID.rawValue):\(renderingMode.rawValue)"
+        case let .createArchiveCollection(operationID, _, _, _, _),
+             let .catalogueArchiveManuscript(operationID, _, _, _, _, _, _, _),
+             let .retrieveArchiveManuscript(operationID, _, _, _):
+            raw = operationID
         case let .applyBirthSiteObservation(observation):
             raw = "birth-site:\(observation.planID.rawValue):\(observation.observedTick)"
         case let .proposeUnion(receipt): raw = receipt.receiptID
@@ -1136,7 +1178,9 @@ public struct AgentReplayRecorder {
         baseCheckpointDigest = checkpoint.semanticDigest
         simulationID = checkpoint.simulationID
         initialTick = checkpoint.tick.rawValue
-        schemaVersion = checkpoint.schemaVersion == AgentCheckpointSchema.writingVersion
+        schemaVersion = checkpoint.schemaVersion == AgentCheckpointSchema.archiveVersion
+            ? AgentReplaySchema.archiveVersion
+            : checkpoint.schemaVersion == AgentCheckpointSchema.writingVersion
             ? AgentReplaySchema.writingVersion
             : checkpoint.schemaVersion
             == AgentCheckpointSchema.longDistanceCommunicationVersion
@@ -1499,6 +1543,15 @@ public struct AgentReplayRecorder {
             }
             schemaVersion = AgentReplaySchema.writingVersion
         }
+        if case let .setArchiveEnabled(enabled, _, _) = operation, enabled,
+           schemaVersion < AgentReplaySchema.archiveVersion {
+            guard records.isEmpty else {
+                throw AgentReplayError.invalidJournal(
+                    "archive activation must be first v41 operation"
+                )
+            }
+            schemaVersion = AgentReplaySchema.archiveVersion
+        }
         if case let .setLongDistanceCommunicationEnabled(
             enabled, _
         ) = operation,
@@ -1755,6 +1808,14 @@ public enum AgentSessionReplayer {
         guard AgentReplaySchema.supports(manifest.schemaVersion) else {
             throw AgentReplayError.unsupportedSchema(manifest.schemaVersion)
         }
+        if manifest.schemaVersion == AgentReplaySchema.archiveVersion,
+           checkpoint.schemaVersion < AgentCheckpointSchema.archiveVersion {
+            guard case .setArchiveEnabled(
+                enabled: true, worldID: _, configuration: _
+            )? = journal.records.first?.operation else {
+                throw AgentReplayError.unsupportedSchema(manifest.schemaVersion)
+            }
+        }
         if manifest.schemaVersion == AgentReplaySchema.writingVersion,
            checkpoint.schemaVersion < AgentCheckpointSchema.writingVersion {
             // A version-40 envelope cannot relabel a pre-writing journal.
@@ -1854,6 +1915,8 @@ public enum AgentSessionReplayer {
                     <= AgentCheckpointSchema.languageVersion)
             || (manifest.schemaVersion == AgentReplaySchema.writingVersion
                 && checkpoint.schemaVersion <= AgentCheckpointSchema.longDistanceCommunicationVersion)
+            || (manifest.schemaVersion == AgentReplaySchema.archiveVersion
+                && checkpoint.schemaVersion <= AgentCheckpointSchema.writingVersion)
             || (manifest.schemaVersion
                     == AgentReplaySchema.longDistanceCommunicationVersion
                 && checkpoint.schemaVersion
@@ -2002,6 +2065,46 @@ extension AgentSimulationSession {
             _ = try candidate.acceptWriting(plan, receipt: receipt)
         case let .readWriting(artifactID, readerID, receipt):
             _ = try candidate.readWriting(artifactID: artifactID, readerID: readerID, receipt: receipt)
+        case let .setArchiveEnabled(enabled, worldID, configuration):
+            try candidate.setArchiveEnabled(
+                enabled,
+                worldID: worldID,
+                configuration: configuration
+            )
+        case let .createArchiveCollection(
+            operationID, kind, catalogueArtifactID, curatorID,
+            catalogueReceipt
+        ):
+            _ = try candidate.createArchiveCollection(
+                operationID: operationID,
+                kind: kind,
+                catalogueArtifactID: catalogueArtifactID,
+                curatorID: curatorID,
+                catalogueReceipt: catalogueReceipt
+            )
+        case let .catalogueArchiveManuscript(
+            operationID, collectionID, artifactID, relationship,
+            cataloguerID, catalogueReceipt, artifactReceipt, parentReceipt
+        ):
+            _ = try candidate.catalogueArchiveManuscript(
+                operationID: operationID,
+                collectionID: collectionID,
+                artifactID: artifactID,
+                relationship: relationship,
+                cataloguerID: cataloguerID,
+                catalogueReceipt: catalogueReceipt,
+                artifactReceipt: artifactReceipt,
+                parentReceipt: parentReceipt
+            )
+        case let .retrieveArchiveManuscript(
+            operationID, selection, readerID, receipt
+        ):
+            _ = try candidate.retrieveArchiveManuscript(
+                operationID: operationID,
+                selection: selection,
+                readerID: readerID,
+                receipt: receipt
+            )
         case let .setLongDistanceCommunicationEnabled(
             enabled, configuration
         ):
