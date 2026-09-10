@@ -141,8 +141,8 @@ for the compact status. In particular:
   AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical
   product HEAD `0c6a6e88ce838266897526a74d067532163cb06f`. Published progression is
   complete through `CIV-44`.
-- `CIV-45 — Writing and Literacy V1` is a **CORRECTION 09 LOCAL REVIEW
-  CANDIDATE — NOT PUBLISHED** from exact published baseline
+- `CIV-45 — Writing and Literacy V1` is a **CORRECTION 09 SENIOR-APPROVED
+  LOCAL PUBLICATION CANDIDATE — NOT PUBLISHED** from exact published baseline
   `9a2cfec10b4a0d1b6a5d2f46aac8f3c312ddbb0e`; local product commit
   `ac38675d88d4b709183e7b26f92a0a45b0e928c1` and initial candidate
   `89cffa47f1e9635e0f44a0fac246e92739501911` remain intact; initial senior
@@ -198,10 +198,13 @@ for the compact status. In particular:
   `3d1fdeea7c1e2f833a97b903c1357dd1d0acfe77` decodes all nine persisted
   population-configuration fields through the same validated constructor used
   by normal API construction; the restore registry defense reuses that contract.
-  It supplies the current local candidate. Published progression
-  remains complete through CIV-44. The next
-  authorized action is CIV-45 independent senior re-review; CIV-46 and CIV-47
-  remain unstarted and unauthorized. Gate G remains planned and unevaluated. See
+  Independent senior re-review returned **PASS — SENIOR REVIEW APPROVED** with
+  no blocker, major or minor finding. It supplies the senior-approved local
+  publication candidate, which remains **NOT PUBLISHED**. Published progression
+  remains complete through CIV-44. The next authorized action is protected
+  manual publication of the senior-approved CIV-45 candidate, then independent
+  remote verification; CIV-46 and CIV-47 remain unstarted and unauthorized.
+  Gate G remains planned and unevaluated. See
   [`CIV_45_PHASE_SUMMARY.md`](docs/pebblelab/CIV_45_PHASE_SUMMARY.md).
 
 Historical Gate B `FAIL` reports and the closure-candidate report are preserved

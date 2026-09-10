@@ -2,7 +2,8 @@
 
 ## Review status and baseline
 
-`CIV-45` is a **CORRECTION 09 LOCAL REVIEW CANDIDATE — NOT PUBLISHED**. It was
+`CIV-45` is a **CORRECTION 09 SENIOR-APPROVED LOCAL PUBLICATION CANDIDATE —
+NOT PUBLISHED**. It was
 implemented from exact published baseline
 `9a2cfec10b4a0d1b6a5d2f46aac8f3c312ddbb0e` on local branch
 `codex/civ-45-writing-literacy-v1`. The initial product, test and live-proof
@@ -59,9 +60,10 @@ without its validated initializer, allowing a coherent persisted maximum of
 513 and eight other out-of-contract field values to reach restoration.
 Correction 09 product/test commit is
 `3d1fdeea7c1e2f833a97b903c1357dd1d0acfe77`; the corrected review candidate is
-the local documentation HEAD containing this summary. All nine failed
-candidates remain intact, immutable historical evidence and are not
-represented as approved.
+`f92dacb841a74a7512212eead20f6300531a63f7`. Independent senior re-review
+returned **PASS — SENIOR REVIEW APPROVED**, with zero blocker/P0, zero
+major/P1 and zero minor findings. All nine failed candidates remain intact,
+immutable historical evidence and are not represented as approved.
 
 ```text
 Initial CIV-45 candidate: CORRECTION REQUIRED
@@ -73,13 +75,24 @@ Correction 05 candidate: CORRECTION REQUIRED
 Correction 06 candidate: CORRECTION REQUIRED
 Correction 07 candidate: CORRECTION REQUIRED
 Correction 08 candidate: CORRECTION REQUIRED
-Correction 09: LOCAL REVIEW CANDIDATE — NOT PUBLISHED
+Correction 09: PASS — SENIOR REVIEW APPROVED — NOT PUBLISHED
 ```
 
-The published branch remains complete through CIV-44. Correction 09 has not
-received independent senior re-review approval and CIV-45 has not been
-published. CIV-46 and CIV-47 have not started. `V4-GATE-G-v1` remains
-**PLANNED / UNEVALUATED**.
+The published branch remains complete through CIV-44. Correction 09 is the
+senior-approved local publication candidate, but CIV-45 has not been published
+and independent remote publication verification remains pending. The next
+authorized action is protected manual publication of the senior-approved
+CIV-45 candidate, then independent remote verification. CIV-46 and CIV-47 have
+not started and remain unauthorized. `V4-GATE-G-v1` remains **PLANNED /
+UNEVALUATED**.
+
+The review retained two **OBSERVATION / NON-BLOCKING** notes. The required C05
+suite remains `23/23 PASS`, while its optional proof-hook continuation is not
+claimed as PASS because it may synchronously re-enter save under
+`saveCaptureLock`; no reachable ordinary production equivalent was identified.
+The explicit `AgentPopulationConfiguration.CodingKeys` must also remain aligned
+with any future persisted field; all nine current fields are present and there
+is no current schema defect.
 
 ## Ownership and architecture
 
@@ -955,9 +968,9 @@ its existence alone.
 
 ```text
 published progression: COMPLETE THROUGH CIV-44
-CIV-45: CORRECTION 09 LOCAL REVIEW CANDIDATE — NOT PUBLISHED
+CIV-45: CORRECTION 09 SENIOR-APPROVED LOCAL PUBLICATION CANDIDATE — NOT PUBLISHED
 CIV-46: PLANNED — NOT STARTED / NOT AUTHORIZED
 CIV-47: PLANNED — NOT STARTED / NOT AUTHORIZED
 V4-GATE-G-v1: PLANNED / UNEVALUATED
-next action: CIV-45 INDEPENDENT SENIOR RE-REVIEW
+next action: PROTECTED MANUAL PUBLICATION, THEN INDEPENDENT REMOTE SHA VERIFICATION
 ```
