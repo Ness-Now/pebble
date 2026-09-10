@@ -2,7 +2,7 @@
 
 ## Review status and baseline
 
-`CIV-45` is a **CORRECTION 08 LOCAL REVIEW CANDIDATE — NOT PUBLISHED**. It was
+`CIV-45` is a **CORRECTION 09 LOCAL REVIEW CANDIDATE — NOT PUBLISHED**. It was
 implemented from exact published baseline
 `9a2cfec10b4a0d1b6a5d2f46aac8f3c312ddbb0e` on local branch
 `codex/civ-45-writing-literacy-v1`. The initial product, test and live-proof
@@ -52,8 +52,14 @@ in the lifecycle result. Correction 07 product/test commit is
 because normal streaming could evict a non-persistent probe while the
 controller registry retained the same object and its material custody, letting
 a successful lifecycle omit that custody. Correction 08 product/test commit is
-`fe168f72d31fdbc0a1f783b351c0974ec649b1bb`; the corrected review candidate is
-the local documentation HEAD containing this summary. All eight failed
+`fe168f72d31fdbc0a1f783b351c0974ec649b1bb`; candidate
+`54d9e4ba37340178927411b3bf5f3bd5cedae4c5` received **CORRECTION REQUIRED**
+because synthesized `Decodable` reconstructed `AgentPopulationConfiguration`
+without its validated initializer, allowing a coherent persisted maximum of
+513 and eight other out-of-contract field values to reach restoration.
+Correction 09 product/test commit is
+`3d1fdeea7c1e2f833a97b903c1357dd1d0acfe77`; the corrected review candidate is
+the local documentation HEAD containing this summary. All nine failed
 candidates remain intact, immutable historical evidence and are not
 represented as approved.
 
@@ -66,10 +72,11 @@ Correction 04 candidate: CORRECTION REQUIRED
 Correction 05 candidate: CORRECTION REQUIRED
 Correction 06 candidate: CORRECTION REQUIRED
 Correction 07 candidate: CORRECTION REQUIRED
-Correction 08: LOCAL REVIEW CANDIDATE — NOT PUBLISHED
+Correction 08 candidate: CORRECTION REQUIRED
+Correction 09: LOCAL REVIEW CANDIDATE — NOT PUBLISHED
 ```
 
-The published branch remains complete through CIV-44. Correction 08 has not
+The published branch remains complete through CIV-44. Correction 09 has not
 received independent senior re-review approval and CIV-45 has not been
 published. CIV-46 and CIV-47 have not started. `V4-GATE-G-v1` remains
 **PLANNED / UNEVALUATED**.
@@ -306,6 +313,53 @@ historical retained set: every streaming pass derives retention from current
 World entities. Mortality, stop and normal semantic probe removal remove the
 incarnation and binding, after which the chunk is normally evictable.
 
+Correction 09 closes the persisted premise of that bound without redesigning
+Correction 08. Before C09, normal construction called the validated
+`AgentPopulationConfiguration` initializer, but synthesized `Decodable`
+assigned its stored properties directly. A self-consistent checkpoint with
+`maximumActivePopulation = 513` and matching settlement capacity therefore
+decoded, validated and produced a restorable candidate. The same bypass
+covered the complete serialized constructor contract:
+
+```text
+maximumActivePopulation      3...512
+maximumMigrationRecords      1...64
+maximumConcurrentMigrations  == 1
+maximumMigrationDistance     1...64
+maximumEntryCandidates       1...16
+maximumRouteLength           1...32
+maximumMigrationTicks        1...256
+maximumMigrationReplans      0...3
+arrivalDistance              == 0
+```
+
+C09 preserves the same nine `CodingKeys`, field names and `Int` types. Its
+custom decode reads those fields and delegates construction to the same
+validated initializer used by the normal API; valid decoded configuration is
+therefore equivalent to valid normal construction for the serialized
+contract. `validatePopulationRegistry` invokes that same canonical validation
+as a secondary in-memory restore defense and does not maintain a divergent
+limit list. There is no schema bump, migration, clamp or fallback.
+
+The historical pre-fix checkpoint had a valid outer digest, checkpoint ID,
+manifest and matching settlement capacity, yet reported
+`decodedMaximum=513 settlementCapacity=513 validation=PASS
+restoreCandidate=PASS status=REPRODUCED`. Post-fix, direct decode, checkpoint
+restore and replay decode reject 513 deterministically before candidate
+publication, registry publication, probe planning/spawn, World or custody
+mutation. Boundary 512 remains valid, and a real 512-member population refuses
+admission 513 without consuming an identity or mutating state. Consequently:
+
+```text
+restored active population <= maximumActivePopulation <= 512
+incarnated probes <= active population
+probe-retained chunks <= incarnated probes <= 512
+```
+
+The final 512 value is a theoretical simultaneous-incarnation ceiling, not a
+permanent resident-chunk allocation; normal scale remains 24 and retention is
+recomputed from current World entities on every streaming pass.
+
 Correction 03 keeps `authorityGeneration` exclusively in Core. A detachable
 `SignInscriptionAuthorityObservation` is an opaque, World/catalogue-bound test
 token, not a durable PebbleAgents receipt. Production read, notation practice
@@ -430,7 +484,12 @@ scripts/verify-pebblelab-civ45.sh
 Commands and final results:
 
 ```text
-Correction 08 Debug campaign at exact product commit fe168f72d31fdbc0a1f783b351c0974ec649b1bb
+Correction 09 Debug campaign at exact product commit 3d1fdeea7c1e2f833a97b903c1357dd1d0acfe77
+42 passed, 0 failed # C09 full restored population contract
+49 passed, 0 failed # checkpoint/replay
+19 passed, 0 failed # persistence reconciliation
+66 passed, 0 failed # population/migration
+69 passed, 0 failed # scale/restoration
 6 passed, 0 failed # streaming retention, custody, replacement, multi-probe and cycles
 AppKit two terminateCancel attempts then terminateNow: PASS
 fresh-process restart custody: 1 passed, 0 failed
@@ -444,7 +503,12 @@ Correction 04 two-process proof PASS
 105 passed, 0 failed # CIV-45
 93 passed, 0 failed # mortality
 
-Correction 08 Release/Optimized campaign at the same exact product commit
+Correction 09 Release/Optimized campaign at the same exact product commit
+42 passed, 0 failed # C09 full restored population contract
+49 passed, 0 failed # checkpoint/replay
+19 passed, 0 failed # persistence reconciliation
+66 passed, 0 failed # population/migration
+69 passed, 0 failed # scale/restoration
 6 passed, 0 failed # Correction 08 focused
 AppKit lifecycle and fresh restart PASS
 8 passed, 0 failed + AppKit PASS # true Release Correction 07
@@ -456,6 +520,15 @@ Correction 04 two-process proof PASS
 26 passed, 0 failed # persistent identity
 105 passed, 0 failed # CIV-45
 93 passed, 0 failed # mortality
+
+C09 focused outcomes in both Debug and Release
+18 invalid configurations rejected with API/decode parity
+maximumActivePopulation 513 direct decode rejected
+maximumActivePopulation 512 accepted and round-trip byte exact
+valid outer checkpoint + matching settlement capacity 513 rejected
+replay operation carrying 513 rejected before application
+candidate publication NO; physical mutation ZERO; no clamp or fallback
+512 members then normal admission 513 REFUSED without identity consumption
 
 scripts/verify-pebblelab-civ45-correction07-phase1.sh
 8 passed, 0 failed # lifecycle Core Debug
@@ -510,6 +583,19 @@ PEBBLELAB_CIV45_BUILD_CONFIGURATION=release scripts/verify-pebblelab-civ45-corre
 8/8 in-process capture/rollback/save checks passed
 3/3 separate-process restart checks passed
 ```
+
+Correction 09's retained pre-fix reproduction is
+`/tmp/pebblelab-civ45-c09-phase1/prefix-513-reproduction.log`. It constructs a
+self-consistent stored checkpoint and reports `decodedMaximum=513`,
+`settlementCapacity=513`, `validation=PASS`, `restoreCandidate=PASS` and
+`status=REPRODUCED`. The final C09 Debug logs remain under
+`/tmp/pebblelab-civ45-c09-phase1/`; the resumed Phase 2 Release, gate and live
+logs remain under
+`/tmp/pebblelab-civ45-correction09-phase2.pvtRfi/`. The required C05 suite is
+`23/23 PASS`; its optional continuation is not claimed as PASS because a
+pre-existing proof hook may synchronously re-enter save while holding
+`saveCaptureLock`. No equivalent product path was identified, so this remains
+a non-blocking harness observation and was not changed by C09.
 
 Correction 08's retained pre-fix log is
 `/tmp/pebblelab-civ45-c08-prefx.0ggurJ/prefx.log`. It uses the production
@@ -646,8 +732,8 @@ scripts/verify-pebblelab-live.sh --dry-run --writing
 scripts/verify-pebblelab-live.sh --writing
 ```
 
-The Correction 08 dry-run passed. The release campaign used exact Correction 08
-product/test commit `fe168f72d31fdbc0a1f783b351c0974ec649b1bb`, then ran two
+The Correction 09 dry-run passed. The release campaign used exact Correction 09
+product/test commit `3d1fdeea7c1e2f833a97b903c1357dd1d0acfe77`, then ran two
 fresh real processes for each of seeds 46 and 73
 under disposable `CFFIXED_USER_HOME` roots. Process one created an ordinary blank oak sign on a
 natural supported site, observed a real oak log, wrote the false `stone`
@@ -665,18 +751,18 @@ process. Read, practice and writing in that live binary route through
 primitive covered by the deterministic stale tests. The live campaign proves
 the legitimate current-authority path; it does not substitute for the hostile
 N→N+1, Correction 04 capture-order or Correction 06 unresolved-horizon proofs.
-The final Correction 08 campaign
+The final Correction 09 campaign
 root is:
 
 ```text
-/tmp/pebblelab-civ45-live.zcwinX
+/tmp/pebblelab-civ45-live.7jo0Tb
 ```
 
 Seed 46 used material identity 288, artifact
-`inscription-7638c4845a9e66bda280fdb4f79d86e510950b97b351b0c8869f36f9e7eac712`,
+`inscription-c5dee809d9a5cb29ffbb1338af594e33c3527d9a0e80ff349fb490cf2cae46d7`,
 sign `(22,68,-21)` and real oak-log source `(19,66,-24)`. Seed 73 used
 material identity 147, artifact
-`inscription-cedfd4c5ca8858818d3576e685910b7e7e9da05349738d58956e5f9ff5f99c45`,
+`inscription-7b1cdbfa25a4c848a6118f8c33103a051a901abd54882e1f1be605f91a46f59e`,
 sign `(15,64,-8)` and real oak-log source `(12,64,-7)`.
 
 The four 3024×1898 captures were individually inspected. Each visibly shows
@@ -691,20 +777,20 @@ Key evidence SHA-256 values:
 
 | Seed | Artifact | SHA-256 |
 | --- | --- | --- |
-| 46 | `write.log` | `5b921c1e458ff2aeb06967dc46af7956977f13cae0cfaa2cc7d3d1fccdd2bea1` |
-| 46 | `read.log` | `04ce767ca27a4078a8d91f7ea41a276f879c08e6229cec78c1ccb3df3302c9f0` |
-| 46 | `written-sign.json` / byte-identical `reloaded-sign.json` | `36aa8e8a80f99f0f51d90b0ebb767fa9e90489cb7952b5f15fe3079906ca44e9` |
-| 46 | `writing-checkpoint.json` | `cfd5413ae9f53b8ef3c0e06fafce95c719ec8d9274b23a31b3d41bc80cbf9166` |
-| 46 | `reading-checkpoint.json` | `8d256fff9077048fc29c7b6bb43ac6ecd84a765201e3ef081e4f83032e50a251` |
-| 46 | `written.png` | `5ef0f1c25437c83226a297ba7beae1b5cd66e879eeb4bf45d4417f8d27dcea89` |
-| 46 | `read.png` | `cebb7cb28cb082d122eed8eb71e2eb7682b12711996376a1653ec742e294e8ae` |
-| 73 | `write.log` | `40497f6aa9859b612af2c3c0c2779d349b3fab273c90b7f85def510ca5d00d86` |
-| 73 | `read.log` | `28ca7efb6a93454e77fc0e7f67911df7e2ce378bd71d5c52f58980285b6cbac2` |
-| 73 | `written-sign.json` / byte-identical `reloaded-sign.json` | `f4529c998092818b3a345a5c72de42f45ee7616d99e44de972671b3ef38df591` |
-| 73 | `writing-checkpoint.json` | `c28ce9da9ed671c0574528d3cf0c8442f4535f47e734727a02c663b8139d5740` |
-| 73 | `reading-checkpoint.json` | `fda38f98f0b5098b2b2d1bb73d56b70d5e56086c19fbc76d210362c5db8792cf` |
-| 73 | `written.png` | `9c4b19a7c3122fcaa0f66b6332e96c4cec6e744aed64fccb6f274e0486417f66` |
-| 73 | `read.png` | `c37dc4599a22652ad61cdc9022b2d33f3c8d2eb27f0eae7e320ff8d1fed13ee8` |
+| 46 | `write.log` | `b355742668dc6827c3aced824d97db0da2eb79c1945853d41da416d31c1ee6f8` |
+| 46 | `read.log` | `e0aaeda62e85698c34893be3143097d5b6e88216f7f745feb311f5132f7cb689` |
+| 46 | `written-sign.json` / byte-identical `reloaded-sign.json` | `097dfd207aa98dad6ceb48ac940c9045d6e623e7b01829ef77ab61fcccabab68` |
+| 46 | `writing-checkpoint.json` | `2bb1c1c4fdceec0446d77ab3ab050ae122725804f26a658cd2e79b9dc3b5953e` |
+| 46 | `reading-checkpoint.json` | `dae53d5d4dcfac472a1853fda05a212322b70a041dc9f1b06630846d2f7dff03` |
+| 46 | `written.png` | `e117d4f8ed0f3aaddb072156f4f8f4eca2b51477f919845803e1d7c1567cd1f2` |
+| 46 | `read.png` | `9391b64b2f82754b4214dafe44b01f3061eb0e7bbd4e40e2e262dfc614099a18` |
+| 73 | `write.log` | `5bcf9e93b87724b68b9967b8d93f62e76d7194f44aa00575ef086ea8e8f1fd7e` |
+| 73 | `read.log` | `4f0fd10f453e2066b014bf136a035f555d326497cc1502010fe51c6d7658319e` |
+| 73 | `written-sign.json` / byte-identical `reloaded-sign.json` | `3515a6197625c26852de0f8cafa1eddfc9de1f15de2b3d47cd2e892ecd4fccb8` |
+| 73 | `writing-checkpoint.json` | `96bb9820e9159e161097055e8611625e67edab3c6d69422a945037ef69243757` |
+| 73 | `reading-checkpoint.json` | `ee4f9f6261a30ac7ead5f2e64253a7b5f812b9f4accc46cbeef653e8b57993e8` |
+| 73 | `written.png` | `8f60552a00aff830ee44b2a92707935f6a48761537fba505f665baa75a7e00ea` |
+| 73 | `read.png` | `0fe0c36d1caf24296559b319ead68cce1f0d82021b0cab5c3f0c110684eab191` |
 
 ## Canonical repository gate and intermediate failures
 
@@ -714,13 +800,13 @@ The final canonical command was:
 scripts/verify-pebblelab.sh
 ```
 
-The final Correction 08 run passed all 35 repository steps against exact
-product/test commit `fe168f72d31fdbc0a1f783b351c0974ec649b1bb`. The shared
+The final Correction 09 run passed all 35 repository steps against exact
+product/test commit `3d1fdeea7c1e2f833a97b903c1357dd1d0acfe77`. The shared
 runtime reported `4644 passed, 0 failed`; deterministic scenario pairs and
 canonical output comparisons all passed. Evidence is retained at
-`/var/folders/23/t4l5dv055dl3x1zqylcpl9wc0000gn/T/PebbleLab-verify.6iXU1j`,
+`/var/folders/23/t4l5dv055dl3x1zqylcpl9wc0000gn/T/PebbleLab-verify.Lfy7E7`,
 with the captured console log at
-`/tmp/pebblelab-civ45-c08-gate.IBeCAt/repository-gate.log`.
+`/tmp/pebblelab-civ45-correction09-phase2.pvtRfi/repository-gate.log`.
 Golden regeneration was not attempted.
 
 Failures encountered and retained during development were corrected rather
@@ -869,7 +955,7 @@ its existence alone.
 
 ```text
 published progression: COMPLETE THROUGH CIV-44
-CIV-45: CORRECTION 08 LOCAL REVIEW CANDIDATE — NOT PUBLISHED
+CIV-45: CORRECTION 09 LOCAL REVIEW CANDIDATE — NOT PUBLISHED
 CIV-46: PLANNED — NOT STARTED / NOT AUTHORIZED
 CIV-47: PLANNED — NOT STARTED / NOT AUTHORIZED
 V4-GATE-G-v1: PLANNED / UNEVALUATED
