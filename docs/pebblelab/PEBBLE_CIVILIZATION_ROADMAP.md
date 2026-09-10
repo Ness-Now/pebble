@@ -12,12 +12,16 @@ defined by [`PEBBLE_CIVILIZATION_VISION.md`](PEBBLE_CIVILIZATION_VISION.md).
 [`ROADMAP_MANIFEST.json`](ROADMAP_MANIFEST.json) is the machine-readable
 projection of this document and must agree with it exactly.
 
-Local candidate overlay: `CIV-46` is **IMPLEMENTED AND TESTED LOCALLY —
-EXTERNAL SENIOR REVIEW PENDING — NOT PUBLISHED** from exact baseline
+Local candidate overlay: `CIV-46` is **PASS — SENIOR REVIEW APPROVED — NOT
+PUBLISHED** from exact baseline
 `f78f0d3c282282d75cc3d27418135246de2975b7`; product/test commit
-`1ada83ae248552924a4f729439654ad7ff8abfaa`. Published canonical progression
-still ends at CIV-45. CIV-47 is not started and Gate G remains planned and
-unevaluated. See [`CIV_46_PHASE_SUMMARY.md`](CIV_46_PHASE_SUMMARY.md).
+`1ada83ae248552924a4f729439654ad7ff8abfaa`; approved reviewed candidate
+`560e5d4a2b42bfd1519077fe6955ff6f9d99bc70`, tree
+`82bfb1f8189fcbe08835f4f0710c3235b82196a7`; review ZIP SHA-256
+`3befd2e1cae32d31c47ddce77dd361f367b5612ba18d859ababbd63dfb376551`.
+Published canonical progression still ends at CIV-45. CIV-47 is not started
+and Gate G remains planned, unevaluated and not acquired. See
+[`CIV_46_PHASE_SUMMARY.md`](CIV_46_PHASE_SUMMARY.md).
 
 Published product baseline evaluated by the independent Gate C campaign:
 
@@ -143,10 +147,10 @@ Gate R: ACQUIRED AND PUBLISHED
 Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
 active CIV phase: NONE
-local review candidate: CIV-46 — TESTED / NOT SENIOR-REVIEWED / NOT PUBLISHED
+local senior-approved candidate: CIV-46 — PASS / NOT PUBLISHED
 completed and published through: CIV-45 (CIV-38 and CIV-40 remain optional and unstarted)
 next eligible phase: CIV-46
-next authorized action: INDEPENDENT SENIOR REVIEW OF LOCAL CIV-46 CANDIDATE
+next authorized action: PREPARE PROTECTED PUBLICATION OF SENIOR-APPROVED CIV-46 CANDIDATE
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
@@ -251,9 +255,9 @@ CIV-45 Correction 08 product/test commit: fe168f72d31fdbc0a1f783b351c0974ec649b1
 CIV-45 Correction 08 candidate: 54d9e4ba37340178927411b3bf5f3bd5cedae4c5 — CORRECTION REQUIRED
 CIV-45 Correction 09 product/test commit: 3d1fdeea7c1e2f833a97b903c1357dd1d0acfe77
 CIV-45 Correction 09: PASS — SENIOR REVIEW APPROVED — PUBLISHED / REMOTE VERIFIED
-CIV-46: LOCAL REVIEW CANDIDATE — TESTED / NOT SENIOR-REVIEWED / NOT PUBLISHED
+CIV-46: PASS — SENIOR REVIEW APPROVED / NOT PUBLISHED
 CIV-47: PLANNED — NOT STARTED
-V4-GATE-G-v1: PLANNED / UNEVALUATED
+V4-GATE-G-v1: PLANNED / UNEVALUATED / NOT ACQUIRED
 ```
 
 The `CIV-33` completion is published on the canonical branch at
@@ -709,10 +713,10 @@ evidence for persisted population-configuration validation bypass. Correction
 09 product/test commit `3d1fdeea7c1e2f833a97b903c1357dd1d0acfe77` supplies the
 accepted product/test correction. Independent senior review returned **PASS —
 SENIOR REVIEW APPROVED** with no blocker, major or minor finding. Publication
-and independent remote verification are complete. CIV-46 is now a tested local
-review candidate, neither senior-reviewed nor published; CIV-47 remains
-unstarted. External review of CIV-46 is next. Gate G remains
-planned and unevaluated. See
+and independent remote verification are complete. CIV-46 is implemented,
+tested and externally senior-review approved, but is not published; CIV-47
+remains unstarted. Protected publication preparation for CIV-46 is next. Gate
+G remains planned, unevaluated and not acquired. See
 [`CIV_44_PHASE_SUMMARY.md`](CIV_44_PHASE_SUMMARY.md) and
 [`CIV_45_PHASE_SUMMARY.md`](CIV_45_PHASE_SUMMARY.md).
 
@@ -1508,7 +1512,7 @@ Evaluation 05 product correction: NO
 Evaluation 05 verdict: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 Gate E status: ACQUIRED AND PUBLISHED
 Gate E acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f76744f83
-next authorized action: INDEPENDENT SENIOR REVIEW OF LOCAL CIV-46 CANDIDATE
+next authorized action: PREPARE PROTECTED PUBLICATION OF SENIOR-APPROVED CIV-46 CANDIDATE
 CIV-39 status: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 Gate F status: ACQUIRED AND PUBLISHED — REMOTE VERIFIED
@@ -1572,9 +1576,9 @@ CIV-45 Correction 08 product/test commit: fe168f72d31fdbc0a1f783b351c0974ec649b1
 CIV-45 Correction 08 candidate: 54d9e4ba37340178927411b3bf5f3bd5cedae4c5 — CORRECTION REQUIRED
 CIV-45 Correction 09 product/test commit: 3d1fdeea7c1e2f833a97b903c1357dd1d0acfe77
 CIV-45 Correction 09: PASS — SENIOR REVIEW APPROVED — PUBLISHED / REMOTE VERIFIED
-CIV-46 status: LOCAL REVIEW CANDIDATE — TESTED / NOT SENIOR-REVIEWED / NOT PUBLISHED
+CIV-46 status: PASS — SENIOR REVIEW APPROVED / NOT PUBLISHED
 CIV-47 status: PLANNED — NOT STARTED
-V4-GATE-G-v1 status: PLANNED / UNEVALUATED
+V4-GATE-G-v1 status: PLANNED / UNEVALUATED / NOT ACQUIRED
 ```
 
 Blocker 01 binds exact production origin to the exact rights-tracked asset and
@@ -1851,8 +1855,9 @@ REQUIRED** evidence. Correction 09 product/test commit
 `3d1fdeea7c1e2f833a97b903c1357dd1d0acfe77` supplies the accepted product/test
 correction. Independent senior review returned **PASS — SENIOR REVIEW
 APPROVED**. Publication and independent remote verification are complete.
-CIV-46 is a tested local review candidate, neither senior-reviewed nor
-published. CIV-47 remains unstarted. Gate G remains planned and unevaluated.
+CIV-46 is implemented, tested and externally senior-review approved, but is
+not published. CIV-47 remains unstarted. Gate G remains planned, unevaluated
+and not acquired.
 
 ## Wave 5 — Knowledge, language and culture
 
@@ -1955,9 +1960,9 @@ Published progression is complete through `CIV-45`, which is **COMPLETE AND
 PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical
 publication HEAD `f43c0a014efbb0123ec21647e326a84e0956cdd6`. Its initial and Correction 01 through Correction 08
 candidates all remain **CORRECTION REQUIRED** historical evidence.
-`CIV-46` is a tested local review candidate, neither senior-reviewed nor
-published. `CIV-47` remains unstarted. Gate G remains planned and has not been
-evaluated.
+`CIV-46` is implemented, tested and externally senior-review approved, but is
+not published. `CIV-47` remains unstarted. Gate G remains planned, unevaluated
+and not acquired.
 
 Observable slices:
 

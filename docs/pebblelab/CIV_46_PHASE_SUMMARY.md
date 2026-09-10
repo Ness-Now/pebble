@@ -1,24 +1,29 @@
 # CIV-46 — Books, Manuscripts, Archives and Libraries V1
 
-## Local review status
+## Senior review status
 
-`CIV-46` is **IMPLEMENTED AND TESTED LOCALLY — EXTERNAL SENIOR REVIEW
-PENDING — NOT PUBLISHED**.
+`CIV-46` is **PASS — SENIOR REVIEW APPROVED — NOT PUBLISHED**.
 
 ```text
 Exact baseline: f78f0d3c282282d75cc3d27418135246de2975b7
 Branch: codex/civ-46-books-manuscripts-archives-libraries-v1
 Product/test commit: 1ada83ae248552924a4f729439654ad7ff8abfaa
-External senior review: NOT PERFORMED
+Reviewed candidate: 560e5d4a2b42bfd1519077fe6955ff6f9d99bc70
+Reviewed candidate tree: 82bfb1f8189fcbe08835f4f0710c3235b82196a7
+Review ZIP SHA-256: 3befd2e1cae32d31c47ddce77dd361f367b5612ba18d859ababbd63dfb376551
+External senior review: PASS — SENIOR REVIEW APPROVED
+P0 findings: NONE
+P1 findings: NONE
+Product correction required: NO
 Publication: NOT PERFORMED
-Gate G: PLANNED / UNEVALUATED
+Gate G: PLANNED / UNEVALUATED / NOT ACQUIRED
 CIV-47: NOT STARTED
 ```
 
-The final documentation commit and review ZIP identify the complete local
-candidate. Nothing in this record grants senior approval or remote publication.
-All historical CIV-45 Initial/Correction 01–08 `CORRECTION REQUIRED` verdicts
-remain unchanged.
+The independent external senior review approved the exact candidate and tree
+identified above. This approval does not claim publication or remote
+verification. All historical CIV-45 Initial/Correction 01–08
+`CORRECTION REQUIRED` verdicts remain unchanged.
 
 ## Architecture and authority
 
@@ -81,8 +86,9 @@ hashing.
 Checkpoint and replay schema 41 add the archive state and typed operations.
 Collection and manuscript IDs are deterministic hashes of stable World and
 logical operation identities. A logical operation ID is unique across archive
-collections, manuscripts and retrievals. Exact retry returns the accepted
-record; divergent reuse is refused.
+collections, manuscripts and retrievals. A retry of the same committed logical
+retrieval returns the accepted record; conflicting reuse of the durable
+operation identity is refused.
 
 Every durable transition is built on a copy of the aggregate and published
 only after archive, causal, CIV-45, CIV-42 and CIV-41 validation succeeds. The
@@ -149,15 +155,17 @@ Rejected intermediate campaigns remain evidence only, never final proof:
 - the preceding two-seed run was functionally green but its seed-73 captures
   were rejected because the camera/player was drowning.
 
-## Remaining review boundary
+## Remaining publication boundary
 
-No functional failure is known. External senior review, independent ZIP
-inspection and publication have not occurred. The renderer emitted two
-pre-existing unused-variable warnings (`lightViewM`, `lightProjM`) during the
-repository gate; they are outside CIV-46. Gate G remains unevaluated and CIV-47
-remains unstarted.
+No functional failure is known. Independent external senior review and ZIP
+inspection returned **PASS — SENIOR REVIEW APPROVED**, with no P0 or P1 finding
+and no required product correction. Publication and remote verification have
+not occurred. The renderer emitted two pre-existing unused-variable warnings
+(`lightViewM`, `lightProjM`) during the repository gate; they are outside
+CIV-46. Gate G remains unevaluated and not acquired, and CIV-47 remains
+unstarted.
 
 ```text
-Status: LOCAL REVIEW CANDIDATE / NOT PUBLISHED
+Status: PASS — SENIOR REVIEW APPROVED / NOT PUBLISHED
 Push attempted: NO
 ```
