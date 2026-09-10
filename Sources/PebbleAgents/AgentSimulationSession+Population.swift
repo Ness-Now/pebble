@@ -729,13 +729,17 @@ extension AgentSimulationSession {
         clock: AgentSimulationClock,
         departedAgentIDs: Set<AgentID> = []
     ) throws {
+        do {
+            try registry.configuration.validate()
+        } catch {
+            throw AgentCheckpointError.invalidBound("population configuration")
+        }
         let agentIDs = Set(agents.map(\.agentID))
         let settlements = registry.settlements
         let settlementIDs = Set(settlements.map(\.settlementID))
         let residentOccurrences = settlements.flatMap(\.residentIDs)
         let transitOccurrences = settlements.flatMap(\.inTransitIDs)
-        guard registry.configuration.maximumActivePopulation >= 3,
-              registry.settlement.settlementID == .main,
+        guard registry.settlement.settlementID == .main,
               registry.scaleState != nil
                 || registry.settlement.capacity
                     == registry.configuration.maximumActivePopulation,

@@ -130,6 +130,18 @@ public struct AgentPopulationConfiguration: Codable, Equatable, Sendable {
     public let maximumMigrationReplans: Int
     public let arrivalDistance: Int
 
+    private enum CodingKeys: String, CodingKey {
+        case maximumActivePopulation
+        case maximumMigrationRecords
+        case maximumConcurrentMigrations
+        case maximumMigrationDistance
+        case maximumEntryCandidates
+        case maximumRouteLength
+        case maximumMigrationTicks
+        case maximumMigrationReplans
+        case arrivalDistance
+    }
+
     public init(
         maximumActivePopulation: Int = 8,
         maximumMigrationRecords: Int = 16,
@@ -140,6 +152,102 @@ public struct AgentPopulationConfiguration: Codable, Equatable, Sendable {
         maximumMigrationTicks: Int = 64,
         maximumMigrationReplans: Int = 3,
         arrivalDistance: Int = 0
+    ) throws {
+        try Self.validate(
+            maximumActivePopulation: maximumActivePopulation,
+            maximumMigrationRecords: maximumMigrationRecords,
+            maximumConcurrentMigrations: maximumConcurrentMigrations,
+            maximumMigrationDistance: maximumMigrationDistance,
+            maximumEntryCandidates: maximumEntryCandidates,
+            maximumRouteLength: maximumRouteLength,
+            maximumMigrationTicks: maximumMigrationTicks,
+            maximumMigrationReplans: maximumMigrationReplans,
+            arrivalDistance: arrivalDistance
+        )
+        self.maximumActivePopulation = maximumActivePopulation
+        self.maximumMigrationRecords = maximumMigrationRecords
+        self.maximumConcurrentMigrations = maximumConcurrentMigrations
+        self.maximumMigrationDistance = maximumMigrationDistance
+        self.maximumEntryCandidates = maximumEntryCandidates
+        self.maximumRouteLength = maximumRouteLength
+        self.maximumMigrationTicks = maximumMigrationTicks
+        self.maximumMigrationReplans = maximumMigrationReplans
+        self.arrivalDistance = arrivalDistance
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        do {
+            try self.init(
+                maximumActivePopulation: container.decode(
+                    Int.self,
+                    forKey: .maximumActivePopulation
+                ),
+                maximumMigrationRecords: container.decode(
+                    Int.self,
+                    forKey: .maximumMigrationRecords
+                ),
+                maximumConcurrentMigrations: container.decode(
+                    Int.self,
+                    forKey: .maximumConcurrentMigrations
+                ),
+                maximumMigrationDistance: container.decode(
+                    Int.self,
+                    forKey: .maximumMigrationDistance
+                ),
+                maximumEntryCandidates: container.decode(
+                    Int.self,
+                    forKey: .maximumEntryCandidates
+                ),
+                maximumRouteLength: container.decode(
+                    Int.self,
+                    forKey: .maximumRouteLength
+                ),
+                maximumMigrationTicks: container.decode(
+                    Int.self,
+                    forKey: .maximumMigrationTicks
+                ),
+                maximumMigrationReplans: container.decode(
+                    Int.self,
+                    forKey: .maximumMigrationReplans
+                ),
+                arrivalDistance: container.decode(
+                    Int.self,
+                    forKey: .arrivalDistance
+                )
+            )
+        } catch let error as AgentPopulationError {
+            throw DecodingError.dataCorrupted(DecodingError.Context(
+                codingPath: decoder.codingPath,
+                debugDescription: error.description
+            ))
+        }
+    }
+
+    func validate() throws {
+        try Self.validate(
+            maximumActivePopulation: maximumActivePopulation,
+            maximumMigrationRecords: maximumMigrationRecords,
+            maximumConcurrentMigrations: maximumConcurrentMigrations,
+            maximumMigrationDistance: maximumMigrationDistance,
+            maximumEntryCandidates: maximumEntryCandidates,
+            maximumRouteLength: maximumRouteLength,
+            maximumMigrationTicks: maximumMigrationTicks,
+            maximumMigrationReplans: maximumMigrationReplans,
+            arrivalDistance: arrivalDistance
+        )
+    }
+
+    private static func validate(
+        maximumActivePopulation: Int,
+        maximumMigrationRecords: Int,
+        maximumConcurrentMigrations: Int,
+        maximumMigrationDistance: Int,
+        maximumEntryCandidates: Int,
+        maximumRouteLength: Int,
+        maximumMigrationTicks: Int,
+        maximumMigrationReplans: Int,
+        arrivalDistance: Int
     ) throws {
         guard (3...512).contains(maximumActivePopulation) else {
             throw AgentPopulationError.invalidConfiguration("active population")
@@ -158,15 +266,6 @@ public struct AgentPopulationConfiguration: Codable, Equatable, Sendable {
               arrivalDistance == 0 else {
             throw AgentPopulationError.invalidConfiguration("migration bounds")
         }
-        self.maximumActivePopulation = maximumActivePopulation
-        self.maximumMigrationRecords = maximumMigrationRecords
-        self.maximumConcurrentMigrations = maximumConcurrentMigrations
-        self.maximumMigrationDistance = maximumMigrationDistance
-        self.maximumEntryCandidates = maximumEntryCandidates
-        self.maximumRouteLength = maximumRouteLength
-        self.maximumMigrationTicks = maximumMigrationTicks
-        self.maximumMigrationReplans = maximumMigrationReplans
-        self.arrivalDistance = arrivalDistance
     }
 
     public static let live = try! AgentPopulationConfiguration()
