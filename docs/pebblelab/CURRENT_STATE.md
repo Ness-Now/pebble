@@ -107,7 +107,7 @@ SHA of the documentation commit that contains it.
   Final review archive SHA-256:
   `570df1fd45349de684b47a0c30fcb1452137b86d5d40174146126333e6f51683`.
   Published progression remains complete through CIV-44. CIV-45 is now a
-  **CORRECTION 07 LOCAL REVIEW CANDIDATE — NOT PUBLISHED** after its initial candidate
+  **CORRECTION 08 LOCAL REVIEW CANDIDATE — NOT PUBLISHED** after its initial candidate
   `89cffa47f1e9635e0f44a0fac246e92739501911` received **CORRECTION REQUIRED**
   for resident-chunk-only material identity. Senior Review Correction 01 is
   local product/test commit `b68a6aeff106f5a3791279d5bd62b8b2916c9a4c`;
@@ -134,8 +134,15 @@ SHA of the documentation commit that contains it.
   REQUIRED** evidence for lifecycle cleanup after the durable barrier,
   irreversible shutdown before AppKit cancellation, and ignored non-chunk
   persistence failures. Correction 07 product/test commit
-  `6890eab1f460a09b2fe01bf02d4a0fd248528ea9` supplies the local candidate;
-  it orders idempotent physical custody preparation before the final aggregate
+  `6890eab1f460a09b2fe01bf02d4a0fd248528ea9` and candidate
+  `c7f497d679a4d0046de6e8ad28e6d9504e3166ff` remain historical **CORRECTION
+  REQUIRED** evidence for carried probe custody lost after normal streaming
+  detached the incarnation from World authority. Correction 08 product/test
+  commit `fe168f72d31fdbc0a1f783b351c0974ec649b1bb` supplies the local candidate;
+  normal `streamChunks` retains chunks containing current probe incarnations,
+  leaves the low-level unload primitive general, and lifecycle refuses any
+  session/registry/World probe mismatch. Correction 07 had already ordered
+  idempotent physical custody preparation before the final aggregate
   WorldRecord/Player/Advancements/chunk-index/unresolved barrier, then permits
   irreversible controller shutdown and World destruction/replacement only
   after success. Failed exit or AppKit termination retains the usable World and
@@ -341,9 +348,9 @@ Gate F correction history:
 - `CIV-44 — Compositional and Long-Distance Communication V1` is **COMPLETE
   AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical HEAD
   `0c6a6e88ce838266897526a74d067532163cb06f`. Published canonical progression
-  remains complete through CIV-44. CIV-45 is a Correction 07 local review
+  remains complete through CIV-44. CIV-45 is a Correction 08 local review
   candidate at product/test commit
-  `6890eab1f460a09b2fe01bf02d4a0fd248528ea9`, is not published, and awaits
+  `fe168f72d31fdbc0a1f783b351c0974ec649b1bb`, is not published, and awaits
   independent senior re-review. Its initial candidate
   `89cffa47f1e9635e0f44a0fac246e92739501911` remains the **CORRECTION
   REQUIRED** historical candidate. Correction 01 candidate
@@ -352,7 +359,8 @@ Gate F correction history:
   `b502d272998834a6bc70a5c5fc0740924d03caa1` and Correction 04 candidate
   `2a83631ee642e2bc71f7da4c82b01172f35c7bdc` and Correction 05 candidate
   `cf80aa1f789edd74417bf225ef34a5fad3eac588` and Correction 06 candidate
-  `a8f153715cf02ec28225cd86e7ba045b715d9323` also remain **CORRECTION
+  `a8f153715cf02ec28225cd86e7ba045b715d9323` and Correction 07 candidate
+  `c7f497d679a4d0046de6e8ad28e6d9504e3166ff` also remain **CORRECTION
   REQUIRED** historical evidence. Gate G remains planned and unevaluated.
 
 Published Gate E history:
@@ -750,7 +758,7 @@ the Gate E acquisition are now published and independently remote verified.
 ## Current program position
 
 ```text
-active CIV phase: CIV-45 — CORRECTION 07 LOCAL REVIEW CANDIDATE — NOT PUBLISHED
+active CIV phase: CIV-45 — CORRECTION 08 LOCAL REVIEW CANDIDATE — NOT PUBLISHED
 completed and published through: CIV-44 (CIV-38 and CIV-40 remain optional and unstarted)
 next eligible action: CIV-45 independent senior re-review
 next authorized action: CIV-45 independent senior re-review; CIV-46 remains unauthorized
@@ -835,7 +843,7 @@ CIV-43 final review archive SHA-256: 1c22063677e95430bb6f220a95c75e07e0512d532d0
 CIV-44 status: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 CIV-44 published canonical HEAD: 0c6a6e88ce838266897526a74d067532163cb06f
 CIV-44 final review archive SHA-256: 570df1fd45349de684b47a0c30fcb1452137b86d5d40174146126333e6f51683
-CIV-45 status: CORRECTION 07 LOCAL REVIEW CANDIDATE — NOT PUBLISHED
+CIV-45 status: CORRECTION 08 LOCAL REVIEW CANDIDATE — NOT PUBLISHED
 CIV-45 exact published baseline: 9a2cfec10b4a0d1b6a5d2f46aac8f3c312ddbb0e
 CIV-45 initial product commit: ac38675d88d4b709183e7b26f92a0a45b0e928c1
 CIV-45 initial candidate: 89cffa47f1e9635e0f44a0fac246e92739501911 — CORRECTION REQUIRED
@@ -853,6 +861,8 @@ CIV-45 Correction 05 candidate: cf80aa1f789edd74417bf225ef34a5fad3eac588 — COR
 CIV-45 Correction 06 product/test commit: d551a5e9b9d57c64c9ae5bc408949fd8f7b2c0d5
 CIV-45 Correction 06 candidate: a8f153715cf02ec28225cd86e7ba045b715d9323 — CORRECTION REQUIRED
 CIV-45 Correction 07 product/test commit: 6890eab1f460a09b2fe01bf02d4a0fd248528ea9
+CIV-45 Correction 07 candidate: c7f497d679a4d0046de6e8ad28e6d9504e3166ff — CORRECTION REQUIRED
+CIV-45 Correction 08 product/test commit: fe168f72d31fdbc0a1f783b351c0974ec649b1bb
 CIV-45 next authorized action: INDEPENDENT SENIOR RE-REVIEW
 CIV-46 / CIV-47 status: PLANNED — NOT STARTED / NOT AUTHORIZED
 V4-GATE-G-v1 status: PLANNED / UNEVALUATED
@@ -1289,8 +1299,8 @@ SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical product HEAD
 PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical HEAD
 `0c6a6e88ce838266897526a74d067532163cb06f`, from exact implementation baseline
 `50d0f73fb9b2a29fd1c3aa80395d20df862a0048`. Published progression is complete
-through CIV-44. CIV-45 is a **CORRECTION 07 LOCAL REVIEW CANDIDATE — NOT PUBLISHED** at
-Correction 07 product/test commit `6890eab1f460a09b2fe01bf02d4a0fd248528ea9`
+through CIV-44. CIV-45 is a **CORRECTION 08 LOCAL REVIEW CANDIDATE — NOT PUBLISHED** at
+Correction 08 product/test commit `fe168f72d31fdbc0a1f783b351c0974ec649b1bb`
 and awaits independent senior re-review. Initial candidate
 `89cffa47f1e9635e0f44a0fac246e92739501911` remains historical **CORRECTION
 REQUIRED** evidence. Correction 01 candidate
@@ -1299,7 +1309,8 @@ REQUIRED** evidence. Correction 01 candidate
 `b502d272998834a6bc70a5c5fc0740924d03caa1` and Correction 04 candidate
 `2a83631ee642e2bc71f7da4c82b01172f35c7bdc` and Correction 05 candidate
 `cf80aa1f789edd74417bf225ef34a5fad3eac588` and Correction 06 candidate
-`a8f153715cf02ec28225cd86e7ba045b715d9323` likewise remain historical
+`a8f153715cf02ec28225cd86e7ba045b715d9323` and Correction 07 candidate
+`c7f497d679a4d0046de6e8ad28e6d9504e3166ff` likewise remain historical
 **CORRECTION REQUIRED** evidence. CIV-46 and CIV-47 remain unstarted and
 unauthorized. Gate G remains planned and unevaluated. See
 [`CIV_45_PHASE_SUMMARY.md`](CIV_45_PHASE_SUMMARY.md).

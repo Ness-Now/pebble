@@ -2,7 +2,7 @@
 
 ## Review status and baseline
 
-`CIV-45` is a **CORRECTION 07 LOCAL REVIEW CANDIDATE — NOT PUBLISHED**. It was
+`CIV-45` is a **CORRECTION 08 LOCAL REVIEW CANDIDATE — NOT PUBLISHED**. It was
 implemented from exact published baseline
 `9a2cfec10b4a0d1b6a5d2f46aac8f3c312ddbb0e` on local branch
 `codex/civ-45-writing-literacy-v1`. The initial product, test and live-proof
@@ -47,8 +47,13 @@ because lifecycle cleanup could mutate persistent physical state after the
 last successful barrier, AppKit cancellation could occur after irreversible
 civilization shutdown, and non-chunk persistence failures were not included
 in the lifecycle result. Correction 07 product/test commit is
-`6890eab1f460a09b2fe01bf02d4a0fd248528ea9`; the corrected review candidate is
-the local documentation HEAD containing this summary. All seven failed
+`6890eab1f460a09b2fe01bf02d4a0fd248528ea9`; candidate
+`c7f497d679a4d0046de6e8ad28e6d9504e3166ff` received **CORRECTION REQUIRED**
+because normal streaming could evict a non-persistent probe while the
+controller registry retained the same object and its material custody, letting
+a successful lifecycle omit that custody. Correction 08 product/test commit is
+`fe168f72d31fdbc0a1f783b351c0974ec649b1bb`; the corrected review candidate is
+the local documentation HEAD containing this summary. All eight failed
 candidates remain intact, immutable historical evidence and are not
 represented as approved.
 
@@ -60,10 +65,11 @@ Correction 03 candidate: CORRECTION REQUIRED
 Correction 04 candidate: CORRECTION REQUIRED
 Correction 05 candidate: CORRECTION REQUIRED
 Correction 06 candidate: CORRECTION REQUIRED
-Correction 07: LOCAL REVIEW CANDIDATE — NOT PUBLISHED
+Correction 07 candidate: CORRECTION REQUIRED
+Correction 08: LOCAL REVIEW CANDIDATE — NOT PUBLISHED
 ```
 
-The published branch remains complete through CIV-44. Correction 07 has not
+The published branch remains complete through CIV-44. Correction 08 has not
 received independent senior re-review approval and CIV-45 has not been
 published. CIV-46 and CIV-47 have not started. `V4-GATE-G-v1` remains
 **PLANNED / UNEVALUATED**.
@@ -268,6 +274,38 @@ two `.terminateCancel` replies with the same simulation, focus, follow mode,
 probe identities and advancing ticks, then repaired persistence and observed
 shutdown followed by `.terminateNow` on the third attempt.
 
+Correction 08 closes the streamed-probe custody gap without making camera
+distance a civilization event. `World.entities` and `entityById` remain the
+physical incarnation authority; `probesByAgentId` remains only a binding
+registry for those same objects, never persistence or an unincarnated-agent
+store. During normal `streamChunks`, a chunk containing a live
+`LabCoreAgentEntity` is retained. The general low-level `unloadChunk` primitive
+is unchanged and remains directly usable by existing persistence proofs.
+Walking away therefore causes no spill, custody transfer, `ItemEntity`
+creation, identity allocation or cognitive event: the same probe object,
+binding and carried inventory remain authoritative through out/in cycles.
+
+Lifecycle preparation additionally requires exact equality between the
+session agent IDs, registry IDs and World probe IDs, resolves every binding to
+the identical object in `entityById`, and rechecks the condition after physical
+preparation. An abnormal low-level detachment therefore fails closed rather
+than allowing a successful lifecycle to forget custody. The pre-fix production
+trace exercised `frame → tick → streamChunks → unloadChunk` and observed
+`beforeWorld=YES afterWorld=NO registry=YES custody=7 lifecycle=PASS restart=0`.
+After Correction 08, ordinary streaming conserves carried quantity exactly,
+while the already-owned Correction 07 lifecycle materializes that custody once
+at its semantic persistence boundary.
+
+Retention is bounded by the number of simultaneously incarnated probes: the
+normal population is at most 8, the scale application target at most 24, and
+the configuration hard maximum is 512. One probe can retain at most its own
+chunk, so the production scale target adds at most 24 resident chunks (about
+9.6 MiB at the measured 400 KiB per chunk); 512 chunks (about 200 MiB) is only
+a theoretical configuration maximum, not permanent consumption. There is no
+historical retained set: every streaming pass derives retention from current
+World entities. Mortality, stop and normal semantic probe removal remove the
+incarnation and binding, after which the chunk is normally evictable.
+
 Correction 03 keeps `authorityGeneration` exclusively in Core. A detachable
 `SignInscriptionAuthorityObservation` is an opaque, World/catalogue-bound test
 token, not a durable PebbleAgents receipt. Production read, notation practice
@@ -392,6 +430,33 @@ scripts/verify-pebblelab-civ45.sh
 Commands and final results:
 
 ```text
+Correction 08 Debug campaign at exact product commit fe168f72d31fdbc0a1f783b351c0974ec649b1bb
+6 passed, 0 failed # streaming retention, custody, replacement, multi-probe and cycles
+AppKit two terminateCancel attempts then terminateNow: PASS
+fresh-process restart custody: 1 passed, 0 failed
+8 passed, 0 failed + AppKit PASS # Correction 07
+24 passed, 0 failed # Correction 06, including direct unload and restart
+23 passed, 0 failed # Correction 05 required suite
+Correction 04 two-process proof PASS
+11 passed, 0 failed # Correction 03
+56 passed, 0 failed + 4/4 crash boundaries # Correction 02
+26 passed, 0 failed # persistent identity
+105 passed, 0 failed # CIV-45
+93 passed, 0 failed # mortality
+
+Correction 08 Release/Optimized campaign at the same exact product commit
+6 passed, 0 failed # Correction 08 focused
+AppKit lifecycle and fresh restart PASS
+8 passed, 0 failed + AppKit PASS # true Release Correction 07
+24 passed, 0 failed # Correction 06
+23 passed, 0 failed # Correction 05 required suite
+Correction 04 two-process proof PASS
+11 passed, 0 failed # Correction 03
+56 passed, 0 failed + 4/4 crash boundaries # Correction 02
+26 passed, 0 failed # persistent identity
+105 passed, 0 failed # CIV-45
+93 passed, 0 failed # mortality
+
 scripts/verify-pebblelab-civ45-correction07-phase1.sh
 8 passed, 0 failed # lifecycle Core Debug
 AppKit attempts 1/2 terminateCancel with active civilization; attempt 3 terminateNow
@@ -445,6 +510,20 @@ PEBBLELAB_CIV45_BUILD_CONFIGURATION=release scripts/verify-pebblelab-civ45-corre
 8/8 in-process capture/rollback/save checks passed
 3/3 separate-process restart checks passed
 ```
+
+Correction 08's retained pre-fix log is
+`/tmp/pebblelab-civ45-c08-prefx.0ggurJ/prefx.log`. It uses the production
+`frame → tick → streamChunks → unloadChunk` path and reports
+`beforeWorld=YES afterWorld=NO registry=YES custody=7 lifecycle=PASS restart=0
+status=REPRODUCED`. The final Debug evidence root is
+`/tmp/pebblelab-civ45-correction08-phase1.XATReV`; the final combined Optimized
+log is `/tmp/pebblelab-civ45-c08-optimized.6PIKlh/optimized-all.log`, with the
+separately confirmed true Release Correction 07 proof at
+`/tmp/pebblelab-civ45-c07-optimized.NNtv68`. These proofs cover ordinary
+streaming retention without spill or identity allocation, exact custody
+conservation, repeated out/in, multiple and mixed probes, empty custody,
+fail-closed detached bindings, exit retry, two AppKit cancellations followed by
+success, World replacement, fresh restart and mortality release.
 
 Correction 07 pre-fix evidence deterministically reproduced all three senior
 findings: cleanup dirtied a chunk after a successful barrier and the spill was
@@ -567,8 +646,8 @@ scripts/verify-pebblelab-live.sh --dry-run --writing
 scripts/verify-pebblelab-live.sh --writing
 ```
 
-The Correction 07 dry-run passed. The release campaign used exact Correction 07
-product/test commit `6890eab1f460a09b2fe01bf02d4a0fd248528ea9`, then ran two
+The Correction 08 dry-run passed. The release campaign used exact Correction 08
+product/test commit `fe168f72d31fdbc0a1f783b351c0974ec649b1bb`, then ran two
 fresh real processes for each of seeds 46 and 73
 under disposable `CFFIXED_USER_HOME` roots. Process one created an ordinary blank oak sign on a
 natural supported site, observed a real oak log, wrote the false `stone`
@@ -586,18 +665,18 @@ process. Read, practice and writing in that live binary route through
 primitive covered by the deterministic stale tests. The live campaign proves
 the legitimate current-authority path; it does not substitute for the hostile
 N→N+1, Correction 04 capture-order or Correction 06 unresolved-horizon proofs.
-The final Correction 07 campaign
+The final Correction 08 campaign
 root is:
 
 ```text
-/tmp/pebblelab-civ45-live.AhPjpv
+/tmp/pebblelab-civ45-live.zcwinX
 ```
 
-Seed 46 used material identity 289, artifact
-`inscription-1deab7ba134fa5a55926234fded78a4da9799ac91a448ed158e47810a2ef50ac`,
+Seed 46 used material identity 288, artifact
+`inscription-7638c4845a9e66bda280fdb4f79d86e510950b97b351b0c8869f36f9e7eac712`,
 sign `(22,68,-21)` and real oak-log source `(19,66,-24)`. Seed 73 used
 material identity 147, artifact
-`inscription-fc89f9688a4a8159091888430081c572f79104d9feeea28028238d267197cdb2`,
+`inscription-cedfd4c5ca8858818d3576e685910b7e7e9da05349738d58956e5f9ff5f99c45`,
 sign `(15,64,-8)` and real oak-log source `(12,64,-7)`.
 
 The four 3024×1898 captures were individually inspected. Each visibly shows
@@ -612,20 +691,20 @@ Key evidence SHA-256 values:
 
 | Seed | Artifact | SHA-256 |
 | --- | --- | --- |
-| 46 | `write.log` | `51ce8831913578c555d685d77231b8941e9f9a750705a92e1c60544908ccf5f5` |
-| 46 | `read.log` | `dd2c4ce6f4a7d8ef45644412bacb05c899bd8c28bfdba6d21b4ea16b5534d84f` |
-| 46 | `written-sign.json` / byte-identical `reloaded-sign.json` | `70619099dcb9f429946d0c636d4192d0fce4bc80f9b97a14550101058ff28bbe` |
-| 46 | `writing-checkpoint.json` | `4f4cc55c62b97f479dd9e4d583ff39d8a28507a881561cc1f436112cad02dac1` |
-| 46 | `reading-checkpoint.json` | `fc53c1700d31dfac13967ef39b8b89d562a3bbd5126d049285f35e6feac27d37` |
-| 46 | `written.png` | `2561fefda7fbe43562732466e7b0a4fa0b0031c2d444a4ee229ee1e3e9143d1a` |
-| 46 | `read.png` | `8effe3d98a9cc0f4153587f551b3eabc09634adaf5fbc9428c3a4dab90ed9294` |
-| 73 | `write.log` | `ab20eb24b4d374cb2e27f8bd43a42dd73e220cf31ef39f672a85994df04ddbe4` |
-| 73 | `read.log` | `ce0cf265e6c6fd4c283b01313a719d406f329e4d28c84a516c797ea3b5b9ccad` |
-| 73 | `written-sign.json` / byte-identical `reloaded-sign.json` | `52a0cc8193cd668941702105de0cf1f7638fbc8df94f2766b83e2b375e891395` |
-| 73 | `writing-checkpoint.json` | `385bd0749d654c14628a439ed5a363726c8070cff997004aef43d916e2aeb84a` |
-| 73 | `reading-checkpoint.json` | `5f48cc1df06ba8f3d1c95c464e0f356d2d54377cedcf5476fe957487cc7c1b56` |
-| 73 | `written.png` | `dd11b4c0a054261c897c137231d49724a316ae64b75bf287c00d9b84396f3c1a` |
-| 73 | `read.png` | `70b4ff973bdb7c0954ddf5d8f5692377499edc6b583efaa6955317a372a9ac80` |
+| 46 | `write.log` | `5b921c1e458ff2aeb06967dc46af7956977f13cae0cfaa2cc7d3d1fccdd2bea1` |
+| 46 | `read.log` | `04ce767ca27a4078a8d91f7ea41a276f879c08e6229cec78c1ccb3df3302c9f0` |
+| 46 | `written-sign.json` / byte-identical `reloaded-sign.json` | `36aa8e8a80f99f0f51d90b0ebb767fa9e90489cb7952b5f15fe3079906ca44e9` |
+| 46 | `writing-checkpoint.json` | `cfd5413ae9f53b8ef3c0e06fafce95c719ec8d9274b23a31b3d41bc80cbf9166` |
+| 46 | `reading-checkpoint.json` | `8d256fff9077048fc29c7b6bb43ac6ecd84a765201e3ef081e4f83032e50a251` |
+| 46 | `written.png` | `5ef0f1c25437c83226a297ba7beae1b5cd66e879eeb4bf45d4417f8d27dcea89` |
+| 46 | `read.png` | `cebb7cb28cb082d122eed8eb71e2eb7682b12711996376a1653ec742e294e8ae` |
+| 73 | `write.log` | `40497f6aa9859b612af2c3c0c2779d349b3fab273c90b7f85def510ca5d00d86` |
+| 73 | `read.log` | `28ca7efb6a93454e77fc0e7f67911df7e2ce378bd71d5c52f58980285b6cbac2` |
+| 73 | `written-sign.json` / byte-identical `reloaded-sign.json` | `f4529c998092818b3a345a5c72de42f45ee7616d99e44de972671b3ef38df591` |
+| 73 | `writing-checkpoint.json` | `c28ce9da9ed671c0574528d3cf0c8442f4535f47e734727a02c663b8139d5740` |
+| 73 | `reading-checkpoint.json` | `fda38f98f0b5098b2b2d1bb73d56b70d5e56086c19fbc76d210362c5db8792cf` |
+| 73 | `written.png` | `9c4b19a7c3122fcaa0f66b6332e96c4cec6e744aed64fccb6f274e0486417f66` |
+| 73 | `read.png` | `c37dc4599a22652ad61cdc9022b2d33f3c8d2eb27f0eae7e320ff8d1fed13ee8` |
 
 ## Canonical repository gate and intermediate failures
 
@@ -635,17 +714,28 @@ The final canonical command was:
 scripts/verify-pebblelab.sh
 ```
 
-The final Correction 07 run passed all 35 repository steps against exact
-product/test commit `6890eab1f460a09b2fe01bf02d4a0fd248528ea9`. The shared
+The final Correction 08 run passed all 35 repository steps against exact
+product/test commit `fe168f72d31fdbc0a1f783b351c0974ec649b1bb`. The shared
 runtime reported `4644 passed, 0 failed`; deterministic scenario pairs and
 canonical output comparisons all passed. Evidence is retained at
-`/var/folders/23/t4l5dv055dl3x1zqylcpl9wc0000gn/T/PebbleLab-verify.kasXgu`,
+`/var/folders/23/t4l5dv055dl3x1zqylcpl9wc0000gn/T/PebbleLab-verify.6iXU1j`,
 with the captured console log at
-`/tmp/pebblelab-civ45-correction07-phase2-6890eab/gate/repository-gate-full.log`.
+`/tmp/pebblelab-civ45-c08-gate.IBeCAt/repository-gate.log`.
 Golden regeneration was not attempted.
 
 Failures encountered and retained during development were corrected rather
 than hidden:
+
+- Correction 08 pre-fix reproduced the real streaming/custody loss with
+  `beforeWorld=YES afterWorld=NO registry=YES custody=7 lifecycle=PASS
+  restart=0`. Its raw log is
+  `/tmp/pebblelab-civ45-c08-prefx.0ggurJ/prefx.log`;
+- the Correction 05 wrapper reached its required `23/23`, then its optional
+  application continuation deadlocked in a pre-existing proof hook that
+  deliberately invokes a synchronous save while `saveCaptureLock` is already
+  held. No equivalent reachable product path was identified, C08 did not
+  change that hook or lock order, and the event is retained as a non-blocking
+  proof-harness observation rather than silently represented as PASS;
 
 - Correction 07 pre-fix reproduced `cleanupDirty=YES restartSpill=0`, real
   AppKit `.terminateCancel` with `sessionAfter=nil updateSession=nil`, and
@@ -779,7 +869,7 @@ its existence alone.
 
 ```text
 published progression: COMPLETE THROUGH CIV-44
-CIV-45: CORRECTION 07 LOCAL REVIEW CANDIDATE — NOT PUBLISHED
+CIV-45: CORRECTION 08 LOCAL REVIEW CANDIDATE — NOT PUBLISHED
 CIV-46: PLANNED — NOT STARTED / NOT AUTHORIZED
 CIV-47: PLANNED — NOT STARTED / NOT AUTHORIZED
 V4-GATE-G-v1: PLANNED / UNEVALUATED

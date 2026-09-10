@@ -141,7 +141,7 @@ for the compact status. In particular:
   AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical
   product HEAD `0c6a6e88ce838266897526a74d067532163cb06f`. Published progression is
   complete through `CIV-44`.
-- `CIV-45 — Writing and Literacy V1` is a **CORRECTION 07 LOCAL REVIEW
+- `CIV-45 — Writing and Literacy V1` is a **CORRECTION 08 LOCAL REVIEW
   CANDIDATE — NOT PUBLISHED** from exact published baseline
   `9a2cfec10b4a0d1b6a5d2f46aac8f3c312ddbb0e`; local product commit
   `ac38675d88d4b709183e7b26f92a0a45b0e928c1` and initial candidate
@@ -183,7 +183,15 @@ for the compact status. In particular:
   moves idempotent physical custody preparation before a final barrier covering
   WorldRecord, Player, Advancements, chunks/index and unresolved persistence;
   irreversible runtime shutdown and World destruction/replacement occur only
-  after success. It supplies the current local candidate. Published progression
+  after success. Candidate `c7f497d679a4d0046de6e8ad28e6d9504e3166ff`
+  received **CORRECTION REQUIRED** because production streaming could remove a
+  non-persistent carried probe from World authority while its controller
+  binding survived. Correction 08 product/test commit
+  `fe168f72d31fdbc0a1f783b351c0974ec649b1bb` retains each currently incarnated
+  probe chunk under normal `streamChunks`, without spill or identity allocation,
+  keeps `unloadChunk` general, and makes lifecycle fail closed unless session,
+  registry and World probe identities form one exact bijection. It supplies the
+  current local candidate. Published progression
   remains complete through CIV-44. The next
   authorized action is CIV-45 independent senior re-review; CIV-46 and CIV-47
   remain unstarted and unauthorized. Gate G remains planned and unevaluated. See
