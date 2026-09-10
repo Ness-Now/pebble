@@ -106,9 +106,9 @@ SHA of the documentation commit that contains it.
   approved, manual publication completed and the exact remote was verified.
   Final review archive SHA-256:
   `570df1fd45349de684b47a0c30fcb1452137b86d5d40174146126333e6f51683`.
-  Published progression remains complete through CIV-44. CIV-45 is now a
-  **CORRECTION 09 SENIOR-APPROVED LOCAL PUBLICATION CANDIDATE — NOT
-  PUBLISHED** after its initial candidate
+  Published progression is complete through CIV-45. CIV-45 is **COMPLETE AND
+  PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical
+  publication HEAD `f43c0a014efbb0123ec21647e326a84e0956cdd6`, after its initial candidate
   `89cffa47f1e9635e0f44a0fac246e92739501911` received **CORRECTION REQUIRED**
   for resident-chunk-only material identity. Senior Review Correction 01 is
   local product/test commit `b68a6aeff106f5a3791279d5bd62b8b2916c9a4c`;
@@ -159,11 +159,11 @@ SHA of the documentation commit that contains it.
   civilization. A valid restored population is now structurally bounded by
   `maximumActivePopulation <= 512`, closing the persisted premise used by C08
   without changing streaming. Independent senior re-review returned **PASS —
-  SENIOR REVIEW APPROVED**, with no blocker, major or minor finding. Its next
-  authorized action is protected manual publication of the senior-approved
-  candidate, then independent remote verification.
-  CIV-46 and CIV-47 remain unstarted and unauthorized. Gate G remains planned
-  and unevaluated. See
+  SENIOR REVIEW APPROVED**, with no blocker, major or minor finding. The
+  senior-approved candidate was published and independently remote verified.
+  The next authorized action is review and authorization of CIV-46; CIV-46 and
+  CIV-47 remain unstarted, and no CIV-46 implementation is authorized. Gate G
+  remains planned and unevaluated. See
   [`CIV_44_PHASE_SUMMARY.md`](CIV_44_PHASE_SUMMARY.md) and
   [`CIV_45_PHASE_SUMMARY.md`](CIV_45_PHASE_SUMMARY.md).
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
@@ -363,10 +363,10 @@ Gate F correction history:
 - `CIV-44 — Compositional and Long-Distance Communication V1` is **COMPLETE
   AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical HEAD
   `0c6a6e88ce838266897526a74d067532163cb06f`. Published canonical progression
-  remains complete through CIV-44. CIV-45 is a Correction 09 senior-approved
-  local publication candidate at product/test commit
-  `3d1fdeea7c1e2f833a97b903c1357dd1d0acfe77`, is not published, and awaits
-  protected manual publication followed by independent remote verification.
+  is complete through CIV-45. CIV-45 is complete and published, senior-review
+  approved and independently remote verified at canonical publication HEAD
+  `f43c0a014efbb0123ec21647e326a84e0956cdd6`; Correction 09 product/test commit
+  is `3d1fdeea7c1e2f833a97b903c1357dd1d0acfe77`.
   Its initial candidate
   `89cffa47f1e9635e0f44a0fac246e92739501911` remains the **CORRECTION
   REQUIRED** historical candidate. Correction 01 candidate
@@ -775,10 +775,10 @@ the Gate E acquisition are now published and independently remote verified.
 ## Current program position
 
 ```text
-active CIV phase: CIV-45 — CORRECTION 09 SENIOR-APPROVED LOCAL PUBLICATION CANDIDATE — NOT PUBLISHED
-completed and published through: CIV-44 (CIV-38 and CIV-40 remain optional and unstarted)
-next eligible action: protected manual publication of the senior-approved CIV-45 candidate
-next authorized action: protected manual publication, then independent remote verification; CIV-46 remains unauthorized
+active CIV phase: NONE
+completed and published through: CIV-45 (CIV-38 and CIV-40 remain optional and unstarted)
+next eligible phase: CIV-46
+next authorized action: REVIEW AND AUTHORIZE CIV-46; IMPLEMENTATION REMAINS UNAUTHORIZED
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -860,7 +860,8 @@ CIV-43 final review archive SHA-256: 1c22063677e95430bb6f220a95c75e07e0512d532d0
 CIV-44 status: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 CIV-44 published canonical HEAD: 0c6a6e88ce838266897526a74d067532163cb06f
 CIV-44 final review archive SHA-256: 570df1fd45349de684b47a0c30fcb1452137b86d5d40174146126333e6f51683
-CIV-45 status: CORRECTION 09 SENIOR-APPROVED LOCAL PUBLICATION CANDIDATE — NOT PUBLISHED
+CIV-45 status: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+CIV-45 published canonical HEAD: f43c0a014efbb0123ec21647e326a84e0956cdd6
 CIV-45 exact published baseline: 9a2cfec10b4a0d1b6a5d2f46aac8f3c312ddbb0e
 CIV-45 initial product commit: ac38675d88d4b709183e7b26f92a0a45b0e928c1
 CIV-45 initial candidate: 89cffa47f1e9635e0f44a0fac246e92739501911 — CORRECTION REQUIRED
@@ -882,8 +883,8 @@ CIV-45 Correction 07 candidate: c7f497d679a4d0046de6e8ad28e6d9504e3166ff — COR
 CIV-45 Correction 08 product/test commit: fe168f72d31fdbc0a1f783b351c0974ec649b1bb
 CIV-45 Correction 08 candidate: 54d9e4ba37340178927411b3bf5f3bd5cedae4c5 — CORRECTION REQUIRED
 CIV-45 Correction 09 product/test commit: 3d1fdeea7c1e2f833a97b903c1357dd1d0acfe77
-CIV-45 Correction 09: PASS — SENIOR REVIEW APPROVED — NOT PUBLISHED
-CIV-45 next authorized action: PROTECTED MANUAL PUBLICATION, THEN INDEPENDENT REMOTE SHA VERIFICATION
+CIV-45 Correction 09: PASS — SENIOR REVIEW APPROVED — PUBLISHED / REMOTE VERIFIED
+CIV-45 next authorized action: REVIEW AND AUTHORIZE CIV-46; IMPLEMENTATION REMAINS UNAUTHORIZED
 CIV-46 / CIV-47 status: PLANNED — NOT STARTED / NOT AUTHORIZED
 V4-GATE-G-v1 status: PLANNED / UNEVALUATED
 roadmap generation: V4
@@ -1319,12 +1320,11 @@ SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical product HEAD
 PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical HEAD
 `0c6a6e88ce838266897526a74d067532163cb06f`, from exact implementation baseline
 `50d0f73fb9b2a29fd1c3aa80395d20df862a0048`. Published progression is complete
-through CIV-44. CIV-45 is a **CORRECTION 09 SENIOR-APPROVED LOCAL PUBLICATION
-CANDIDATE — NOT PUBLISHED** at
-Correction 09 product/test commit `3d1fdeea7c1e2f833a97b903c1357dd1d0acfe77`
-after independent senior re-review returned **PASS — SENIOR REVIEW APPROVED**.
-It awaits protected manual publication followed by independent remote
-verification. Initial candidate
+through CIV-45. CIV-45 is **COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED —
+REMOTE VERIFIED** at canonical publication HEAD
+`f43c0a014efbb0123ec21647e326a84e0956cdd6`. Correction 09 product/test commit
+`3d1fdeea7c1e2f833a97b903c1357dd1d0acfe77` received **PASS — SENIOR REVIEW
+APPROVED**. Initial candidate
 `89cffa47f1e9635e0f44a0fac246e92739501911` remains historical **CORRECTION
 REQUIRED** evidence. Correction 01 candidate
 `68bda3e5e7a28af50fed3d9680d2a9a0dfeea4e4` and Correction 02 candidate

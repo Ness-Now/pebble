@@ -139,10 +139,10 @@ for the compact status. In particular:
   manual publication completed and exact remote verification passed.
 - `CIV-44 — Compositional and Long-Distance Communication V1` is **COMPLETE
   AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical
-  product HEAD `0c6a6e88ce838266897526a74d067532163cb06f`. Published progression is
-  complete through `CIV-44`.
-- `CIV-45 — Writing and Literacy V1` is a **CORRECTION 09 SENIOR-APPROVED
-  LOCAL PUBLICATION CANDIDATE — NOT PUBLISHED** from exact published baseline
+  product HEAD `0c6a6e88ce838266897526a74d067532163cb06f`.
+- `CIV-45 — Writing and Literacy V1` is **COMPLETE AND PUBLISHED — SENIOR
+  REVIEW APPROVED — REMOTE VERIFIED** at canonical publication HEAD
+  `f43c0a014efbb0123ec21647e326a84e0956cdd6`, from exact implementation baseline
   `9a2cfec10b4a0d1b6a5d2f46aac8f3c312ddbb0e`; local product commit
   `ac38675d88d4b709183e7b26f92a0a45b0e928c1` and initial candidate
   `89cffa47f1e9635e0f44a0fac246e92739501911` remain intact; initial senior
@@ -199,12 +199,12 @@ for the compact status. In particular:
   population-configuration fields through the same validated constructor used
   by normal API construction; the restore registry defense reuses that contract.
   Independent senior re-review returned **PASS — SENIOR REVIEW APPROVED** with
-  no blocker, major or minor finding. It supplies the senior-approved local
-  publication candidate, which remains **NOT PUBLISHED**. Published progression
-  remains complete through CIV-44. The next authorized action is protected
-  manual publication of the senior-approved CIV-45 candidate, then independent
-  remote verification; CIV-46 and CIV-47 remain unstarted and unauthorized.
-  Gate G remains planned and unevaluated. See
+  no blocker, major or minor finding. The senior-approved candidate
+  `f43c0a014efbb0123ec21647e326a84e0956cdd6` was published to
+  `lab/pebblelab-v1` and independently remote verified. Published progression
+  is complete through CIV-45. The next authorized action is review and
+  authorization of CIV-46; CIV-46 and CIV-47 remain unstarted. Gate G remains
+  planned and unevaluated. See
   [`CIV_45_PHASE_SUMMARY.md`](docs/pebblelab/CIV_45_PHASE_SUMMARY.md).
 
 Historical Gate B `FAIL` reports and the closure-candidate report are preserved

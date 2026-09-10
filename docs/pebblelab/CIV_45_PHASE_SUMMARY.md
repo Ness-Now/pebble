@@ -2,8 +2,10 @@
 
 ## Review status and baseline
 
-`CIV-45` is a **CORRECTION 09 SENIOR-APPROVED LOCAL PUBLICATION CANDIDATE —
-NOT PUBLISHED**. It was
+`CIV-45` is **COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE
+VERIFIED** at canonical publication HEAD
+`f43c0a014efbb0123ec21647e326a84e0956cdd6`. Independent comparison of local
+HEAD with `lab/pebblelab-v1` reported `0 ahead / 0 behind`. It was
 implemented from exact published baseline
 `9a2cfec10b4a0d1b6a5d2f46aac8f3c312ddbb0e` on local branch
 `codex/civ-45-writing-literacy-v1`. The initial product, test and live-proof
@@ -75,15 +77,15 @@ Correction 05 candidate: CORRECTION REQUIRED
 Correction 06 candidate: CORRECTION REQUIRED
 Correction 07 candidate: CORRECTION REQUIRED
 Correction 08 candidate: CORRECTION REQUIRED
-Correction 09: PASS — SENIOR REVIEW APPROVED — NOT PUBLISHED
+Correction 09: PASS — SENIOR REVIEW APPROVED — PUBLISHED / REMOTE VERIFIED
 ```
 
-The published branch remains complete through CIV-44. Correction 09 is the
-senior-approved local publication candidate, but CIV-45 has not been published
-and independent remote publication verification remains pending. The next
-authorized action is protected manual publication of the senior-approved
-CIV-45 candidate, then independent remote verification. CIV-46 and CIV-47 have
-not started and remain unauthorized. `V4-GATE-G-v1` remains **PLANNED /
+The published branch is complete through CIV-45. Correction 09 is the final
+accepted closure mechanism, and senior-approved candidate
+`f43c0a014efbb0123ec21647e326a84e0956cdd6` is published and independently
+remote verified. The next authorized action is review and authorization of
+CIV-46; no CIV-46 implementation is authorized by this reconciliation.
+CIV-46 and CIV-47 have not started. `V4-GATE-G-v1` remains **PLANNED /
 UNEVALUATED**.
 
 The review retained two **OBSERVATION / NON-BLOCKING** notes. The required C05
@@ -967,10 +969,11 @@ its existence alone.
 ## Program state
 
 ```text
-published progression: COMPLETE THROUGH CIV-44
-CIV-45: CORRECTION 09 SENIOR-APPROVED LOCAL PUBLICATION CANDIDATE — NOT PUBLISHED
+published progression: COMPLETE THROUGH CIV-45
+CIV-45: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+CIV-45 published canonical HEAD: f43c0a014efbb0123ec21647e326a84e0956cdd6
 CIV-46: PLANNED — NOT STARTED / NOT AUTHORIZED
 CIV-47: PLANNED — NOT STARTED / NOT AUTHORIZED
 V4-GATE-G-v1: PLANNED / UNEVALUATED
-next action: PROTECTED MANUAL PUBLICATION, THEN INDEPENDENT REMOTE SHA VERIFICATION
+next action: REVIEW AND AUTHORIZE CIV-46; IMPLEMENTATION NOT AUTHORIZED
 ```

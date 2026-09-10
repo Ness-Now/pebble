@@ -47,7 +47,7 @@ These documents form the minimal permanent memory of the project:
 | [`CIV_42_PHASE_SUMMARY.md`](CIV_42_PHASE_SUMMARY.md) | Published CIV-42 architecture, language-independent semantics, French seed/prior, sparse lexical learning, provider-off realization, schema-37 persistence/replay, Senior Review Corrections 01–02, retained-boundary provenance, attacks A–G, validation, publication history and non-claims. |
 | [`CIV_43_PHASE_SUMMARY.md`](CIV_43_PHASE_SUMMARY.md) | Published CIV-43 architecture, Social-local oral composition, immediate-speaker attribution, deterministic faithful/distorted transmission, CIV-41 acquisition/revision, schema-38 persistence/replay, terminal compaction coordination, exact empty-set oral authority, Senior Review Corrections 01–02, validation, publication history and non-claims. |
 | [`CIV_44_PHASE_SUMMARY.md`](CIV_44_PHASE_SUMMARY.md) | Published CIV-44 architecture, embodied carrier composition, immutable pickup commitment, accepted-movement provenance, post-arrival CIV-43 handoff, schema-39 restart/replay, lifecycle, bounds, Senior Review Corrections 01–02, validation, publication history and deliberate V1 limits. |
-| [`CIV_45_PHASE_SUMMARY.md`](CIV_45_PHASE_SUMMARY.md) | Senior-approved, unpublished CIV-45 Correction 09 publication candidate: the independent review accepted the canonical nine-invariant decode contract, 513 fail-closed behavior, boundary 512 and C08 streaming boundedness; nine historical Correction Required verdicts remain explicit. |
+| [`CIV_45_PHASE_SUMMARY.md`](CIV_45_PHASE_SUMMARY.md) | Published and independently remote-verified CIV-45: Correction 09 passed senior review, the canonical nine-invariant decode contract closes 513 fail-closed behavior and C08 streaming boundedness, and nine historical Correction Required verdicts remain explicit. |
 | [`GATE_F_BLOCKER_01_SETTLEMENT_ADMISSION_CAPACITY.md`](GATE_F_BLOCKER_01_SETTLEMENT_ADMISSION_CAPACITY.md) | Published, independently remote-verified Blocker 01 correction record; preserves Gate F Evaluation 01 historical FAIL and documents shared publication/restore per-settlement admission capacity, atomic refusal and two-process schema-35 proof. |
 | [`GATE_F_BLOCKER_02_MIGRATION_DESTINATION_CAPACITY.md`](GATE_F_BLOCKER_02_MIGRATION_DESTINATION_CAPACITY.md) | Published, independently remote-verified Blocker 02 correction record; preserves Evaluation 02 historical FAIL and documents derived durable destination-slot authority, atomic full-destination refusal, exact arrival/death/failure release, schema-35 restart and two-process proof. |
 | [`GATE_F_BLOCKER_03_DYNAMIC_FIDELITY_AUTHORITY.md`](GATE_F_BLOCKER_03_DYNAMIC_FIDELITY_AUTHORITY.md) | Published, independently remote-verified Blocker 03 correction record; preserves Evaluation 03 historical FAIL and documents shared dynamic-member fidelity composition, exact birth refusal/retry, legacy migration, mortality, rotation and two-process schema-35 proof. |
@@ -106,9 +106,9 @@ CIV-37: COMPLETE AND PUBLISHED
 CIV-38: OPTIONAL — NOT STARTED
 V4-GATE-E-v1: ACQUIRED AND PUBLISHED
 V4-GATE-E-v1 acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f76744f83
-active phase: CIV-45 — CORRECTION 09 SENIOR-APPROVED LOCAL PUBLICATION CANDIDATE — NOT PUBLISHED
-completed through: CIV-44 (CIV-38 and CIV-40 optional and unstarted)
-next eligible action: protected manual publication of the senior-approved CIV-45 candidate, then independent remote verification
+active phase: NONE
+completed through: CIV-45 (CIV-38 and CIV-40 optional and unstarted)
+next eligible phase: CIV-46
 Gate E Evaluation 01: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 01: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 02: FAIL — HISTORICAL IMMUTABLE EVIDENCE
@@ -118,7 +118,7 @@ V4-GATE-E-v1 Blocker 03: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 04: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 04: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 05: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
-next authorized action: CIV-45 protected manual publication, then independent remote verification; CIV-46 remains unauthorized
+next authorized action: review and authorize CIV-46; implementation remains unauthorized
 CIV-39: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 V4-GATE-F-v1: ACQUIRED AND PUBLISHED — REMOTE VERIFIED
@@ -157,7 +157,8 @@ CIV-43 published canonical product HEAD: 9690538a5cfd2a871750ffa839a404f7d19818d
 CIV-43 final review archive SHA-256: 1c22063677e95430bb6f220a95c75e07e0512d532d0273accf7c442a9b6fd54a
 CIV-44: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 CIV-44 published canonical HEAD: 0c6a6e88ce838266897526a74d067532163cb06f
-CIV-45: CORRECTION 09 SENIOR-APPROVED LOCAL PUBLICATION CANDIDATE — NOT PUBLISHED
+CIV-45: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+CIV-45 published canonical HEAD: f43c0a014efbb0123ec21647e326a84e0956cdd6
 CIV-45 exact published baseline: 9a2cfec10b4a0d1b6a5d2f46aac8f3c312ddbb0e
 CIV-45 initial product commit: ac38675d88d4b709183e7b26f92a0a45b0e928c1
 CIV-45 initial candidate: 89cffa47f1e9635e0f44a0fac246e92739501911 — CORRECTION REQUIRED
@@ -179,8 +180,8 @@ CIV-45 Correction 07 candidate: c7f497d679a4d0046de6e8ad28e6d9504e3166ff — COR
 CIV-45 Correction 08 product/test commit: fe168f72d31fdbc0a1f783b351c0974ec649b1bb
 CIV-45 Correction 08 candidate: 54d9e4ba37340178927411b3bf5f3bd5cedae4c5 — CORRECTION REQUIRED
 CIV-45 Correction 09 product/test commit: 3d1fdeea7c1e2f833a97b903c1357dd1d0acfe77
-CIV-45 Correction 09: PASS — SENIOR REVIEW APPROVED — NOT PUBLISHED
-CIV-45 next authorized action: PROTECTED MANUAL PUBLICATION, THEN INDEPENDENT REMOTE VERIFICATION
+CIV-45 Correction 09: PASS — SENIOR REVIEW APPROVED — PUBLISHED / REMOTE VERIFIED
+CIV-45 next authorized action: REVIEW AND AUTHORIZE CIV-46; IMPLEMENTATION REMAINS UNAUTHORIZED
 CIV-46 / CIV-47: PLANNED — NOT STARTED / NOT AUTHORIZED
 V4-GATE-G-v1: PLANNED / UNEVALUATED
 ```
@@ -460,10 +461,10 @@ PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical product
 HEAD `0c6a6e88ce838266897526a74d067532163cb06f`, from exact implementation
 baseline `50d0f73fb9b2a29fd1c3aa80395d20df862a0048`. Its Senior Review blocker and
 Corrections 01–02 remain recorded in the published phase summary. Published
-progression remains complete through CIV-44. CIV-45 is a Correction 09
-senior-approved local publication candidate at product/test commit
-`3d1fdeea7c1e2f833a97b903c1357dd1d0acfe77`; it remains not published and
-awaits protected manual publication followed by independent remote verification. Initial candidate
+progression is complete through CIV-45. CIV-45 is complete and published,
+senior-review approved and independently remote verified at canonical
+publication HEAD `f43c0a014efbb0123ec21647e326a84e0956cdd6`; Correction 09 product/test
+commit is `3d1fdeea7c1e2f833a97b903c1357dd1d0acfe77`. Initial candidate
 `89cffa47f1e9635e0f44a0fac246e92739501911` and Correction 01 candidate
 `68bda3e5e7a28af50fed3d9680d2a9a0dfeea4e4` and Correction 02 candidate
 `b9fdccd7c8bef0c5bfc39d40d09e32920a3f4ac2` and Correction 03 candidate
