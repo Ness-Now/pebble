@@ -532,6 +532,32 @@ func runPebbleAgentsCultureSmoke() {
         } catch {
             check("schema 42 refuses missing cultural durable state", true, "\(error)")
         }
+        let hostileCultureIdentity = cultureResignedCheckpoint(checkpoint) {
+            var culture = $0["distributedCultureState"] as! [String: Any]
+            var individuals = culture["individuals"] as! [[String: Any]]
+            individuals[0]["agentID"] = "civ47-invented-identity"
+            culture["individuals"] = individuals
+            $0["distributedCultureState"] = culture
+        }
+        do {
+            _ = try AgentSimulationSession.restoring(hostileCultureIdentity)
+            check("schema 42 refuses invented cultural identity", false)
+        } catch {
+            check("schema 42 refuses invented cultural identity", true, "\(error)")
+        }
+        let hostileCultureBound = cultureResignedCheckpoint(checkpoint) {
+            var culture = $0["distributedCultureState"] as! [String: Any]
+            var configuration = culture["configuration"] as! [String: Any]
+            configuration["maximumIndividuals"] = 1
+            culture["configuration"] = configuration
+            $0["distributedCultureState"] = culture
+        }
+        do {
+            _ = try AgentSimulationSession.restoring(hostileCultureBound)
+            check("schema 42 refuses hostile cultural bounds", false)
+        } catch {
+            check("schema 42 refuses hostile cultural bounds", true, "\(error)")
+        }
         let futureSchema = cultureResignedCheckpoint(checkpoint) {
             $0["schemaVersion"] = 43
         }
