@@ -23,10 +23,13 @@ with no P0 or P1 finding and no required product correction. The reviewed ZIP
 SHA-256 is
 `3befd2e1cae32d31c47ddce77dd361f367b5612ba18d859ababbd63dfb376551`.
 Manual publication completed and the exact canonical remote was independently
-verified. Published progression is complete through CIV-46. `CIV-47` remains
-**PLANNED — NOT STARTED / NOT IMPLEMENTATION-AUTHORIZED**, and Gate G remains
-**PLANNED / UNEVALUATED / NOT ACQUIRED**. See
-[`CIV_46_PHASE_SUMMARY.md`](CIV_46_PHASE_SUMMARY.md).
+verified. Published progression is complete through CIV-46. `CIV-47` is now a
+**LOCAL REVIEW CANDIDATE — NOT PUBLISHED** from exact baseline
+`70cb245e089987bc829ac138b0988eb3fc825d57`, with product/test commit
+`ae727382ceaffbf55ee1706ac3a74fe43066c6d4`. Senior review has not been
+performed. Gate G remains **PLANNED / UNEVALUATED / NOT ACQUIRED**. See
+[`CIV_46_PHASE_SUMMARY.md`](CIV_46_PHASE_SUMMARY.md) and
+[`CIV_47_PHASE_SUMMARY.md`](CIV_47_PHASE_SUMMARY.md).
 
 ## Acquired
 
@@ -188,13 +191,15 @@ verified. Published progression is complete through CIV-46. `CIV-47` remains
   senior-approved candidate was published and independently remote verified.
   CIV-46 is **COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE
   VERIFIED** at canonical publication HEAD
-  `dcdc6a5dc984f8144705bb601ec677f1df767b7f`. Review and authorization of
-  CIV-47 is the next action; CIV-47 remains planned, not started and not
-  implementation-authorized. Gate G remains planned, unevaluated and not
-  acquired. See
+  `dcdc6a5dc984f8144705bb601ec677f1df767b7f`. CIV-47 is a local review
+  candidate at product/test commit
+  `ae727382ceaffbf55ee1706ac3a74fe43066c6d4`; it is not published and has not
+  received senior review. Gate G remains planned, unevaluated and not acquired.
+  See
   [`CIV_44_PHASE_SUMMARY.md`](CIV_44_PHASE_SUMMARY.md) and
   [`CIV_45_PHASE_SUMMARY.md`](CIV_45_PHASE_SUMMARY.md), plus
-  [`CIV_46_PHASE_SUMMARY.md`](CIV_46_PHASE_SUMMARY.md).
+  [`CIV_46_PHASE_SUMMARY.md`](CIV_46_PHASE_SUMMARY.md) and
+  [`CIV_47_PHASE_SUMMARY.md`](CIV_47_PHASE_SUMMARY.md).
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
 
 Gate F correction history:
@@ -805,10 +810,9 @@ the Gate E acquisition are now published and independently remote verified.
 ## Current program position
 
 ```text
-active CIV phase: NONE
+active CIV phase: CIV-47 LOCAL REVIEW CANDIDATE — NOT PUBLISHED
 completed and published through: CIV-46 (CIV-38 and CIV-40 remain optional and unstarted)
-next eligible phase: CIV-47
-next authorized action: REVIEW AND AUTHORIZE CIV-47; IMPLEMENTATION REMAINS UNAUTHORIZED
+next eligible action: INDEPENDENT SENIOR REVIEW OF CIV-47
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -916,7 +920,7 @@ CIV-45 Correction 09 product/test commit: 3d1fdeea7c1e2f833a97b903c1357dd1d0acfe
 CIV-45 Correction 09: PASS — SENIOR REVIEW APPROVED — PUBLISHED / REMOTE VERIFIED
 CIV-46 status: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 CIV-46 published canonical HEAD: dcdc6a5dc984f8144705bb601ec677f1df767b7f
-CIV-47 status: PLANNED — NOT STARTED / NOT IMPLEMENTATION-AUTHORIZED
+CIV-47 status: LOCAL REVIEW CANDIDATE — NOT PUBLISHED
 V4-GATE-G-v1 status: PLANNED / UNEVALUATED / NOT ACQUIRED
 roadmap generation: V4
 ```
@@ -1368,11 +1372,14 @@ REQUIRED** evidence. Correction 01 candidate
 `54d9e4ba37340178927411b3bf5f3bd5cedae4c5` likewise remain historical
 **CORRECTION REQUIRED** evidence. CIV-46 is **COMPLETE AND PUBLISHED — SENIOR
 REVIEW APPROVED — REMOTE VERIFIED** at canonical publication HEAD
-`dcdc6a5dc984f8144705bb601ec677f1df767b7f`. CIV-47 remains planned, not
-started and not implementation-authorized. Gate G remains planned, unevaluated
-and not acquired. See
+`dcdc6a5dc984f8144705bb601ec677f1df767b7f`. CIV-47 is a local review
+candidate at product/test commit
+`ae727382ceaffbf55ee1706ac3a74fe43066c6d4`; it remains not published and not
+senior-review approved. Gate G remains planned, unevaluated and not acquired.
+See
 [`CIV_45_PHASE_SUMMARY.md`](CIV_45_PHASE_SUMMARY.md) and
-[`CIV_46_PHASE_SUMMARY.md`](CIV_46_PHASE_SUMMARY.md).
+[`CIV_46_PHASE_SUMMARY.md`](CIV_46_PHASE_SUMMARY.md), plus
+[`CIV_47_PHASE_SUMMARY.md`](CIV_47_PHASE_SUMMARY.md).
 `CIV-38` remains **OPTIONAL — NOT STARTED** and is not a prerequisite.
 `CIV-40` remains **OPTIONAL TOOLING — NOT STARTED**. Currency is not a Gate E
 or CIV-39 prerequisite.
