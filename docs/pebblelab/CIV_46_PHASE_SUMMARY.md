@@ -1,8 +1,10 @@
 # CIV-46 — Books, Manuscripts, Archives and Libraries V1
 
-## Senior review status
+## Review and publication status
 
-`CIV-46` is **PASS — SENIOR REVIEW APPROVED — NOT PUBLISHED**.
+`CIV-46` is **COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE
+VERIFIED** at canonical publication HEAD
+`dcdc6a5dc984f8144705bb601ec677f1df767b7f`.
 
 ```text
 Exact baseline: f78f0d3c282282d75cc3d27418135246de2975b7
@@ -10,19 +12,21 @@ Branch: codex/civ-46-books-manuscripts-archives-libraries-v1
 Product/test commit: 1ada83ae248552924a4f729439654ad7ff8abfaa
 Reviewed candidate: 560e5d4a2b42bfd1519077fe6955ff6f9d99bc70
 Reviewed candidate tree: 82bfb1f8189fcbe08835f4f0710c3235b82196a7
+Senior-approved publication HEAD: dcdc6a5dc984f8144705bb601ec677f1df767b7f
 Review ZIP SHA-256: 3befd2e1cae32d31c47ddce77dd361f367b5612ba18d859ababbd63dfb376551
 External senior review: PASS — SENIOR REVIEW APPROVED
 P0 findings: NONE
 P1 findings: NONE
 Product correction required: NO
-Publication: NOT PERFORMED
+Publication: PUBLISHED / REMOTE VERIFIED
 Gate G: PLANNED / UNEVALUATED / NOT ACQUIRED
 CIV-47: NOT STARTED
 ```
 
 The independent external senior review approved the exact candidate and tree
-identified above. This approval does not claim publication or remote
-verification. All historical CIV-45 Initial/Correction 01–08
+identified above. The senior-approved documentation HEAD was then manually
+published to `lab/pebblelab-v1`, and that exact remote publication was
+independently verified. All historical CIV-45 Initial/Correction 01–08
 `CORRECTION REQUIRED` verdicts remain unchanged.
 
 ## Architecture and authority
@@ -155,17 +159,19 @@ Rejected intermediate campaigns remain evidence only, never final proof:
 - the preceding two-seed run was functionally green but its seed-73 captures
   were rejected because the camera/player was drowning.
 
-## Remaining publication boundary
+## Published closure
 
 No functional failure is known. Independent external senior review and ZIP
 inspection returned **PASS — SENIOR REVIEW APPROVED**, with no P0 or P1 finding
-and no required product correction. Publication and remote verification have
-not occurred. The renderer emitted two pre-existing unused-variable warnings
-(`lightViewM`, `lightProjM`) during the repository gate; they are outside
-CIV-46. Gate G remains unevaluated and not acquired, and CIV-47 remains
-unstarted.
+and no required product correction. Manual publication and independent remote
+verification completed at exact canonical HEAD
+`dcdc6a5dc984f8144705bb601ec677f1df767b7f`. The renderer emitted two
+pre-existing unused-variable warnings (`lightViewM`, `lightProjM`) during the
+repository gate; they are outside CIV-46. CIV-47 remains planned, not started
+and not implementation-authorized. Gate G remains planned, unevaluated and not
+acquired.
 
 ```text
-Status: PASS — SENIOR REVIEW APPROVED / NOT PUBLISHED
-Push attempted: NO
+Status: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+Next authorized action: REVIEW AND AUTHORIZE CIV-47; IMPLEMENTATION NOT AUTHORIZED
 ```

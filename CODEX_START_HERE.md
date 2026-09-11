@@ -202,10 +202,15 @@ for the compact status. In particular:
   no blocker, major or minor finding. The senior-approved candidate
   `f43c0a014efbb0123ec21647e326a84e0956cdd6` was published to
   `lab/pebblelab-v1` and independently remote verified. Published progression
-  is complete through CIV-45. The next authorized action is review and
-  authorization of CIV-46; CIV-46 and CIV-47 remain unstarted. Gate G remains
-  planned and unevaluated. See
-  [`CIV_45_PHASE_SUMMARY.md`](docs/pebblelab/CIV_45_PHASE_SUMMARY.md).
+  is now complete through CIV-46. CIV-46 is **COMPLETE AND PUBLISHED — SENIOR
+  REVIEW APPROVED — REMOTE VERIFIED** at canonical publication HEAD
+  `dcdc6a5dc984f8144705bb601ec677f1df767b7f`, from product/test commit
+  `1ada83ae248552924a4f729439654ad7ff8abfaa` and reviewed candidate
+  `560e5d4a2b42bfd1519077fe6955ff6f9d99bc70`. The next authorized action is
+  review and authorization of CIV-47; CIV-47 remains planned, not started and
+  not implementation-authorized. Gate G remains planned, unevaluated and not
+  acquired. See [`CIV_45_PHASE_SUMMARY.md`](docs/pebblelab/CIV_45_PHASE_SUMMARY.md)
+  and [`CIV_46_PHASE_SUMMARY.md`](docs/pebblelab/CIV_46_PHASE_SUMMARY.md).
 
 Historical Gate B `FAIL` reports and the closure-candidate report are preserved
 as evidence of their own evaluations. They do not reopen Gate B.
