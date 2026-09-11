@@ -206,13 +206,16 @@ for the compact status. In particular:
   REVIEW APPROVED — REMOTE VERIFIED** at canonical publication HEAD
   `dcdc6a5dc984f8144705bb601ec677f1df767b7f`, from product/test commit
   `1ada83ae248552924a4f729439654ad7ff8abfaa` and reviewed candidate
-  `560e5d4a2b42bfd1519077fe6955ff6f9d99bc70`. CIV-47 is a **LOCAL REVIEW
-  CANDIDATE — NOT PUBLISHED** after Senior Review Correction 01 product/test
-  commit `45701f56169218b70f2e698dc0dea67bb1d027c0`, from exact baseline
+  `560e5d4a2b42bfd1519077fe6955ff6f9d99bc70`. CIV-47 Correction 01 is **PASS —
+  SENIOR REVIEW APPROVED — NOT PUBLISHED — NOT REMOTE VERIFIED** at reviewed
+  candidate `874a844ba54b66210ac303912193038c9f4ee6e0`, tree
+  `fec66e6423e594c568b700ced191fbafd87b5523`, after product/test commit
+  `45701f56169218b70f2e698dc0dea67bb1d027c0`, from exact baseline
   `70cb245e089987bc829ac138b0988eb3fc825d57`. Original reviewed candidate
   `27806ac721e8e3570cc31f9e8cac2a001de4d4ca` remains historical **CORRECTION
-  REQUIRED** evidence; Correction 01 has not received senior re-review. Gate G
-  remains planned, unevaluated and not acquired. See
+  REQUIRED — P0 0 / P1 4** evidence; Correction 01 re-review returned **P0 0 /
+  P1 0**. Published progression remains complete through CIV-46. Gate G remains
+  planned, unevaluated and not acquired. See
   [`CIV_45_PHASE_SUMMARY.md`](docs/pebblelab/CIV_45_PHASE_SUMMARY.md),
   [`CIV_46_PHASE_SUMMARY.md`](docs/pebblelab/CIV_46_PHASE_SUMMARY.md) and
   [`CIV_47_PHASE_SUMMARY.md`](docs/pebblelab/CIV_47_PHASE_SUMMARY.md), plus

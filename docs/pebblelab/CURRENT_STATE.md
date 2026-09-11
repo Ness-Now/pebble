@@ -23,13 +23,18 @@ with no P0 or P1 finding and no required product correction. The reviewed ZIP
 SHA-256 is
 `3befd2e1cae32d31c47ddce77dd361f367b5612ba18d859ababbd63dfb376551`.
 Manual publication completed and the exact canonical remote was independently
-verified. Published progression is complete through CIV-46. `CIV-47` is now a
-**LOCAL REVIEW CANDIDATE — NOT PUBLISHED** after Senior Review Correction 01
-product/test commit `45701f56169218b70f2e698dc0dea67bb1d027c0`, from exact
-baseline `70cb245e089987bc829ac138b0988eb3fc825d57`. Original reviewed candidate
-`27806ac721e8e3570cc31f9e8cac2a001de4d4ca` remains historical **CORRECTION
-REQUIRED** evidence; Correction 01 has not received senior re-review. Gate G
-remains **PLANNED / UNEVALUATED / NOT ACQUIRED**. See
+verified. Published progression is complete through CIV-46. `CIV-47`
+Correction 01 is **PASS — SENIOR REVIEW APPROVED — NOT PUBLISHED — NOT REMOTE
+VERIFIED** at reviewed candidate
+`874a844ba54b66210ac303912193038c9f4ee6e0`, tree
+`fec66e6423e594c568b700ced191fbafd87b5523`, after product/test commit
+`45701f56169218b70f2e698dc0dea67bb1d027c0`, from exact baseline
+`70cb245e089987bc829ac138b0988eb3fc825d57`. Its accepted review ZIP SHA-256 is
+`23f084707c1ab3929ef37b02462229f15711dd8aa050f631a30df7e0888ca8a6`.
+Original reviewed candidate `27806ac721e8e3570cc31f9e8cac2a001de4d4ca`
+remains historical **CORRECTION REQUIRED — P0 0 / P1 4** evidence; Correction
+01 re-review returned **P0 0 / P1 0**. Publication is pending. Gate G remains
+**PLANNED / UNEVALUATED / NOT ACQUIRED**. See
 [`CIV_46_PHASE_SUMMARY.md`](CIV_46_PHASE_SUMMARY.md) and
 [`CIV_47_PHASE_SUMMARY.md`](CIV_47_PHASE_SUMMARY.md), plus
 [`CIV_47_SENIOR_REVIEW_CORRECTION_01.md`](CIV_47_SENIOR_REVIEW_CORRECTION_01.md).
@@ -194,11 +199,13 @@ remains **PLANNED / UNEVALUATED / NOT ACQUIRED**. See
   senior-approved candidate was published and independently remote verified.
   CIV-46 is **COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE
   VERIFIED** at canonical publication HEAD
-  `dcdc6a5dc984f8144705bb601ec677f1df767b7f`. CIV-47 is a local review
-  candidate after Correction 01 product/test commit
+  `dcdc6a5dc984f8144705bb601ec677f1df767b7f`. CIV-47 Correction 01 is **PASS —
+  SENIOR REVIEW APPROVED — NOT PUBLISHED — NOT REMOTE VERIFIED** at reviewed
+  candidate `874a844ba54b66210ac303912193038c9f4ee6e0`, after product/test commit
   `45701f56169218b70f2e698dc0dea67bb1d027c0`; original reviewed candidate
-  `27806ac721e8e3570cc31f9e8cac2a001de4d4ca` remains **CORRECTION REQUIRED**,
-  and Correction 01 is not published or senior-review approved. Gate G remains
+  `27806ac721e8e3570cc31f9e8cac2a001de4d4ca` remains **CORRECTION REQUIRED —
+  P0 0 / P1 4**, and Correction 01 re-review returned **P0 0 / P1 0**.
+  Published progression remains complete through CIV-46. Gate G remains
   planned, unevaluated and not acquired.
   See
   [`CIV_44_PHASE_SUMMARY.md`](CIV_44_PHASE_SUMMARY.md) and
@@ -815,9 +822,9 @@ the Gate E acquisition are now published and independently remote verified.
 ## Current program position
 
 ```text
-active CIV phase: CIV-47 LOCAL REVIEW CANDIDATE — NOT PUBLISHED
+active CIV phase: CIV-47 PASS — SENIOR REVIEW APPROVED — NOT PUBLISHED — NOT REMOTE VERIFIED
 completed and published through: CIV-46 (CIV-38 and CIV-40 remain optional and unstarted)
-next eligible action: INDEPENDENT SENIOR REVIEW OF CIV-47
+next eligible action: PREPARE-PROTECTED-PUBLICATION-CIV-47-SENIOR-APPROVED-CANDIDATE
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -1222,6 +1229,12 @@ golden regeneration: NOT ATTEMPTED
 
 ## Next authorized action
 
+The next authorized action is
+`PREPARE-PROTECTED-PUBLICATION-CIV-47-SENIOR-APPROVED-CANDIDATE`.
+Publication and independent remote verification have not occurred; canonical
+progression remains completed and published through CIV-46. Gate G remains
+planned, unevaluated and not acquired.
+
 Gate E Evaluation 05 is
 **PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE**. Evaluations 01–04
 remain **FAIL — HISTORICAL IMMUTABLE EVIDENCE**, and Blockers 01–04 remain
@@ -1377,12 +1390,15 @@ REQUIRED** evidence. Correction 01 candidate
 `54d9e4ba37340178927411b3bf5f3bd5cedae4c5` likewise remain historical
 **CORRECTION REQUIRED** evidence. CIV-46 is **COMPLETE AND PUBLISHED — SENIOR
 REVIEW APPROVED — REMOTE VERIFIED** at canonical publication HEAD
-`dcdc6a5dc984f8144705bb601ec677f1df767b7f`. CIV-47 is a local review
-candidate after Correction 01 product/test commit
+`dcdc6a5dc984f8144705bb601ec677f1df767b7f`. CIV-47 Correction 01 is **PASS —
+SENIOR REVIEW APPROVED — NOT PUBLISHED — NOT REMOTE VERIFIED** at reviewed
+candidate `874a844ba54b66210ac303912193038c9f4ee6e0`, tree
+`fec66e6423e594c568b700ced191fbafd87b5523`, after product/test commit
 `45701f56169218b70f2e698dc0dea67bb1d027c0`; original reviewed candidate
-`27806ac721e8e3570cc31f9e8cac2a001de4d4ca` remains **CORRECTION REQUIRED**,
-and Correction 01 remains not published and not senior-review approved. Gate G
-remains planned, unevaluated and not acquired.
+`27806ac721e8e3570cc31f9e8cac2a001de4d4ca` remains **CORRECTION REQUIRED —
+P0 0 / P1 4**, while Correction 01 re-review returned **P0 0 / P1 0**.
+Published progression remains complete through CIV-46. Gate G remains planned,
+unevaluated and not acquired.
 See
 [`CIV_45_PHASE_SUMMARY.md`](CIV_45_PHASE_SUMMARY.md) and
 [`CIV_46_PHASE_SUMMARY.md`](CIV_46_PHASE_SUMMARY.md), plus

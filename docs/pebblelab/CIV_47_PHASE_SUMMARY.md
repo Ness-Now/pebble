@@ -2,8 +2,8 @@
 
 ## Review status
 
-`CIV-47` Senior Review Correction 01 is a **LOCAL REVIEW CANDIDATE — NOT
-PUBLISHED**.
+`CIV-47` Senior Review Correction 01 is **PASS — SENIOR REVIEW APPROVED — NOT
+PUBLISHED — NOT REMOTE VERIFIED**.
 
 ```text
 Exact baseline: 70cb245e089987bc829ac138b0988eb3fc825d57
@@ -11,17 +11,23 @@ Branch: codex/civ-47-distributed-culture-norms-rituals-v1
 Initial product/test commit: ae727382ceaffbf55ee1706ac3a74fe43066c6d4
 Original reviewed candidate: 27806ac721e8e3570cc31f9e8cac2a001de4d4ca
 Original reviewed tree: 2f24e73e6f6ef40f34d017692a84fdf9a24ba6cf
-Original senior verdict: CORRECTION REQUIRED
+Original senior verdict: CORRECTION REQUIRED — P0 0 / P1 4
 Senior Review Correction 01 product/test commit: 45701f56169218b70f2e698dc0dea67bb1d027c0
-Correction 01 senior review: NOT PERFORMED
+Correction 01 senior-reviewed candidate: 874a844ba54b66210ac303912193038c9f4ee6e0
+Correction 01 senior-reviewed tree: fec66e6423e594c568b700ced191fbafd87b5523
+Correction 01 review ZIP: PebbleLab-CIV47-Correction01-LocalReview-874a844-FINAL.zip
+Correction 01 review ZIP SHA-256: 23f084707c1ab3929ef37b02462229f15711dd8aa050f631a30df7e0888ca8a6
+Correction 01 senior review: PASS — SENIOR REVIEW APPROVED — P0 0 / P1 0
 Publication: NOT PUBLISHED
-Remote verification: NOT PERFORMED
+Remote verification: NOT REMOTE VERIFIED
 Gate G: PLANNED / UNEVALUATED / NOT ACQUIRED
+Next authorized action: PREPARE-PROTECTED-PUBLICATION-CIV-47-SENIOR-APPROVED-CANDIDATE
 ```
 
 The original candidate and review ZIP remain immutable historical
-`CORRECTION REQUIRED` evidence. Correction 01 does not claim senior approval,
-publication, remote verification or Gate G evaluation.
+`CORRECTION REQUIRED — P0 0 / P1 4` evidence. Independent re-review approved
+Correction 01 with no P0 or P1 finding. Publication, remote verification and
+Gate G evaluation have not occurred.
 
 ## Architecture and authority
 
@@ -160,8 +166,8 @@ Rejected/intermediate evidence remains distinct:
   normative logs were replayed on the committed SHA above.
 
 ```text
-Status: LOCAL REVIEW CANDIDATE / NOT PUBLISHED
-Senior review approved: NO
+Status: PASS — SENIOR REVIEW APPROVED / NOT PUBLISHED / NOT REMOTE VERIFIED
+Senior review approved: YES
 Gate G evaluated: NO
 Gate G acquired: NO
 Push attempted: NO
