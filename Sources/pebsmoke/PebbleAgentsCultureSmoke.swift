@@ -9,14 +9,24 @@ private let cultureEast1 = AgentID(rawValue: "culture-east-1")!
 private let cultureEast2 = AgentID(rawValue: "culture-east-2")!
 private let cultureEastSettlement = AgentSettlementID(rawValue: "culture-east")!
 
-private func cultureAgent(_ id: AgentID, x: Int) -> AgentSessionAgentState {
+private func cultureAgent(
+    _ id: AgentID,
+    x: Int,
+    health: Int = 100,
+    lethalNextTick: Bool = false
+) -> AgentSessionAgentState {
     let position = AgentPosition(x: x, y: 64, z: 0)
     return AgentSessionAgentState(
         id: id.rawValue,
         state: "idle",
         position: position,
-        needs: AgentNeeds(hunger: -10, fatigue: 0, curiosity: 0, safety: 1),
-        health: 100,
+        needs: AgentNeeds(
+            hunger: lethalNextTick ? 1 : -10,
+            fatigue: 0,
+            curiosity: 0,
+            safety: 1
+        ),
+        health: health,
         fear: 0,
         homePosition: position,
         nearbyAgents: [],
@@ -41,7 +51,10 @@ private func cultureAgent(_ id: AgentID, x: Int) -> AgentSessionAgentState {
         totalManhattanDistanceMoved: 0,
         returnHomeMoveCount: 0,
         totalDistanceReducedTowardHome: 0,
-        survivalProgress: nil
+        survivalProgress: lethalNextTick ? AgentSurvivalProgress(
+            status: .starving,
+            consecutiveCriticalHungerTicks: 2
+        ) : nil
     )
 }
 
@@ -581,6 +594,69 @@ func runPebbleAgentsCultureSmoke() {
                 && cultureConfiguration.maximumHistoryPerIndividual == 32
                 && session.distributedCultureSnapshot().individuals.count == 3
                 && mainProjection.metrics.historicalRowsVisited == 0)
+
+        var mortalityCulture = try AgentSimulationSession(
+            configuration: try AgentSessionConfiguration(
+                seed: 147,
+                memoryPolicy: .bounded(maxEntries: 32)
+            ),
+            agents: [
+                cultureAgent(
+                    cultureMain0, x: 0, health: 10, lethalNextTick: true
+                ),
+                cultureAgent(cultureMain1, x: 2),
+                cultureAgent(cultureMain2, x: 4),
+            ],
+            simulationID: try AgentSimulationID(
+                validating: "civ47-mortality-continuity"
+            ),
+            causalLedgerPolicy: .bounded(maxEvents: 128)
+        )
+        mortalityCulture.setSurvivalEnabled(true)
+        try mortalityCulture.initializePopulationRegistry(
+            settlementAnchor: AgentPosition(x: 0, y: 64, z: 0),
+            receptionPosition: AgentPosition(x: 0, y: 64, z: 1)
+        )
+        try mortalityCulture.setSocialEnabled(true)
+        try mortalityCulture.setDistributedCultureEnabled(true)
+        let mortalPractice = try mortalityCulture.originateCulturalPractice(
+            operationID: "civ47-mortal-origin",
+            originatorID: cultureMain0,
+            form: .norm(AgentCultureNormPattern(
+                context: .scarcityAid,
+                expectedAction: .offerBeforePrivateUse
+            ))
+        ).practice
+        try mortalityCulture.setMortalityEnabled(true)
+        _ = try mortalityCulture.advanceTick()
+        let departedCulture = cultureStance(
+            mortalityCulture,
+            agentID: cultureMain0,
+            practiceID: mortalPractice.practiceID
+        )
+        let livingProjection = try mortalityCulture.culturalPrevalence(
+            in: .settlement(.main)
+        )
+        check("mortality retains bounded culture as history, not membership",
+              departedCulture?.status == .adopted
+                && mortalityCulture.mortalitySnapshot().records.contains {
+                    $0.agentID == cultureMain0
+                }
+                && !livingProjection.memberIDs.contains(cultureMain0)
+                && livingProjection.entries.isEmpty)
+        let mortalityCheckpoint = try mortalityCulture.makeCheckpoint()
+        let mortalityRestart = try AgentSimulationSession.restoring(
+            mortalityCheckpoint
+        )
+        check("departed culture survives restart without agent resurrection",
+              cultureStance(
+                mortalityRestart,
+                agentID: cultureMain0,
+                practiceID: mortalPractice.practiceID
+              ) == departedCulture
+                && !mortalityRestart.populationSnapshot().members.contains {
+                    $0.agentID == cultureMain0
+                })
 
         var (capacity, _) = try culturePreparedSession(
             id: "civ47-culture-capacity",

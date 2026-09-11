@@ -1234,6 +1234,7 @@ extension AgentSimulationSession {
         try validateLanguageStateIfInitialized()
         try validateOralTransmissionStateIfInitialized()
         try validateLongDistanceCommunicationStateIfInitialized()
+        try validateDistributedCultureStateIfInitialized()
     }
 
     private func conservationSnapshotWith(

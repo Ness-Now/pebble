@@ -1158,8 +1158,16 @@ extension AgentSimulationSession {
         var practices: [AgentCulturePracticeID: AgentCulturePractice] = [:]
         var records: [String: AgentCultureRecord] = [:]
         var holders: [String: Set<AgentID>] = [:]
+        let activeOrHistoricallyDepartedAgentIDs = Set(
+            statesById.values.map(\.agentID)
+        ).union(mortalityState?.records.map(\.agentID) ?? [])
+            .union(mortalityState?.compactedDeathSummaries?.map(\.agentID) ?? [])
         for individual in state.individuals {
-            guard statesById[individual.agentID.rawValue] != nil,
+            // Mortality owns removal from the active population. Culture keeps
+            // the bounded individual row as historical evidence; accepting a
+            // mortality-owned departed identity does not make it active or
+            // include it in a settlement prevalence projection.
+            guard activeOrHistoricallyDepartedAgentIDs.contains(individual.agentID),
                   individual.stances.count
                     <= state.configuration.maximumPracticesPerIndividual,
                   individual.history.count
