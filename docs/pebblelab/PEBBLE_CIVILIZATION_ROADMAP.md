@@ -22,7 +22,7 @@ APPROVED — REMOTE VERIFIED** at canonical publication HEAD
 `3befd2e1cae32d31c47ddce77dd361f367b5612ba18d859ababbd63dfb376551`.
 Published canonical progression is complete through CIV-46. CIV-47 is a
 **LOCAL REVIEW CANDIDATE — NOT PUBLISHED** at product/test commit
-`ae727382ceaffbf55ee1706ac3a74fe43066c6d4`, from exact baseline
+`ea9a7484252ac5c75f3880b9b3f14d70fdef06c7`, from exact baseline
 `70cb245e089987bc829ac138b0988eb3fc825d57`. It has not received senior review.
 Gate G remains planned, unevaluated and not acquired. See
 [`CIV_46_PHASE_SUMMARY.md`](CIV_46_PHASE_SUMMARY.md) and
@@ -721,7 +721,7 @@ and independent remote verification are complete. CIV-46 is complete and
 published, senior-review approved and independently remote verified at
 canonical publication HEAD `dcdc6a5dc984f8144705bb601ec677f1df767b7f`.
 CIV-47 is a local review candidate at product/test commit
-`ae727382ceaffbf55ee1706ac3a74fe43066c6d4`; it is not published and is not
+`ea9a7484252ac5c75f3880b9b3f14d70fdef06c7`; it is not published and is not
 senior-review approved. Gate G remains planned, unevaluated and not acquired.
 See
 [`CIV_44_PHASE_SUMMARY.md`](CIV_44_PHASE_SUMMARY.md) and
@@ -1867,7 +1867,7 @@ CIV-46 is complete and published, senior-review approved and independently
 remote verified at canonical publication HEAD
 `dcdc6a5dc984f8144705bb601ec677f1df767b7f`. CIV-47 is a local review
 candidate at product/test commit
-`ae727382ceaffbf55ee1706ac3a74fe43066c6d4`; it is not published and is not
+`ea9a7484252ac5c75f3880b9b3f14d70fdef06c7`; it is not published and is not
 senior-review approved. Gate G remains planned, unevaluated and not acquired.
 
 ## Wave 5 — Knowledge, language and culture
@@ -1975,7 +1975,7 @@ candidates all remain **CORRECTION REQUIRED** historical evidence.
 VERIFIED** at canonical publication HEAD
 `dcdc6a5dc984f8144705bb601ec677f1df767b7f`. `CIV-47` is a local review
 candidate at product/test commit
-`ae727382ceaffbf55ee1706ac3a74fe43066c6d4`; it is not published and is not
+`ea9a7484252ac5c75f3880b9b3f14d70fdef06c7`; it is not published and is not
 senior-review approved. Gate G remains planned, unevaluated and not acquired.
 
 Observable slices:

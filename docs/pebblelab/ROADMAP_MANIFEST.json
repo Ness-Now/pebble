@@ -309,9 +309,10 @@
     "civ46ReviewArchiveSHA256": "3befd2e1cae32d31c47ddce77dd361f367b5612ba18d859ababbd63dfb376551",
     "civ46PublicationStatus": "completedPublishedSeniorReviewApprovedRemoteVerified",
     "civ47ExactBaseline": "70cb245e089987bc829ac138b0988eb3fc825d57",
-    "civ47ProductTestCommit": "ae727382ceaffbf55ee1706ac3a74fe43066c6d4",
+    "civ47InitialProductTestCommit": "ae727382ceaffbf55ee1706ac3a74fe43066c6d4",
+    "civ47ProductTestCommit": "ea9a7484252ac5c75f3880b9b3f14d70fdef06c7",
     "civ47LocalStatus": "localReviewCandidateNotPublished",
-    "meaning": "Canonical published product history is complete through CIV-46. CIV-45 initial and Correction 01 through Correction 08 candidates remain historical CORRECTION REQUIRED evidence. CIV-46 exact baseline f78f0d3c282282d75cc3d27418135246de2975b7, product/test commit 1ada83ae248552924a4f729439654ad7ff8abfaa and reviewed candidate 560e5d4a2b42bfd1519077fe6955ff6f9d99bc70 remain distinct historical identities; senior-approved publication HEAD dcdc6a5dc984f8144705bb601ec677f1df767b7f is published on lab/pebblelab-v1 and independently remote verified. CIV-41 remains the sole generic epistemic authority; CIV-42 remains the semantic and lexical authority; CIV-43 remains the local oral-transmission authority; CIV-45 remains the material written-carrier authority. CIV-47 is a local review candidate at product/test commit ae727382ceaffbf55ee1706ac3a74fe43066c6d4 from exact baseline 70cb245e089987bc829ac138b0988eb3fc825d57; it is not published and has not received senior review. Gate G remains planned, unevaluated and not acquired. Optional CIV-38 and CIV-40 remain unstarted; currency is not a Gate E or CIV-39 dependency.",
+    "meaning": "Canonical published product history is complete through CIV-46. CIV-45 initial and Correction 01 through Correction 08 candidates remain historical CORRECTION REQUIRED evidence. CIV-46 exact baseline f78f0d3c282282d75cc3d27418135246de2975b7, product/test commit 1ada83ae248552924a4f729439654ad7ff8abfaa and reviewed candidate 560e5d4a2b42bfd1519077fe6955ff6f9d99bc70 remain distinct historical identities; senior-approved publication HEAD dcdc6a5dc984f8144705bb601ec677f1df767b7f is published on lab/pebblelab-v1 and independently remote verified. CIV-41 remains the sole generic epistemic authority; CIV-42 remains the semantic and lexical authority; CIV-43 remains the local oral-transmission authority; CIV-45 remains the material written-carrier authority. CIV-47 is a local review candidate at product/test commit ea9a7484252ac5c75f3880b9b3f14d70fdef06c7 from exact baseline 70cb245e089987bc829ac138b0988eb3fc825d57; it is not published and has not received senior review. Gate G remains planned, unevaluated and not acquired. Optional CIV-38 and CIV-40 remain unstarted; currency is not a Gate E or CIV-39 dependency.",
     "safeBootstrapHardeningPublished": true
   },
   "documents": {
@@ -410,7 +411,8 @@
     "civ47Published": false,
     "civ47PublicationVerified": false,
     "civ47ExactBaseline": "70cb245e089987bc829ac138b0988eb3fc825d57",
-    "civ47ProductTestCommit": "ae727382ceaffbf55ee1706ac3a74fe43066c6d4",
+    "civ47InitialProductTestCommit": "ae727382ceaffbf55ee1706ac3a74fe43066c6d4",
+    "civ47ProductTestCommit": "ea9a7484252ac5c75f3880b9b3f14d70fdef06c7",
     "civ41ReviewedCandidate": "1ce9506824775c1b59eaf5c358f0e8d4edd4eab7",
     "civ41SeniorReviewCorrection01Status": "completedPublishedSeniorReviewApprovedRemoteVerified",
     "civ27Status": "completed",
@@ -3925,7 +3927,8 @@
       "published": false,
       "publicationVerified": false,
       "exactBaseline": "70cb245e089987bc829ac138b0988eb3fc825d57",
-      "productTestCommit": "ae727382ceaffbf55ee1706ac3a74fe43066c6d4",
+      "initialProductTestCommit": "ae727382ceaffbf55ee1706ac3a74fe43066c6d4",
+      "productTestCommit": "ea9a7484252ac5c75f3880b9b3f14d70fdef06c7",
       "wave": "wave-5-knowledge-language-culture",
       "requiredForCanonicalProgression": true,
       "cultureDistribution": [

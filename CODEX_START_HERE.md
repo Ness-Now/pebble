@@ -208,7 +208,7 @@ for the compact status. In particular:
   `1ada83ae248552924a4f729439654ad7ff8abfaa` and reviewed candidate
   `560e5d4a2b42bfd1519077fe6955ff6f9d99bc70`. CIV-47 is a **LOCAL REVIEW
   CANDIDATE — NOT PUBLISHED** at product/test commit
-  `ae727382ceaffbf55ee1706ac3a74fe43066c6d4`, from exact baseline
+  `ea9a7484252ac5c75f3880b9b3f14d70fdef06c7`, from exact baseline
   `70cb245e089987bc829ac138b0988eb3fc825d57`; it has not received senior
   review. Gate G remains planned, unevaluated and not acquired. See
   [`CIV_45_PHASE_SUMMARY.md`](docs/pebblelab/CIV_45_PHASE_SUMMARY.md),

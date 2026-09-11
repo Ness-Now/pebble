@@ -26,7 +26,7 @@ Manual publication completed and the exact canonical remote was independently
 verified. Published progression is complete through CIV-46. `CIV-47` is now a
 **LOCAL REVIEW CANDIDATE — NOT PUBLISHED** from exact baseline
 `70cb245e089987bc829ac138b0988eb3fc825d57`, with product/test commit
-`ae727382ceaffbf55ee1706ac3a74fe43066c6d4`. Senior review has not been
+`ea9a7484252ac5c75f3880b9b3f14d70fdef06c7`. Senior review has not been
 performed. Gate G remains **PLANNED / UNEVALUATED / NOT ACQUIRED**. See
 [`CIV_46_PHASE_SUMMARY.md`](CIV_46_PHASE_SUMMARY.md) and
 [`CIV_47_PHASE_SUMMARY.md`](CIV_47_PHASE_SUMMARY.md).
@@ -193,7 +193,7 @@ performed. Gate G remains **PLANNED / UNEVALUATED / NOT ACQUIRED**. See
   VERIFIED** at canonical publication HEAD
   `dcdc6a5dc984f8144705bb601ec677f1df767b7f`. CIV-47 is a local review
   candidate at product/test commit
-  `ae727382ceaffbf55ee1706ac3a74fe43066c6d4`; it is not published and has not
+  `ea9a7484252ac5c75f3880b9b3f14d70fdef06c7`; it is not published and has not
   received senior review. Gate G remains planned, unevaluated and not acquired.
   See
   [`CIV_44_PHASE_SUMMARY.md`](CIV_44_PHASE_SUMMARY.md) and
@@ -1374,7 +1374,7 @@ REQUIRED** evidence. Correction 01 candidate
 REVIEW APPROVED — REMOTE VERIFIED** at canonical publication HEAD
 `dcdc6a5dc984f8144705bb601ec677f1df767b7f`. CIV-47 is a local review
 candidate at product/test commit
-`ae727382ceaffbf55ee1706ac3a74fe43066c6d4`; it remains not published and not
+`ea9a7484252ac5c75f3880b9b3f14d70fdef06c7`; it remains not published and not
 senior-review approved. Gate G remains planned, unevaluated and not acquired.
 See
 [`CIV_45_PHASE_SUMMARY.md`](CIV_45_PHASE_SUMMARY.md) and

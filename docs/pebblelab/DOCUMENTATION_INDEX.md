@@ -108,10 +108,10 @@ CIV-37: COMPLETE AND PUBLISHED
 CIV-38: OPTIONAL — NOT STARTED
 V4-GATE-E-v1: ACQUIRED AND PUBLISHED
 V4-GATE-E-v1 acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f76744f83
-active phase: NONE
+active phase: CIV-47 LOCAL REVIEW CANDIDATE — NOT PUBLISHED
 completed through: CIV-46 (CIV-38 and CIV-40 optional and unstarted)
 published through: CIV-46
-next eligible phase: CIV-47
+next eligible phase: NONE PENDING INDEPENDENT SENIOR REVIEW
 Gate E Evaluation 01: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 01: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 02: FAIL — HISTORICAL IMMUTABLE EVIDENCE
@@ -121,7 +121,7 @@ V4-GATE-E-v1 Blocker 03: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 04: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 04: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 05: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
-next authorized action: review and authorize CIV-47; implementation remains unauthorized
+next authorized action: INDEPENDENT SENIOR REVIEW OF CIV-47
 CIV-39: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 V4-GATE-F-v1: ACQUIRED AND PUBLISHED — REMOTE VERIFIED
@@ -186,7 +186,7 @@ CIV-45 Correction 09 product/test commit: 3d1fdeea7c1e2f833a97b903c1357dd1d0acfe
 CIV-45 Correction 09: PASS — SENIOR REVIEW APPROVED — PUBLISHED / REMOTE VERIFIED
 CIV-46: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 CIV-46 published canonical HEAD: dcdc6a5dc984f8144705bb601ec677f1df767b7f
-CIV-47: PLANNED — NOT STARTED / NOT IMPLEMENTATION-AUTHORIZED
+CIV-47: LOCAL REVIEW CANDIDATE — NOT PUBLISHED
 V4-GATE-G-v1: PLANNED / UNEVALUATED / NOT ACQUIRED
 ```
 
@@ -480,11 +480,13 @@ commit is `3d1fdeea7c1e2f833a97b903c1357dd1d0acfe77`. Initial candidate
 `54d9e4ba37340178927411b3bf5f3bd5cedae4c5` remain **CORRECTION REQUIRED**
 historical evidence. CIV-46 is complete and published, senior-review approved
 and independently remote verified at canonical publication HEAD
-`dcdc6a5dc984f8144705bb601ec677f1df767b7f`. CIV-47 remains planned, not
-started and not implementation-authorized. Gate G remains planned, unevaluated
-and not acquired. See
+`dcdc6a5dc984f8144705bb601ec677f1df767b7f`. CIV-47 is a local review
+candidate at product/test commit
+`ea9a7484252ac5c75f3880b9b3f14d70fdef06c7`; it is not published and has not
+received senior review. Gate G remains planned, unevaluated and not acquired. See
 [`CIV_45_PHASE_SUMMARY.md`](CIV_45_PHASE_SUMMARY.md) and
-[`CIV_46_PHASE_SUMMARY.md`](CIV_46_PHASE_SUMMARY.md).
+[`CIV_46_PHASE_SUMMARY.md`](CIV_46_PHASE_SUMMARY.md) and
+[`CIV_47_PHASE_SUMMARY.md`](CIV_47_PHASE_SUMMARY.md).
 `CIV-38` remains
 optional and not started; `CIV-40` remains optional tooling and not started.
 Currency is not a Gate E or CIV-39 prerequisite.

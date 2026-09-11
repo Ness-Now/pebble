@@ -7,7 +7,8 @@
 ```text
 Exact baseline: 70cb245e089987bc829ac138b0988eb3fc825d57
 Branch: codex/civ-47-distributed-culture-norms-rituals-v1
-Product/test commit: ae727382ceaffbf55ee1706ac3a74fe43066c6d4
+Initial product/test commit: ae727382ceaffbf55ee1706ac3a74fe43066c6d4
+Final product/test commit: ea9a7484252ac5c75f3880b9b3f14d70fdef06c7
 Senior review: NOT PERFORMED
 Publication: NOT PUBLISHED
 Remote verification: NOT PERFORMED
@@ -62,6 +63,12 @@ Fidelity tiers can change processing cadence, but CIV-47 state is not tiered
 away. Causal FIFO compaction refreshes a digest commitment to all bounded
 cultural state before its prior boundary leaves retention.
 
+Mortality removes an agent only from active population authority. Its bounded
+cultural row remains historical evidence when backed by retained or compacted
+mortality identity, is excluded from current settlement prevalence, and
+survives checkpoint/restart without resurrecting the agent. Social authority
+cannot be disabled underneath an initialized cultural state.
+
 ## Persistence, replay and failure semantics
 
 Checkpoint and replay schema 42 persist the individual state, histories,
@@ -99,9 +106,9 @@ state.
 
 ## Executed evidence
 
-On product/test commit `ae727382ceaffbf55ee1706ac3a74fe43066c6d4`:
+On final product/test commit `ea9a7484252ac5c75f3880b9b3f14d70fdef06c7`:
 
-- `PEBBLELAB_SMOKE_ONLY=civ-47 .build/debug/pebsmoke`: **35/35 PASS**.
+- `PEBBLELAB_SMOKE_ONLY=civ-47 .build/debug/pebsmoke`: **42/42 PASS**.
 - `scripts/verify-pebblelab-civ47.sh` in release: **PASS**.
 - CIV-41: 3/3 writer, 5/5 reader and 47/47 focused.
 - CIV-42: 3/3 writer, 5/5 reader and 56/56 focused.
@@ -125,8 +132,13 @@ Rejected intermediate runs:
   placed `try` incorrectly; compilation was rejected before execution;
 - the next fixture used noncanonical founder identifiers and was refused by
   existing population authority before any cultural transition;
-- after those fixture-only corrections, the final 35/35 debug and release
-  campaigns passed.
+- an attempted `--only` CLI selector was not a supported smoke selector; the
+  accidentally unfiltered run was interrupted and supplied no accepted result;
+- the first mortality-continuity fixture supplied only two founders and was
+  refused by existing population authority at 32/33 assertions;
+- a defensive review then found and corrected departed-agent historical
+  validation, social-dependency teardown and explicit projection-input bounds;
+  the final 42/42 debug and release campaigns passed.
 
 ```text
 Status: LOCAL REVIEW CANDIDATE / NOT PUBLISHED
