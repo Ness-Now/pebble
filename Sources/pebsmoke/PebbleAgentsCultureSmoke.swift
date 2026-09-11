@@ -624,6 +624,17 @@ func runPebbleAgentsCultureSmoke() {
                 && cultureConfiguration.maximumHistoryPerIndividual == 32
                 && session.distributedCultureSnapshot().individuals.count == 3
                 && mainProjection.metrics.historicalRowsVisited == 0)
+        do {
+            _ = try session.culturalPrevalence(in: .individuals(
+                (0...cultureConfiguration.maximumIndividuals).map {
+                    AgentID(rawValue: "civ47-projection-\($0)")!
+                }
+            ))
+            check("explicit prevalence scope has a structural input bound", false)
+        } catch {
+            check("explicit prevalence scope has a structural input bound", true,
+                  "\(error)")
+        }
 
         var mortalityCulture = try AgentSimulationSession(
             configuration: try AgentSessionConfiguration(

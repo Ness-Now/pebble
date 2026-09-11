@@ -976,7 +976,11 @@ extension AgentSimulationSession {
             }.map(\.agentID).sorted()
         case let .individuals(ids):
             let sorted = ids.sorted()
-            guard Set(sorted).count == sorted.count else {
+            let maximum = distributedCultureState?.configuration
+                .maximumIndividuals ?? AgentCultureConfiguration.live
+                .maximumIndividuals
+            guard sorted.count <= maximum,
+                  Set(sorted).count == sorted.count else {
                 throw AgentSessionError.culture(.invalidState("projection individuals"))
             }
             for id in sorted { try requireCultureAgent(id) }
