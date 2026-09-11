@@ -298,6 +298,14 @@ public enum AgentCausalEventKind: String, Codable, CaseIterable, Sendable {
     case archiveManuscriptCatalogued
     case archiveManuscriptRetrieved
     case archiveProvenanceBoundary
+    case cultureInitialized
+    case culturePracticeOriginated
+    case culturePracticeExposed
+    case culturePracticeConsidered
+    case culturePracticeUsed
+    case cultureVariationCreated
+    case cultureContinuityReviewed
+    case cultureProvenanceBoundary
     case communicationTransportInitialized
     case communicationTransportDispatched
     case communicationTransportProgressed
@@ -348,6 +356,7 @@ public enum AgentCausalOrigin: String, Codable, Sendable {
     case communicationTransportTransition
     case writingTransition
     case archiveTransition
+    case cultureTransition
 }
 
 public enum AgentCausalPayload: Codable, Equatable, Sendable {
@@ -395,6 +404,12 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
     )
     case writing(recordID: String, detail: String)
     case archive(recordID: String, detail: String)
+    case culture(
+        recordID: String,
+        practiceID: String?,
+        status: String,
+        detail: String
+    )
     case communicationTransport(
         transportID: String,
         authorID: String?,
@@ -728,6 +743,8 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
             return "writing|\(recordID)|\(detail)"
         case let .archive(recordID, detail):
             return "archive|\(recordID)|\(detail)"
+        case let .culture(recordID, practiceID, status, detail):
+            return "culture|\(recordID)|\(practiceID ?? "none")|\(status)|\(detail)"
         case let .communicationTransport(
             transportID, authorID, carrierID, destinationID, status, detail
         ):
@@ -1014,6 +1031,14 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
              (.archiveManuscriptCatalogued, .archive),
              (.archiveManuscriptRetrieved, .archive),
              (.archiveProvenanceBoundary, .archive),
+             (.cultureInitialized, .culture),
+             (.culturePracticeOriginated, .culture),
+             (.culturePracticeExposed, .culture),
+             (.culturePracticeConsidered, .culture),
+             (.culturePracticeUsed, .culture),
+             (.cultureVariationCreated, .culture),
+             (.cultureContinuityReviewed, .culture),
+             (.cultureProvenanceBoundary, .culture),
              (.communicationTransportInitialized, .communicationTransport),
              (.communicationTransportDispatched, .communicationTransport),
              (.communicationTransportProgressed, .communicationTransport),

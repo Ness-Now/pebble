@@ -42,6 +42,7 @@ public enum AgentReplaySchema {
     public static let longDistanceCommunicationVersion = 39
     public static let writingVersion = 40
     public static let archiveVersion = 41
+    public static let cultureVersion = 42
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -70,7 +71,7 @@ public enum AgentReplaySchema {
             || version == oralTransmissionVersion
             || version == longDistanceCommunicationVersion
             || version == writingVersion
-            || version == archiveVersion
+            || version == archiveVersion || version == cultureVersion
     }
 }
 
@@ -227,6 +228,13 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case archiveCollection
     case archiveManuscript
     case archiveRetrieval
+    case cultureFeature
+    case cultureOrigin
+    case cultureVariation
+    case cultureExposure
+    case cultureConsideration
+    case cultureUse
+    case cultureContinuity
     case longDistanceCommunicationFeature
     case longDistanceCommunicationDispatch
     case longDistanceCommunicationDelivery
@@ -307,6 +315,45 @@ public enum AgentReplayOperation: Codable {
         selection: AgentArchiveSelection,
         readerID: AgentID,
         receipt: AgentWritingPhysicalReceipt
+    )
+    case setDistributedCultureEnabled(
+        Bool,
+        configuration: AgentCultureConfiguration
+    )
+    case originateCulturalPractice(
+        operationID: String,
+        originatorID: AgentID,
+        form: AgentCulturePracticeForm
+    )
+    case createCulturalVariation(
+        operationID: String,
+        creatorID: AgentID,
+        parentPracticeID: AgentCulturePracticeID,
+        form: AgentCulturePracticeForm
+    )
+    case recordCulturalExposure(
+        operationID: String,
+        targetID: AgentID,
+        sourceAgentID: AgentID,
+        practiceID: AgentCulturePracticeID,
+        carrier: AgentCultureCarrierReference
+    )
+    case considerCulturalPractice(
+        operationID: String,
+        agentID: AgentID,
+        practiceID: AgentCulturePracticeID
+    )
+    case enactCulturalPractice(
+        operationID: String,
+        practitionerID: AgentID,
+        practiceID: AgentCulturePracticeID,
+        coParticipantIDs: [AgentID],
+        witnessIDs: [AgentID]
+    )
+    case reviewCulturalContinuity(
+        operationID: String,
+        agentID: AgentID,
+        practiceID: AgentCulturePracticeID
     )
     case setLongDistanceCommunicationEnabled(
         Bool,
@@ -613,6 +660,13 @@ public enum AgentReplayOperation: Codable {
         case .createArchiveCollection: return .archiveCollection
         case .catalogueArchiveManuscript: return .archiveManuscript
         case .retrieveArchiveManuscript: return .archiveRetrieval
+        case .setDistributedCultureEnabled: return .cultureFeature
+        case .originateCulturalPractice: return .cultureOrigin
+        case .createCulturalVariation: return .cultureVariation
+        case .recordCulturalExposure: return .cultureExposure
+        case .considerCulturalPractice: return .cultureConsideration
+        case .enactCulturalPractice: return .cultureUse
+        case .reviewCulturalContinuity: return .cultureContinuity
         case .setLongDistanceCommunicationEnabled:
             return .longDistanceCommunicationFeature
         case .beginLongDistanceCommunication:
@@ -789,6 +843,13 @@ public enum AgentReplayOperation: Codable {
         case let .createArchiveCollection(operationID, _, _, _, _),
              let .catalogueArchiveManuscript(operationID, _, _, _, _, _, _, _),
              let .retrieveArchiveManuscript(operationID, _, _, _):
+            raw = operationID
+        case let .originateCulturalPractice(operationID, _, _),
+             let .createCulturalVariation(operationID, _, _, _),
+             let .recordCulturalExposure(operationID, _, _, _, _),
+             let .considerCulturalPractice(operationID, _, _),
+             let .enactCulturalPractice(operationID, _, _, _, _),
+             let .reviewCulturalContinuity(operationID, _, _):
             raw = operationID
         case let .applyBirthSiteObservation(observation):
             raw = "birth-site:\(observation.planID.rawValue):\(observation.observedTick)"
@@ -1178,7 +1239,9 @@ public struct AgentReplayRecorder {
         baseCheckpointDigest = checkpoint.semanticDigest
         simulationID = checkpoint.simulationID
         initialTick = checkpoint.tick.rawValue
-        schemaVersion = checkpoint.schemaVersion == AgentCheckpointSchema.archiveVersion
+        schemaVersion = checkpoint.schemaVersion == AgentCheckpointSchema.cultureVersion
+            ? AgentReplaySchema.cultureVersion
+            : checkpoint.schemaVersion == AgentCheckpointSchema.archiveVersion
             ? AgentReplaySchema.archiveVersion
             : checkpoint.schemaVersion == AgentCheckpointSchema.writingVersion
             ? AgentReplaySchema.writingVersion
@@ -1552,6 +1615,15 @@ public struct AgentReplayRecorder {
             }
             schemaVersion = AgentReplaySchema.archiveVersion
         }
+        if case let .setDistributedCultureEnabled(enabled, _) = operation,
+           enabled, schemaVersion < AgentReplaySchema.cultureVersion {
+            guard records.isEmpty else {
+                throw AgentReplayError.invalidJournal(
+                    "culture activation must be first v42 operation"
+                )
+            }
+            schemaVersion = AgentReplaySchema.cultureVersion
+        }
         if case let .setLongDistanceCommunicationEnabled(
             enabled, _
         ) = operation,
@@ -1808,6 +1880,14 @@ public enum AgentSessionReplayer {
         guard AgentReplaySchema.supports(manifest.schemaVersion) else {
             throw AgentReplayError.unsupportedSchema(manifest.schemaVersion)
         }
+        if manifest.schemaVersion == AgentReplaySchema.cultureVersion,
+           checkpoint.schemaVersion < AgentCheckpointSchema.cultureVersion {
+            guard case .setDistributedCultureEnabled(
+                true, configuration: _
+            )? = journal.records.first?.operation else {
+                throw AgentReplayError.unsupportedSchema(manifest.schemaVersion)
+            }
+        }
         if manifest.schemaVersion == AgentReplaySchema.archiveVersion,
            checkpoint.schemaVersion < AgentCheckpointSchema.archiveVersion {
             guard case .setArchiveEnabled(
@@ -1917,6 +1997,8 @@ public enum AgentSessionReplayer {
                 && checkpoint.schemaVersion <= AgentCheckpointSchema.longDistanceCommunicationVersion)
             || (manifest.schemaVersion == AgentReplaySchema.archiveVersion
                 && checkpoint.schemaVersion <= AgentCheckpointSchema.writingVersion)
+            || (manifest.schemaVersion == AgentReplaySchema.cultureVersion
+                && checkpoint.schemaVersion <= AgentCheckpointSchema.archiveVersion)
             || (manifest.schemaVersion
                     == AgentReplaySchema.longDistanceCommunicationVersion
                 && checkpoint.schemaVersion
@@ -2104,6 +2186,58 @@ extension AgentSimulationSession {
                 selection: selection,
                 readerID: readerID,
                 receipt: receipt
+            )
+        case let .setDistributedCultureEnabled(enabled, configuration):
+            try candidate.setDistributedCultureEnabled(
+                enabled, configuration: configuration
+            )
+        case let .originateCulturalPractice(operationID, originatorID, form):
+            _ = try candidate.originateCulturalPractice(
+                operationID: operationID,
+                originatorID: originatorID,
+                form: form
+            )
+        case let .createCulturalVariation(
+            operationID, creatorID, parentPracticeID, form
+        ):
+            _ = try candidate.createCulturalVariation(
+                operationID: operationID,
+                creatorID: creatorID,
+                parentPracticeID: parentPracticeID,
+                form: form
+            )
+        case let .recordCulturalExposure(
+            operationID, targetID, sourceAgentID, practiceID, carrier
+        ):
+            _ = try candidate.recordCulturalExposure(
+                operationID: operationID,
+                targetID: targetID,
+                sourceAgentID: sourceAgentID,
+                practiceID: practiceID,
+                carrier: carrier
+            )
+        case let .considerCulturalPractice(operationID, agentID, practiceID):
+            _ = try candidate.considerCulturalPractice(
+                operationID: operationID,
+                agentID: agentID,
+                practiceID: practiceID
+            )
+        case let .enactCulturalPractice(
+            operationID, practitionerID, practiceID,
+            coParticipantIDs, witnessIDs
+        ):
+            _ = try candidate.enactCulturalPractice(
+                operationID: operationID,
+                practitionerID: practitionerID,
+                practiceID: practiceID,
+                coParticipantIDs: coParticipantIDs,
+                witnessIDs: witnessIDs
+            )
+        case let .reviewCulturalContinuity(operationID, agentID, practiceID):
+            _ = try candidate.reviewCulturalContinuity(
+                operationID: operationID,
+                agentID: agentID,
+                practiceID: practiceID
             )
         case let .setLongDistanceCommunicationEnabled(
             enabled, configuration

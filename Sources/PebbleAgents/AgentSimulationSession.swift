@@ -44,6 +44,7 @@ public struct AgentSimulationSession {
     public internal(set) var oralTransmissionState: AgentOralTransmissionState?
     public internal(set) var writingState: AgentWritingState?
     public internal(set) var archiveState: AgentArchiveState?
+    public internal(set) var distributedCultureState: AgentDistributedCultureState?
     public internal(set) var longDistanceCommunicationState:
         AgentLongDistanceCommunicationState?
     public internal(set) var physicalEnabled: Bool
@@ -151,6 +152,7 @@ public struct AgentSimulationSession {
         oralTransmissionState = nil
         writingState = nil
         archiveState = nil
+        distributedCultureState = nil
         longDistanceCommunicationState = nil
         physicalEnabled = false
         physicalSignals = []

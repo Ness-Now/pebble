@@ -27,6 +27,7 @@ extension AgentSimulationSession {
         let originalLanguage = languageState
         let originalWriting = writingState
         let originalArchive = archiveState
+        let originalCulture = distributedCultureState
         let originalOral = oralTransmissionState
         let originalLongDistanceCommunication =
             longDistanceCommunicationState
@@ -69,6 +70,9 @@ extension AgentSimulationSession {
                 if try appendArchiveBoundaryIfNeeded(beforeEvicting: leaving) {
                     continue
                 }
+                if try appendCultureBoundaryIfNeeded(beforeEvicting: leaving) {
+                    continue
+                }
                 if try appendAgricultureRetentionBoundaryIfNeeded(
                     beforeEvicting: leaving,
                     testFault: testFault
@@ -101,6 +105,7 @@ extension AgentSimulationSession {
             languageState = originalLanguage
             writingState = originalWriting
             archiveState = originalArchive
+            distributedCultureState = originalCulture
             oralTransmissionState = originalOral
             longDistanceCommunicationState =
                 originalLongDistanceCommunication
@@ -128,6 +133,7 @@ extension AgentSimulationSession {
         let originalLanguage = languageState
         let originalWriting = writingState
         let originalArchive = archiveState
+        let originalCulture = distributedCultureState
         let originalOral = oralTransmissionState
         let originalLongDistanceCommunication =
             longDistanceCommunicationState
@@ -167,6 +173,7 @@ extension AgentSimulationSession {
             languageState = originalLanguage
             writingState = originalWriting
             archiveState = originalArchive
+            distributedCultureState = originalCulture
             oralTransmissionState = originalOral
             longDistanceCommunicationState =
                 originalLongDistanceCommunication
@@ -212,6 +219,39 @@ extension AgentSimulationSession {
             throw AgentArchiveError.unavailable("causal archive retention")
         }
         archiveState!.boundary = AgentArchiveBoundary(
+            eventID: event.eventID,
+            digest: digest
+        )
+        return true
+    }
+
+    private mutating func appendCultureBoundaryIfNeeded(
+        beforeEvicting leaving: [AgentCausalEvent]
+    ) throws -> Bool {
+        guard let state = distributedCultureState,
+              let boundary = state.boundary,
+              leaving.contains(where: { $0.eventID == boundary.eventID }) else {
+            return false
+        }
+        let digest = cultureBoundaryDigest(state)
+        guard let event = try causalLedger.append(
+            instant: simulationInstant,
+            kind: .cultureProvenanceBoundary,
+            origin: .cultureTransition,
+            actorID: nil,
+            subjectID: nil,
+            causes: [boundary.eventID],
+            payload: .culture(
+                recordID: "distributed-culture",
+                practiceID: nil,
+                status: "provenanceBoundary",
+                detail: digest
+            ),
+            summary: "distributed culture provenance retention boundary"
+        ) else {
+            throw AgentSessionError.culture(.causalLedgerRequired)
+        }
+        distributedCultureState!.boundary = AgentCultureBoundary(
             eventID: event.eventID,
             digest: digest
         )
