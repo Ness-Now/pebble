@@ -18,6 +18,9 @@ struct AgentSocialTickPlan {
 
 extension AgentSimulationSession {
     public mutating func setSocialEnabled(_ enabled: Bool) throws {
+        if !enabled, distributedCultureState != nil {
+            throw AgentSessionError.culture(.socialRequired)
+        }
         if !enabled, longDistanceCommunicationState != nil {
             throw AgentSessionError.longDistanceCommunication(.socialRequired)
         }

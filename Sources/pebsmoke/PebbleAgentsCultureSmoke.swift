@@ -462,6 +462,10 @@ func runPebbleAgentsCultureSmoke() {
                 witnessIDs: [cultureEast0]
             )
         }
+        cultureRefusal("social authority cannot disappear under culture",
+                       session: session) {
+            try $0.setSocialEnabled(false)
+        }
 
         check("culture does not duplicate epistemic authority",
               session.knowledgeSnapshot() == epistemicAfterCarrier
