@@ -1,9 +1,9 @@
 # CIV-47 — Distributed Culture, Norms and Ritual Practices V1
 
-## Review status
+## Publication status
 
-`CIV-47` Senior Review Correction 01 is **PASS — SENIOR REVIEW APPROVED — NOT
-PUBLISHED — NOT REMOTE VERIFIED**.
+`CIV-47` is **COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE
+VERIFIED**.
 
 ```text
 Exact baseline: 70cb245e089987bc829ac138b0988eb3fc825d57
@@ -18,16 +18,20 @@ Correction 01 senior-reviewed tree: fec66e6423e594c568b700ced191fbafd87b5523
 Correction 01 review ZIP: PebbleLab-CIV47-Correction01-LocalReview-874a844-FINAL.zip
 Correction 01 review ZIP SHA-256: 23f084707c1ab3929ef37b02462229f15711dd8aa050f631a30df7e0888ca8a6
 Correction 01 senior review: PASS — SENIOR REVIEW APPROVED — P0 0 / P1 0
-Publication: NOT PUBLISHED
-Remote verification: NOT REMOTE VERIFIED
+Published canonical HEAD: 51169802ec76770b4c80850c7dee33cf94ee5524
+Published canonical tree: 28c2f6800b2a760337e20020f1337d376cecce3d
+Publication: COMPLETE AND PUBLISHED
+Remote verification: VERIFIED
 Gate G: PLANNED / UNEVALUATED / NOT ACQUIRED
-Next authorized action: PREPARE-PROTECTED-PUBLICATION-CIV-47-SENIOR-APPROVED-CANDIDATE
+Next authorized action: REVIEW-AND-AUTHORIZE-GATE-G
 ```
 
 The original candidate and review ZIP remain immutable historical
 `CORRECTION REQUIRED — P0 0 / P1 4` evidence. Independent re-review approved
-Correction 01 with no P0 or P1 finding. Publication, remote verification and
-Gate G evaluation have not occurred.
+Correction 01 with no P0 or P1 finding. Before publication, the approved
+Correction 01 candidate was retained locally while protected publication was
+prepared. Manual publication and independent remote verification subsequently
+completed at the exact canonical identity above. Gate G has not been evaluated.
 
 ## Architecture and authority
 
@@ -166,7 +170,7 @@ Rejected/intermediate evidence remains distinct:
   normative logs were replayed on the committed SHA above.
 
 ```text
-Status: PASS — SENIOR REVIEW APPROVED / NOT PUBLISHED / NOT REMOTE VERIFIED
+Status: COMPLETE AND PUBLISHED / SENIOR REVIEW APPROVED / REMOTE VERIFIED
 Senior review approved: YES
 Gate G evaluated: NO
 Gate G acquired: NO

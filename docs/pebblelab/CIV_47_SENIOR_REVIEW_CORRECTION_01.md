@@ -16,14 +16,21 @@ Correction 01 review ZIP: PebbleLab-CIV47-Correction01-LocalReview-874a844-FINAL
 Correction 01 review ZIP SHA-256: 23f084707c1ab3929ef37b02462229f15711dd8aa050f631a30df7e0888ca8a6
 Correction 01 senior verdict: PASS — SENIOR REVIEW APPROVED
 Correction 01 findings: P0 0 / P1 0
-Correction 01 status: SENIOR REVIEW APPROVED / NOT PUBLISHED / NOT REMOTE VERIFIED
+Senior approval documentation commit: f1b5bdc15da835a2f8c67a647f21d18091d76951
+Pre-publication documentation reconciliation: 51169802ec76770b4c80850c7dee33cf94ee5524
+Published canonical HEAD: 51169802ec76770b4c80850c7dee33cf94ee5524
+Published canonical tree: 28c2f6800b2a760337e20020f1337d376cecce3d
+Correction 01 status: COMPLETE AND PUBLISHED / SENIOR REVIEW APPROVED / REMOTE VERIFIED
 Gate G: PLANNED / UNEVALUATED / NOT ACQUIRED
-Next authorized action: PREPARE-PROTECTED-PUBLICATION-CIV-47-SENIOR-APPROVED-CANDIDATE
+Next authorized action: REVIEW-AND-AUTHORIZE-GATE-G
 ```
 
 This document records the completed independent senior re-review of Correction
 01. It does not alter the original `CORRECTION REQUIRED` verdict and does not
-claim publication, remote verification or Gate G evaluation.
+claim Gate G evaluation. Following approval, Correction 01 remained a local
+review candidate while protected publication was prepared. Manual publication
+and independent remote verification later completed at the exact canonical
+HEAD and tree above.
 
 ## Finding 01 — carrier cultural-content binding
 
@@ -107,7 +114,7 @@ APPROVED** with **P0 0 / P1 0**. The four original P1 findings remain recorded
 above as historical findings closed by Correction 01.
 
 ```text
-CIV-47: PASS — SENIOR REVIEW APPROVED / NOT PUBLISHED / NOT REMOTE VERIFIED
+CIV-47: COMPLETE AND PUBLISHED / SENIOR REVIEW APPROVED / REMOTE VERIFIED
 Senior review approved: YES
 Gate G evaluated: NO
 Gate G acquired: NO
