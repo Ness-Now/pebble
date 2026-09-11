@@ -116,7 +116,7 @@ On final product/test commit `ea9a7484252ac5c75f3880b9b3f14d70fdef06c7`:
 - CIV-44: 2/2 writer, 5/5 reader and 62/62 focused.
 - CIV-45: 105/105 focused plus its relevant Core persistence corrections.
 - CIV-46: 38/38 focused.
-- `scripts/verify-pebblelab.sh`: **35/35 steps, 4717/4717 assertions PASS**.
+- `scripts/verify-pebblelab.sh`: **35/35 steps, 4724/4724 assertions PASS**.
 - `PEBBLE_REGOLD` was absent. Provider input and network access were not used.
 
 No GUI/live campaign was run. CIV-47 changes only deterministic
