@@ -231,6 +231,7 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case cultureFeature
     case cultureOrigin
     case cultureVariation
+    case cultureOralCarrier
     case cultureExposure
     case cultureConsideration
     case cultureUse
@@ -330,6 +331,15 @@ public enum AgentReplayOperation: Codable {
         creatorID: AgentID,
         parentPracticeID: AgentCulturePracticeID,
         form: AgentCulturePracticeForm
+    )
+    case transmitCulturalPracticeOrally(
+        operationID: String,
+        sourceAgentID: AgentID,
+        targetID: AgentID,
+        practiceID: AgentCulturePracticeID,
+        accompanyingPropositionID: AgentKnowledgePropositionID,
+        renderingMode: AgentLanguageRenderingMode,
+        acceptedEffect: AgentOralAcceptedEffect?
     )
     case recordCulturalExposure(
         operationID: String,
@@ -663,6 +673,7 @@ public enum AgentReplayOperation: Codable {
         case .setDistributedCultureEnabled: return .cultureFeature
         case .originateCulturalPractice: return .cultureOrigin
         case .createCulturalVariation: return .cultureVariation
+        case .transmitCulturalPracticeOrally: return .cultureOralCarrier
         case .recordCulturalExposure: return .cultureExposure
         case .considerCulturalPractice: return .cultureConsideration
         case .enactCulturalPractice: return .cultureUse
@@ -846,6 +857,9 @@ public enum AgentReplayOperation: Codable {
             raw = operationID
         case let .originateCulturalPractice(operationID, _, _),
              let .createCulturalVariation(operationID, _, _, _),
+             let .transmitCulturalPracticeOrally(
+                operationID, _, _, _, _, _, _
+             ),
              let .recordCulturalExposure(operationID, _, _, _, _),
              let .considerCulturalPractice(operationID, _, _),
              let .enactCulturalPractice(operationID, _, _, _, _),
@@ -1670,6 +1684,31 @@ public struct AgentReplayRecorder {
                     decisionDigest: oralResult.decisionDigest
                 )
             )
+        } else if case let .transmitCulturalPracticeOrally(
+            operationID, sourceAgentID, targetID, practiceID,
+            accompanyingPropositionID, renderingMode, nil
+        ) = operation,
+          let oralResult = result.oralTransmissionResult,
+          let interpreted = candidate.knowledgeGraphState?.propositions
+            .first(where: {
+                $0.propositionID == oralResult.interpretedSemanticContent
+                    .sourcePropositionID
+            }) {
+            recordedOperation = .transmitCulturalPracticeOrally(
+                operationID: operationID,
+                sourceAgentID: sourceAgentID,
+                targetID: targetID,
+                practiceID: practiceID,
+                accompanyingPropositionID: accompanyingPropositionID,
+                renderingMode: renderingMode,
+                acceptedEffect: AgentOralAcceptedEffect(
+                    interpretedProposition: interpreted,
+                    interpretedSemanticContent:
+                        oralResult.interpretedSemanticContent,
+                    outcome: oralResult.outcome,
+                    decisionDigest: oralResult.decisionDigest
+                )
+            )
         } else if case let .beginLongDistanceCommunication(
             authorID, carrierID, destinationID, propositionID,
             renderingMode, nil
@@ -2206,6 +2245,20 @@ extension AgentSimulationSession {
                 parentPracticeID: parentPracticeID,
                 form: form
             )
+        case let .transmitCulturalPracticeOrally(
+            operationID, sourceAgentID, targetID, practiceID,
+            accompanyingPropositionID, renderingMode, acceptedEffect
+        ):
+            let result = try candidate.transmitCulturalPracticeOrally(
+                operationID: operationID,
+                sourceAgentID: sourceAgentID,
+                targetID: targetID,
+                practiceID: practiceID,
+                accompanyingPropositionID: accompanyingPropositionID,
+                renderingMode: renderingMode,
+                recordedEffect: acceptedEffect
+            )
+            oralTransmissionResult = result.transmission
         case let .recordCulturalExposure(
             operationID, targetID, sourceAgentID, practiceID, carrier
         ):

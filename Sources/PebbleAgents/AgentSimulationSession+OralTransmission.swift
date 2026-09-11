@@ -151,7 +151,8 @@ extension AgentSimulationSession {
         recipientID: AgentID,
         propositionID: AgentKnowledgePropositionID,
         renderingMode: AgentLanguageRenderingMode,
-        recordedEffect: AgentOralAcceptedEffect?
+        recordedEffect: AgentOralAcceptedEffect?,
+        contentAttachment: AgentOralContentAttachment? = nil
     ) throws -> AgentOralTransmission {
         guard let oral = oralTransmissionState, oral.enabled else {
             throw AgentSessionError.oral(.disabled)
@@ -164,6 +165,12 @@ extension AgentSimulationSession {
         }
         guard languageState?.enabled == true else {
             throw AgentSessionError.oral(.languageRequired)
+        }
+        if let contentAttachment,
+           !oralContentAttachmentIsValid(contentAttachment) {
+            throw AgentSessionError.oral(.invalidState(
+                "oral content attachment"
+            ))
         }
         guard let speaker = statesById[speakerID.rawValue] else {
             throw AgentSessionError.oral(.unknownAgent(speakerID.rawValue))
@@ -247,6 +254,10 @@ extension AgentSimulationSession {
         let transmissionID = AgentOralTransmissionID(
             rawValue: "oral-transmission-\(state.nextTransmissionOrdinal)"
         )!
+        let receiptReason = oralReceiptReason(
+            decisionDigest: acceptedEffect.decisionDigest,
+            contentAttachment: contentAttachment
+        )
         let receiptEvent = try candidate.requiredOralEvent(
             kind: .oralTransmissionAccepted,
             actorID: speakerID,
@@ -257,7 +268,7 @@ extension AgentSimulationSession {
             receivedPropositionID:
                 acceptedEffect.interpretedProposition.propositionID,
             status: acceptedEffect.outcome.rawValue,
-            reason: acceptedEffect.decisionDigest,
+            reason: receiptReason,
             summary: "oral claim \(speakerID.rawValue)>\(recipientID.rawValue) \(acceptedEffect.outcome.rawValue)"
         )
         let acquisition = try candidate.recordKnowledgeOralSourceClaim(
@@ -273,6 +284,7 @@ extension AgentSimulationSession {
                 acceptedEffect.interpretedSemanticContent,
             outcome: acceptedEffect.outcome,
             decisionDigest: acceptedEffect.decisionDigest,
+            contentAttachment: contentAttachment,
             locality: locality,
             receiptEventID: receiptEvent.eventID,
             acquisition: acquisition,
@@ -295,6 +307,7 @@ extension AgentSimulationSession {
                 acceptedEffect.interpretedSemanticContent,
             outcome: acceptedEffect.outcome,
             decisionDigest: acceptedEffect.decisionDigest,
+            contentAttachment: contentAttachment,
             locality: locality,
             receiptEventID: receiptEvent.eventID,
             recipientClaimID: acquisition.claimID,
@@ -857,7 +870,9 @@ extension AgentSimulationSession {
             knowledge.propositions.map { ($0.propositionID, $0) }
         )
         for record in state.transmissions {
-            guard record.speakerID != record.recipientID,
+            guard record.contentAttachment.map(oralContentAttachmentIsValid)
+                    ?? true,
+                  record.speakerID != record.recipientID,
                   record.transmittedAtTick >= 0,
                   record.transmittedAtTick <= tick,
                   record.locality.observedAtTick
@@ -1001,6 +1016,7 @@ extension AgentSimulationSession {
                     record.interpretedSemanticContent,
                 outcome: record.outcome,
                 decisionDigest: record.decisionDigest,
+                contentAttachment: record.contentAttachment,
                 locality: record.locality,
                 receiptEventID: record.receiptEventID,
                 acquisition: acquisition,
@@ -1025,7 +1041,10 @@ extension AgentSimulationSession {
                       receivedID == record.interpretedSemanticContent
                         .sourcePropositionID.rawValue,
                       status == record.outcome.rawValue,
-                      reason == record.decisionDigest else {
+                      reason == oralReceiptReason(
+                        decisionDigest: record.decisionDigest,
+                        contentAttachment: record.contentAttachment
+                      ) else {
                     throw AgentSessionError.oral(.invalidState(
                         "oral receipt event"
                     ))
@@ -1139,7 +1158,7 @@ extension AgentSimulationSession {
 func oralTransmissionCanonicalText(
     _ record: AgentOralTransmission
 ) -> String {
-    [
+    var fields = [
         record.transmissionID.rawValue,
         record.speakerID.rawValue,
         record.recipientID.rawValue,
@@ -1165,7 +1184,11 @@ func oralTransmissionCanonicalText(
         record.recipientBeliefRevisionEventID.rawValue,
         String(record.transmittedAtTick),
         record.provenanceDigest,
-    ].joined(separator: "|")
+    ]
+    if let contentAttachment = record.contentAttachment {
+        fields.append(contentAttachment.canonicalText)
+    }
+    return fields.joined(separator: "|")
 }
 
 func oralTransmissionDigest(
@@ -1174,12 +1197,13 @@ func oralTransmissionDigest(
     interpretedSemanticContent: AgentLanguageSemanticContent,
     outcome: AgentOralTransmissionOutcome,
     decisionDigest: String,
+    contentAttachment: AgentOralContentAttachment?,
     locality: AgentOralLocalityEvidence,
     receiptEventID: AgentCausalEventID,
     acquisition: AgentSimulationSession.KnowledgeOralAcquisition,
     transmittedAtTick: Int
 ) -> String {
-    AgentOralDigest.make([
+    var fields = [
         "oral-transmission-provenance-v1",
         transmissionID.rawValue,
         communication.speakerID.rawValue,
@@ -1205,7 +1229,23 @@ func oralTransmissionDigest(
         acquisition.beliefID.rawValue,
         acquisition.beliefRevisionEventID.rawValue,
         String(transmittedAtTick),
-    ].joined(separator: "|"))
+    ]
+    if let contentAttachment {
+        fields.append(contentAttachment.canonicalText)
+    }
+    return AgentOralDigest.make(fields.joined(separator: "|"))
+}
+
+func oralReceiptReason(
+    decisionDigest: String,
+    contentAttachment: AgentOralContentAttachment?
+) -> String {
+    guard let contentAttachment else { return decisionDigest }
+    // The ordinary distortion decision remains committed by the oral record
+    // and provenance digest. For an attached application payload, the causal
+    // receipt exposes that payload's exact commitment so the owning subsystem
+    // can validate the retained carrier without interpreting CIV-41 content.
+    return contentAttachment.contentDigest
 }
 
 func oralProvenanceBoundaryDigest(

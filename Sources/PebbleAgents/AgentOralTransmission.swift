@@ -55,8 +55,39 @@ public enum AgentOralError: Error, Equatable {
 }
 
 private func isValidOralIdentifier(_ value: String) -> Bool {
-    (1...192).contains(value.utf8.count)
+    !value.isEmpty && value.utf8.prefix(193).count <= 192
         && value.utf8.allSatisfy { (33...126).contains($0) }
+}
+
+/// A bounded, opaque attachment carried by the oral hop itself. The carrier
+/// owns only the immutable bytes it transported; the named subsystem remains
+/// the authority for interpreting those bytes.
+public struct AgentOralContentAttachment: Codable, Equatable, Sendable {
+    public let namespace: String
+    public let contentID: String
+    public let contentDigest: String
+
+    init(namespace: String, contentID: String, contentDigest: String) {
+        self.namespace = namespace
+        self.contentID = contentID
+        self.contentDigest = contentDigest
+    }
+
+    var canonicalText: String {
+        "\(namespace)|\(contentID)|\(contentDigest)"
+    }
+}
+
+func oralContentAttachmentIsValid(
+    _ attachment: AgentOralContentAttachment
+) -> Bool {
+    isValidOralIdentifier(attachment.namespace)
+        && isValidOralIdentifier(attachment.contentID)
+        && !attachment.contentDigest.isEmpty
+        && attachment.contentDigest.utf8.prefix(97).count <= 96
+        && attachment.contentDigest.utf8.allSatisfy {
+            (48...57).contains($0) || (97...102).contains($0)
+        }
 }
 
 public struct AgentOralTransmissionID:
@@ -119,6 +150,9 @@ public struct AgentOralTransmission: Codable, Equatable, Sendable {
     public let interpretedSemanticContent: AgentLanguageSemanticContent
     public let outcome: AgentOralTransmissionOutcome
     public let decisionDigest: String
+    /// Optional application content committed at carrier creation. It is not
+    /// a CIV-41 belief or CIV-42 semantic authority.
+    public let contentAttachment: AgentOralContentAttachment?
     public let locality: AgentOralLocalityEvidence
     public let receiptEventID: AgentCausalEventID
     public let recipientClaimID: AgentKnowledgeClaimID

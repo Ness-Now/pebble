@@ -145,10 +145,13 @@ extension AgentSimulationSession {
             actorID: originatorID,
             sourceAgentID: nil,
             carrier: nil,
+            carrierEventID: nil,
+            carrierContentDigest: nil,
             participantIDs: [],
             witnessIDs: [],
             outcome: .adopted,
             competingPracticeID: nil,
+            causes: event.causes,
             tick: candidate.tick,
             eventID: event.eventID
         )
@@ -246,10 +249,13 @@ extension AgentSimulationSession {
             actorID: creatorID,
             sourceAgentID: creatorID,
             carrier: nil,
+            carrierEventID: nil,
+            carrierContentDigest: nil,
             participantIDs: [],
             witnessIDs: [],
             outcome: .adopted,
             competingPracticeID: parentPracticeID,
+            causes: event.causes,
             tick: candidate.tick,
             eventID: event.eventID
         )
@@ -275,9 +281,125 @@ extension AgentSimulationSession {
         return record
     }
 
-    /// CIV-43/45/46 remain the carrier authorities. This transition stores a
-    /// bounded cultural exposure reference only and never creates a belief or
-    /// treats a surviving catalogue row as material access.
+    /// Creates an oral carrier whose immutable attachment commits the exact
+    /// cultural descriptor, then admits the exposure in the same aggregate
+    /// transaction. The accompanying CIV-41 proposition remains separate
+    /// epistemic content; the attachment is not a belief or semantic sense.
+    @discardableResult
+    public mutating func transmitCulturalPracticeOrally(
+        operationID: String,
+        sourceAgentID: AgentID,
+        targetID: AgentID,
+        practiceID: AgentCulturePracticeID,
+        accompanyingPropositionID: AgentKnowledgePropositionID,
+        renderingMode: AgentLanguageRenderingMode
+    ) throws -> AgentCultureRecord {
+        try transmitCulturalPracticeOrally(
+            operationID: operationID,
+            sourceAgentID: sourceAgentID,
+            targetID: targetID,
+            practiceID: practiceID,
+            accompanyingPropositionID: accompanyingPropositionID,
+            renderingMode: renderingMode,
+            recordedEffect: nil
+        ).record
+    }
+
+    mutating func transmitCulturalPracticeOrally(
+        operationID: String,
+        sourceAgentID: AgentID,
+        targetID: AgentID,
+        practiceID: AgentCulturePracticeID,
+        accompanyingPropositionID: AgentKnowledgePropositionID,
+        renderingMode: AgentLanguageRenderingMode,
+        recordedEffect: AgentOralAcceptedEffect?
+    ) throws -> (record: AgentCultureRecord, transmission: AgentOralTransmission?) {
+        try requireCultureOperationID(operationID)
+        guard let sourceStance = cultureStance(
+            for: sourceAgentID, practiceID: practiceID
+        ) else {
+            throw AgentSessionError.culture(.unknownPractice(practiceID))
+        }
+        let contentDigest = culturePracticeContentDigest(sourceStance.practice)
+        let requestDigest = AgentCultureDigest.make([
+            "culture-oral-exposure-v2", simulationID.rawValue, operationID,
+            sourceAgentID.rawValue, targetID.rawValue, practiceID.rawValue,
+            accompanyingPropositionID.rawValue, renderingMode.rawValue,
+            contentDigest,
+        ].joined(separator: "|"))
+        if let existing = try existingCultureRecord(
+            operationID: operationID,
+            requestDigest: requestDigest
+        ) {
+            let transmission: AgentOralTransmission?
+            if case let .oral(transmissionID) = existing.carrier {
+                transmission = oralTransmissionState?.transmissions.first {
+                    $0.transmissionID == transmissionID
+                }
+            } else {
+                throw AgentSessionError.culture(.invalidState(
+                    "oral culture retry carrier"
+                ))
+            }
+            return (existing, transmission)
+        }
+        guard distributedCultureState?.enabled == true else {
+            throw AgentSessionError.culture(.disabled)
+        }
+        try requireCultureAgent(sourceAgentID)
+        try requireCultureAgent(targetID)
+        guard sourceAgentID != targetID,
+              sourceStance.status == .adopted else {
+            throw AgentSessionError.culture(.notAdopted(
+                sourceAgentID, practiceID
+            ))
+        }
+        try prevalidateCultureRows(
+            affectedAgentIDs: [targetID],
+            newPracticeFor: cultureStance(
+                for: targetID, practiceID: practiceID
+            ) == nil ? [targetID] : []
+        )
+
+        let attachment = AgentOralContentAttachment(
+            namespace: cultureOralContentNamespace,
+            contentID: practiceID.rawValue,
+            contentDigest: contentDigest
+        )
+        var candidate = self
+        let transmission = try candidate.transmitOralClaim(
+            speakerID: sourceAgentID,
+            recipientID: targetID,
+            propositionID: accompanyingPropositionID,
+            renderingMode: renderingMode,
+            recordedEffect: recordedEffect,
+            contentAttachment: attachment
+        )
+        let carrier: AgentCultureCarrierReference = .oral(
+            transmission.transmissionID
+        )
+        let evidence = try candidate.cultureCarrierEvidence(
+            carrier,
+            targetID: targetID,
+            sourceAgentID: sourceAgentID,
+            sourceStance: sourceStance
+        )
+        let record = try candidate.admitCulturalExposure(
+            operationID: operationID,
+            requestDigest: requestDigest,
+            targetID: targetID,
+            sourceAgentID: sourceAgentID,
+            sourceStance: sourceStance,
+            carrier: carrier,
+            carrierEvidence: evidence
+        )
+        self = candidate
+        return (record, transmission)
+    }
+
+    /// Admits only a carrier that already contains an exact cultural-content
+    /// commitment. Plain oral claims and the current CIV-45/46 carriers fail
+    /// closed because their records do not contain that commitment.
     @discardableResult
     public mutating func recordCulturalExposure(
         operationID: String,
@@ -287,6 +409,7 @@ extension AgentSimulationSession {
         carrier: AgentCultureCarrierReference
     ) throws -> AgentCultureRecord {
         try requireCultureOperationID(operationID)
+        try validateCultureCarrierInput(carrier)
         let requestDigest = AgentCultureDigest.make([
             "culture-exposure-v1", simulationID.rawValue, operationID,
             targetID.rawValue, sourceAgentID.rawValue, practiceID.rawValue,
@@ -310,56 +433,16 @@ extension AgentSimulationSession {
             sourceAgentID: sourceAgentID,
             sourceStance: sourceStance
         )
-        if let target = cultureIndividual(for: targetID),
-           target.history.contains(where: {
-               $0.kind == .exposed && $0.practice.practiceID == practiceID
-                   && $0.carrier == carrier
-           }) {
-            throw AgentSessionError.culture(.duplicateCarrier(practiceID))
-        }
         var candidate = self
-        try candidate.prevalidateCultureRows(
-            affectedAgentIDs: [targetID],
-            newPracticeFor: candidate.cultureStance(
-                for: targetID, practiceID: practiceID
-            ) == nil ? [targetID] : []
-        )
-        let event = try candidate.requiredCultureEvent(
-            kind: .culturePracticeExposed,
-            actorID: sourceAgentID,
-            subjectID: targetID,
-            causes: [carrierEvidence.carrierEventID, carrierEvidence.sourceStatusEventID]
-                .sorted(),
-            practiceID: practiceID,
-            recordID: operationID,
-            status: "exposed",
-            detail: requestDigest,
-            summary: "cultural exposure \(sourceAgentID.rawValue)>\(targetID.rawValue)"
-        )
-        let record = AgentCultureRecord(
+        let record = try candidate.admitCulturalExposure(
             operationID: operationID,
             requestDigest: requestDigest,
-            kind: .exposed,
-            practice: sourceStance.practice,
-            actorID: targetID,
+            targetID: targetID,
             sourceAgentID: sourceAgentID,
+            sourceStance: sourceStance,
             carrier: carrier,
-            participantIDs: [],
-            witnessIDs: [],
-            outcome: nil,
-            competingPracticeID: nil,
-            tick: candidate.tick,
-            eventID: event.eventID
+            carrierEvidence: carrierEvidence
         )
-        candidate.insertCultureRecord(record, for: [targetID])
-        candidate.applyCultureExposure(
-            practice: sourceStance.practice,
-            to: targetID,
-            eventID: event.eventID
-        )
-        candidate.insertCultureReceipt(for: record)
-        try candidate.commitCultureBoundary(causes: [event.eventID])
-        try candidate.validateDistributedCultureStateIfInitialized()
         self = candidate
         return record
     }
@@ -432,10 +515,13 @@ extension AgentSimulationSession {
             actorID: agentID,
             sourceAgentID: nil,
             carrier: nil,
+            carrierEventID: nil,
+            carrierContentDigest: nil,
             participantIDs: [],
             witnessIDs: [],
             outcome: outcome,
             competingPracticeID: competitor?.practice.practiceID,
+            causes: event.causes,
             tick: candidate.tick,
             eventID: event.eventID
         )
@@ -469,6 +555,19 @@ extension AgentSimulationSession {
         witnessIDs: [AgentID] = []
     ) throws -> AgentCultureRecord {
         try requireCultureOperationID(operationID)
+        guard let state = distributedCultureState, state.enabled else {
+            throw AgentSessionError.culture(.disabled)
+        }
+        // Public array bounds precede Set construction, sorting, joining and
+        // hashing. The practitioner consumes one participant slot.
+        guard coParticipantIDs.count
+                < state.configuration.maximumParticipantsPerUse,
+              witnessIDs.count
+                <= state.configuration.maximumWitnessesPerUse else {
+            throw AgentSessionError.culture(.invalidState(
+                "use participant input bound"
+            ))
+        }
         let participants = Array(Set([practitionerID] + coParticipantIDs)).sorted()
         let witnesses = Array(Set(witnessIDs)).sorted()
         let requestDigest = AgentCultureDigest.make([
@@ -481,9 +580,6 @@ extension AgentSimulationSession {
             operationID: operationID,
             requestDigest: requestDigest
         ) { return existing }
-        guard let state = distributedCultureState, state.enabled else {
-            throw AgentSessionError.culture(.disabled)
-        }
         guard participants.count == coParticipantIDs.count + 1,
               witnesses.count == witnessIDs.count,
               Set(participants).isDisjoint(with: Set(witnesses)),
@@ -508,7 +604,12 @@ extension AgentSimulationSession {
            participants.count < pattern.minimumParticipants {
             throw AgentSessionError.culture(.invalidPractice("ritual quorum"))
         }
-        for id in participants.dropFirst() + witnesses {
+        for id in participants where id != practitionerID {
+            guard cultureAgentsShareLocalAuthority(practitionerID, id) else {
+                throw AgentSessionError.culture(.nonLocal(practitionerID, id))
+            }
+        }
+        for id in witnesses {
             guard cultureAgentsShareLocalAuthority(practitionerID, id) else {
                 throw AgentSessionError.culture(.nonLocal(practitionerID, id))
             }
@@ -545,10 +646,13 @@ extension AgentSimulationSession {
             actorID: practitionerID,
             sourceAgentID: practitionerID,
             carrier: nil,
+            carrierEventID: nil,
+            carrierContentDigest: nil,
             participantIDs: participants,
             witnessIDs: witnesses,
             outcome: nil,
             competingPracticeID: nil,
+            causes: event.causes,
             tick: candidate.tick,
             eventID: event.eventID
         )
@@ -639,11 +743,14 @@ extension AgentSimulationSession {
             actorID: agentID,
             sourceAgentID: nil,
             carrier: nil,
+            carrierEventID: nil,
+            carrierContentDigest: nil,
             participantIDs: [],
             witnessIDs: [],
             outcome: outcome,
             competingPracticeID: competitorIsStronger
                 ? competitor?.practice.practiceID : nil,
+            causes: event.causes,
             tick: candidate.tick,
             eventID: event.eventID
         )
@@ -708,10 +815,174 @@ extension AgentSimulationSession {
     }
 }
 
+/// Rebuilds only the cryptographic/causal attestations around an intentionally
+/// mutated schema-42 durable state. This test-only seam lets hostile-checkpoint
+/// tests prove the semantic validator, instead of stopping at the first stale
+/// boundary digest. It does not relax restore and is unavailable to ordinary
+/// callers.
+@_spi(Testing)
+public func reattestCultureDurableStateForTesting(
+    _ bytes: Data
+) throws -> Data {
+    var root = try JSONSerialization.jsonObject(with: bytes) as! [String: Any]
+    var cultureObject = root["distributedCultureState"] as! [String: Any]
+    let cultureBytes = try JSONSerialization.data(
+        withJSONObject: cultureObject,
+        options: [.sortedKeys, .withoutEscapingSlashes]
+    )
+    let culture = try AgentCheckpointCodec.decode(
+        AgentDistributedCultureState.self,
+        from: cultureBytes
+    )
+    guard let boundary = culture.boundary,
+          var boundaryObject = cultureObject["boundary"] as? [String: Any]
+    else {
+        throw AgentSessionError.culture(.invalidState(
+            "testing culture boundary"
+        ))
+    }
+    let boundaryDigest = cultureBoundaryDigest(culture)
+    boundaryObject["digest"] = boundaryDigest
+    cultureObject["boundary"] = boundaryObject
+    root["distributedCultureState"] = cultureObject
+
+    let ledgerBytes = try JSONSerialization.data(
+        withJSONObject: root["causalLedger"]!,
+        options: [.sortedKeys, .withoutEscapingSlashes]
+    )
+    let ledger = try AgentCheckpointCodec.decode(
+        AgentCausalLedgerDurableState.self,
+        from: ledgerBytes
+    )
+    guard ledger.droppedEventCount == 0 else {
+        throw AgentSessionError.culture(.invalidState(
+            "testing reattestation requires complete causal retention"
+        ))
+    }
+    let events = try ledger.events.map { event -> AgentCausalEvent in
+        let payload: AgentCausalPayload
+        if event.eventID == boundary.eventID {
+            guard case let .culture(
+                recordID, practiceID, status, _
+            ) = event.payload else {
+                throw AgentSessionError.culture(.invalidState(
+                    "testing culture boundary event"
+                ))
+            }
+            payload = .culture(
+                recordID: recordID,
+                practiceID: practiceID,
+                status: status,
+                detail: boundaryDigest
+            )
+        } else {
+            payload = event.payload
+        }
+        return try AgentCausalEvent(
+            id: event.eventID,
+            instant: event.instant,
+            kind: event.kind,
+            origin: event.origin,
+            actorID: event.actorID,
+            subjectID: event.subjectID,
+            operationID: event.operationID,
+            causes: event.causes,
+            payload: payload,
+            summary: event.summary
+        )
+    }
+    let rollingDigest = events.reduce(AgentCausalEvent.digest("")) {
+        AgentCausalEvent.digest("\($0)|\($1.digest)")
+    }
+    let reattestedLedger = AgentCausalLedgerDurableState(
+        policy: ledger.policy,
+        events: events,
+        latestSequence: ledger.latestSequence,
+        droppedEventCount: ledger.droppedEventCount,
+        rollingDigest: rollingDigest
+    )
+    root["causalLedger"] = try JSONSerialization.jsonObject(
+        with: AgentCheckpointCodec.encode(reattestedLedger)
+    )
+    return try JSONSerialization.data(
+        withJSONObject: root,
+        options: [.sortedKeys, .withoutEscapingSlashes]
+    )
+}
+
 extension AgentSimulationSession {
     private struct CultureCarrierEvidence {
         let carrierEventID: AgentCausalEventID
         let sourceStatusEventID: AgentCausalEventID
+        let contentDigest: String
+    }
+
+    private mutating func admitCulturalExposure(
+        operationID: String,
+        requestDigest: String,
+        targetID: AgentID,
+        sourceAgentID: AgentID,
+        sourceStance: AgentCultureStance,
+        carrier: AgentCultureCarrierReference,
+        carrierEvidence: CultureCarrierEvidence
+    ) throws -> AgentCultureRecord {
+        let practiceID = sourceStance.practice.practiceID
+        if let target = cultureIndividual(for: targetID),
+           target.history.contains(where: {
+               $0.kind == .exposed && $0.practice.practiceID == practiceID
+                   && $0.carrier == carrier
+           }) {
+            throw AgentSessionError.culture(.duplicateCarrier(practiceID))
+        }
+        try prevalidateCultureRows(
+            affectedAgentIDs: [targetID],
+            newPracticeFor: cultureStance(
+                for: targetID, practiceID: practiceID
+            ) == nil ? [targetID] : []
+        )
+        let causes = [
+            carrierEvidence.carrierEventID,
+            carrierEvidence.sourceStatusEventID,
+        ].sorted()
+        let event = try requiredCultureEvent(
+            kind: .culturePracticeExposed,
+            actorID: sourceAgentID,
+            subjectID: targetID,
+            causes: causes,
+            practiceID: practiceID,
+            recordID: operationID,
+            status: "exposed",
+            detail: requestDigest,
+            summary: "cultural exposure \(sourceAgentID.rawValue)>\(targetID.rawValue)"
+        )
+        let record = AgentCultureRecord(
+            operationID: operationID,
+            requestDigest: requestDigest,
+            kind: .exposed,
+            practice: sourceStance.practice,
+            actorID: targetID,
+            sourceAgentID: sourceAgentID,
+            carrier: carrier,
+            carrierEventID: carrierEvidence.carrierEventID,
+            carrierContentDigest: carrierEvidence.contentDigest,
+            participantIDs: [],
+            witnessIDs: [],
+            outcome: nil,
+            competingPracticeID: nil,
+            causes: event.causes,
+            tick: tick,
+            eventID: event.eventID
+        )
+        insertCultureRecord(record, for: [targetID])
+        applyCultureExposure(
+            practice: sourceStance.practice,
+            to: targetID,
+            eventID: event.eventID
+        )
+        insertCultureReceipt(for: record)
+        try commitCultureBoundary(causes: [event.eventID])
+        try validateDistributedCultureStateIfInitialized()
+        return record
     }
 
     private func cultureCarrierEvidence(
@@ -722,6 +993,7 @@ extension AgentSimulationSession {
     ) throws -> CultureCarrierEvidence {
         let authoritySequence: AgentCausalSequence
         let carrierEventID: AgentCausalEventID
+        let contentDigest: String
         switch carrier {
         case let .oral(id):
             guard let transmission = oralTransmissionState?.transmissions.first(where: {
@@ -730,11 +1002,19 @@ extension AgentSimulationSession {
                 throw AgentSessionError.culture(.unknownCarrier(carrier.canonicalText))
             }
             guard transmission.speakerID == sourceAgentID,
-                  transmission.recipientID == targetID else {
+                  transmission.recipientID == targetID,
+                  let attachment = transmission.contentAttachment,
+                  attachment.namespace == cultureOralContentNamespace,
+                  attachment.contentID
+                    == sourceStance.practice.practiceID.rawValue,
+                  attachment.contentDigest
+                    == culturePracticeContentDigest(sourceStance.practice)
+            else {
                 throw AgentSessionError.culture(.invalidCarrier(carrier.canonicalText))
             }
             authoritySequence = transmission.receiptEventID.sequence
             carrierEventID = transmission.receiptEventID
+            contentDigest = attachment.contentDigest
         case let .writingReading(readingID):
             guard let reading = writingState?.readings.first(where: {
                 $0.readingID == readingID
@@ -747,8 +1027,9 @@ extension AgentSimulationSession {
                   artifact.plan.authorID == sourceAgentID else {
                 throw AgentSessionError.culture(.invalidCarrier(carrier.canonicalText))
             }
-            authoritySequence = artifact.inscriptionEventID.sequence
-            carrierEventID = reading.readingEventID
+            throw AgentSessionError.culture(.invalidCarrier(
+                "writing carrier has no cultural-content commitment"
+            ))
         case let .archiveRetrieval(operationID):
             guard let retrieval = archiveState?.retrievals.first(where: {
                 $0.operationID == operationID
@@ -761,8 +1042,9 @@ extension AgentSimulationSession {
                   artifact.plan.authorID == sourceAgentID else {
                 throw AgentSessionError.culture(.invalidCarrier(carrier.canonicalText))
             }
-            authoritySequence = artifact.inscriptionEventID.sequence
-            carrierEventID = retrieval.retrievalEventID
+            throw AgentSessionError.culture(.invalidCarrier(
+                "archive carrier has no cultural-content commitment"
+            ))
         }
         guard let historical = cultureHistoricalStatus(
             for: sourceAgentID,
@@ -775,7 +1057,8 @@ extension AgentSimulationSession {
         }
         return CultureCarrierEvidence(
             carrierEventID: carrierEventID,
-            sourceStatusEventID: historical.eventID
+            sourceStatusEventID: historical.eventID,
+            contentDigest: contentDigest
         )
     }
 
@@ -975,11 +1258,18 @@ extension AgentSimulationSession {
                 $0.houseID == id && $0.leftTick == nil
             }.map(\.agentID).sorted()
         case let .individuals(ids):
-            let sorted = ids.sorted()
             let maximum = distributedCultureState?.configuration
                 .maximumIndividuals ?? AgentCultureConfiguration.live
                 .maximumIndividuals
-            guard sorted.count <= maximum,
+            // Refuse an oversized public input before sorting, Set
+            // construction or per-identity authority lookup.
+            guard ids.count <= maximum else {
+                throw AgentSessionError.culture(.invalidState(
+                    "projection individual input bound"
+                ))
+            }
+            let sorted = ids.sorted()
+            guard
                   Set(sorted).count == sorted.count else {
                 throw AgentSessionError.culture(.invalidState("projection individuals"))
             }
@@ -1006,6 +1296,22 @@ extension AgentSimulationSession {
     private func requireCultureOperationID(_ operationID: String) throws {
         guard cultureIdentifierIsValid(operationID, maximum: 128) else {
             throw AgentSessionError.culture(.invalidOperationID(operationID))
+        }
+    }
+
+    private func validateCultureCarrierInput(
+        _ carrier: AgentCultureCarrierReference
+    ) throws {
+        switch carrier {
+        case .oral:
+            return
+        case let .writingReading(identifier),
+             let .archiveRetrieval(identifier):
+            guard cultureIdentifierIsValid(identifier, maximum: 192) else {
+                throw AgentSessionError.culture(.invalidCarrier(
+                    "carrier identifier"
+                ))
+            }
         }
     }
 
@@ -1047,6 +1353,15 @@ extension AgentSimulationSession {
         guard let state = distributedCultureState, state.enabled else {
             throw AgentSessionError.culture(.disabled)
         }
+        guard affectedAgentIDs.count
+                <= state.configuration.maximumParticipantsPerUse
+                    + state.configuration.maximumWitnessesPerUse,
+              newPracticeFor.count
+                <= state.configuration.maximumIndividuals else {
+            throw AgentSessionError.culture(.capacityReached(
+                "culture row input bound"
+            ))
+        }
         let affected = Array(Set(affectedAgentIDs)).sorted()
         let newIndividuals = affected.filter { cultureIndividual(for: $0) == nil }
         guard state.individuals.count + newIndividuals.count
@@ -1082,6 +1397,11 @@ extension AgentSimulationSession {
         detail: String,
         summary: String
     ) throws -> AgentCausalEvent {
+        guard causes.count <= AgentCausalEvent.maximumCauseCount else {
+            throw AgentSessionError.culture(.invalidState(
+                "culture causal input bound"
+            ))
+        }
         guard let event = try recordCausalEvent(
             kind: kind,
             origin: .cultureTransition,
@@ -1126,8 +1446,69 @@ extension AgentSimulationSession {
         distributedCultureState = state
     }
 
+    private func prevalidateCultureEncodedInputBounds(
+        _ state: AgentDistributedCultureState
+    ) throws {
+        try state.configuration.validate()
+        guard state.individuals.count <= state.configuration.maximumIndividuals,
+              state.operationReceipts.count
+                <= state.configuration.maximumOperationReceipts,
+              state.boundary.map({ cultureDigestIsValid($0.digest) }) ?? false
+        else {
+            throw AgentSessionError.culture(.invalidState(
+                "encoded culture input bound"
+            ))
+        }
+        for individual in state.individuals {
+            guard individual.stances.count
+                    <= state.configuration.maximumPracticesPerIndividual,
+                  individual.history.count
+                    <= state.configuration.maximumHistoryPerIndividual else {
+                throw AgentSessionError.culture(.invalidState(
+                    "encoded individual input bound"
+                ))
+            }
+            for stance in individual.stances {
+                try validateCulturePractice(stance.practice)
+            }
+            for record in individual.history {
+                guard cultureIdentifierIsValid(
+                        record.operationID, maximum: 128
+                      ),
+                      cultureDigestIsValid(record.requestDigest),
+                      record.participantIDs.count
+                        <= state.configuration.maximumParticipantsPerUse,
+                      record.witnessIDs.count
+                        <= state.configuration.maximumWitnessesPerUse,
+                      record.causes.count <= AgentCausalEvent.maximumCauseCount,
+                      record.carrierContentDigest.map(cultureDigestIsValid)
+                        ?? true else {
+                    throw AgentSessionError.culture(.invalidState(
+                        "encoded history input bound"
+                    ))
+                }
+                try validateCulturePractice(record.practice)
+                if let carrier = record.carrier {
+                    try validateCultureCarrierInput(carrier)
+                }
+            }
+        }
+        for receipt in state.operationReceipts {
+            guard cultureIdentifierIsValid(
+                    receipt.operationID, maximum: 128
+                  ), cultureDigestIsValid(receipt.requestDigest) else {
+                throw AgentSessionError.culture(.invalidState(
+                    "encoded receipt input bound"
+                ))
+            }
+        }
+    }
+
     func validateCultureBoundary() throws {
         guard let state = distributedCultureState else { return }
+        // Check every caller-controlled collection and string before encoding
+        // the complete state for its boundary digest.
+        try prevalidateCultureEncodedInputBounds(state)
         guard let boundary = state.boundary,
               boundary.digest == cultureBoundaryDigest(state),
               let event = causalLedger.events.first(where: {
@@ -1162,6 +1543,9 @@ extension AgentSimulationSession {
         var practices: [AgentCulturePracticeID: AgentCulturePractice] = [:]
         var records: [String: AgentCultureRecord] = [:]
         var holders: [String: Set<AgentID>] = [:]
+        let retainedEvents = Dictionary(uniqueKeysWithValues:
+            causalLedger.events.map { ($0.eventID, $0) }
+        )
         let activeOrHistoricallyDepartedAgentIDs = Set(
             statesById.values.map(\.agentID)
         ).union(mortalityState?.records.map(\.agentID) ?? [])
@@ -1209,12 +1593,19 @@ extension AgentSimulationSession {
             for record in individual.history {
                 try validateCulturePractice(record.practice)
                 guard cultureIdentifierIsValid(record.operationID, maximum: 128),
-                      record.requestDigest.count == 64,
+                      cultureDigestIsValid(record.requestDigest),
                       record.tick >= 0, record.tick <= tick,
                       record.eventID.simulationID == simulationID,
                       record.eventID.sequence.rawValue <= causalLedger.latestSequence else {
                     throw AgentSessionError.culture(.invalidState("history record"))
                 }
+                try validateCultureRecordShape(record)
+                try validateCultureRecordCausalEvent(
+                    record, retainedEvents: retainedEvents
+                )
+                try validateCultureCarrierProvenance(
+                    record, retainedEvents: retainedEvents
+                )
                 if let existing = records[record.operationID], existing != record {
                     throw AgentSessionError.culture(.invalidState("operation collision"))
                 }
@@ -1228,6 +1619,9 @@ extension AgentSimulationSession {
             }
             try validateCultureIndividualDerivedState(individual)
         }
+        try validateCultureCausalSemantics(
+            records.values.sorted { $0.eventID < $1.eventID }
+        )
         guard records.count == state.operationReceipts.count else {
             throw AgentSessionError.culture(.invalidState("operation count"))
         }
@@ -1264,11 +1658,584 @@ extension AgentSimulationSession {
         }
     }
 
+    private struct CultureHistoricalCursor {
+        var stance: AgentCultureStance
+        var statusEventID: AgentCausalEventID
+    }
+
+    /// Replays each unique distributed record once, in causal order. This is
+    /// validation only: it proves that retained record causes are the exact
+    /// individual histories the live transition would have selected, even if
+    /// a hostile checkpoint consistently alters both a record and its ledger
+    /// event. Work is bounded by retained operation receipts and sparse
+    /// per-individual practice rows; there is no agents-by-practices scan.
+    private func validateCultureCausalSemantics(
+        _ records: [AgentCultureRecord]
+    ) throws {
+        guard let configuration = distributedCultureState?.configuration,
+              records.count <= configuration.maximumOperationReceipts else {
+            throw AgentSessionError.culture(.invalidState(
+                "culture causal validation bound"
+            ))
+        }
+        var cursors: [AgentID: [AgentCulturePracticeID: CultureHistoricalCursor]]
+            = [:]
+
+        func strongestCompetitor(
+            for agentID: AgentID,
+            excluding practiceID: AgentCulturePracticeID,
+            competitionKey: String
+        ) -> CultureHistoricalCursor? {
+            cursors[agentID]?.values.filter {
+                $0.stance.practice.practiceID != practiceID
+                    && $0.stance.practice.form.competitionKey == competitionKey
+                    && $0.stance.status == .adopted
+            }.sorted {
+                if $0.stance.useCount != $1.stance.useCount {
+                    return $0.stance.useCount > $1.stance.useCount
+                }
+                if ($0.stance.lastUseTick ?? -1)
+                    != ($1.stance.lastUseTick ?? -1) {
+                    return ($0.stance.lastUseTick ?? -1)
+                        > ($1.stance.lastUseTick ?? -1)
+                }
+                return $0.stance.practice.practiceID
+                    < $1.stance.practice.practiceID
+            }.first
+        }
+
+        func publish(
+            _ cursor: CultureHistoricalCursor,
+            for agentID: AgentID
+        ) {
+            cursors[agentID, default: [:]][
+                cursor.stance.practice.practiceID
+            ] = cursor
+        }
+
+        for record in records {
+            let practiceID = record.practice.practiceID
+            switch record.kind {
+            case .originated:
+                guard cursors[record.actorID]?[practiceID] == nil,
+                      record.causes.isEmpty else {
+                    throw AgentSessionError.culture(.invalidState(
+                        "origin causal history"
+                    ))
+                }
+                publish(CultureHistoricalCursor(
+                    stance: AgentCultureStance(
+                        practice: record.practice,
+                        status: .adopted,
+                        exposureCount: 0,
+                        useCount: 0,
+                        lastExposureTick: nil,
+                        lastUseTick: nil,
+                        adoptedAtTick: record.tick,
+                        adoptedEventID: record.eventID,
+                        lastTransitionEventID: record.eventID
+                    ),
+                    statusEventID: record.eventID
+                ), for: record.actorID)
+
+            case .variationCreated:
+                guard let parentID = record.practice.parentPracticeID,
+                      let parent = cursors[record.actorID]?[parentID],
+                      parent.stance.status == .adopted,
+                      record.causes == [parent.stance.lastTransitionEventID],
+                      cursors[record.actorID]?[practiceID] == nil else {
+                    throw AgentSessionError.culture(.invalidState(
+                        "variation causal history"
+                    ))
+                }
+                publish(CultureHistoricalCursor(
+                    stance: AgentCultureStance(
+                        practice: record.practice,
+                        status: .adopted,
+                        exposureCount: 0,
+                        useCount: 0,
+                        lastExposureTick: nil,
+                        lastUseTick: nil,
+                        adoptedAtTick: record.tick,
+                        adoptedEventID: record.eventID,
+                        lastTransitionEventID: record.eventID
+                    ),
+                    statusEventID: record.eventID
+                ), for: record.actorID)
+
+            case .exposed:
+                guard let sourceAgentID = record.sourceAgentID,
+                      let source = cursors[sourceAgentID]?[practiceID],
+                      source.stance.status == .adopted,
+                      let carrierEventID = record.carrierEventID,
+                      record.causes
+                        == [carrierEventID, source.statusEventID].sorted()
+                else {
+                    throw AgentSessionError.culture(.invalidState(
+                        "exposure causal history"
+                    ))
+                }
+                var target = cursors[record.actorID]?[practiceID]
+                    ?? CultureHistoricalCursor(
+                        stance: AgentCultureStance(
+                            practice: record.practice,
+                            status: .exposed,
+                            exposureCount: 0,
+                            useCount: 0,
+                            lastExposureTick: nil,
+                            lastUseTick: nil,
+                            adoptedAtTick: nil,
+                            adoptedEventID: nil,
+                            lastTransitionEventID: record.eventID
+                        ),
+                        statusEventID: record.eventID
+                    )
+                target.stance.exposureCount += 1
+                target.stance.lastExposureTick = record.tick
+                target.stance.lastTransitionEventID = record.eventID
+                if target.stance.status == .exposed {
+                    target.statusEventID = record.eventID
+                }
+                publish(target, for: record.actorID)
+
+            case .considered:
+                guard var target = cursors[record.actorID]?[practiceID] else {
+                    throw AgentSessionError.culture(.invalidState(
+                        "consideration causal history"
+                    ))
+                }
+                let competitor = strongestCompetitor(
+                    for: record.actorID,
+                    excluding: practiceID,
+                    competitionKey: target.stance.practice.form.competitionKey
+                )
+                let required = configuration.adoptionExposureThreshold
+                    + (competitor?.stance.useCount ?? 0)
+                let expectedOutcome: AgentCultureDecisionOutcome
+                if target.stance.status == .adopted {
+                    expectedOutcome = .considered
+                } else if target.stance.exposureCount >= required {
+                    expectedOutcome = .adopted
+                } else if competitor != nil {
+                    expectedOutcome = .rejected
+                } else {
+                    expectedOutcome = .considered
+                }
+                let expectedCauses = [
+                    target.stance.lastTransitionEventID,
+                    competitor?.stance.lastTransitionEventID,
+                ].compactMap { $0 }.sorted()
+                guard record.outcome == expectedOutcome,
+                      record.competingPracticeID
+                        == competitor?.stance.practice.practiceID,
+                      record.causes == expectedCauses else {
+                    throw AgentSessionError.culture(.invalidState(
+                        "consideration causal decision"
+                    ))
+                }
+                if expectedOutcome == .adopted {
+                    target.stance.status = .adopted
+                    target.stance.adoptedAtTick = record.tick
+                    target.stance.adoptedEventID = record.eventID
+                    target.statusEventID = record.eventID
+                } else if expectedOutcome == .rejected {
+                    target.stance.status = .rejected
+                    target.statusEventID = record.eventID
+                }
+                target.stance.lastTransitionEventID = record.eventID
+                publish(target, for: record.actorID)
+
+            case .used:
+                var participants: [AgentID: CultureHistoricalCursor] = [:]
+                for participantID in record.participantIDs {
+                    guard let participant = cursors[participantID]?[practiceID],
+                          participant.stance.status == .adopted,
+                          participant.stance.practice == record.practice,
+                          participant.stance.adoptedEventID != nil else {
+                        throw AgentSessionError.culture(.invalidState(
+                            "use participant causal history"
+                        ))
+                    }
+                    participants[participantID] = participant
+                }
+                guard record.causes == participants.values.compactMap({
+                    $0.stance.adoptedEventID
+                }).sorted() else {
+                    throw AgentSessionError.culture(.invalidState(
+                        "use causal links"
+                    ))
+                }
+                for participantID in record.participantIDs {
+                    var participant = participants[participantID]!
+                    participant.stance.useCount += 1
+                    participant.stance.lastUseTick = record.tick
+                    participant.stance.lastTransitionEventID = record.eventID
+                    publish(participant, for: participantID)
+                }
+                for witnessID in record.witnessIDs {
+                    var witness = cursors[witnessID]?[practiceID]
+                        ?? CultureHistoricalCursor(
+                            stance: AgentCultureStance(
+                                practice: record.practice,
+                                status: .exposed,
+                                exposureCount: 0,
+                                useCount: 0,
+                                lastExposureTick: nil,
+                                lastUseTick: nil,
+                                adoptedAtTick: nil,
+                                adoptedEventID: nil,
+                                lastTransitionEventID: record.eventID
+                            ),
+                            statusEventID: record.eventID
+                        )
+                    witness.stance.exposureCount += 1
+                    witness.stance.lastExposureTick = record.tick
+                    witness.stance.lastTransitionEventID = record.eventID
+                    if witness.stance.status == .exposed {
+                        witness.statusEventID = record.eventID
+                    }
+                    publish(witness, for: witnessID)
+                }
+
+            case .continuityReviewed:
+                guard var target = cursors[record.actorID]?[practiceID],
+                      target.stance.status == .adopted else {
+                    throw AgentSessionError.culture(.invalidState(
+                        "continuity causal history"
+                    ))
+                }
+                let competitor = strongestCompetitor(
+                    for: record.actorID,
+                    excluding: practiceID,
+                    competitionKey: target.stance.practice.form.competitionKey
+                )
+                let competitorIsStronger = competitor.map {
+                    $0.stance.useCount > target.stance.useCount
+                        || ($0.stance.useCount == target.stance.useCount
+                            && ($0.stance.lastUseTick ?? -1)
+                                > (target.stance.lastUseTick ?? -1))
+                } ?? false
+                let referenceTick = target.stance.lastUseTick
+                    ?? target.stance.adoptedAtTick ?? record.tick
+                let inactive = record.tick - referenceTick
+                    >= configuration.inactivityTicksBeforeDecline
+                let expectedOutcome: AgentCultureDecisionOutcome =
+                    competitorIsStronger ? .ceasedSuperseded
+                        : (inactive ? .ceasedUnused : .continued)
+                let expectedCauses = [
+                    target.stance.lastTransitionEventID,
+                    competitorIsStronger
+                        ? competitor?.stance.lastTransitionEventID : nil,
+                ].compactMap { $0 }.sorted()
+                guard record.outcome == expectedOutcome,
+                      record.competingPracticeID
+                        == (competitorIsStronger
+                            ? competitor?.stance.practice.practiceID : nil),
+                      record.causes == expectedCauses else {
+                    throw AgentSessionError.culture(.invalidState(
+                        "continuity causal decision"
+                    ))
+                }
+                if expectedOutcome == .ceasedSuperseded
+                    || expectedOutcome == .ceasedUnused {
+                    target.stance.status = .ceased
+                    target.statusEventID = record.eventID
+                }
+                target.stance.lastTransitionEventID = record.eventID
+                publish(target, for: record.actorID)
+            }
+        }
+
+        for individual in distributedCultureState?.individuals ?? [] {
+            guard cursors[individual.agentID]?.values.map(\.stance).sorted(by: {
+                $0.practice.practiceID < $1.practice.practiceID
+            }) == individual.stances else {
+                throw AgentSessionError.culture(.invalidState(
+                    "causal replayed cultural stance"
+                ))
+            }
+        }
+    }
+
+    private func validateCultureRecordShape(
+        _ record: AgentCultureRecord
+    ) throws {
+        guard record.causes == record.causes.sorted(),
+              Set(record.causes).count == record.causes.count,
+              record.causes.allSatisfy({
+                  $0.simulationID == simulationID
+                      && $0.sequence < record.eventID.sequence
+              }),
+              record.participantIDs == record.participantIDs.sorted(),
+              Set(record.participantIDs).count
+                == record.participantIDs.count,
+              record.witnessIDs == record.witnessIDs.sorted(),
+              Set(record.witnessIDs).count == record.witnessIDs.count,
+              Set(record.participantIDs).isDisjoint(
+                with: Set(record.witnessIDs)
+              ) else {
+            throw AgentSessionError.culture(.invalidState("record shape"))
+        }
+        switch record.kind {
+        case .originated:
+            guard record.practice.originatorID == record.actorID,
+                  record.practice.originOperationID == record.operationID,
+                  record.practice.parentPracticeID == nil,
+                  record.sourceAgentID == nil,
+                  record.carrier == nil,
+                  record.carrierEventID == nil,
+                  record.carrierContentDigest == nil,
+                  record.participantIDs.isEmpty,
+                  record.witnessIDs.isEmpty,
+                  record.outcome == .adopted,
+                  record.competingPracticeID == nil,
+                  record.causes.isEmpty else {
+                throw AgentSessionError.culture(.invalidState(
+                    "origin record"
+                ))
+            }
+        case .variationCreated:
+            guard record.practice.originatorID == record.actorID,
+                  record.practice.originOperationID == record.operationID,
+                  record.practice.parentPracticeID
+                    == record.competingPracticeID,
+                  record.sourceAgentID == record.actorID,
+                  record.carrier == nil,
+                  record.carrierEventID == nil,
+                  record.carrierContentDigest == nil,
+                  record.participantIDs.isEmpty,
+                  record.witnessIDs.isEmpty,
+                  record.outcome == .adopted,
+                  record.causes.count == 1 else {
+                throw AgentSessionError.culture(.invalidState(
+                    "variation record"
+                ))
+            }
+        case .exposed:
+            guard let sourceAgentID = record.sourceAgentID,
+                  sourceAgentID != record.actorID,
+                  case .oral? = record.carrier,
+                  let carrierEventID = record.carrierEventID,
+                  record.causes.contains(carrierEventID),
+                  record.carrierContentDigest
+                    == culturePracticeContentDigest(record.practice),
+                  record.participantIDs.isEmpty,
+                  record.witnessIDs.isEmpty,
+                  record.outcome == nil,
+                  record.competingPracticeID == nil,
+                  record.causes.count == 2 else {
+                throw AgentSessionError.culture(.invalidState(
+                    "exposure record"
+                ))
+            }
+        case .considered:
+            guard record.sourceAgentID == nil,
+                  record.carrier == nil,
+                  record.carrierEventID == nil,
+                  record.carrierContentDigest == nil,
+                  record.participantIDs.isEmpty,
+                  record.witnessIDs.isEmpty,
+                  record.outcome == .considered
+                    || record.outcome == .adopted
+                    || record.outcome == .rejected,
+                  record.causes.count
+                    == (record.competingPracticeID == nil ? 1 : 2),
+                  record.outcome != .rejected
+                    || record.competingPracticeID != nil else {
+                throw AgentSessionError.culture(.invalidState(
+                    "consideration record"
+                ))
+            }
+        case .used:
+            guard record.sourceAgentID == record.actorID,
+                  record.carrier == nil,
+                  record.carrierEventID == nil,
+                  record.carrierContentDigest == nil,
+                  record.participantIDs.contains(record.actorID),
+                  record.outcome == nil,
+                  record.competingPracticeID == nil,
+                  record.causes.count == record.participantIDs.count else {
+                throw AgentSessionError.culture(.invalidState("use record"))
+            }
+        case .continuityReviewed:
+            guard record.sourceAgentID == nil,
+                  record.carrier == nil,
+                  record.carrierEventID == nil,
+                  record.carrierContentDigest == nil,
+                  record.participantIDs.isEmpty,
+                  record.witnessIDs.isEmpty,
+                  record.outcome == .continued
+                    || record.outcome == .ceasedUnused
+                    || record.outcome == .ceasedSuperseded,
+                  (record.outcome == .ceasedSuperseded)
+                    == (record.competingPracticeID != nil),
+                  record.causes.count
+                    == (record.competingPracticeID == nil ? 1 : 2) else {
+                throw AgentSessionError.culture(.invalidState(
+                    "continuity record"
+                ))
+            }
+        }
+    }
+
+    private func validateCultureRecordCausalEvent(
+        _ record: AgentCultureRecord,
+        retainedEvents: [AgentCausalEventID: AgentCausalEvent]
+    ) throws {
+        guard let event = retainedEvents[record.eventID] else {
+            guard causalLedger.droppedEventCount > 0,
+                  let firstRetained = causalLedger.events.first?.eventID,
+                  record.eventID < firstRetained,
+                  let boundary = distributedCultureState?.boundary,
+                  record.eventID < boundary.eventID else {
+                throw AgentSessionError.culture(.invalidState(
+                    "missing culture causal event"
+                ))
+            }
+            return
+        }
+        let expectedKind: AgentCausalEventKind
+        let expectedActor: AgentID?
+        let expectedSubject: AgentID?
+        let expectedStatus: String
+        switch record.kind {
+        case .originated:
+            expectedKind = .culturePracticeOriginated
+            expectedActor = record.actorID
+            expectedSubject = record.actorID
+            expectedStatus = AgentCultureDecisionOutcome.adopted.rawValue
+        case .variationCreated:
+            expectedKind = .cultureVariationCreated
+            expectedActor = record.actorID
+            expectedSubject = record.actorID
+            expectedStatus = AgentCultureDecisionOutcome.adopted.rawValue
+        case .exposed:
+            expectedKind = .culturePracticeExposed
+            expectedActor = record.sourceAgentID
+            expectedSubject = record.actorID
+            expectedStatus = "exposed"
+        case .considered:
+            expectedKind = .culturePracticeConsidered
+            expectedActor = record.actorID
+            expectedSubject = record.actorID
+            expectedStatus = record.outcome!.rawValue
+        case .used:
+            expectedKind = .culturePracticeUsed
+            expectedActor = record.actorID
+            expectedSubject = record.witnessIDs.first
+            expectedStatus = "used"
+        case .continuityReviewed:
+            expectedKind = .cultureContinuityReviewed
+            expectedActor = record.actorID
+            expectedSubject = record.actorID
+            expectedStatus = record.outcome!.rawValue
+        }
+        guard event.kind == expectedKind,
+              event.origin == .cultureTransition,
+              event.actorID == expectedActor,
+              event.subjectID == expectedSubject,
+              event.operationID == nil,
+              event.causes == record.causes,
+              event.simulationTick.rawValue == record.tick,
+              case let .culture(
+                recordID, practiceID, status, detail
+              ) = event.payload,
+              recordID == record.operationID,
+              practiceID == record.practice.practiceID.rawValue,
+              status == expectedStatus,
+              detail == record.requestDigest else {
+            throw AgentSessionError.culture(.invalidState(
+                "culture causal event mismatch"
+            ))
+        }
+    }
+
+    private func validateCultureCarrierProvenance(
+        _ record: AgentCultureRecord,
+        retainedEvents: [AgentCausalEventID: AgentCausalEvent]
+    ) throws {
+        guard record.kind == .exposed else { return }
+        guard let sourceAgentID = record.sourceAgentID,
+              let carrierEventID = record.carrierEventID,
+              let contentDigest = record.carrierContentDigest,
+              case let .oral(transmissionID)? = record.carrier,
+              let oralState = oralTransmissionState else {
+            throw AgentSessionError.culture(.invalidState(
+                "culture carrier provenance"
+            ))
+        }
+        guard let historical = cultureHistoricalStatus(
+                for: sourceAgentID,
+                practiceID: record.practice.practiceID,
+                through: carrierEventID.sequence
+              ), historical.status == .adopted,
+              record.causes == [carrierEventID, historical.eventID].sorted()
+        else {
+            throw AgentSessionError.culture(.invalidState(
+                "culture source causal status"
+            ))
+        }
+        if let transmission = oralState.transmissions.first(where: {
+            $0.transmissionID == transmissionID
+        }) {
+            guard transmission.speakerID == sourceAgentID,
+                  transmission.recipientID == record.actorID,
+                  transmission.receiptEventID == carrierEventID,
+                  let attachment = transmission.contentAttachment,
+                  attachment.namespace == cultureOralContentNamespace,
+                  attachment.contentID
+                    == record.practice.practiceID.rawValue,
+                  attachment.contentDigest == contentDigest else {
+                throw AgentSessionError.culture(.invalidState(
+                    "culture carrier content"
+                ))
+            }
+        } else {
+            guard oralState.evictedTransmissionCount > 0 else {
+                throw AgentSessionError.culture(.invalidState(
+                    "missing culture carrier"
+                ))
+            }
+        }
+        if let carrierEvent = retainedEvents[carrierEventID] {
+            guard carrierEvent.kind == .oralTransmissionAccepted,
+                  carrierEvent.origin == .oralTransition,
+                  carrierEvent.actorID == sourceAgentID,
+                  carrierEvent.subjectID == record.actorID,
+                  case let .oral(
+                    retainedID, _, _, _, reason
+                  ) = carrierEvent.payload,
+                  retainedID == transmissionID.rawValue,
+                  reason == contentDigest else {
+                throw AgentSessionError.culture(.invalidState(
+                    "culture carrier causal event"
+                ))
+            }
+        } else {
+            guard causalLedger.droppedEventCount > 0,
+                  let firstRetained = causalLedger.events.first?.eventID,
+                  carrierEventID < firstRetained else {
+                throw AgentSessionError.culture(.invalidState(
+                    "missing carrier causal event"
+                ))
+            }
+        }
+    }
+
     private func validateCulturePractice(
         _ practice: AgentCulturePractice
     ) throws {
         try practice.form.validate()
-        guard cultureIdentifierIsValid(practice.originOperationID, maximum: 128),
+        guard cultureIdentifierIsValid(
+                practice.practiceID.rawValue, maximum: 96
+              ),
+              cultureIdentifierIsValid(
+                practice.rootPracticeID.rawValue, maximum: 96
+              ),
+              (practice.parentPracticeID.map {
+                cultureIdentifierIsValid($0.rawValue, maximum: 96)
+              } ?? true),
+              cultureIdentifierIsValid(practice.originOperationID, maximum: 128),
               practice.generation >= 0,
               (practice.generation == 0) == (practice.parentPracticeID == nil),
               (practice.parentPracticeID == nil

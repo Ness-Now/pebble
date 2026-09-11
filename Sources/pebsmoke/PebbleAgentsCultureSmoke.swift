@@ -100,23 +100,23 @@ private func culturePreparedSession(
     try session.initializePopulationScaling(
         additionalSettlements: [AgentPopulationSettlement(
             settlementID: cultureEastSettlement,
-            anchor: AgentPosition(x: 24, y: 64, z: 0),
-            receptionPosition: AgentPosition(x: 24, y: 64, z: 1),
+            anchor: AgentPosition(x: 7, y: 64, z: 1),
+            receptionPosition: AgentPosition(x: 7, y: 64, z: 1),
             capacity: 6,
             residentIDs: [],
             inTransitIDs: []
         )],
         additionalResidents: [
             AgentScaledResidentAdmission(
-                state: cultureAgent(cultureEast0, x: 24),
+                state: cultureAgent(cultureEast0, x: 9),
                 settlementID: cultureEastSettlement
             ),
             AgentScaledResidentAdmission(
-                state: cultureAgent(cultureEast1, x: 26),
+                state: cultureAgent(cultureEast1, x: 10),
                 settlementID: cultureEastSettlement
             ),
             AgentScaledResidentAdmission(
-                state: cultureAgent(cultureEast2, x: 28),
+                state: cultureAgent(cultureEast2, x: 12),
                 settlementID: cultureEastSettlement
             ),
         ],
@@ -130,7 +130,7 @@ private func culturePreparedSession(
             maximumFidelityTransitionHistory: 32,
             maximumSettlementMigrationHistory: 4,
             maximumConcurrentSettlementMigrations: 1,
-            maximumSettlementMigrationRouteLength: 16
+            maximumSettlementMigrationRouteLength: 32
         )
     )
     try session.setSocialEnabled(true)
@@ -175,6 +175,49 @@ private func cultureStance(
     }?.stances.first { $0.practice.practiceID == practiceID }
 }
 
+private func cultureWritingReceipt(
+    _ plan: AgentWritingPlan,
+    actorID: AgentID,
+    session: AgentSimulationSession
+) -> AgentWritingPhysicalReceipt {
+    AgentWritingPhysicalReceipt(
+        worldID: plan.worldID,
+        dimension: plan.dimension,
+        cell: plan.cell,
+        blockKey: "oak_sign",
+        artifactID: plan.artifactID,
+        materialID: plan.materialID,
+        contentDigest: plan.contentDigest,
+        lines: plan.lines,
+        actorID: actorID,
+        actorPosition: try! session.state(for: actorID).position,
+        observedAtTick: session.tick
+    )
+}
+
+private func cultureWrite(
+    _ session: inout AgentSimulationSession,
+    propositionID: AgentKnowledgePropositionID,
+    materialID: Int,
+    cell: AgentPosition
+) throws -> AgentWrittenArtifact {
+    let plan = try session.prepareWriting(
+        authorID: cultureMain0,
+        propositionID: propositionID,
+        materialID: materialID,
+        dimension: "0",
+        cell: cell
+    )
+    return try session.acceptWriting(
+        plan,
+        receipt: cultureWritingReceipt(
+            plan,
+            actorID: cultureMain0,
+            session: session
+        )
+    )
+}
+
 private func cultureRecord(
     _ session: AgentSimulationSession,
     operationID: String
@@ -187,6 +230,7 @@ private func cultureRecord(
 private func cultureRefusal(
     _ name: String,
     session: AgentSimulationSession,
+    expectedError: AgentCultureError? = nil,
     operation: (inout AgentSimulationSession) throws -> Void
 ) {
     var candidate = session
@@ -194,14 +238,102 @@ private func cultureRefusal(
     do {
         try operation(&candidate)
         check(name, false, "unexpected success")
+    } catch let AgentSessionError.culture(error) {
+        check(name, expectedError.map { $0 == error } ?? true, "\(error)")
     } catch {
-        check(name, true, "\(error)")
+        check(name, expectedError == nil, "\(error)")
     }
     check(name + " is atomic", try! candidate.durableStateBytes() == before)
 }
 
+private func cultureMigrationRoute() -> [AgentPosition] {
+    [AgentPosition(x: 0, y: 64, z: 0)]
+        + (0...7).map { AgentPosition(x: $0, y: 64, z: 1) }
+}
+
+private func cultureMigrationPerception(
+    session: AgentSimulationSession,
+    route: [AgentPosition]
+) -> AgentPerceptionInput {
+    let state = try! session.state(for: cultureMain0)
+    func column(_ position: AgentPosition) -> AgentWorldColumnObservation {
+        AgentWorldColumnObservation(
+            position: position,
+            chunkReady: true,
+            surfaceY: position.y,
+            height: position.y,
+            blockBelow: 1,
+            blockAtFeet: 0,
+            blockAtHead: 0,
+            groundPresent: true,
+            feetClear: true,
+            headClear: true
+        )
+    }
+    let neighbors = AgentCardinalDirection.allCases.map { direction in
+        let position = AgentPosition(
+            x: state.position.x + direction.dx,
+            y: state.position.y,
+            z: state.position.z + direction.dz
+        )
+        return AgentWorldNeighborObservation(
+            direction: direction,
+            column: column(position),
+            stepDelta: 0,
+            traversable: true,
+            dangerousDrop: false
+        )
+    }
+    return AgentPerceptionInput(
+        agentId: cultureMain0.rawValue,
+        worldObservation: try! AgentWorldObservation(
+            worldTick: session.tick + 1,
+            position: state.position,
+            center: column(state.position),
+            neighbors: neighbors,
+            biomeId: 1,
+            biomeName: "plains",
+            combinedLight: 15,
+            skyLight: 15,
+            blockLight: 0,
+            dayTime: 6_000,
+            raining: false,
+            thundering: false
+        ),
+        navigationObservation: AgentNavigationObservation(
+            worldTick: session.tick + 1,
+            origin: state.position,
+            target: route.last!,
+            radius: AgentNavigationObservation.maximumRadius,
+            cells: route.map {
+                AgentNavigationCell(position: $0, status: .traversable)
+            }
+        )
+    )
+}
+
+private func cultureCompleteMigration(
+    _ session: inout AgentSimulationSession
+) throws {
+    let route = cultureMigrationRoute()
+    _ = try session.beginSettlementMigration(
+        agentID: cultureMain0,
+        destinationSettlementID: cultureEastSettlement,
+        verifiedRoute: route
+    )
+    for _ in 1..<route.count {
+        _ = try session.advanceTick(perceptions: [
+            cultureMigrationPerception(session: session, route: route),
+        ])
+        try session.applyMovementOutcomes(
+            AgentMovementCoordinator.resolve(snapshot: session.snapshot())
+        )
+    }
+}
+
 private func cultureResignedCheckpoint(
     _ checkpoint: AgentSessionCheckpoint,
+    reattestCulture: Bool = false,
     mutateDurable: (inout [String: Any]) -> Void
 ) -> AgentSessionCheckpoint {
     var root = try! JSONSerialization.jsonObject(
@@ -209,10 +341,13 @@ private func cultureResignedCheckpoint(
     ) as! [String: Any]
     var durable = root["durableState"] as! [String: Any]
     mutateDurable(&durable)
-    let mutatedBytes = try! JSONSerialization.data(
+    var mutatedBytes = try! JSONSerialization.data(
         withJSONObject: durable,
         options: [.sortedKeys, .withoutEscapingSlashes]
     )
+    if reattestCulture {
+        mutatedBytes = try! reattestCultureDurableStateForTesting(mutatedBytes)
+    }
     let mutatedState = try! AgentCheckpointCodec.decode(
         AgentSessionDurableState.self,
         from: mutatedBytes
@@ -238,6 +373,97 @@ private func cultureResignedCheckpoint(
             options: [.sortedKeys, .withoutEscapingSlashes]
         )
     )
+}
+
+private func cultureMutateRecord(
+    _ durable: inout [String: Any],
+    operationID: String,
+    mutation: (inout [String: Any]) -> Void
+) {
+    var culture = durable["distributedCultureState"] as! [String: Any]
+    var individuals = culture["individuals"] as! [[String: Any]]
+    var mutated = false
+    for individualIndex in individuals.indices {
+        var history = individuals[individualIndex]["history"] as! [[String: Any]]
+        for recordIndex in history.indices
+        where history[recordIndex]["operationID"] as? String == operationID {
+            mutation(&history[recordIndex])
+            mutated = true
+        }
+        individuals[individualIndex]["history"] = history
+    }
+    precondition(mutated)
+    culture["individuals"] = individuals
+    durable["distributedCultureState"] = culture
+}
+
+private func cultureRecordEventObject(
+    _ durable: [String: Any],
+    operationID: String
+) -> [String: Any] {
+    let culture = durable["distributedCultureState"] as! [String: Any]
+    let individuals = culture["individuals"] as! [[String: Any]]
+    for individual in individuals {
+        for record in individual["history"] as! [[String: Any]]
+        where record["operationID"] as? String == operationID {
+            return record["eventID"] as! [String: Any]
+        }
+    }
+    preconditionFailure("missing culture record \(operationID)")
+}
+
+private func cultureMutateRecordCausalEvent(
+    _ durable: inout [String: Any],
+    operationID: String,
+    mutation: (inout [String: Any]) -> Void
+) {
+    let target = cultureRecordEventObject(durable, operationID: operationID)
+    var ledger = durable["causalLedger"] as! [String: Any]
+    var events = ledger["events"] as! [[String: Any]]
+    let index = events.firstIndex {
+        NSDictionary(dictionary: $0["eventID"] as! [String: Any])
+            .isEqual(to: target)
+    }!
+    mutation(&events[index])
+    ledger["events"] = events
+    durable["causalLedger"] = ledger
+}
+
+private func cultureReplaceString(
+    in value: Any,
+    matching old: String,
+    with new: String
+) -> Any {
+    if let string = value as? String { return string == old ? new : string }
+    if let array = value as? [Any] {
+        return array.map {
+            cultureReplaceString(in: $0, matching: old, with: new)
+        }
+    }
+    if let dictionary = value as? [String: Any] {
+        return dictionary.mapValues {
+            cultureReplaceString(in: $0, matching: old, with: new)
+        }
+    }
+    return value
+}
+
+private func cultureRestoreRefuses(
+    _ name: String,
+    checkpoint: AgentSessionCheckpoint,
+    mutation: (inout [String: Any]) -> Void
+) {
+    let hostile = cultureResignedCheckpoint(
+        checkpoint,
+        reattestCulture: true,
+        mutateDurable: mutation
+    )
+    do {
+        _ = try AgentSimulationSession.restoring(hostile)
+        check(name, false, "accepted reattested hostile state")
+    } catch {
+        check(name, true, "\(error)")
+    }
 }
 
 func runPebbleAgentsCultureSmoke() {
@@ -280,26 +506,48 @@ func runPebbleAgentsCultureSmoke() {
         let root = cultureRecord(session, operationID: "civ47-root-ritual")!
             .practice
 
-        let oralResult = try recorder.apply(.transmitOralClaim(
+        let unboundOralResult = try recorder.apply(.transmitOralClaim(
             speakerID: cultureMain0,
             recipientID: cultureMain1,
             propositionID: propositionID,
             renderingMode: .deterministicCompositional,
             acceptedEffect: nil
         ), to: &session)
+        let unboundOral = unboundOralResult.oralTransmissionResult!
+        cultureRefusal(
+            "unrelated wood oral carrier cannot expose remembrance ritual",
+            session: session
+        ) {
+            _ = try $0.recordCulturalExposure(
+                operationID: "civ47-unbound-oral-exposure",
+                targetID: cultureMain1,
+                sourceAgentID: cultureMain0,
+                practiceID: root.practiceID,
+                carrier: .oral(unboundOral.transmissionID)
+            )
+        }
+        let oralResult = try recorder.apply(.transmitCulturalPracticeOrally(
+            operationID: "civ47-oral-exposure-main1",
+            sourceAgentID: cultureMain0,
+            targetID: cultureMain1,
+            practiceID: root.practiceID,
+            accompanyingPropositionID: propositionID,
+            renderingMode: .deterministicCompositional,
+            acceptedEffect: nil
+        ), to: &session)
         let oral = oralResult.oralTransmissionResult!
+        check("oral carrier commits the exact cultural practice descriptor",
+              oral.contentAttachment?.namespace
+                == "pebble.culture.practice.v1"
+                && oral.contentAttachment?.contentID == root.practiceID.rawValue
+                && cultureRecord(
+                    session, operationID: "civ47-oral-exposure-main1"
+                )?.carrierContentDigest
+                    == oral.contentAttachment?.contentDigest)
         let epistemicAfterCarrier = session.knowledgeSnapshot()
         let languageAfterCarrier = session.languageSnapshot()
         let populationAfterCarrier = session.populationSnapshot()
-
-        _ = try recorder.apply(.recordCulturalExposure(
-            operationID: "civ47-oral-exposure-main1",
-            targetID: cultureMain1,
-            sourceAgentID: cultureMain0,
-            practiceID: root.practiceID,
-            carrier: .oral(oral.transmissionID)
-        ), to: &session)
-        check("valid oral exposure does not auto-adopt",
+        check("bound oral cultural exposure does not auto-adopt",
               cultureStance(session, agentID: cultureMain1,
                             practiceID: root.practiceID)?.status == .exposed)
         _ = try recorder.apply(.enactCulturalPractice(
@@ -505,6 +753,14 @@ func runPebbleAgentsCultureSmoke() {
         check("schema 42 restart is byte exact",
               try AgentCheckpointCodec.encode(restored.makeCheckpoint())
                 == checkpointBytes)
+        let restoredOral = restored.oralTransmissionState?.transmissions.first {
+            $0.transmissionID == oral.transmissionID
+        }
+        check("carrier-content linkage survives schema 42 restart",
+              restoredOral?.contentAttachment == oral.contentAttachment
+                && cultureRecord(
+                    restored, operationID: "civ47-oral-exposure-main1"
+                )?.carrierEventID == oral.receiptEventID)
         check("decline and lineage survive restart without resurrection",
               cultureStance(restored, agentID: cultureMain1,
                             practiceID: root.practiceID)?.status == .ceased
@@ -526,6 +782,10 @@ func runPebbleAgentsCultureSmoke() {
         check("schema 42 replay is deterministic and byte exact",
               try replay.session.durableStateBytes()
                 == session.durableStateBytes())
+        check("carrier-content linkage is replay deterministic",
+              replay.session.oralTransmissionState?.transmissions.first {
+                  $0.transmissionID == oral.transmissionID
+              }?.contentAttachment == oral.contentAttachment)
 
         let missingCulture = cultureResignedCheckpoint(checkpoint) {
             $0.removeValue(forKey: "distributedCultureState")
@@ -561,6 +821,114 @@ func runPebbleAgentsCultureSmoke() {
             check("schema 42 refuses hostile cultural bounds", false)
         } catch {
             check("schema 42 refuses hostile cultural bounds", true, "\(error)")
+        }
+        cultureRestoreRefuses(
+            "schema 42 refuses retained causal event kind mismatch",
+            checkpoint: checkpoint
+        ) {
+            cultureMutateRecordCausalEvent(
+                &$0,
+                operationID: "civ47-oral-exposure-main1"
+            ) { $0["kind"] = "culturePracticeConsidered" }
+        }
+        cultureRestoreRefuses(
+            "schema 42 refuses retained causal payload mismatch",
+            checkpoint: checkpoint
+        ) {
+            cultureMutateRecordCausalEvent(
+                &$0,
+                operationID: "civ47-oral-exposure-main1"
+            ) { event in
+                event["payload"] = cultureReplaceString(
+                    in: event["payload"]!,
+                    matching: cultureRecord(
+                        session,
+                        operationID: "civ47-oral-exposure-main1"
+                    )!.requestDigest,
+                    with: String(repeating: "0", count: 64)
+                )
+            }
+        }
+        cultureRestoreRefuses(
+            "schema 42 refuses retained causal actor relation mismatch",
+            checkpoint: checkpoint
+        ) {
+            cultureMutateRecordCausalEvent(
+                &$0,
+                operationID: "civ47-oral-exposure-main1"
+            ) { $0["actorID"] = cultureMain2.rawValue }
+        }
+        cultureRestoreRefuses(
+            "schema 42 refuses retained causal subject relation mismatch",
+            checkpoint: checkpoint
+        ) {
+            cultureMutateRecordCausalEvent(
+                &$0,
+                operationID: "civ47-oral-exposure-main1"
+            ) { $0["subjectID"] = cultureMain2.rawValue }
+        }
+        cultureRestoreRefuses(
+            "schema 42 refuses retained causal origin mismatch",
+            checkpoint: checkpoint
+        ) {
+            cultureMutateRecordCausalEvent(
+                &$0,
+                operationID: "civ47-oral-exposure-main1"
+            ) { $0["origin"] = "oralTransition" }
+        }
+        cultureRestoreRefuses(
+            "schema 42 refuses retained causal cause mismatch",
+            checkpoint: checkpoint
+        ) {
+            cultureMutateRecordCausalEvent(
+                &$0,
+                operationID: "civ47-oral-exposure-main1"
+            ) { event in
+                var causes = event["causes"] as! [[String: Any]]
+                causes.removeFirst()
+                event["causes"] = causes
+            }
+        }
+        cultureRestoreRefuses(
+            "schema 42 refuses jointly reattested fabricated required causes",
+            checkpoint: checkpoint
+        ) { durable in
+            let ledger = durable["causalLedger"] as! [String: Any]
+            let firstEvent = (ledger["events"] as! [[String: Any]])[0]
+            let fabricatedCause = firstEvent["eventID"] as! [String: Any]
+            var changedCauses: [[String: Any]] = []
+            cultureMutateRecord(
+                &durable,
+                operationID: "civ47-oral-exposure-main1"
+            ) { record in
+                var causes = record["causes"] as! [[String: Any]]
+                causes[0] = fabricatedCause
+                changedCauses = causes
+                record["causes"] = causes
+            }
+            cultureMutateRecordCausalEvent(
+                &durable,
+                operationID: "civ47-oral-exposure-main1"
+            ) { $0["causes"] = changedCauses }
+        }
+        cultureRestoreRefuses(
+            "schema 42 refuses record originator actor mismatch",
+            checkpoint: checkpoint
+        ) {
+            cultureMutateRecord(&$0, operationID: "civ47-root-ritual") {
+                $0["actorID"] = cultureMain1.rawValue
+            }
+        }
+        cultureRestoreRefuses(
+            "schema 42 refuses carrier cultural-content mismatch",
+            checkpoint: checkpoint
+        ) {
+            cultureMutateRecord(
+                &$0,
+                operationID: "civ47-oral-exposure-main1"
+            ) {
+                $0["carrierContentDigest"] = String(repeating: "f", count: 64)
+            }
         }
         let futureSchema = cultureResignedCheckpoint(checkpoint) {
             $0["schemaVersion"] = 43
@@ -603,6 +971,15 @@ func runPebbleAgentsCultureSmoke() {
               compactedRestored.distributedCultureState?.individuals
                 == restored.distributedCultureState?.individuals
                 && compactedRestartBytes == compactedBytes)
+        check("compaction preserves carrier-content causal attestation",
+              cultureRecord(
+                  compactedRestored,
+                  operationID: "civ47-oral-exposure-main1"
+              )?.carrierContentDigest == oral.contentAttachment?.contentDigest
+                && cultureRecord(
+                    compactedRestored,
+                    operationID: "civ47-oral-exposure-main1"
+                )?.carrierEventID == oral.receiptEventID)
 
         let durableObject = try JSONSerialization.jsonObject(
             with: session.durableStateBytes()
@@ -630,10 +1007,57 @@ func runPebbleAgentsCultureSmoke() {
                     AgentID(rawValue: "civ47-projection-\($0)")!
                 }
             ))
-            check("explicit prevalence scope has a structural input bound", false)
+            check("explicit prevalence scope is bounded before sort and lookup", false)
+        } catch AgentSessionError.culture(
+            .invalidState("projection individual input bound")
+        ) {
+            check("explicit prevalence scope is bounded before sort and lookup", true)
         } catch {
-            check("explicit prevalence scope has a structural input bound", true,
+            check("explicit prevalence scope is bounded before sort and lookup", false,
                   "\(error)")
+        }
+        cultureRefusal(
+            "co-participant input is bounded before Set and sort",
+            session: session,
+            expectedError: .invalidState("use participant input bound")
+        ) {
+            _ = try $0.enactCulturalPractice(
+                operationID: "civ47-oversized-co-participants",
+                practitionerID: cultureMain0,
+                practiceID: root.practiceID,
+                coParticipantIDs: Array(
+                    repeating: cultureEast0,
+                    count: cultureConfiguration.maximumParticipantsPerUse
+                )
+            )
+        }
+        cultureRefusal(
+            "witness input is bounded before Set and sort",
+            session: session,
+            expectedError: .invalidState("use participant input bound")
+        ) {
+            _ = try $0.enactCulturalPractice(
+                operationID: "civ47-oversized-witnesses",
+                practitionerID: cultureMain0,
+                practiceID: root.practiceID,
+                witnessIDs: Array(
+                    repeating: cultureEast0,
+                    count: cultureConfiguration.maximumWitnessesPerUse + 1
+                )
+            )
+        }
+        cultureRefusal(
+            "carrier identifier is bounded before canonicalization and hashing",
+            session: session,
+            expectedError: .invalidCarrier("carrier identifier")
+        ) {
+            _ = try $0.recordCulturalExposure(
+                operationID: "civ47-oversized-carrier",
+                targetID: cultureMain1,
+                sourceAgentID: cultureMain0,
+                practiceID: root.practiceID,
+                carrier: .writingReading(String(repeating: "x", count: 193))
+            )
         }
 
         var mortalityCulture = try AgentSimulationSession(
@@ -698,6 +1122,248 @@ func runPebbleAgentsCultureSmoke() {
                 && !mortalityRestart.populationSnapshot().members.contains {
                     $0.agentID == cultureMain0
                 })
+
+        var (binding, bindingProposition) = try culturePreparedSession(
+            id: "civ47-carrier-content-binding"
+        )
+        try binding.setDistributedCultureEnabled(true)
+        let bindingRoot = try binding.originateCulturalPractice(
+            operationID: "civ47-binding-root",
+            originatorID: cultureMain0,
+            form: .ritual(try AgentCultureRitualPattern(
+                context: .remembrance,
+                orderedSteps: [.assemble, .speakNames, .disperse],
+                minimumParticipants: 1
+            ))
+        ).practice
+        let bindingNorm = try binding.originateCulturalPractice(
+            operationID: "civ47-binding-other",
+            originatorID: cultureMain0,
+            form: .norm(AgentCultureNormPattern(
+                context: .scarcityAid,
+                expectedAction: .offerBeforePrivateUse
+            ))
+        ).practice
+        _ = try binding.transmitCulturalPracticeOrally(
+            operationID: "civ47-binding-other-exposure",
+            sourceAgentID: cultureMain0,
+            targetID: cultureMain1,
+            practiceID: bindingNorm.practiceID,
+            accompanyingPropositionID: bindingProposition,
+            renderingMode: .deterministicCompositional
+        )
+        let otherCarrier = cultureRecord(
+            binding,
+            operationID: "civ47-binding-other-exposure"
+        )!.carrier!
+        cultureRefusal(
+            "real carrier bound to another practice cannot expose requested practice",
+            session: binding
+        ) {
+            _ = try $0.recordCulturalExposure(
+                operationID: "civ47-binding-mismatch",
+                targetID: cultureMain1,
+                sourceAgentID: cultureMain0,
+                practiceID: bindingRoot.practiceID,
+                carrier: otherCarrier
+            )
+        }
+        let bindingBeforeRetry = try binding.durableStateBytes()
+        let bindingRetry = try binding.transmitCulturalPracticeOrally(
+            operationID: "civ47-binding-other-exposure",
+            sourceAgentID: cultureMain0,
+            targetID: cultureMain1,
+            practiceID: bindingNorm.practiceID,
+            accompanyingPropositionID: bindingProposition,
+            renderingMode: .deterministicCompositional
+        )
+        let bindingAfterRetry = try binding.durableStateBytes()
+        check("bound oral carrier retry is byte-idempotent",
+              bindingRetry.eventID == cultureRecord(
+                  binding,
+                  operationID: "civ47-binding-other-exposure"
+              )?.eventID
+                && bindingAfterRetry == bindingBeforeRetry)
+
+        var (unsupportedCarriers, carrierProposition) = try culturePreparedSession(
+            id: "civ47-unsupported-carriers"
+        )
+        try unsupportedCarriers.setDistributedCultureEnabled(true)
+        let unsupportedPractice = try unsupportedCarriers
+            .originateCulturalPractice(
+                operationID: "civ47-unsupported-carrier-practice",
+                originatorID: cultureMain0,
+                form: .norm(AgentCultureNormPattern(
+                    context: .scarcityAid,
+                    expectedAction: .offerBeforePrivateUse
+                ))
+            ).practice
+        try unsupportedCarriers.setWritingEnabled(
+            true,
+            worldID: "civ47-carrier-world",
+            configuration: try AgentWritingConfiguration(
+                maximumArtifacts: 2,
+                maximumReadings: 2,
+                maximumLiteracyRecords: 4
+            )
+        )
+        for agentID in [cultureMain0, cultureMain1] {
+            try unsupportedCarriers.seedWritingEducationalPrior(for: agentID)
+        }
+        let catalogueArtifact = try cultureWrite(
+            &unsupportedCarriers,
+            propositionID: carrierProposition,
+            materialID: 47_001,
+            cell: AgentPosition(x: 1, y: 64, z: 0)
+        )
+        let manuscriptArtifact = try cultureWrite(
+            &unsupportedCarriers,
+            propositionID: carrierProposition,
+            materialID: 47_002,
+            cell: AgentPosition(x: 1, y: 64, z: 1)
+        )
+        let reading = try unsupportedCarriers.readWriting(
+            artifactID: catalogueArtifact.artifactID,
+            readerID: cultureMain1,
+            receipt: cultureWritingReceipt(
+                catalogueArtifact.plan,
+                actorID: cultureMain1,
+                session: unsupportedCarriers
+            )
+        )
+        cultureRefusal(
+            "real CIV-45 reading fails closed without cultural-content commitment",
+            session: unsupportedCarriers,
+            expectedError: .invalidCarrier(
+                "writing carrier has no cultural-content commitment"
+            )
+        ) {
+            _ = try $0.recordCulturalExposure(
+                operationID: "civ47-writing-fail-closed",
+                targetID: cultureMain1,
+                sourceAgentID: cultureMain0,
+                practiceID: unsupportedPractice.practiceID,
+                carrier: .writingReading(reading.readingID)
+            )
+        }
+        try unsupportedCarriers.setArchiveEnabled(
+            true,
+            worldID: "civ47-carrier-world",
+            configuration: try AgentArchiveConfiguration(
+                maximumCollections: 1,
+                maximumManuscripts: 1,
+                maximumRetrievals: 1,
+                maximumSearchResults: 1
+            )
+        )
+        let catalogueReceipt = cultureWritingReceipt(
+            catalogueArtifact.plan,
+            actorID: cultureMain0,
+            session: unsupportedCarriers
+        )
+        let collection = try unsupportedCarriers.createArchiveCollection(
+            operationID: "civ47-carrier-collection",
+            kind: .library,
+            catalogueArtifactID: catalogueArtifact.artifactID,
+            curatorID: cultureMain0,
+            catalogueReceipt: catalogueReceipt
+        )
+        _ = try unsupportedCarriers.catalogueArchiveManuscript(
+            operationID: "civ47-carrier-catalogue",
+            collectionID: collection.collectionID,
+            artifactID: manuscriptArtifact.artifactID,
+            relationship: .source,
+            cataloguerID: cultureMain0,
+            catalogueReceipt: catalogueReceipt,
+            artifactReceipt: cultureWritingReceipt(
+                manuscriptArtifact.plan,
+                actorID: cultureMain0,
+                session: unsupportedCarriers
+            )
+        )
+        let archiveIndex = try unsupportedCarriers.rebuildArchiveIndex()
+        let archiveSelection = try unsupportedCarriers.searchArchive(
+            archiveIndex,
+            collectionID: collection.collectionID,
+            query: .artifact(manuscriptArtifact.artifactID),
+            requesterID: cultureMain0,
+            catalogueReceipt: catalogueReceipt
+        ).hits[0].selection
+        _ = try unsupportedCarriers.retrieveArchiveManuscript(
+            operationID: "civ47-real-archive-retrieval",
+            selection: archiveSelection,
+            readerID: cultureMain1,
+            receipt: cultureWritingReceipt(
+                manuscriptArtifact.plan,
+                actorID: cultureMain1,
+                session: unsupportedCarriers
+            )
+        )
+        cultureRefusal(
+            "real CIV-46 retrieval fails closed without cultural-content commitment",
+            session: unsupportedCarriers,
+            expectedError: .invalidCarrier(
+                "archive carrier has no cultural-content commitment"
+            )
+        ) {
+            _ = try $0.recordCulturalExposure(
+                operationID: "civ47-archive-fail-closed",
+                targetID: cultureMain1,
+                sourceAgentID: cultureMain0,
+                practiceID: unsupportedPractice.practiceID,
+                carrier: .archiveRetrieval("civ47-real-archive-retrieval")
+            )
+        }
+
+        var (locality, _) = try culturePreparedSession(
+            id: "civ47-lexicographic-locality"
+        )
+        try locality.setDistributedCultureEnabled(true)
+        let localityPractice = try locality.originateCulturalPractice(
+            operationID: "civ47-locality-practice",
+            originatorID: cultureMain0,
+            form: .norm(AgentCultureNormPattern(
+                context: .reciprocalWork,
+                expectedAction: .reciprocateAfterAid
+            ))
+        ).practice
+        for ordinal in 1...2 {
+            _ = try locality.enactCulturalPractice(
+                operationID: "civ47-locality-demo-\(ordinal)",
+                practitionerID: cultureMain0,
+                practiceID: localityPractice.practiceID,
+                witnessIDs: [cultureMain1]
+            )
+        }
+        _ = try locality.considerCulturalPractice(
+            operationID: "civ47-locality-adopt",
+            agentID: cultureMain1,
+            practiceID: localityPractice.practiceID
+        )
+        try cultureCompleteMigration(&locality)
+        check("lexically smaller co-participant is in the remote settlement",
+              cultureMain0 < cultureMain1
+                && locality.populationSnapshot().members.first {
+                    $0.agentID == cultureMain0
+                }?.settlementID == cultureEastSettlement
+                && locality.populationSnapshot().members.first {
+                    $0.agentID == cultureMain1
+                }?.settlementID == .main,
+              "members=\(locality.populationSnapshot().members) "
+                + "position=\(try locality.state(for: cultureMain0).position) "
+                + "migrations=\(locality.populationScaleSnapshot().settlementMigrations)")
+        cultureRefusal(
+            "remote lexically smaller co-participant is refused by identity",
+            session: locality,
+            expectedError: .nonLocal(cultureMain1, cultureMain0)
+        ) {
+            _ = try $0.enactCulturalPractice(
+                operationID: "civ47-locality-adversarial",
+                practitionerID: cultureMain1,
+                practiceID: localityPractice.practiceID,
+                coParticipantIDs: [cultureMain0]
+            )
+        }
 
         var (capacity, _) = try culturePreparedSession(
             id: "civ47-culture-capacity",

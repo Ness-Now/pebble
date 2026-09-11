@@ -280,10 +280,15 @@ public struct AgentCultureRecord: Codable, Equatable, Sendable {
     public let actorID: AgentID
     public let sourceAgentID: AgentID?
     public let carrier: AgentCultureCarrierReference?
+    /// Exact carrier event and cultural-content commitment admitted at the
+    /// causal moment. Both survive carrier retention compaction.
+    public let carrierEventID: AgentCausalEventID?
+    public let carrierContentDigest: String?
     public let participantIDs: [AgentID]
     public let witnessIDs: [AgentID]
     public let outcome: AgentCultureDecisionOutcome?
     public let competingPracticeID: AgentCulturePracticeID?
+    public let causes: [AgentCausalEventID]
     public let tick: Int
     public let eventID: AgentCausalEventID
 }
@@ -373,6 +378,28 @@ enum AgentCultureDigest {
             String(format: "%02x", $0)
         }.joined()
     }
+}
+
+let cultureOralContentNamespace = "pebble.culture.practice.v1"
+
+func culturePracticeContentDigest(_ practice: AgentCulturePractice) -> String {
+    AgentCultureDigest.make([
+        "culture-practice-content-v1",
+        practice.practiceID.rawValue,
+        practice.rootPracticeID.rawValue,
+        practice.parentPracticeID?.rawValue ?? "root",
+        String(practice.generation),
+        practice.form.canonicalText,
+        practice.originatorID.rawValue,
+        practice.originOperationID,
+    ].joined(separator: "|"))
+}
+
+func cultureDigestIsValid(_ value: String) -> Bool {
+    !value.isEmpty && value.utf8.prefix(65).count == 64
+        && value.utf8.allSatisfy {
+            (48...57).contains($0) || (97...102).contains($0)
+        }
 }
 
 func cultureIdentifierIsValid(_ value: String, maximum: Int) -> Bool {
