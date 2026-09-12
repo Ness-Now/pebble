@@ -1,0 +1,86 @@
+{
+  "task": "V4-GATE-G-v1 — Cumulative Culture",
+  "evaluation": "V4-GATE-G-v1 Evaluation 02",
+  "verdict": "PASS — SENIOR REVIEW REQUIRED — NOT YET ACQUIRED",
+  "seniorReview": "REQUIRED_NOT_PERFORMED",
+  "gateGAcquired": false,
+  "repository": "Ness-Now/pebble",
+  "canonicalBranch": "lab/pebblelab-v1",
+  "canonicalBaseline": "a87d20f87ecb1aa1cb99a3d12bd06684bad50ac3",
+  "canonicalTree": "1bd0e176b219bbe9f7ca3067b7daa74cbec1b63c",
+  "evaluationBranch": "codex/gate-g-evaluation-02",
+  "harnessCommit": "6425515fad675925db146c547831e8f104ee2834",
+  "harnessTree": "6b44e2e17a530a8f58204bc399b783ea4cef4ce4",
+  "historicalEvaluation01": {
+    "status": "FAIL — EVALUATED_FAIL_NOT_ACQUIRED",
+    "evidenceImmutable": true,
+    "reinterpreted": false
+  },
+  "requirements": {
+    "multiPersonTransmission": "PASS",
+    "multiGenerationTransmission": "PASS",
+    "dialectDivergence": "PASS",
+    "survivableTraditions": "PASS",
+    "losableTraditions": "PASS",
+    "materialWrittenPreservation": "PASS",
+    "reconstructibleCulturalHistory": "PASS"
+  },
+  "decisive": {
+    "debug": {"passed": 26, "failed": 0},
+    "release": {"passed": 26, "failed": 0},
+    "debugFreshProcess": {"passed": 8, "failed": 0},
+    "releaseFreshProcess": {"passed": 8, "failed": 0},
+    "providerMode": "off",
+    "originalForm": "bois",
+    "evolvedForm": "murrin-19f91ddb",
+    "childID": "agent_3"
+  },
+  "identities": {
+    "schemaVersion": 43,
+    "baseCheckpointDigest": "5c97b37c12c20cee4c481554d8465330ad1d4d1cb28f71b29564421a2814e47e",
+    "birthCheckpointDigest": "32345214293a59f7b28fd84758b2a420c68d4bbdb6aac3dad421a350804fc272",
+    "finalCheckpointDigest": "bbbb6552c3a3aa8a0285dd75d9fd7a4075b62b21cfa8262971ea928c411e6c5c",
+    "replayRecordCount": 41,
+    "replayOperationsDigest": "f1d85711f04d87f5f400b7ed9ef446ee72fabbbbafd2ea1157aeae262c63dec7",
+    "resultSHA256": "601b401913d817b7c81681b477c4ca34fb863c2f699fecaed8396b88560959ff",
+    "debugReleaseAuthoritativeArtifacts": "BYTE_IDENTICAL"
+  },
+  "writingCultureBoundary": {
+    "materialPreservation": "PASS",
+    "unboundWritingReadingCulturalAdoption": "REFUSED_AS_REQUIRED",
+    "unboundArchiveRetrievalCulturalAdoption": "REFUSED_AS_REQUIRED",
+    "directWritingToCultureRequiredByGate": false
+  },
+  "owningRegressions": {
+    "civ41ThroughCiv47Wrapper": "PASS",
+    "civ47": {"passed": 73, "failed": 0},
+    "gateGBlocker01": {"passed": 23, "failed": 0},
+    "lifecycle": {"passed": 80, "failed": 0},
+    "checkpointReplay": {"passed": 49, "failed": 0}
+  },
+  "repositoryVerification": {
+    "stepsPassed": 35,
+    "stepsFailed": 0,
+    "smokePassed": 4778,
+    "smokeFailed": 0,
+    "pebbleRegold": "ABSENT"
+  },
+  "live": {
+    "policy": "Visual Game Smoke Policy V5",
+    "result": "PASS",
+    "seeds": [46, 73],
+    "processes": 4,
+    "captures": 4,
+    "capturesInspected": 4,
+    "freshProcessRestart": true,
+    "materialLossRefusal": true,
+    "metadataOnlyAfterLoss": true,
+    "cleanup": "EXACT",
+    "captureTimingLimitation": "before-loss material view carries a later completed-status overlay; structured logs/checkpoints own loss proof"
+  },
+  "findings": {"p0": 0, "p1": 0, "otherProductDefects": 0},
+  "productBehaviorModified": false,
+  "goldensRegenerated": false,
+  "civ48Started": false,
+  "push": "NOT_ATTEMPTED"
+}
