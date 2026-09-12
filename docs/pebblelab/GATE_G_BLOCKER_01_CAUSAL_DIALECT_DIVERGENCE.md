@@ -2,12 +2,12 @@
 
 ## Status
 
-`V4-GATE-G-v1 Blocker 01: LOCAL CORRECTION CANDIDATE — GREEN — NOT
-PUBLISHED`
+`V4-GATE-G-v1 Blocker 01: PASS — SENIOR REVIEW APPROVED — PUBLISHED —
+REMOTE VERIFIED`
 
-This candidate corrects the single P1 blocker established by frozen Gate G
-Evaluation 01. It does not perform Gate G Evaluation 02, acquire Gate G, start
-CIV-48 or alter the historical Evaluation 01 verdict.
+This published correction closes the single P1 blocker established by frozen
+Gate G Evaluation 01. It does not perform Gate G Evaluation 02, acquire Gate G,
+authorize CIV-48 or alter the historical Evaluation 01 verdict.
 
 ```text
 canonical correction baseline: 47469034a50ef1b5b24ee363b8e8313100e8d449
@@ -15,10 +15,16 @@ verified origin/lab/pebblelab-v1 at correction start: 47469034a50ef1b5b24ee363b8
 correction branch: codex/gate-g-blocker-01-causal-dialect-divergence
 product/test commit: eca701080ecb7f67e7fc632e862b7907e73a98eb
 schema-compatibility regression commit: 8e1f44e052b07e6cbcc42090f9a547b5139e5bf7
-documentation/evidence commit: this documentation successor; exact identity is recorded in the review bundle
+publication/evidence HEAD: d5a7e450144810674b5c8adfb98b335f9ad74b5a
+published correction tree: 98e54193ed8a81ad16470c175c29f39eb0ffdbfe
+review ZIP SHA-256: ea7bcc7fcca5dcc52ef77f78a0836e226ee0d916ab072810d9d6e90e9eb0885d
+senior review: PASS — SENIOR REVIEW APPROVED — P0 0 / P1 0
+manual publication: COMPLETED
+independent remote verification: PASS
 Gate G: NOT ACQUIRED
-Gate G Evaluation 02: NOT PERFORMED
-CIV-48: NOT STARTED
+Gate G Evaluation 02: NOT YET PERFORMED
+CIV-48: NOT AUTHORIZED
+next authorized action: REVIEW-AND-AUTHORIZE-GATE-G-EVALUATION-02
 Push attempted: NO
 ```
 
@@ -41,6 +47,19 @@ Both forbidden ancestry checks return exit `1` from
 `git merge-base --is-ancestor`. Neither Evaluation 01 commit is in this
 correction's ancestry. No evaluation commit was merged, rebased, cherry-picked
 or otherwise placed in the correction history.
+
+Independent senior review returned **PASS — SENIOR REVIEW APPROVED** with
+**P0 0 / P1 0**. Manual publication established
+`d5a7e450144810674b5c8adfb98b335f9ad74b5a`, tree
+`98e54193ed8a81ad16470c175c29f39eb0ffdbfe`, on
+`lab/pebblelab-v1`; independent fetch and remote-ref verification passed. The
+accepted review ZIP SHA-256 is
+`ea7bcc7fcca5dcc52ef77f78a0836e226ee0d916ab072810d9d6e90e9eb0885d`.
+
+These facts close Blocker 01 only. Evaluation 01 remains immutable historical
+FAIL evidence, Gate G remains not acquired, Evaluation 02 has not yet been
+performed, and CIV-48 remains unauthorized. The next authorized action is
+`REVIEW-AND-AUTHORIZE-GATE-G-EVALUATION-02` for a new independent evaluation.
 
 ## Corrected product capability
 

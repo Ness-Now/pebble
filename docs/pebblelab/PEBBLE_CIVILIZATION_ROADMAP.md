@@ -31,11 +31,22 @@ reviewed candidate `874a844ba54b66210ac303912193038c9f4ee6e0`, tree
 `23f084707c1ab3929ef37b02462229f15711dd8aa050f631a30df7e0888ca8a6`.
 Original reviewed candidate `27806ac721e8e3570cc31f9e8cac2a001de4d4ca`
 remains **CORRECTION REQUIRED — P0 0 / P1 4**; Correction 01 re-review returned
-**P0 0 / P1 0**. Gate G remains planned, unevaluated and not acquired. The next
-authorized action is `REVIEW-AND-AUTHORIZE-GATE-G`. See
+**P0 0 / P1 0**. Gate G Evaluation 01 remains immutable **FAIL —
+EVALUATED_FAIL_NOT_ACQUIRED — SENIOR REVIEW APPROVED** evidence. Its causal
+dialect Blocker 01 correction is **PASS — SENIOR REVIEW APPROVED — P0 0 / P1
+0 — PUBLISHED — REMOTE VERIFIED** at canonical HEAD
+`d5a7e450144810674b5c8adfb98b335f9ad74b5a`, tree
+`98e54193ed8a81ad16470c175c29f39eb0ffdbfe`; review ZIP SHA-256
+`ea7bcc7fcca5dcc52ef77f78a0836e226ee0d916ab072810d9d6e90e9eb0885d`.
+Gate G remains not acquired, Evaluation 02 has not yet been performed, and
+CIV-48 remains unauthorized. The next authorized action is
+`REVIEW-AND-AUTHORIZE-GATE-G-EVALUATION-02` for a new independent evaluation.
+See
 [`CIV_46_PHASE_SUMMARY.md`](CIV_46_PHASE_SUMMARY.md) and
 [`CIV_47_PHASE_SUMMARY.md`](CIV_47_PHASE_SUMMARY.md), plus
-[`CIV_47_SENIOR_REVIEW_CORRECTION_01.md`](CIV_47_SENIOR_REVIEW_CORRECTION_01.md).
+[`CIV_47_SENIOR_REVIEW_CORRECTION_01.md`](CIV_47_SENIOR_REVIEW_CORRECTION_01.md)
+and
+[`GATE_G_BLOCKER_01_CAUSAL_DIALECT_DIVERGENCE.md`](GATE_G_BLOCKER_01_CAUSAL_DIALECT_DIVERGENCE.md).
 
 Published product baseline evaluated by the independent Gate C campaign:
 
@@ -162,7 +173,7 @@ Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
 active CIV phase: none
 completed and published through: CIV-47 (CIV-38 and CIV-40 remain optional and unstarted)
-next eligible action: REVIEW-AND-AUTHORIZE-GATE-G
+next eligible action: REVIEW-AND-AUTHORIZE-GATE-G-EVALUATION-02
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
@@ -271,7 +282,14 @@ CIV-46: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 CIV-46 published canonical HEAD: dcdc6a5dc984f8144705bb601ec677f1df767b7f
 CIV-47: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 CIV-47 published canonical HEAD: 51169802ec76770b4c80850c7dee33cf94ee5524
-V4-GATE-G-v1: PLANNED / UNEVALUATED / NOT ACQUIRED
+Gate G Evaluation 01: FAIL — EVALUATED_FAIL_NOT_ACQUIRED — SENIOR REVIEW APPROVED — HISTORICAL IMMUTABLE EVIDENCE
+Gate G Blocker 01: PASS — SENIOR REVIEW APPROVED — PUBLISHED — REMOTE VERIFIED
+Gate G Blocker 01 published canonical HEAD: d5a7e450144810674b5c8adfb98b335f9ad74b5a
+Gate G Blocker 01 published canonical tree: 98e54193ed8a81ad16470c175c29f39eb0ffdbfe
+Gate G Blocker 01 review ZIP SHA-256: ea7bcc7fcca5dcc52ef77f78a0836e226ee0d916ab072810d9d6e90e9eb0885d
+V4-GATE-G-v1: NOT ACQUIRED
+Gate G Evaluation 02: NOT YET PERFORMED
+CIV-48: NOT AUTHORIZED
 ```
 
 The `CIV-33` completion is published on the canonical branch at
@@ -737,8 +755,9 @@ after Correction 01 reviewed candidate
 `45701f56169218b70f2e698dc0dea67bb1d027c0`; original reviewed candidate
 `27806ac721e8e3570cc31f9e8cac2a001de4d4ca` remains **CORRECTION REQUIRED —
 P0 0 / P1 4**, and Correction 01 re-review returned **P0 0 / P1 0**. Published
-progression is complete through CIV-47. Gate G remains planned,
-unevaluated and not acquired.
+progression is complete through CIV-47. Gate G Evaluation 01 remains immutable
+historical FAIL evidence, its Blocker 01 correction is published and remote
+verified, and Gate G remains not acquired.
 See
 [`CIV_44_PHASE_SUMMARY.md`](CIV_44_PHASE_SUMMARY.md) and
 [`CIV_45_PHASE_SUMMARY.md`](CIV_45_PHASE_SUMMARY.md).
@@ -1535,7 +1554,7 @@ Evaluation 05 product correction: NO
 Evaluation 05 verdict: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 Gate E status: ACQUIRED AND PUBLISHED
 Gate E acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f76744f83
-next eligible action: REVIEW-AND-AUTHORIZE-GATE-G
+next eligible action: REVIEW-AND-AUTHORIZE-GATE-G-EVALUATION-02
 CIV-39 status: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 Gate F status: ACQUIRED AND PUBLISHED — REMOTE VERIFIED
@@ -1603,7 +1622,14 @@ CIV-46 status: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERI
 CIV-46 published canonical HEAD: dcdc6a5dc984f8144705bb601ec677f1df767b7f
 CIV-47 status: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 CIV-47 published canonical HEAD: 51169802ec76770b4c80850c7dee33cf94ee5524
-V4-GATE-G-v1 status: PLANNED / UNEVALUATED / NOT ACQUIRED
+Gate G Evaluation 01 status: FAIL — EVALUATED_FAIL_NOT_ACQUIRED — SENIOR REVIEW APPROVED — HISTORICAL IMMUTABLE EVIDENCE
+Gate G Blocker 01 status: PASS — SENIOR REVIEW APPROVED — PUBLISHED — REMOTE VERIFIED
+Gate G Blocker 01 published canonical HEAD: d5a7e450144810674b5c8adfb98b335f9ad74b5a
+Gate G Blocker 01 published canonical tree: 98e54193ed8a81ad16470c175c29f39eb0ffdbfe
+Gate G Blocker 01 review ZIP SHA-256: ea7bcc7fcca5dcc52ef77f78a0836e226ee0d916ab072810d9d6e90e9eb0885d
+V4-GATE-G-v1 status: NOT ACQUIRED
+Gate G Evaluation 02 status: NOT YET PERFORMED
+CIV-48 status: NOT AUTHORIZED
 ```
 
 Blocker 01 binds exact production origin to the exact rights-tracked asset and
@@ -1889,8 +1915,9 @@ candidate `874a844ba54b66210ac303912193038c9f4ee6e0` and product/test commit
 `45701f56169218b70f2e698dc0dea67bb1d027c0`; original reviewed candidate
 `27806ac721e8e3570cc31f9e8cac2a001de4d4ca` remains **CORRECTION REQUIRED —
 P0 0 / P1 4**, and Correction 01 re-review returned **P0 0 / P1 0**. Published
-progression is complete through CIV-47. Gate G remains planned,
-unevaluated and not acquired.
+progression is complete through CIV-47. Gate G Evaluation 01 remains immutable
+historical FAIL evidence, its Blocker 01 correction is published and remote
+verified, and Gate G remains not acquired.
 
 ## Wave 5 — Knowledge, language and culture
 
@@ -2002,8 +2029,9 @@ candidate `874a844ba54b66210ac303912193038c9f4ee6e0` and product/test commit
 `45701f56169218b70f2e698dc0dea67bb1d027c0`; original reviewed candidate
 `27806ac721e8e3570cc31f9e8cac2a001de4d4ca` remains **CORRECTION REQUIRED —
 P0 0 / P1 4**, and Correction 01 re-review returned **P0 0 / P1 0**. Published
-progression is complete through CIV-47. Gate G remains planned,
-unevaluated and not acquired.
+progression is complete through CIV-47. Gate G Evaluation 01 remains immutable
+historical FAIL evidence, its Blocker 01 correction is published and remote
+verified, and Gate G remains not acquired.
 
 Observable slices:
 
@@ -2163,7 +2191,7 @@ keeps incarnation physical and produces verifiable long-duration history.
 | `V4-GATE-D-v1` | acquired and published | `CIV-29`–`CIV-33`, renewable subsistence milestone and Blockers 01–10 published; Evaluations 01–10 remain historical FAIL evidence; Evaluation 11 PASS is senior-review approved |
 | `V4-GATE-E-v1` | acquired and published | `CIV-34`–`CIV-37`; `CIV-38` optional and currency not required; Evaluations 01–04 historical FAIL; Blockers 01–04 fixed/published/remote-verified; Evaluation 05 PASS senior-review-approved published evidence |
 | `V4-GATE-F-v1` | acquired and published, independently remote verified at `14475f4ad5dde9e1063a830ba7e38390cfb4d045` | required `CIV-39` complete/published/remote-verified; Evaluations 01–11 historical FAIL; Blockers 01–11 fixed/published/remote-verified; Evaluation 12 senior-review-approved published PASS evidence; `CIV-40` optional tooling and not started |
-| `V4-GATE-G-v1` | planned | `CIV-41`–`CIV-47` |
+| `V4-GATE-G-v1` | not acquired | `CIV-41`–`CIV-47` complete/published; Evaluation 01 historical immutable FAIL; Blocker 01 senior-review-approved, published and remote-verified; Evaluation 02 not yet performed |
 | `V4-GATE-H-v1` | planned | `CIV-48`–`CIV-52` |
 | `V4-GATE-I-v1` | planned | `CIV-53`–`CIV-56` |
 | `V4-GATE-J-v1` | planned | `CIV-57`–`CIV-58` |

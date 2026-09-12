@@ -3,7 +3,7 @@
 This file is the compact canonical status. It records product state, not the
 SHA of the documentation commit that contains it.
 
-## Gate G Evaluation 01 and Blocker 01 correction candidate
+## Gate G Evaluation 01 and Blocker 01 verified publication
 
 `V4-GATE-G-v1 Evaluation 01` is frozen **FAIL —
 EVALUATED_FAIL_NOT_ACQUIRED — SENIOR REVIEW APPROVED — HISTORICAL IMMUTABLE
@@ -11,21 +11,27 @@ EVIDENCE** at evidence HEAD
 `cb03d5bc142a36aa0c828d2350e34d579717c4fb`. Its accepted archive SHA-256 is
 `8ab89f5570bbd0c89c5a06a2850cb9967966799f32b4885f9fca55f3ad35081a`.
 
-Blocker 01, `immutableSingleFormPerSensePreventsCausalDialectDivergence`, has
-a green local correction candidate on branch
-`codex/gate-g-blocker-01-causal-dialect-divergence`, rooted directly at exact
-published baseline `47469034a50ef1b5b24ee363b8e8313100e8d449`. Product/test
-commit `eca701080ecb7f67e7fc632e862b7907e73a98eb` adds bounded individual
-CIV-42 lexical innovation, local learning, durable schema-43 authority and
-exact restart/replay/compaction/mortality behavior. Compatibility regression
-commit `8e1f44e052b07e6cbcc42090f9a547b5139e5bf7` makes existing Family and
-Estate policies explicitly strict through schema 43 and keeps schema 44
-unsupported. The focused proof passes 23/23, CIV-41→47 owning suites pass, and
-the canonical repository gate passes all 35 steps with 4778/4778 assertions.
+Blocker 01, `immutableSingleFormPerSensePreventsCausalDialectDivergence`, is
+**PASS — SENIOR REVIEW APPROVED — P0 0 / P1 0 — PUBLISHED — REMOTE VERIFIED**.
+It was rooted directly at exact published baseline
+`47469034a50ef1b5b24ee363b8e8313100e8d449`. Product/test commit
+`eca701080ecb7f67e7fc632e862b7907e73a98eb` adds bounded individual CIV-42
+lexical innovation, local learning, durable schema-43 authority and exact
+restart/replay/compaction/mortality behavior. Compatibility regression commit
+`8e1f44e052b07e6cbcc42090f9a547b5139e5bf7` makes existing Family and Estate
+policies explicitly strict through schema 43 and keeps schema 44 unsupported.
+Manual publication established canonical HEAD
+`d5a7e450144810674b5c8adfb98b335f9ad74b5a`, tree
+`98e54193ed8a81ad16470c175c29f39eb0ffdbfe`; independent remote verification
+passed. The accepted review ZIP SHA-256 is
+`ea7bcc7fcca5dcc52ef77f78a0836e226ee0d916ab072810d9d6e90e9eb0885d`.
 
-The Evaluation 01 commits are not in the correction ancestry. The correction
-is local, not published and not yet independently reviewed. Gate G remains
-**NOT ACQUIRED**; Evaluation 02 was not performed and CIV-48 was not started.
+The focused proof passes 23/23, CIV-41→47 owning suites pass, and the canonical
+repository gate passes all 35 steps with 4778/4778 assertions. The Evaluation
+01 commits are not in the correction ancestry. Gate G remains **NOT
+ACQUIRED**; Evaluation 02 has not yet been performed and CIV-48 remains
+unauthorized. The next authorized action is
+`REVIEW-AND-AUTHORIZE-GATE-G-EVALUATION-02` for a new independent evaluation.
 See
 [`GATE_G_BLOCKER_01_CAUSAL_DIALECT_DIVERGENCE.md`](GATE_G_BLOCKER_01_CAUSAL_DIALECT_DIVERGENCE.md).
 
@@ -853,7 +859,7 @@ the Gate E acquisition are now published and independently remote verified.
 ```text
 active CIV phase: none
 completed and published through: CIV-47 (CIV-38 and CIV-40 remain optional and unstarted)
-next eligible action: REVIEW-AND-AUTHORIZE-GATE-G
+next eligible action: REVIEW-AND-AUTHORIZE-GATE-G-EVALUATION-02
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -963,7 +969,14 @@ CIV-46 status: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERI
 CIV-46 published canonical HEAD: dcdc6a5dc984f8144705bb601ec677f1df767b7f
 CIV-47 status: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 CIV-47 published canonical HEAD: 51169802ec76770b4c80850c7dee33cf94ee5524
-V4-GATE-G-v1 status: PLANNED / UNEVALUATED / NOT ACQUIRED
+Gate G Evaluation 01 status: FAIL — EVALUATED_FAIL_NOT_ACQUIRED — SENIOR REVIEW APPROVED — HISTORICAL IMMUTABLE EVIDENCE
+Gate G Blocker 01 status: PASS — SENIOR REVIEW APPROVED — PUBLISHED — REMOTE VERIFIED
+Gate G Blocker 01 published canonical HEAD: d5a7e450144810674b5c8adfb98b335f9ad74b5a
+Gate G Blocker 01 published canonical tree: 98e54193ed8a81ad16470c175c29f39eb0ffdbfe
+Gate G Blocker 01 review ZIP SHA-256: ea7bcc7fcca5dcc52ef77f78a0836e226ee0d916ab072810d9d6e90e9eb0885d
+V4-GATE-G-v1 status: NOT ACQUIRED
+Gate G Evaluation 02 status: NOT YET PERFORMED
+CIV-48 status: NOT AUTHORIZED
 roadmap generation: V4
 ```
 
@@ -1259,12 +1272,13 @@ golden regeneration: NOT ATTEMPTED
 
 ## Next authorized action
 
-The next authorized action is independent senior review of the local
-`V4-GATE-G-v1 Blocker 01` correction candidate. CIV-47 publication and
-independent remote verification are complete; canonical progression is
-completed and published through CIV-47. Gate G Evaluation 01 remains frozen
-FAIL, Gate G is not acquired, Evaluation 02 was not performed and CIV-48 is not
-authorized.
+The next authorized action is
+`REVIEW-AND-AUTHORIZE-GATE-G-EVALUATION-02`. Blocker 01 is senior-review
+approved, published and independently remote verified; canonical progression
+is complete and published through CIV-47. Gate G Evaluation 01 remains frozen
+historical FAIL evidence, Gate G is not acquired, Evaluation 02 has not yet
+been performed, and CIV-48 remains unauthorized. Evaluation 02 must be a new
+independent evaluation.
 
 Gate E Evaluation 05 is
 **PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE**. Evaluations 01–04
