@@ -234,12 +234,14 @@ extension AgentSimulationSession {
         let acceptedEffect = recordedEffect ?? canonicalEffect
 
         var candidate = self
-        let communication = try candidate.communicateLanguageSemanticContent(
-            speakerID: speakerID,
-            recipientID: recipientID,
-            propositionID: propositionID,
-            renderingMode: renderingMode
-        )
+        let communication = try candidate
+            .communicateLanguageSemanticContentForLocalOral(
+                speakerID: speakerID,
+                recipientID: recipientID,
+                propositionID: propositionID,
+                renderingMode: renderingMode,
+                locality: locality
+            )
         guard communication.semanticContent == sourceSemanticContent else {
             throw AgentSessionError.oral(.invalidState(
                 "CIV-42 transmitted semantic mismatch"
@@ -323,6 +325,9 @@ extension AgentSimulationSession {
         state.transmissions.append(transmission)
         state.nextTransmissionOrdinal += 1
         candidate.oralTransmissionState = state
+        try candidate.retainLanguageLocalOralAuthority(
+            for: transmission
+        )
         try candidate.compactOralStateAfterTransmission()
         try candidate.commitOralProvenanceBoundary(causes: [
             receiptEvent.eventID,

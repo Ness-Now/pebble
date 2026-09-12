@@ -57,6 +57,8 @@ public enum AgentLanguageError: Error, Equatable {
     case invalidIdentifier(String)
     case invalidPack(String)
     case missingLexicalKnowledge(String)
+    case insufficientLocalUsage(String)
+    case replayEffectMismatch(String)
     case capacityReached(String)
     case invalidState(String)
 }
@@ -117,6 +119,18 @@ public struct AgentLanguageAssociationID:
 }
 
 public struct AgentLanguageCommunicationID:
+    RawRepresentable, Codable, Hashable, Comparable, Sendable {
+    public let rawValue: String
+    public init?(rawValue: String) {
+        guard isValidLanguageIdentifier(rawValue) else { return nil }
+        self.rawValue = rawValue
+    }
+    public static func < (lhs: Self, rhs: Self) -> Bool {
+        lhs.rawValue < rhs.rawValue
+    }
+}
+
+public struct AgentLanguageLexicalInnovationID:
     RawRepresentable, Codable, Hashable, Comparable, Sendable {
     public let rawValue: String
     public init?(rawValue: String) {
@@ -290,6 +304,75 @@ public struct AgentLanguageLexicalUse:
     public let role: AgentLanguageSenseRole
     public let senseID: AgentLanguageSenseID
     public let form: String
+    /// The product-owned root innovation that authorizes a non-pack form.
+    /// `nil` means this use is the immutable pack prior for the sense.
+    public let innovationID: AgentLanguageLexicalInnovationID?
+}
+
+/// Replay records the accepted product decision and verifies it against the
+/// same retained local-use history. Callers never choose `evolvedForm`.
+public struct AgentLanguageLexicalInnovationAcceptedEffect:
+    Codable, Equatable, Sendable {
+    public let evolvedForm: String
+    public let decisionDigest: String
+
+    public init(evolvedForm: String, decisionDigest: String) {
+        self.evolvedForm = evolvedForm
+        self.decisionDigest = decisionDigest
+    }
+}
+
+/// A bounded CIV-42 authority record for one individual's lexical innovation.
+/// Exact CIV-43 support receipts prove the local usage pressure that caused
+/// it; neither a settlement nor the Language Pack becomes an evolving
+/// dictionary.
+public struct AgentLanguageLexicalInnovationSupport:
+    Codable, Equatable, Sendable {
+    public let transmissionID: AgentOralTransmissionID
+    public let speakerID: AgentID
+    public let recipientID: AgentID
+    public let languageCommunicationID: AgentLanguageCommunicationID
+    public let languageCommunicationEventID: AgentCausalEventID
+    public let oralReceiptEventID: AgentCausalEventID
+    public let outcome: AgentOralTransmissionOutcome
+    public let locality: AgentOralLocalityEvidence
+    public let transmittedAtTick: Int
+    public let semanticContentDigest: String
+    public let lexicalUse: AgentLanguageLexicalUse
+    public let languageProvenanceDigest: String
+    public let oralProvenanceDigest: String
+}
+
+public struct AgentLanguageLexicalInnovation:
+    Codable, Equatable, Sendable {
+    public let innovationID: AgentLanguageLexicalInnovationID
+    public let innovatorID: AgentID
+    public let packID: AgentLanguagePackID
+    public let senseID: AgentLanguageSenseID
+    public let sourceAssociationID: AgentLanguageAssociationID
+    public let sourceForm: String
+    public let evolvedForm: String
+    public let supports: [AgentLanguageLexicalInnovationSupport]
+    public let innovatedAtTick: Int
+    public let innovationEventID: AgentCausalEventID
+    public let decisionDigest: String
+
+    public var supportingTransmissionIDs: [AgentOralTransmissionID] {
+        supports.map(\.transmissionID)
+    }
+}
+
+/// Optional so schema-37...42 language payloads decode and re-encode without
+/// acquiring correction-only keys. Its presence advances checkpoints to v43.
+public struct AgentLanguageLexicalEvolutionState:
+    Codable, Equatable, Sendable {
+    public internal(set) var innovations: [AgentLanguageLexicalInnovation]
+    public internal(set) var evictedInnovationCount: Int
+
+    init() {
+        innovations = []
+        evictedInnovationCount = 0
+    }
 }
 
 /// Language owns only a stable reference to CIV-41's bounded historical
@@ -314,6 +397,23 @@ public struct AgentLanguagePriorSeedReceipt:
     public let digest: String
 }
 
+/// Exact CIV-43 carrier authority retained only with a CIV-42 exposure that
+/// taught an evolved form. The receipt preserves the local causal handoff
+/// after bounded oral history legitimately evicts the full transmission row.
+public struct AgentLanguageLocalOralAuthorityReceipt:
+    Codable, Equatable, Sendable {
+    public let transmissionID: AgentOralTransmissionID
+    public let oralReceiptEventID: AgentCausalEventID
+    public let receivedPropositionID: AgentKnowledgePropositionID
+    public let interpretedSemanticContentDigest: String
+    public let outcome: AgentOralTransmissionOutcome
+    public let decisionDigest: String
+    public let contentAttachment: AgentOralContentAttachment?
+    public let locality: AgentOralLocalityEvidence
+    public let transmittedAtTick: Int
+    public let oralProvenanceDigest: String
+}
+
 /// Exact linguistic exposure retained only while current lexical competence
 /// needs it. It records no recipient belief and grants no epistemic authority.
 public struct AgentLanguageExposureReceipt:
@@ -331,12 +431,15 @@ public struct AgentLanguageExposureReceipt:
     public let communicatedAtTick: Int
     public let communicationEventID: AgentCausalEventID
     public let digest: String
+    public let localOralAuthority:
+        AgentLanguageLocalOralAuthorityReceipt?
 }
 
 public enum AgentLanguageLexicalAssociationSource:
     String, Codable, Sendable {
     case seededPrior
     case exposure
+    case innovation
 }
 
 public enum AgentLanguageLexicalCompetence:
@@ -359,6 +462,7 @@ public struct AgentLanguageLexicalAssociation:
     public internal(set) var lastExposedAtTick: Int
     public internal(set) var lastEventID: AgentCausalEventID
     public let priorSeedID: String?
+    public let innovationID: AgentLanguageLexicalInnovationID?
     public internal(set) var learningCommunicationIDs:
         [AgentLanguageCommunicationID]
     public internal(set) var lastExposureCommunicationID:
@@ -408,6 +512,8 @@ public struct AgentLanguageGraphState: Codable, Equatable, Sendable {
     public internal(set) var priorSeedReceipts:
         [AgentLanguagePriorSeedReceipt]
     public internal(set) var exposureReceipts: [AgentLanguageExposureReceipt]
+    public internal(set) var lexicalEvolution:
+        AgentLanguageLexicalEvolutionState?
     public internal(set) var provenanceBoundary:
         AgentLanguageProvenanceBoundary?
     public internal(set) var evictedCommunicationCount: Int
@@ -425,6 +531,7 @@ public struct AgentLanguageGraphState: Codable, Equatable, Sendable {
         communications = []
         priorSeedReceipts = []
         exposureReceipts = []
+        lexicalEvolution = nil
         provenanceBoundary = nil
         evictedCommunicationCount = 0
         retiredLexicalAssociationCount = 0
@@ -441,8 +548,10 @@ public struct AgentLanguageSnapshot: Codable, Equatable, Sendable {
     public let communications: [AgentLanguageCommunication]
     public let priorSeedReceipts: [AgentLanguagePriorSeedReceipt]
     public let exposureReceipts: [AgentLanguageExposureReceipt]
+    public let lexicalInnovations: [AgentLanguageLexicalInnovation]
     public let provenanceBoundary: AgentLanguageProvenanceBoundary?
     public let evictedCommunicationCount: Int
+    public let evictedInnovationCount: Int
     public let retiredLexicalAssociationCount: Int
     public let digest: String
 }
@@ -453,7 +562,9 @@ public struct AgentLanguageSummary: Codable, Equatable, Sendable {
     public let knownAssociationCount: Int
     public let acquiringAssociationCount: Int
     public let communicationCount: Int
+    public let lexicalInnovationCount: Int
     public let evictedCommunicationCount: Int
+    public let evictedInnovationCount: Int
     public let retiredLexicalAssociationCount: Int
     public let digest: String
 }

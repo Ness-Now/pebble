@@ -43,6 +43,7 @@ public enum AgentReplaySchema {
     public static let writingVersion = 40
     public static let archiveVersion = 41
     public static let cultureVersion = 42
+    public static let lexicalDivergenceVersion = 43
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -72,6 +73,7 @@ public enum AgentReplaySchema {
             || version == longDistanceCommunicationVersion
             || version == writingVersion
             || version == archiveVersion || version == cultureVersion
+            || version == lexicalDivergenceVersion
     }
 }
 
@@ -218,6 +220,7 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case languageFeature
     case languagePrior
     case languageCommunication
+    case languageLexicalInnovation
     case oralFeature
     case oralTransmission
     case writingLiteracy
@@ -272,6 +275,11 @@ public enum AgentReplayOperation: Codable {
         recipientID: AgentID,
         propositionID: AgentKnowledgePropositionID,
         renderingMode: AgentLanguageRenderingMode
+    )
+    case innovateLanguageLexicalForm(
+        agentID: AgentID,
+        senseID: AgentLanguageSenseID,
+        acceptedEffect: AgentLanguageLexicalInnovationAcceptedEffect?
     )
     case setOralTransmissionEnabled(
         Bool,
@@ -660,6 +668,8 @@ public enum AgentReplayOperation: Codable {
         case .seedLanguagePrior: return .languagePrior
         case .communicateLanguageSemanticContent:
             return .languageCommunication
+        case .innovateLanguageLexicalForm:
+            return .languageLexicalInnovation
         case .setOralTransmissionEnabled: return .oralFeature
         case .transmitOralClaim: return .oralTransmission
         case .seedWritingEducationalPrior, .practiceWritingNotation: return .writingLiteracy
@@ -833,6 +843,10 @@ public enum AgentReplayOperation: Codable {
             raw = "language-communicate:\(speakerID.rawValue):"
                 + "\(recipientID.rawValue):\(propositionID.rawValue):"
                 + renderingMode.rawValue
+        case let .innovateLanguageLexicalForm(
+            agentID, senseID, _
+        ):
+            raw = "language-innovate:\(agentID.rawValue):\(senseID.rawValue)"
         case let .transmitOralClaim(
             speakerID, recipientID, propositionID, renderingMode, _
         ):
@@ -1007,6 +1021,8 @@ public struct AgentReplayApplicationResult {
     public let socialVerificationResult: AgentSocialVerificationResult?
     public let claimedPhysicalPresentations: [AgentPhysicalPresentationRequest]
     public let oralTransmissionResult: AgentOralTransmission?
+    public let languageLexicalInnovationResult:
+        AgentLanguageLexicalInnovation?
 
     init(
         tick: Int,
@@ -1015,7 +1031,9 @@ public struct AgentReplayApplicationResult {
         tickResult: AgentSessionTickResult? = nil,
         socialVerificationResult: AgentSocialVerificationResult? = nil,
         claimedPhysicalPresentations: [AgentPhysicalPresentationRequest] = [],
-        oralTransmissionResult: AgentOralTransmission? = nil
+        oralTransmissionResult: AgentOralTransmission? = nil,
+        languageLexicalInnovationResult:
+            AgentLanguageLexicalInnovation? = nil
     ) {
         self.tick = tick
         self.causalSequence = causalSequence
@@ -1024,6 +1042,8 @@ public struct AgentReplayApplicationResult {
         self.socialVerificationResult = socialVerificationResult
         self.claimedPhysicalPresentations = claimedPhysicalPresentations
         self.oralTransmissionResult = oralTransmissionResult
+        self.languageLexicalInnovationResult =
+            languageLexicalInnovationResult
     }
 }
 
@@ -1253,7 +1273,10 @@ public struct AgentReplayRecorder {
         baseCheckpointDigest = checkpoint.semanticDigest
         simulationID = checkpoint.simulationID
         initialTick = checkpoint.tick.rawValue
-        schemaVersion = checkpoint.schemaVersion == AgentCheckpointSchema.cultureVersion
+        schemaVersion = checkpoint.schemaVersion
+            == AgentCheckpointSchema.lexicalDivergenceVersion
+            ? AgentReplaySchema.lexicalDivergenceVersion
+            : checkpoint.schemaVersion == AgentCheckpointSchema.cultureVersion
             ? AgentReplaySchema.cultureVersion
             : checkpoint.schemaVersion == AgentCheckpointSchema.archiveVersion
             ? AgentReplaySchema.archiveVersion
@@ -1613,6 +1636,15 @@ public struct AgentReplayRecorder {
             }
             schemaVersion = AgentReplaySchema.oralTransmissionVersion
         }
+        if case .innovateLanguageLexicalForm = operation,
+           schemaVersion < AgentReplaySchema.lexicalDivergenceVersion {
+            guard records.isEmpty else {
+                throw AgentReplayError.invalidJournal(
+                    "lexical innovation must be the first v43 replay operation"
+                )
+            }
+            schemaVersion = AgentReplaySchema.lexicalDivergenceVersion
+        }
         if case let .setWritingEnabled(enabled, _, _) = operation, enabled,
            schemaVersion < AgentReplaySchema.writingVersion {
             guard records.isEmpty else {
@@ -1662,7 +1694,20 @@ public struct AgentReplayRecorder {
         let postDigest = try candidate.durableStateDigest()
         let causalAfter = candidate.causalLedgerSnapshot().summary
         let recordedOperation: AgentReplayOperation
-        if case let .transmitOralClaim(
+        if case let .innovateLanguageLexicalForm(
+            agentID, senseID, nil
+        ) = operation,
+           let innovation = result.languageLexicalInnovationResult {
+            recordedOperation = .innovateLanguageLexicalForm(
+                agentID: agentID,
+                senseID: senseID,
+                acceptedEffect:
+                    AgentLanguageLexicalInnovationAcceptedEffect(
+                        evolvedForm: innovation.evolvedForm,
+                        decisionDigest: innovation.decisionDigest
+                    )
+            )
+        } else if case let .transmitOralClaim(
             speakerID, recipientID, propositionID, renderingMode, nil
         ) = operation,
            let oralResult = result.oralTransmissionResult,
@@ -1927,6 +1972,17 @@ public enum AgentSessionReplayer {
                 throw AgentReplayError.unsupportedSchema(manifest.schemaVersion)
             }
         }
+        if manifest.schemaVersion
+            == AgentReplaySchema.lexicalDivergenceVersion,
+           checkpoint.schemaVersion
+            < AgentCheckpointSchema.lexicalDivergenceVersion {
+            guard case .innovateLanguageLexicalForm? =
+                    journal.records.first?.operation else {
+                throw AgentReplayError.unsupportedSchema(
+                    manifest.schemaVersion
+                )
+            }
+        }
         if manifest.schemaVersion == AgentReplaySchema.archiveVersion,
            checkpoint.schemaVersion < AgentCheckpointSchema.archiveVersion {
             guard case .setArchiveEnabled(
@@ -2039,6 +2095,10 @@ public enum AgentSessionReplayer {
             || (manifest.schemaVersion == AgentReplaySchema.cultureVersion
                 && checkpoint.schemaVersion <= AgentCheckpointSchema.archiveVersion)
             || (manifest.schemaVersion
+                    == AgentReplaySchema.lexicalDivergenceVersion
+                && checkpoint.schemaVersion
+                    <= AgentCheckpointSchema.cultureVersion)
+            || (manifest.schemaVersion
                     == AgentReplaySchema.longDistanceCommunicationVersion
                 && checkpoint.schemaVersion
                     <= AgentCheckpointSchema.oralTransmissionVersion)
@@ -2112,6 +2172,8 @@ extension AgentSimulationSession {
         var tickResult: AgentSessionTickResult?
         var socialVerificationResult: AgentSocialVerificationResult?
         var oralTransmissionResult: AgentOralTransmission?
+        var languageLexicalInnovationResult:
+            AgentLanguageLexicalInnovation?
         switch operation {
         case let .advanceTick(perceptions, physicalObservations):
             tickResult = try candidate.advanceTick(
@@ -2161,6 +2223,15 @@ extension AgentSimulationSession {
                 propositionID: propositionID,
                 renderingMode: renderingMode
             )
+        case let .innovateLanguageLexicalForm(
+            agentID, senseID, acceptedEffect
+        ):
+            languageLexicalInnovationResult = try candidate
+                .innovateLanguageLexicalForm(
+                    for: agentID,
+                    senseID: senseID,
+                    recordedEffect: acceptedEffect
+                )
         case let .setOralTransmissionEnabled(enabled, configuration):
             try candidate.setOralTransmissionEnabled(
                 enabled, configuration: configuration
@@ -2736,7 +2807,9 @@ extension AgentSimulationSession {
             tickResult: tickResult,
             socialVerificationResult: socialVerificationResult,
             claimedPhysicalPresentations: claimed,
-            oralTransmissionResult: oralTransmissionResult
+            oralTransmissionResult: oralTransmissionResult,
+            languageLexicalInnovationResult:
+                languageLexicalInnovationResult
         )
     }
 }

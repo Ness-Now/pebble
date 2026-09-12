@@ -71,8 +71,10 @@ extension AgentSimulationSession {
                 communications: [],
                 priorSeedReceipts: [],
                 exposureReceipts: [],
+                lexicalInnovations: [],
                 provenanceBoundary: nil,
                 evictedCommunicationCount: 0,
+                evictedInnovationCount: 0,
                 retiredLexicalAssociationCount: 0,
                 digest: AgentLanguageDigest.make("language:none")
             )
@@ -92,7 +94,10 @@ extension AgentSimulationSession {
         let exposureReceipts = state.exposureReceipts.sorted {
             $0.communicationID < $1.communicationID
         }
-        let canonical = [
+        let lexicalInnovations = state.lexicalEvolution?.innovations.sorted {
+            $0.innovationID < $1.innovationID
+        } ?? []
+        var canonical = [
             "enabled=\(state.enabled ? 1 : 0)",
             "pack=\(state.pack.packID.rawValue)|\(state.pack.languageTag)|\(state.pack.version)",
             state.pack.entries.map {
@@ -112,7 +117,16 @@ extension AgentSimulationSession {
             "evicted=\(state.evictedCommunicationCount)",
             "retired=\(state.retiredLexicalAssociationCount)",
             "next=\(state.nextCommunicationOrdinal)",
-        ].joined(separator: "|")
+        ]
+        if let evolution = state.lexicalEvolution {
+            canonical.append(
+                lexicalInnovations.map { innovationCanonicalText($0) }
+                    .joined(separator: ";")
+            )
+            canonical.append(
+                "evictedInnovations=\(evolution.evictedInnovationCount)"
+            )
+        }
         return AgentLanguageSnapshot(
             enabled: state.enabled,
             tick: tick,
@@ -122,11 +136,14 @@ extension AgentSimulationSession {
             communications: communications,
             priorSeedReceipts: priorSeedReceipts,
             exposureReceipts: exposureReceipts,
+            lexicalInnovations: lexicalInnovations,
             provenanceBoundary: state.provenanceBoundary,
             evictedCommunicationCount: state.evictedCommunicationCount,
+            evictedInnovationCount:
+                state.lexicalEvolution?.evictedInnovationCount ?? 0,
             retiredLexicalAssociationCount:
                 state.retiredLexicalAssociationCount,
-            digest: AgentLanguageDigest.make(canonical)
+            digest: AgentLanguageDigest.make(canonical.joined(separator: "|"))
         )
     }
 
@@ -142,7 +159,9 @@ extension AgentSimulationSession {
                 $0.competence == .acquiring
             }.count,
             communicationCount: snapshot.communications.count,
+            lexicalInnovationCount: snapshot.lexicalInnovations.count,
             evictedCommunicationCount: snapshot.evictedCommunicationCount,
+            evictedInnovationCount: snapshot.evictedInnovationCount,
             retiredLexicalAssociationCount:
                 snapshot.retiredLexicalAssociationCount,
             digest: snapshot.digest
@@ -240,6 +259,7 @@ extension AgentSimulationSession {
                 lastExposedAtTick: candidate.tick,
                 lastEventID: event.eventID,
                 priorSeedID: seedID,
+                innovationID: nil,
                 learningCommunicationIDs: [],
                 lastExposureCommunicationID: nil
             ))
@@ -250,6 +270,229 @@ extension AgentSimulationSession {
         )
         try candidate.validateLanguageStateIfInitialized()
         self = candidate
+    }
+
+    /// Produces a bounded individual lexical innovation from two retained,
+    /// faithful CIV-43 uses of the pack form with distinct local recipients.
+    /// The caller selects only the person and semantic sense; product logic
+    /// selects the causal supports and the resulting form.
+    @discardableResult
+    public mutating func innovateLanguageLexicalForm(
+        for agentID: AgentID,
+        senseID: AgentLanguageSenseID
+    ) throws -> AgentLanguageLexicalInnovation {
+        try innovateLanguageLexicalForm(
+            for: agentID,
+            senseID: senseID,
+            recordedEffect: nil
+        )
+    }
+
+    @discardableResult
+    mutating func innovateLanguageLexicalForm(
+        for agentID: AgentID,
+        senseID: AgentLanguageSenseID,
+        recordedEffect: AgentLanguageLexicalInnovationAcceptedEffect?
+    ) throws -> AgentLanguageLexicalInnovation {
+        guard var state = languageState, state.enabled else {
+            throw AgentSessionError.language(.disabled)
+        }
+        guard statesById[agentID.rawValue] != nil else {
+            throw AgentSessionError.language(.unknownAgent(agentID.rawValue))
+        }
+        guard let packEntry = state.pack.entry(for: senseID) else {
+            throw AgentSessionError.language(
+                .missingLexicalKnowledge(senseID.rawValue)
+            )
+        }
+        if let existing = state.lexicalEvolution?.innovations.first(where: {
+            $0.innovatorID == agentID && $0.senseID == senseID
+        }) {
+            let accepted = AgentLanguageLexicalInnovationAcceptedEffect(
+                evolvedForm: existing.evolvedForm,
+                decisionDigest: existing.decisionDigest
+            )
+            guard recordedEffect == nil || recordedEffect == accepted else {
+                throw AgentSessionError.language(
+                    .replayEffectMismatch(existing.innovationID.rawValue)
+                )
+            }
+            return existing
+        }
+        guard let source = state.lexicalAssociations.first(where: {
+            $0.ownerID == agentID
+                && $0.packID == state.pack.packID
+                && $0.senseID == senseID
+                && $0.form == packEntry.form
+                && $0.innovationID == nil
+                && $0.competence == .known
+        }) else {
+            throw AgentSessionError.language(
+                .missingLexicalKnowledge(senseID.rawValue)
+            )
+        }
+        guard let oral = oralTransmissionState, oral.enabled else {
+            throw AgentSessionError.language(
+                .insufficientLocalUsage(senseID.rawValue)
+            )
+        }
+        let communicationsByID = Dictionary(uniqueKeysWithValues:
+            state.communications.map { ($0.communicationID, $0) }
+        )
+        let eligible = oral.transmissions.compactMap {
+            transmission -> (AgentOralTransmission, AgentLanguageCommunication)? in
+            guard transmission.speakerID == agentID,
+                  transmission.outcome == .faithful,
+                  let communication = communicationsByID[
+                    transmission.languageCommunicationID
+                  ],
+                  communication.speakerID == agentID,
+                  communication.lexicalUses.contains(where: {
+                    $0.senseID == senseID
+                        && $0.form == packEntry.form
+                        && $0.innovationID == nil
+                  }) else { return nil }
+            return (transmission, communication)
+        }.sorted {
+            if $0.0.receiptEventID.sequence
+                != $1.0.receiptEventID.sequence {
+                return $0.0.receiptEventID.sequence
+                    < $1.0.receiptEventID.sequence
+            }
+            return $0.0.transmissionID < $1.0.transmissionID
+        }
+        guard eligible.count >= 2 else {
+            throw AgentSessionError.language(
+                .insufficientLocalUsage(senseID.rawValue)
+            )
+        }
+        let supports = Array(eligible.suffix(2))
+        guard Set(supports.map { $0.0.recipientID }).count == 2 else {
+            throw AgentSessionError.language(
+                .insufficientLocalUsage("distinct local recipients")
+            )
+        }
+        let supportReceipts = supports.map { pair in
+            let transmission = pair.0
+            let communication = pair.1
+            let lexicalUse = communication.lexicalUses.first {
+                $0.senseID == senseID
+                    && $0.form == packEntry.form
+                    && $0.innovationID == nil
+            }!
+            return AgentLanguageLexicalInnovationSupport(
+                transmissionID: transmission.transmissionID,
+                speakerID: transmission.speakerID,
+                recipientID: transmission.recipientID,
+                languageCommunicationID: communication.communicationID,
+                languageCommunicationEventID:
+                    communication.communicationEventID,
+                oralReceiptEventID: transmission.receiptEventID,
+                outcome: transmission.outcome,
+                locality: transmission.locality,
+                transmittedAtTick: transmission.transmittedAtTick,
+                semanticContentDigest: communication.semanticContent.digest,
+                lexicalUse: lexicalUse,
+                languageProvenanceDigest: communication.provenanceDigest,
+                oralProvenanceDigest: transmission.provenanceDigest
+            )
+        }
+        let canonicalEffect = languageInnovationAcceptedEffect(
+            agentID: agentID,
+            senseID: senseID,
+            sourceAssociationID: source.associationID,
+            sourceForm: source.form,
+            supports: supportReceipts,
+            atTick: tick
+        )
+        guard recordedEffect == nil || recordedEffect == canonicalEffect else {
+            throw AgentSessionError.language(
+                .replayEffectMismatch(senseID.rawValue)
+            )
+        }
+        guard !state.pack.entries.contains(where: {
+            $0.form == canonicalEffect.evolvedForm
+        }), !(state.lexicalEvolution?.innovations.contains(where: {
+            $0.evolvedForm == canonicalEffect.evolvedForm
+                && $0.senseID != senseID
+        }) ?? false) else {
+            throw AgentSessionError.language(
+                .invalidState("lexical form rebinding")
+            )
+        }
+        try ensureLanguageAssociationCapacity(
+            adding: 1,
+            for: agentID,
+            state: state
+        )
+        guard (state.lexicalEvolution?.innovations.count ?? 0)
+                < state.configuration.maximumLexicalAssociations else {
+            throw AgentSessionError.language(
+                .capacityReached("lexical innovations")
+            )
+        }
+
+        var candidate = self
+        try candidate.prevalidateCausalAppend(count: 2)
+        let innovationID = AgentLanguageLexicalInnovationID(
+            rawValue: "language-innovation-"
+                + canonicalEffect.decisionDigest
+        )!
+        let event = try candidate.requiredLanguageEvent(
+            kind: .languageLexicalInnovated,
+            actorID: agentID,
+            subjectID: agentID,
+            causes: supportReceipts.map(\.oralReceiptEventID).sorted(),
+            recordID: innovationID.rawValue,
+            propositionID: nil,
+            status: canonicalEffect.evolvedForm,
+            reason: canonicalEffect.decisionDigest,
+            summary: "lexical innovation agent=\(agentID.rawValue) sense=\(senseID.rawValue)"
+        )
+        let innovation = AgentLanguageLexicalInnovation(
+            innovationID: innovationID,
+            innovatorID: agentID,
+            packID: state.pack.packID,
+            senseID: senseID,
+            sourceAssociationID: source.associationID,
+            sourceForm: source.form,
+            evolvedForm: canonicalEffect.evolvedForm,
+            supports: supportReceipts,
+            innovatedAtTick: candidate.tick,
+            innovationEventID: event.eventID,
+            decisionDigest: canonicalEffect.decisionDigest
+        )
+        var evolution = state.lexicalEvolution
+            ?? AgentLanguageLexicalEvolutionState()
+        evolution.innovations.append(innovation)
+        state.lexicalEvolution = evolution
+        state.lexicalAssociations.append(AgentLanguageLexicalAssociation(
+            associationID: languageAssociationID(
+                ownerID: agentID,
+                packID: state.pack.packID,
+                senseID: senseID,
+                form: canonicalEffect.evolvedForm
+            ),
+            ownerID: agentID,
+            packID: state.pack.packID,
+            senseID: senseID,
+            form: canonicalEffect.evolvedForm,
+            source: .innovation,
+            competence: .known,
+            exposureCount: 0,
+            firstAcquiredAtTick: candidate.tick,
+            lastExposedAtTick: candidate.tick,
+            lastEventID: event.eventID,
+            priorSeedID: nil,
+            innovationID: innovationID,
+            learningCommunicationIDs: [],
+            lastExposureCommunicationID: nil
+        ))
+        candidate.languageState = state
+        try candidate.commitLanguageProvenanceBoundary(causes: [event.eventID])
+        try candidate.validateLanguageStateIfInitialized()
+        self = candidate
+        return innovation
     }
 
     public func realizeLanguageSemanticContent(
@@ -291,6 +534,41 @@ extension AgentSimulationSession {
         propositionID: AgentKnowledgePropositionID,
         renderingMode: AgentLanguageRenderingMode
     ) throws -> AgentLanguageCommunication {
+        try communicateLanguageSemanticContent(
+            speakerID: speakerID,
+            recipientID: recipientID,
+            propositionID: propositionID,
+            renderingMode: renderingMode,
+            localOralAuthority: nil
+        )
+    }
+
+    /// CIV-43 alone opens this route after validating live local social
+    /// authority. A direct CIV-42 caller may realize an evolved form, but may
+    /// not teach it to a remote recipient without an authorized carrier.
+    mutating func communicateLanguageSemanticContentForLocalOral(
+        speakerID: AgentID,
+        recipientID: AgentID,
+        propositionID: AgentKnowledgePropositionID,
+        renderingMode: AgentLanguageRenderingMode,
+        locality: AgentOralLocalityEvidence
+    ) throws -> AgentLanguageCommunication {
+        try communicateLanguageSemanticContent(
+            speakerID: speakerID,
+            recipientID: recipientID,
+            propositionID: propositionID,
+            renderingMode: renderingMode,
+            localOralAuthority: locality
+        )
+    }
+
+    private mutating func communicateLanguageSemanticContent(
+        speakerID: AgentID,
+        recipientID: AgentID,
+        propositionID: AgentKnowledgePropositionID,
+        renderingMode: AgentLanguageRenderingMode,
+        localOralAuthority: AgentOralLocalityEvidence?
+    ) throws -> AgentLanguageCommunication {
         guard var state = languageState, state.enabled else {
             throw AgentSessionError.language(.disabled)
         }
@@ -304,6 +582,29 @@ extension AgentSimulationSession {
             throw AgentSessionError.language(
                 .invalidState("speaker and recipient must be distinct")
             )
+        }
+        if let locality = localOralAuthority {
+            guard socialEnabled,
+                  locality.observedAtTick == tick,
+                  locality.speakerPosition
+                    == statesById[speakerID.rawValue]?.position,
+                  locality.recipientPosition
+                    == statesById[recipientID.rawValue]?.position,
+                  locality.authorizedRadius
+                    == configuration.socialConfiguration.communicationRadius,
+                  locality.distance == manhattanDistance(
+                    locality.speakerPosition,
+                    locality.recipientPosition
+                  ),
+                  locality.distance <= locality.authorizedRadius,
+                  canUseDirectSocialCommunicationAuthority(
+                    speakerID: speakerID,
+                    recipientID: recipientID
+                  ) else {
+                throw AgentSessionError.language(
+                    .invalidState("invalid local oral authority")
+                )
+            }
         }
         let (sourceBelief, sourceProposition, content) =
             try languageBeliefAndSemanticContent(
@@ -326,6 +627,16 @@ extension AgentSimulationSession {
                 content: content,
                 lexicalUses: lexicalUses
             ))
+        }
+        let carriesEvolvedForm = lexicalUses.contains {
+            $0.innovationID != nil
+        }
+        guard !carriesEvolvedForm || localOralAuthority != nil else {
+            throw AgentSessionError.language(
+                .invalidState(
+                    "evolved lexical exposure requires local oral authority"
+                )
+            )
         }
 
         let prospectiveNewAssociations = lexicalUses.filter { lexicalUse in
@@ -455,7 +766,8 @@ extension AgentSimulationSession {
                 exposedAssociationIDs: exposedAssociationIDs,
                 communicatedAtTick: candidate.tick,
                 communicationEventID: event.eventID,
-                digest: provenanceDigest
+                digest: provenanceDigest,
+                localOralAuthority: nil
             ))
         }
         for lexicalUse in orderedLexicalUses {
@@ -468,6 +780,12 @@ extension AgentSimulationSession {
             if let index = state.lexicalAssociations.firstIndex(where: {
                 $0.associationID == associationID
             }) {
+                guard state.lexicalAssociations[index].innovationID
+                        == lexicalUse.innovationID else {
+                    throw AgentSessionError.language(
+                        .invalidState("lexical authority substitution")
+                    )
+                }
                 let wasKnown = state.lexicalAssociations[index].competence
                     == .known
                 if state.lexicalAssociations[index].exposureCount
@@ -508,6 +826,7 @@ extension AgentSimulationSession {
                         lastExposedAtTick: candidate.tick,
                         lastEventID: event.eventID,
                         priorSeedID: nil,
+                        innovationID: lexicalUse.innovationID,
                         learningCommunicationIDs: [communicationID],
                         lastExposureCommunicationID: communicationID
                     )
@@ -541,9 +860,70 @@ extension AgentSimulationSession {
             causes: [event.eventID]
         )
         try candidate.validateKnowledgeGraphStateIfEnabled()
-        try candidate.validateLanguageStateIfInitialized()
+        try candidate.validateLanguageStateIfInitialized(
+            pendingLocalOralCommunicationID:
+                carriesEvolvedForm ? communicationID : nil
+        )
         self = candidate
         return communication
+    }
+
+    /// CIV-43 calls this only after publishing the exact local oral row. The
+    /// bounded receipt keeps current evolved competence verifiable after the
+    /// full carrier row is later compacted; it owns no belief authority.
+    mutating func retainLanguageLocalOralAuthority(
+        for transmission: AgentOralTransmission
+    ) throws {
+        guard var state = languageState,
+              let index = state.exposureReceipts.firstIndex(where: {
+                  $0.communicationID == transmission.languageCommunicationID
+              }), state.exposureReceipts[index].lexicalUses.contains(where: {
+                  $0.innovationID != nil
+              }) else {
+            return
+        }
+        let receipt = state.exposureReceipts[index]
+        let authority = AgentLanguageLocalOralAuthorityReceipt(
+            transmissionID: transmission.transmissionID,
+            oralReceiptEventID: transmission.receiptEventID,
+            receivedPropositionID:
+                transmission.interpretedSemanticContent.sourcePropositionID,
+            interpretedSemanticContentDigest:
+                transmission.interpretedSemanticContent.digest,
+            outcome: transmission.outcome,
+            decisionDigest: transmission.decisionDigest,
+            contentAttachment: transmission.contentAttachment,
+            locality: transmission.locality,
+            transmittedAtTick: transmission.transmittedAtTick,
+            oralProvenanceDigest: transmission.provenanceDigest
+        )
+        guard receipt.localOralAuthority == nil
+                || receipt.localOralAuthority == authority else {
+            throw AgentSessionError.language(
+                .invalidState("substituted local oral authority")
+            )
+        }
+        state.exposureReceipts[index] = AgentLanguageExposureReceipt(
+            communicationID: receipt.communicationID,
+            speakerID: receipt.speakerID,
+            recipientID: receipt.recipientID,
+            sourceBeliefID: receipt.sourceBeliefID,
+            sourceBeliefRevisionEventID:
+                receipt.sourceBeliefRevisionEventID,
+            sourcePropositionID: receipt.sourcePropositionID,
+            semanticAuthorityID: receipt.semanticAuthorityID,
+            semanticContentDigest: receipt.semanticContentDigest,
+            lexicalUses: receipt.lexicalUses,
+            exposedAssociationIDs: receipt.exposedAssociationIDs,
+            communicatedAtTick: receipt.communicatedAtTick,
+            communicationEventID: receipt.communicationEventID,
+            digest: receipt.digest,
+            localOralAuthority: authority
+        )
+        languageState = state
+        try commitLanguageProvenanceBoundary(
+            causes: [transmission.receiptEventID]
+        )
     }
 
     /// Mortality remains the sole lifecycle owner. CIV-42 only retires the
@@ -659,6 +1039,9 @@ extension AgentSimulationSession {
                     && $0.senseID == senseUse.senseID
                     && $0.competence == .known
             }.sorted {
+                if $0.lastEventID.sequence != $1.lastEventID.sequence {
+                    return $0.lastEventID.sequence > $1.lastEventID.sequence
+                }
                 if $0.exposureCount != $1.exposureCount {
                     return $0.exposureCount > $1.exposureCount
                 }
@@ -676,7 +1059,8 @@ extension AgentSimulationSession {
             return AgentLanguageLexicalUse(
                 role: senseUse.role,
                 senseID: senseUse.senseID,
-                form: association.form
+                form: association.form,
+                innovationID: association.innovationID
             )
         }.sorted { $0.role < $1.role }
     }
@@ -695,6 +1079,70 @@ extension AgentSimulationSession {
             + "\(byRole[.referentKind] ?? "") \(referentSurface)"
     }
 
+    private func languageInnovationAcceptedEffect(
+        agentID: AgentID,
+        senseID: AgentLanguageSenseID,
+        sourceAssociationID: AgentLanguageAssociationID,
+        sourceForm: String,
+        supports: [AgentLanguageLexicalInnovationSupport],
+        atTick: Int
+    ) -> AgentLanguageLexicalInnovationAcceptedEffect {
+        let supportText = supports.map { support in
+            let locality = support.locality
+            return [
+                support.transmissionID.rawValue,
+                support.speakerID.rawValue,
+                support.recipientID.rawValue,
+                support.oralReceiptEventID.rawValue,
+                support.outcome.rawValue,
+                support.oralProvenanceDigest,
+                support.languageCommunicationID.rawValue,
+                support.languageCommunicationEventID.rawValue,
+                support.languageProvenanceDigest,
+                support.semanticContentDigest,
+                lexicalUseCanonicalText(support.lexicalUse),
+                "\(locality.speakerPosition.x),\(locality.speakerPosition.y),\(locality.speakerPosition.z)",
+                "\(locality.recipientPosition.x),\(locality.recipientPosition.y),\(locality.recipientPosition.z)",
+                String(locality.distance),
+                String(locality.authorizedRadius),
+                String(locality.observedAtTick),
+            ].joined(separator: ":")
+        }.joined(separator: ";")
+        let causalInput = [
+            "language-lexical-innovation-selector-v1",
+            simulationID.rawValue,
+            String(configuration.seed),
+            String(atTick),
+            agentID.rawValue,
+            languageState?.pack.packID.rawValue ?? "missing-pack",
+            senseID.rawValue,
+            sourceAssociationID.rawValue,
+            sourceForm,
+            supportText,
+        ].joined(separator: "|")
+        let selectorDigest = AgentLanguageDigest.make(causalInput)
+        let selectors = selectorDigest.utf8.map(Int.init)
+        let onsets = ["b", "d", "f", "g", "k", "l", "m", "n", "p", "r", "s", "t", "v", "z"]
+        let vowels = ["a", "e", "i", "o", "u"]
+        let codas = ["", "l", "m", "n", "r", "s", "t"]
+        let syllable: (Int) -> String = { offset in
+            onsets[selectors[offset] % onsets.count]
+                + vowels[selectors[offset + 1] % vowels.count]
+                + codas[selectors[offset + 2] % codas.count]
+        }
+        let senseBinding = String(
+            AgentLanguageDigest.make(senseID.rawValue).prefix(8)
+        )
+        let evolvedForm = syllable(0) + syllable(3) + "-" + senseBinding
+        let decisionDigest = AgentLanguageDigest.make(
+            causalInput + "|evolved=\(evolvedForm)"
+        )
+        return AgentLanguageLexicalInnovationAcceptedEffect(
+            evolvedForm: evolvedForm,
+            decisionDigest: decisionDigest
+        )
+    }
+
     func languageAssociationID(
         ownerID: AgentID,
         packID: AgentLanguagePackID,
@@ -707,6 +1155,23 @@ extension AgentSimulationSession {
                     + "\(senseID.rawValue)|\(form)"
             )
         )!
+    }
+
+    func languageLexicalAuthorityIsValid(
+        senseID: AgentLanguageSenseID,
+        form: String,
+        innovationID: AgentLanguageLexicalInnovationID?,
+        state: AgentLanguageGraphState
+    ) -> Bool {
+        if let innovationID {
+            guard let innovation = state.lexicalEvolution?.innovations.first(
+                where: { $0.innovationID == innovationID }
+            ) else { return false }
+            return innovation.packID == state.pack.packID
+                && innovation.senseID == senseID
+                && innovation.evolvedForm == form
+        }
+        return state.pack.entry(for: senseID)?.form == form
     }
 
     private func compactLanguageProvenanceReceipts(
@@ -726,9 +1191,43 @@ extension AgentSimulationSession {
                 \.lastExposureCommunicationID
             )
         )
+        if state.lexicalEvolution != nil {
+            retainedCommunicationIDs.formUnion(
+                state.communications.filter { communication in
+                    communication.lexicalUses.contains {
+                        $0.innovationID != nil
+                    }
+                }.map(\.communicationID)
+            )
+        }
         state.exposureReceipts.removeAll {
             !retainedCommunicationIDs.contains($0.communicationID)
         }
+        guard var evolution = state.lexicalEvolution else { return }
+        var retainedInnovationIDs = Set(
+            state.lexicalAssociations.compactMap(\.innovationID)
+        )
+        retainedInnovationIDs.formUnion(
+            state.communications.flatMap(\.lexicalUses)
+                .compactMap(\.innovationID)
+        )
+        retainedInnovationIDs.formUnion(
+            writingState?.artifacts.flatMap {
+                $0.plan.realization.lexicalUses
+            }.compactMap(\.innovationID) ?? []
+        )
+        let removed = evolution.innovations.filter {
+            !retainedInnovationIDs.contains($0.innovationID)
+        }.count
+        evolution.innovations.removeAll {
+            !retainedInnovationIDs.contains($0.innovationID)
+        }
+        if evolution.evictedInnovationCount <= Int.max - removed {
+            evolution.evictedInnovationCount += removed
+        } else {
+            evolution.evictedInnovationCount = Int.max
+        }
+        state.lexicalEvolution = evolution
     }
 
     mutating func commitLanguageProvenanceBoundary(
@@ -738,6 +1237,7 @@ extension AgentSimulationSession {
         let proofCount = state.communications.count
             + state.priorSeedReceipts.count
             + state.exposureReceipts.count
+            + (state.lexicalEvolution == nil ? 0 : 1)
         guard proofCount > 0 else {
             state.provenanceBoundary = nil
             languageState = state
@@ -819,7 +1319,10 @@ extension AgentSimulationSession {
         return event
     }
 
-    func validateLanguageStateIfInitialized() throws {
+    func validateLanguageStateIfInitialized(
+        pendingLocalOralCommunicationID:
+            AgentLanguageCommunicationID? = nil
+    ) throws {
         guard let state = languageState else { return }
         guard let knowledge = knowledgeGraphState else {
             throw AgentSessionError.language(.knowledgeRequired)
@@ -858,9 +1361,14 @@ extension AgentSimulationSession {
               state.priorSeedReceipts.count
                 <= state.lexicalAssociations.count,
               state.exposureReceipts.count <= state.lexicalAssociations.count
-                * (state.configuration.exposuresRequiredForLearning + 1),
+                * (state.configuration.exposuresRequiredForLearning + 1)
+                + (state.lexicalEvolution == nil
+                    ? 0 : state.communications.count),
               state.evictedCommunicationCount >= 0,
               state.retiredLexicalAssociationCount >= 0,
+              (state.lexicalEvolution?.evictedInnovationCount ?? 0) >= 0,
+              (state.lexicalEvolution?.innovations.count ?? 0)
+                <= state.configuration.maximumLexicalAssociations,
               state.nextCommunicationOrdinal > 0,
               Set(state.lexicalAssociations.map(\.associationID)).count
                 == state.lexicalAssociations.count,
@@ -869,7 +1377,10 @@ extension AgentSimulationSession {
               Set(state.priorSeedReceipts.map(\.seedID)).count
                 == state.priorSeedReceipts.count,
               Set(state.exposureReceipts.map(\.communicationID)).count
-                == state.exposureReceipts.count else {
+                == state.exposureReceipts.count,
+              Set(state.lexicalEvolution?.innovations.map(\.innovationID)
+                    ?? []).count
+                == (state.lexicalEvolution?.innovations.count ?? 0) else {
             throw AgentSessionError.language(.invalidState("global bound or identity"))
         }
         let activeAgentIDs = Set(statesById.values.map(\.agentID))
@@ -893,6 +1404,232 @@ extension AgentSimulationSession {
             return nil
         }
 
+        let innovations = state.lexicalEvolution?.innovations ?? []
+        let innovationsByID = Dictionary(uniqueKeysWithValues:
+            innovations.map { ($0.innovationID, $0) }
+        )
+        let communicationsByID = Dictionary(uniqueKeysWithValues:
+            state.communications.map { ($0.communicationID, $0) }
+        )
+        let oralTransmissionsByID = Dictionary(uniqueKeysWithValues:
+            (oralTransmissionState?.transmissions ?? []).map {
+                ($0.transmissionID, $0)
+            }
+        )
+        func lexicalAuthorityIsValid(
+            senseID: AgentLanguageSenseID,
+            form: String,
+            innovationID: AgentLanguageLexicalInnovationID?
+        ) -> Bool {
+            if let innovationID {
+                guard let innovation = innovationsByID[innovationID] else {
+                    return false
+                }
+                return innovation.packID == state.pack.packID
+                    && innovation.senseID == senseID
+                    && innovation.evolvedForm == form
+            }
+            return state.pack.entry(for: senseID)?.form == form
+        }
+
+        for innovation in innovations {
+            let canonicalEffect = innovation.supports.count == 2
+                ? languageInnovationAcceptedEffect(
+                    agentID: innovation.innovatorID,
+                    senseID: innovation.senseID,
+                    sourceAssociationID: innovation.sourceAssociationID,
+                    sourceForm: innovation.sourceForm,
+                    supports: innovation.supports,
+                    atTick: innovation.innovatedAtTick
+                ) : nil
+            let distinctSupportRecipients = Set(innovation.supports.map {
+                $0.recipientID
+            })
+            let supportOrderIsCausal = zip(
+                innovation.supports,
+                innovation.supports.dropFirst()
+            ).allSatisfy {
+                $0.0.oralReceiptEventID.sequence
+                    < $0.1.oralReceiptEventID.sequence
+            }
+            let supportsAreStructurallyValid = innovation.supports
+                .allSatisfy { support in
+                    let locality = support.locality
+                    return support.speakerID == innovation.innovatorID
+                        && support.outcome == .faithful
+                        && support.transmittedAtTick
+                        <= innovation.innovatedAtTick
+                        && support.languageCommunicationEventID.sequence
+                        < support.oralReceiptEventID.sequence
+                        && support.oralReceiptEventID.sequence
+                        < innovation.innovationEventID.sequence
+                        && support.languageCommunicationEventID.simulationID
+                            == simulationID
+                        && support.oralReceiptEventID.simulationID
+                            == simulationID
+                        && support.lexicalUse.senseID
+                            == innovation.senseID
+                        && support.lexicalUse.form == innovation.sourceForm
+                        && support.lexicalUse.innovationID == nil
+                        && locality.observedAtTick
+                            == support.transmittedAtTick
+                        && locality.distance == manhattanDistance(
+                            locality.speakerPosition,
+                            locality.recipientPosition
+                        )
+                        && locality.authorizedRadius
+                            == configuration.socialConfiguration
+                                .communicationRadius
+                        && locality.distance <= locality.authorizedRadius
+                }
+            guard innovation.packID == state.pack.packID,
+                  state.pack.entry(for: innovation.senseID)?.form
+                    == innovation.sourceForm,
+                  innovation.sourceAssociationID == languageAssociationID(
+                    ownerID: innovation.innovatorID,
+                    packID: innovation.packID,
+                    senseID: innovation.senseID,
+                    form: innovation.sourceForm
+                  ),
+                  innovation.supports.count == 2,
+                  distinctSupportRecipients.count == 2,
+                  Set(innovation.supportingTransmissionIDs).count == 2,
+                  supportOrderIsCausal,
+                  supportsAreStructurallyValid,
+                  canonicalEffect?.evolvedForm == innovation.evolvedForm,
+                  canonicalEffect?.decisionDigest
+                    == innovation.decisionDigest,
+                  innovation.innovationID.rawValue
+                    == "language-innovation-" + innovation.decisionDigest,
+                  !state.pack.entries.contains(where: {
+                    $0.form == innovation.evolvedForm
+                  }),
+                  isValidLanguageText(
+                    innovation.evolvedForm, maximum: 64
+                  ),
+                  innovation.innovatedAtTick >= 0,
+                  innovation.innovatedAtTick <= tick else {
+                throw AgentSessionError.language(
+                    .invalidState("lexical innovation authority")
+                )
+            }
+            for support in innovation.supports {
+                if let transmission = oralTransmissionsByID[
+                    support.transmissionID
+                ] {
+                    guard transmission.speakerID == support.speakerID,
+                          transmission.recipientID == support.recipientID,
+                          transmission.languageCommunicationID
+                            == support.languageCommunicationID,
+                          transmission.languageCommunicationEventID
+                            == support.languageCommunicationEventID,
+                          transmission.receiptEventID
+                            == support.oralReceiptEventID,
+                          transmission.outcome == support.outcome,
+                          transmission.locality == support.locality,
+                          transmission.transmittedAtTick
+                            == support.transmittedAtTick,
+                          transmission.transmittedSemanticContent.digest
+                            == support.semanticContentDigest,
+                          transmission.provenanceDigest
+                            == support.oralProvenanceDigest else {
+                        throw AgentSessionError.language(
+                            .invalidState("retained innovation oral support")
+                        )
+                    }
+                } else {
+                    guard (oralTransmissionState?.evictedTransmissionCount
+                            ?? 0) > 0 else {
+                        throw AgentSessionError.language(
+                            .invalidState("missing innovation oral support")
+                        )
+                    }
+                }
+                if let communication = communicationsByID[
+                    support.languageCommunicationID
+                ] {
+                    guard communication.speakerID == support.speakerID,
+                          communication.recipientID == support.recipientID,
+                          communication.communicationEventID
+                            == support.languageCommunicationEventID,
+                          communication.semanticContent.digest
+                            == support.semanticContentDigest,
+                          communication.lexicalUses.contains(
+                            support.lexicalUse
+                          ),
+                          communication.provenanceDigest
+                            == support.languageProvenanceDigest else {
+                        throw AgentSessionError.language(
+                            .invalidState(
+                                "retained innovation language support"
+                            )
+                        )
+                    }
+                } else {
+                    guard state.evictedCommunicationCount > 0 else {
+                        throw AgentSessionError.language(
+                            .invalidState(
+                                "missing innovation language support"
+                            )
+                        )
+                    }
+                }
+                if let event = try retainedEvent(
+                    support.languageCommunicationEventID
+                ) {
+                    guard event.kind == .languageSemanticCommunicated,
+                          event.origin == .languageTransition,
+                          event.actorID == support.speakerID,
+                          event.subjectID == support.recipientID,
+                          case let .language(
+                            recordID, _, _, reason
+                          ) = event.payload,
+                          recordID
+                            == support.languageCommunicationID.rawValue,
+                          reason == support.languageProvenanceDigest else {
+                        throw AgentSessionError.language(
+                            .invalidState("innovation support event")
+                        )
+                    }
+                }
+            }
+            if let event = try retainedEvent(innovation.innovationEventID) {
+                let expectedCauses = innovation.supports.map(
+                    \.oralReceiptEventID
+                ).sorted()
+                guard event.kind == .languageLexicalInnovated,
+                      event.origin == .languageTransition,
+                      event.actorID == innovation.innovatorID,
+                      event.subjectID == innovation.innovatorID,
+                      event.causes == expectedCauses,
+                      case let .language(
+                        recordID, propositionID, status, reason
+                      ) = event.payload,
+                      recordID == innovation.innovationID.rawValue,
+                      propositionID == nil,
+                      status == innovation.evolvedForm,
+                      reason == innovation.decisionDigest else {
+                    throw AgentSessionError.language(
+                        .invalidState("lexical innovation event")
+                    )
+                }
+            }
+        }
+        let formGroups = Dictionary(grouping: innovations, by: \.evolvedForm)
+        let ownerSenseGroups = Dictionary(grouping: innovations, by: {
+            "\($0.innovatorID.rawValue)|\($0.senseID.rawValue)"
+        })
+        guard formGroups.allSatisfy({ _, records in
+                  Set(records.map(\.senseID)).count == 1
+              }),
+              ownerSenseGroups.allSatisfy({ _, records in
+                  records.count == 1
+              }) else {
+            throw AgentSessionError.language(
+                .invalidState("lexical innovation uniqueness")
+            )
+        }
+
         let historicalAuthorityByID = Dictionary(uniqueKeysWithValues:
             (knowledge.historicalBeliefAuthorities ?? []).map {
                 ($0.authorityID, $0)
@@ -902,6 +1639,7 @@ extension AgentSimulationSession {
             let proofCount = state.communications.count
                 + state.priorSeedReceipts.count
                 + state.exposureReceipts.count
+                + (state.lexicalEvolution == nil ? 0 : 1)
             if proofCount == 0 {
                 guard state.provenanceBoundary == nil else {
                     throw AgentSessionError.language(
@@ -978,9 +1716,6 @@ extension AgentSimulationSession {
         let exposureReceiptsByID = Dictionary(uniqueKeysWithValues:
             state.exposureReceipts.map { ($0.communicationID, $0) }
         )
-        let communicationsByID = Dictionary(uniqueKeysWithValues:
-            state.communications.map { ($0.communicationID, $0) }
-        )
         for receipt in state.exposureReceipts {
             let expectedAssociationIDs = receipt.lexicalUses.map {
                 languageAssociationID(
@@ -1022,8 +1757,11 @@ extension AgentSimulationSession {
                   Set(receipt.lexicalUses.map(\.role)).count
                     == receipt.lexicalUses.count,
                   receipt.lexicalUses.allSatisfy({ lexicalUse in
-                      state.pack.entry(for: lexicalUse.senseID)?.form
-                        == lexicalUse.form
+                      lexicalAuthorityIsValid(
+                        senseID: lexicalUse.senseID,
+                        form: lexicalUse.form,
+                        innovationID: lexicalUse.innovationID
+                      )
                   }),
                   receipt.exposedAssociationIDs == expectedAssociationIDs,
                   receipt.communicatedAtTick >= 0,
@@ -1032,6 +1770,115 @@ extension AgentSimulationSession {
                   receipt.digest == expectedDigest else {
                 throw AgentSessionError.language(
                     .invalidState("exposure receipt")
+                )
+            }
+            let carriesEvolvedForm = receipt.lexicalUses.contains {
+                $0.innovationID != nil
+            }
+            if carriesEvolvedForm,
+               pendingLocalOralCommunicationID
+                == receipt.communicationID {
+                guard receipt.localOralAuthority == nil else {
+                    throw AgentSessionError.language(
+                        .invalidState("premature local oral authority")
+                    )
+                }
+            } else if carriesEvolvedForm {
+                guard let oralAuthority = receipt.localOralAuthority,
+                      oralAuthority.oralReceiptEventID.simulationID
+                        == simulationID,
+                      oralAuthority.oralReceiptEventID.sequence
+                        > receipt.communicationEventID.sequence,
+                      oralAuthority.transmittedAtTick
+                        == receipt.communicatedAtTick,
+                      oralAuthority.locality.observedAtTick
+                        == receipt.communicatedAtTick,
+                      oralAuthority.locality.distance == manhattanDistance(
+                        oralAuthority.locality.speakerPosition,
+                        oralAuthority.locality.recipientPosition
+                      ),
+                      oralAuthority.locality.authorizedRadius
+                        == configuration.socialConfiguration
+                            .communicationRadius,
+                      oralAuthority.locality.distance
+                        <= oralAuthority.locality.authorizedRadius,
+                      oralAuthority.contentAttachment.map(
+                        oralContentAttachmentIsValid
+                      ) ?? true else {
+                    throw AgentSessionError.language(
+                        .invalidState("local oral exposure authority")
+                    )
+                }
+                if let transmission = oralTransmissionsByID[
+                    oralAuthority.transmissionID
+                ] {
+                    guard transmission.speakerID == receipt.speakerID,
+                          transmission.recipientID == receipt.recipientID,
+                          transmission.languageCommunicationID
+                            == receipt.communicationID,
+                          transmission.languageCommunicationEventID
+                            == receipt.communicationEventID,
+                          transmission.receiptEventID
+                            == oralAuthority.oralReceiptEventID,
+                          transmission.interpretedSemanticContent
+                            .sourcePropositionID
+                            == oralAuthority.receivedPropositionID,
+                          transmission.interpretedSemanticContent.digest
+                            == oralAuthority
+                                .interpretedSemanticContentDigest,
+                          transmission.outcome == oralAuthority.outcome,
+                          transmission.decisionDigest
+                            == oralAuthority.decisionDigest,
+                          transmission.contentAttachment
+                            == oralAuthority.contentAttachment,
+                          transmission.locality == oralAuthority.locality,
+                          transmission.transmittedAtTick
+                            == oralAuthority.transmittedAtTick,
+                          transmission.provenanceDigest
+                            == oralAuthority.oralProvenanceDigest else {
+                        throw AgentSessionError.language(
+                            .invalidState("retained local oral authority")
+                        )
+                    }
+                } else {
+                    guard (oralTransmissionState?.evictedTransmissionCount
+                            ?? 0) > 0 else {
+                        throw AgentSessionError.language(
+                            .invalidState("missing local oral authority")
+                        )
+                    }
+                }
+                if let event = try retainedEvent(
+                    oralAuthority.oralReceiptEventID
+                ) {
+                    guard event.kind == .oralTransmissionAccepted,
+                          event.origin == .oralTransition,
+                          event.actorID == receipt.speakerID,
+                          event.subjectID == receipt.recipientID,
+                          event.causes == [receipt.communicationEventID],
+                          case let .oral(
+                            transmissionID, sourceID, receivedID,
+                            status, reason
+                          ) = event.payload,
+                          transmissionID
+                            == oralAuthority.transmissionID.rawValue,
+                          sourceID == receipt.sourcePropositionID.rawValue,
+                          receivedID
+                            == oralAuthority.receivedPropositionID.rawValue,
+                          status == oralAuthority.outcome.rawValue,
+                          reason == oralReceiptReason(
+                            decisionDigest: oralAuthority.decisionDigest,
+                            contentAttachment:
+                                oralAuthority.contentAttachment
+                          ) else {
+                        throw AgentSessionError.language(
+                            .invalidState("local oral receipt event")
+                        )
+                    }
+                }
+            } else if receipt.localOralAuthority != nil {
+                throw AgentSessionError.language(
+                    .invalidState("unexpected local oral authority")
                 )
             }
             if let communication = communicationsByID[
@@ -1097,14 +1944,18 @@ extension AgentSimulationSession {
                 && receipt.lexicalUses.contains {
                     $0.senseID == association.senseID
                         && $0.form == association.form
+                        && $0.innovationID == association.innovationID
                 }
         }
 
         for association in state.lexicalAssociations {
             guard activeAgentIDs.contains(association.ownerID),
                   association.packID == state.pack.packID,
-                  state.pack.entry(for: association.senseID)?.form
-                    == association.form,
+                  lexicalAuthorityIsValid(
+                    senseID: association.senseID,
+                    form: association.form,
+                    innovationID: association.innovationID
+                  ),
                   isValidLanguageText(association.form, maximum: 64),
                   association.exposureCount >= 0,
                   association.exposureCount
@@ -1153,6 +2004,7 @@ extension AgentSimulationSession {
                         association.associationID
                       ),
                       association.competence == .known,
+                      association.innovationID == nil,
                       association.learningCommunicationIDs.isEmpty,
                       association.firstAcquiredAtTick
                         == receipt.seededAtTick else {
@@ -1207,6 +2059,28 @@ extension AgentSimulationSession {
                         .invalidState("exposure lexical acquisition")
                     )
                 }
+            case .innovation:
+                guard association.priorSeedID == nil,
+                      let innovationID = association.innovationID,
+                      let innovation = innovationsByID[innovationID],
+                      innovation.innovatorID == association.ownerID,
+                      innovation.packID == association.packID,
+                      innovation.senseID == association.senseID,
+                      innovation.evolvedForm == association.form,
+                      association.competence == .known,
+                      association.exposureCount == 0,
+                      association.learningCommunicationIDs.isEmpty,
+                      association.lastExposureCommunicationID == nil,
+                      association.firstAcquiredAtTick
+                        == innovation.innovatedAtTick,
+                      association.lastExposedAtTick
+                        == innovation.innovatedAtTick,
+                      association.lastEventID
+                        == innovation.innovationEventID else {
+                    throw AgentSessionError.language(
+                        .invalidState("innovated lexical acquisition")
+                    )
+                }
             }
         }
 
@@ -1228,6 +2102,15 @@ extension AgentSimulationSession {
                 \.lastExposureCommunicationID
             )
         )
+        if state.lexicalEvolution != nil {
+            referencedExposureIDs.formUnion(
+                state.communications.filter { communication in
+                    communication.lexicalUses.contains {
+                        $0.innovationID != nil
+                    }
+                }.map(\.communicationID)
+            )
+        }
         guard referencedExposureIDs
                 == Set(state.exposureReceipts.map(\.communicationID)) else {
             throw AgentSessionError.language(
@@ -1340,8 +2223,11 @@ extension AgentSimulationSession {
                         == communication.semanticContent.senses.map(\.senseID),
                       orderedUses.allSatisfy({
                           isValidLanguageText($0.form, maximum: 64)
-                            && state.pack.entry(for: $0.senseID)?.form
-                                == $0.form
+                            && lexicalAuthorityIsValid(
+                                senseID: $0.senseID,
+                                form: $0.form,
+                                innovationID: $0.innovationID
+                            )
                       }),
                       communication.exposedAssociationIDs
                         == expectedExposedAssociationIDs,
@@ -1352,6 +2238,31 @@ extension AgentSimulationSession {
                       ) else {
                     throw AgentSessionError.language(
                         .invalidState("deterministic rendering")
+                    )
+                }
+            }
+            if communication.lexicalUses.contains(where: {
+                $0.innovationID != nil
+            }) {
+                let oralRecord = oralTransmissionState?.transmissions.first {
+                    $0.languageCommunicationID
+                        == communication.communicationID
+                }
+                let retainedAuthority = exposureReceiptsByID[
+                    communication.communicationID
+                ]?.localOralAuthority
+                guard pendingLocalOralCommunicationID
+                        == communication.communicationID
+                        || retainedAuthority != nil
+                        || (oralRecord?.speakerID == communication.speakerID
+                            && oralRecord?.recipientID
+                                == communication.recipientID
+                            && oralRecord?.languageCommunicationEventID
+                                == communication.communicationEventID) else {
+                    throw AgentSessionError.language(
+                        .invalidState(
+                            "evolved exposure lacks local oral carrier"
+                        )
                     )
                 }
             }
@@ -1381,6 +2292,35 @@ extension AgentSimulationSession {
                 }
             }
         }
+        if let pendingLocalOralCommunicationID {
+            guard state.communications.contains(where: {
+                $0.communicationID == pendingLocalOralCommunicationID
+                    && $0.lexicalUses.contains(where: {
+                        $0.innovationID != nil
+                    })
+            }) else {
+                throw AgentSessionError.language(
+                    .invalidState("invalid pending local oral exposure")
+                )
+            }
+        }
+        var referencedInnovationIDs = Set(
+            state.lexicalAssociations.compactMap(\.innovationID)
+        )
+        referencedInnovationIDs.formUnion(
+            state.communications.flatMap(\.lexicalUses)
+                .compactMap(\.innovationID)
+        )
+        referencedInnovationIDs.formUnion(
+            writingState?.artifacts.flatMap {
+                $0.plan.realization.lexicalUses
+            }.compactMap(\.innovationID) ?? []
+        )
+        guard referencedInnovationIDs == Set(innovationsByID.keys) else {
+            throw AgentSessionError.language(
+                .invalidState("lexical innovation reachability")
+            )
+        }
         try validateProvenanceBoundary()
     }
 }
@@ -1401,9 +2341,8 @@ private func communicationCanonicalText(
         + "\(communication.sourceBeliefRevisionEventID.rawValue)|"
         + "\(communication.semanticAuthority.authorityID.rawValue)|"
         + "\(communication.semanticContent.digest)|\(rendering)|"
-        + communication.lexicalUses.map {
-            "\($0.role.rawValue):\($0.senseID.rawValue):\($0.form)"
-        }.joined(separator: ",")
+        + communication.lexicalUses.map(lexicalUseCanonicalText)
+            .joined(separator: ",")
         + "|" + communication.exposedAssociationIDs.map(\.rawValue)
             .joined(separator: ",")
         + "|" + communication.newlyLearnedSenseIDs.map(\.rawValue)
@@ -1416,7 +2355,7 @@ private func communicationCanonicalText(
 private func associationCanonicalText(
     _ association: AgentLanguageLexicalAssociation
 ) -> String {
-    let fields = [
+    var fields = [
         "association",
         association.associationID.rawValue,
         association.ownerID.rawValue,
@@ -1434,7 +2373,63 @@ private func associationCanonicalText(
             .joined(separator: ","),
         association.lastExposureCommunicationID?.rawValue ?? "none",
     ]
+    if let innovationID = association.innovationID {
+        fields.append(innovationID.rawValue)
+    }
     return fields.joined(separator: "|")
+}
+
+private func lexicalUseCanonicalText(
+    _ use: AgentLanguageLexicalUse
+) -> String {
+    let base = "\(use.role.rawValue):\(use.senseID.rawValue):\(use.form)"
+    return use.innovationID.map { base + ":" + $0.rawValue } ?? base
+}
+
+private func innovationCanonicalText(
+    _ innovation: AgentLanguageLexicalInnovation
+) -> String {
+    [
+        "innovation",
+        innovation.innovationID.rawValue,
+        innovation.innovatorID.rawValue,
+        innovation.packID.rawValue,
+        innovation.senseID.rawValue,
+        innovation.sourceAssociationID.rawValue,
+        innovation.sourceForm,
+        innovation.evolvedForm,
+        innovation.supports.map(innovationSupportCanonicalText)
+            .joined(separator: ";"),
+        String(innovation.innovatedAtTick),
+        innovation.innovationEventID.rawValue,
+        innovation.decisionDigest,
+    ].joined(separator: "|")
+}
+
+private func innovationSupportCanonicalText(
+    _ support: AgentLanguageLexicalInnovationSupport
+) -> String {
+    let locality = support.locality
+    return [
+        "support",
+        support.transmissionID.rawValue,
+        support.speakerID.rawValue,
+        support.recipientID.rawValue,
+        support.languageCommunicationID.rawValue,
+        support.languageCommunicationEventID.rawValue,
+        support.oralReceiptEventID.rawValue,
+        support.outcome.rawValue,
+        "\(locality.speakerPosition.x),\(locality.speakerPosition.y),\(locality.speakerPosition.z)",
+        "\(locality.recipientPosition.x),\(locality.recipientPosition.y),\(locality.recipientPosition.z)",
+        String(locality.distance),
+        String(locality.authorizedRadius),
+        String(locality.observedAtTick),
+        String(support.transmittedAtTick),
+        support.semanticContentDigest,
+        lexicalUseCanonicalText(support.lexicalUse),
+        support.languageProvenanceDigest,
+        support.oralProvenanceDigest,
+    ].joined(separator: ":")
 }
 
 private func languagePriorSeedDigest(
@@ -1475,9 +2470,7 @@ private func languageExposureDigest(
         sourcePropositionID.rawValue,
         semanticAuthorityID.rawValue,
         semanticContentDigest,
-        lexicalUses.map {
-            "\($0.role.rawValue):\($0.senseID.rawValue):\($0.form)"
-        }.joined(separator: ","),
+        lexicalUses.map(lexicalUseCanonicalText).joined(separator: ","),
         exposedAssociationIDs.map(\.rawValue).joined(separator: ","),
         String(communicatedAtTick),
     ].joined(separator: "|"))
@@ -1501,7 +2494,7 @@ private func priorSeedReceiptCanonicalText(
 private func exposureReceiptCanonicalText(
     _ receipt: AgentLanguageExposureReceipt
 ) -> String {
-    [
+    var fields = [
         "exposure-receipt",
         receipt.communicationID.rawValue,
         receipt.speakerID.rawValue,
@@ -1511,14 +2504,40 @@ private func exposureReceiptCanonicalText(
         receipt.sourcePropositionID.rawValue,
         receipt.semanticAuthorityID.rawValue,
         receipt.semanticContentDigest,
-        receipt.lexicalUses.map {
-            "\($0.role.rawValue):\($0.senseID.rawValue):\($0.form)"
-        }.joined(separator: ","),
+        receipt.lexicalUses.map(lexicalUseCanonicalText)
+            .joined(separator: ","),
         receipt.exposedAssociationIDs.map(\.rawValue).joined(separator: ","),
         String(receipt.communicatedAtTick),
         receipt.communicationEventID.rawValue,
         receipt.digest,
-    ].joined(separator: "|")
+    ]
+    if let authority = receipt.localOralAuthority {
+        fields.append(localOralAuthorityCanonicalText(authority))
+    }
+    return fields.joined(separator: "|")
+}
+
+private func localOralAuthorityCanonicalText(
+    _ authority: AgentLanguageLocalOralAuthorityReceipt
+) -> String {
+    let locality = authority.locality
+    return [
+        "local-oral-authority",
+        authority.transmissionID.rawValue,
+        authority.oralReceiptEventID.rawValue,
+        authority.receivedPropositionID.rawValue,
+        authority.interpretedSemanticContentDigest,
+        authority.outcome.rawValue,
+        authority.decisionDigest,
+        authority.contentAttachment?.canonicalText ?? "none",
+        "\(locality.speakerPosition.x),\(locality.speakerPosition.y),\(locality.speakerPosition.z)",
+        "\(locality.recipientPosition.x),\(locality.recipientPosition.y),\(locality.recipientPosition.z)",
+        String(locality.distance),
+        String(locality.authorizedRadius),
+        String(locality.observedAtTick),
+        String(authority.transmittedAtTick),
+        authority.oralProvenanceDigest,
+    ].joined(separator: ":")
 }
 
 func languageProvenanceBoundaryDigest(
@@ -1533,8 +2552,18 @@ func languageProvenanceBoundaryDigest(
     let exposures = state.exposureReceipts.sorted {
         $0.communicationID < $1.communicationID
     }.map(exposureReceiptCanonicalText).joined(separator: ";")
+    let legacy = "language-provenance-boundary-v1|communications=\(communications)"
+        + "|seeds=\(seeds)|exposures=\(exposures)"
+    guard let evolution = state.lexicalEvolution else {
+        return AgentLanguageDigest.make(legacy)
+    }
+    let innovations = evolution.innovations.sorted {
+        $0.innovationID < $1.innovationID
+    }.map(innovationCanonicalText).joined(separator: ";")
     return AgentLanguageDigest.make(
-        "language-provenance-boundary-v1|communications=\(communications)"
+        "language-provenance-boundary-v2|communications=\(communications)"
             + "|seeds=\(seeds)|exposures=\(exposures)"
+            + "|innovations=\(innovations)"
+            + "|evictedInnovations=\(evolution.evictedInnovationCount)"
     )
 }

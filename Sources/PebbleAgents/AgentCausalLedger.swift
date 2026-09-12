@@ -283,6 +283,7 @@ public enum AgentCausalEventKind: String, Codable, CaseIterable, Sendable {
     case languageInitialized
     case languagePriorSeeded
     case languageSemanticCommunicated
+    case languageLexicalInnovated
     case oralTransmissionInitialized
     case oralTransmissionAccepted
     case oralProvenanceBoundary
@@ -1016,6 +1017,7 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
              (.languageInitialized, .language),
              (.languagePriorSeeded, .language),
              (.languageSemanticCommunicated, .language),
+             (.languageLexicalInnovated, .language),
              (.oralTransmissionInitialized, .oral),
              (.oralTransmissionAccepted, .oral),
              (.oralProvenanceBoundary, .oral),

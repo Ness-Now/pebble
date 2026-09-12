@@ -19,7 +19,12 @@ extension AgentSimulationSession {
                 role: $0.role, senseID: $0.senseID
               ) }) == realization.semanticContent.senses,
               realization.lexicalUses.allSatisfy({
-                language.pack.entry(for: $0.senseID)?.form == $0.form
+                languageLexicalAuthorityIsValid(
+                    senseID: $0.senseID,
+                    form: $0.form,
+                    innovationID: $0.innovationID,
+                    state: language
+                )
               }),
               realization.rendering.text == languageDeterministicText(
                 content: realization.semanticContent,
@@ -99,7 +104,9 @@ extension AgentSimulationSession {
         for id in receipt.knowledgeEventIDs {
             if let event = causalLedger.events.first(where: { $0.eventID == id }) {
                 guard event.origin == .languageTransition, event.subjectID == ownerID,
-                      event.kind == .languagePriorSeeded || event.kind == .languageSemanticCommunicated else {
+                      event.kind == .languagePriorSeeded
+                        || event.kind == .languageSemanticCommunicated
+                        || event.kind == .languageLexicalInnovated else {
                     throw AgentSessionError.language(.invalidState("written lexical acquisition event"))
                 }
             } else if id.sequence.rawValue > causalLedger.droppedEventCount {

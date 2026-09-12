@@ -54,6 +54,7 @@ public enum AgentCheckpointSchema {
     public static let writingVersion = 40
     public static let archiveVersion = 41
     public static let cultureVersion = 42
+    public static let lexicalDivergenceVersion = 43
 
     public static func familyValidationSemantics(
         for version: Int
@@ -76,7 +77,8 @@ public enum AgentCheckpointSchema {
             || version == oralTransmissionVersion
             || version == longDistanceCommunicationVersion
             || version == writingVersion
-            || version == archiveVersion || version == cultureVersion {
+            || version == archiveVersion || version == cultureVersion
+            || version == lexicalDivergenceVersion {
             return .strictDurableConsent
         }
         return nil
@@ -101,7 +103,8 @@ public enum AgentCheckpointSchema {
             || version == oralTransmissionVersion
             || version == longDistanceCommunicationVersion
             || version == writingVersion
-            || version == archiveVersion || version == cultureVersion {
+            || version == archiveVersion || version == cultureVersion
+            || version == lexicalDivergenceVersion {
             return .strictDurableSuccessorPlan
         }
         return nil
@@ -135,6 +138,7 @@ public enum AgentCheckpointSchema {
             || version == longDistanceCommunicationVersion
             || version == writingVersion
             || version == archiveVersion || version == cultureVersion
+            || version == lexicalDivergenceVersion
     }
 }
 
@@ -346,7 +350,9 @@ public struct AgentSessionDurableState: Codable {
     public let marketState: AgentMarketState?
 
     init(session: AgentSimulationSession) {
-        if session.distributedCultureState != nil {
+        if session.languageState?.lexicalEvolution != nil {
+            schemaVersion = AgentCheckpointSchema.lexicalDivergenceVersion
+        } else if session.distributedCultureState != nil {
             schemaVersion = AgentCheckpointSchema.cultureVersion
         } else if session.archiveState != nil {
             schemaVersion = AgentCheckpointSchema.archiveVersion
@@ -1428,7 +1434,11 @@ extension AgentSimulationSession {
         let writingSchema = state.schemaVersion == AgentCheckpointSchema.writingVersion
         let archiveSchema = state.schemaVersion == AgentCheckpointSchema.archiveVersion
         let cultureSchema = state.schemaVersion == AgentCheckpointSchema.cultureVersion
-        let latestSchema = cultureSchema || archiveSchema || writingSchema || renewableSchema || independentReceiptSchema
+        let lexicalDivergenceSchema = state.schemaVersion
+            == AgentCheckpointSchema.lexicalDivergenceVersion
+        let latestSchema = lexicalDivergenceSchema || cultureSchema
+            || archiveSchema || writingSchema || renewableSchema
+            || independentReceiptSchema
             || productionSchema || barterSchema || contractSchema || marketSchema
             || populationScaleSchema || knowledgeSchema || languageSchema
             || oralSchema || longDistanceCommunicationSchema
@@ -1759,6 +1769,11 @@ extension AgentSimulationSession {
                     && state.populationRegistry != nil
                     && state.socialEnabled
                     && state.distributedCultureState != nil)
+                || (lexicalDivergenceSchema
+                    && state.knowledgeGraphState != nil
+                    && state.languageState?.lexicalEvolution != nil
+                    && state.oralTransmissionState != nil
+                    && state.socialEnabled)
                 || (longDistanceCommunicationSchema
                     && state.knowledgeGraphState != nil
                     && state.languageState != nil
@@ -1769,29 +1784,38 @@ extension AgentSimulationSession {
         }
         guard (archiveSchema || writingSchema || knowledgeSchema || languageSchema || oralSchema
                 || longDistanceCommunicationSchema
-                || (cultureSchema && state.knowledgeGraphState != nil))
+                || (cultureSchema && state.knowledgeGraphState != nil)
+                || lexicalDivergenceSchema)
                 == (state.knowledgeGraphState != nil),
               (archiveSchema || writingSchema || languageSchema || oralSchema
                 || longDistanceCommunicationSchema
-                || (cultureSchema && state.languageState != nil))
+                || (cultureSchema && state.languageState != nil)
+                || lexicalDivergenceSchema)
                 == (state.languageState != nil),
               (oralSchema || longDistanceCommunicationSchema
                 || ((writingSchema || archiveSchema)
                     && state.oralTransmissionState != nil)
-                || (cultureSchema && state.oralTransmissionState != nil))
+                || (cultureSchema && state.oralTransmissionState != nil)
+                || lexicalDivergenceSchema)
                 == (state.oralTransmissionState != nil),
               (longDistanceCommunicationSchema
                 || ((writingSchema || archiveSchema)
                     && state.longDistanceCommunicationState != nil)
                 || (cultureSchema
+                    && state.longDistanceCommunicationState != nil)
+                || (lexicalDivergenceSchema
                     && state.longDistanceCommunicationState != nil))
                 == (state.longDistanceCommunicationState != nil),
               (writingSchema || archiveSchema
-                || (cultureSchema && state.writingState != nil))
+                || (cultureSchema && state.writingState != nil)
+                || (lexicalDivergenceSchema && state.writingState != nil))
                 == (state.writingState != nil),
-              (archiveSchema || (cultureSchema && state.archiveState != nil))
+              (archiveSchema || (cultureSchema && state.archiveState != nil)
+                || (lexicalDivergenceSchema && state.archiveState != nil))
                 == (state.archiveState != nil),
-              cultureSchema == (state.distributedCultureState != nil) else {
+              (cultureSchema || (lexicalDivergenceSchema
+                    && state.distributedCultureState != nil))
+                == (state.distributedCultureState != nil) else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
         guard state.clock.tick.rawValue >= 0,
