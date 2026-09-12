@@ -51,9 +51,11 @@ passed. Its review ZIP SHA-256 is
 `b0c877f5e8b0c0e995f4f9492365bd58bfc800ebc3615affe153e4636838f495`.
 Gate G is **ACQUIRED AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE
 PUBLICATION VERIFIED** at acquisition canonical HEAD
-`8d8e32b576b384eb9a060f87bde1d42bf15f58f7`. The next authorized action is
-`REVIEW-AND-AUTHORIZE-CIV-48`; CIV-48 remains not started and its
-implementation remains unauthorized.
+`8d8e32b576b384eb9a060f87bde1d42bf15f58f7`. The next required milestone is
+`PLAYABLE SLICE 01 — Autonomous Emergence Baseline`; the next authorized action
+is `REVIEW-AND-LAUNCH-PLAYABLE-SLICE-01-INCREMENT-01`. CIV-48 remains not
+started, implementation unauthorized and deferred behind that milestone and
+the resulting evidence-driven roadmap recalibration.
 See
 [`CIV_46_PHASE_SUMMARY.md`](CIV_46_PHASE_SUMMARY.md) and
 [`CIV_47_PHASE_SUMMARY.md`](CIV_47_PHASE_SUMMARY.md), plus
@@ -186,7 +188,9 @@ Gate B: ACQUIRED AND PUBLISHED
 post-Gate-B safe-bootstrap hardening: PUBLISHED
 active CIV phase: none
 completed and published through: CIV-47 (CIV-38 and CIV-40 remain optional and unstarted)
-next authorized action: REVIEW-AND-AUTHORIZE-CIV-48
+next required milestone: PLAYABLE SLICE 01 — Autonomous Emergence Baseline
+PLAYABLE SLICE 01 status: REQUIRED — NOT STARTED
+next authorized action: REVIEW-AND-LAUNCH-PLAYABLE-SLICE-01-INCREMENT-01
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
@@ -309,6 +313,7 @@ Gate G Evaluation 02 review ZIP SHA-256: b0c877f5e8b0c0e995f4f9492365bd58bfc800e
 V4-GATE-G-v1 status: ACQUIRED AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE PUBLICATION VERIFIED
 V4-GATE-G-v1 acquisition published canonical HEAD: 8d8e32b576b384eb9a060f87bde1d42bf15f58f7
 CIV-48: NOT STARTED — IMPLEMENTATION NOT AUTHORIZED
+V4-GATE-H-v1 status: PLANNED
 ```
 
 The `CIV-33` completion is published on the canonical branch at
@@ -479,6 +484,13 @@ acquired gate.
 
 ## Delivery doctrine
 
+- **Depth follows observable causal need.** A subsystem must be deep enough to
+  create meaningful causal consequences for other systems. Additional domain
+  depth is normally justified by an observed integrated limitation, not by
+  completeness for its own sake. This prioritization never weakens causality,
+  material conservation, authority ownership, locality and provenance,
+  deterministic ordering where required, bounded state,
+  checkpoint/restart/replay, honest failure or independent evaluation.
 - Reuse existing Pebble mechanics before adding physical behavior.
 - Deliver observable vertical slices at least every two or three required
   phases in long waves.
@@ -1576,7 +1588,7 @@ Evaluation 05 product correction: NO
 Evaluation 05 verdict: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 Gate E status: ACQUIRED AND PUBLISHED
 Gate E acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f76744f83
-next authorized action: REVIEW-AND-AUTHORIZE-CIV-48
+next authorized action: REVIEW-AND-LAUNCH-PLAYABLE-SLICE-01-INCREMENT-01
 CIV-39 status: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 Gate F status: ACQUIRED AND PUBLISHED — REMOTE VERIFIED
@@ -2097,6 +2109,148 @@ SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE — REMOTE VERIFIED**. Gate G is
 **ACQUIRED AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE PUBLICATION
 VERIFIED** at acquisition canonical HEAD
 `8d8e32b576b384eb9a060f87bde1d42bf15f58f7`.
+
+## Required non-CIV integration milestone — PLAYABLE SLICE 01
+
+### `V4-MILESTONE-PLAYABLE-SLICE-01-v1` — PLAYABLE SLICE 01 — Autonomous Emergence Baseline
+
+Status: **required — not started**.
+
+This is a required integration and playability milestone between acquired Gate
+G and Wave 6. It is not a new gate, CIV-48, part of CIV-48, a retroactive
+change to Gate G or a new civilization authority. Its purpose is to make the
+already acquired systems operate together through a normal persistent,
+non-scripted and observable product path, then characterize the resulting
+emergence before Wave 6 adds institutional authority. This ordering canonizes
+the approved strategic decision
+`OPTION_1_AUTHORIZE_PLAYABLE_SLICE_01_BEFORE_CIV48`.
+
+Canonical ordering:
+
+```text
+CIV-41 through CIV-47
+→ V4-GATE-G-v1 acquired and published
+→ PLAYABLE SLICE 01 — Autonomous Emergence Baseline
+→ evidence-driven roadmap recalibration
+→ Wave 6 / CIV-48 through CIV-52
+→ V4-GATE-H-v1
+```
+
+The milestone asks whether the acquired systems create meaningful autonomous
+emergence when allowed to interact over long periods. It requires no
+predetermined result. Growth, equilibrium, decline, extinction, scarcity,
+abundance, specialization or its absence, migration or its absence, cultural
+transmission or loss, divergence and convergence are all valid observations.
+An undesirable but causally valid trajectory is a characterization finding,
+not automatically an implementation failure.
+
+Target product moment:
+
+```text
+launch or continue a normal World
+→ initialize a bounded founder population
+→ Play or Pause safely at authoritative 1x
+→ observe at normal speed or validated bounded acceleration
+→ move freely, select and follow Pebbles
+→ inspect authoritative individual and settlement state
+→ view bounded Chronicle/history
+→ discover trajectories not scripted by proof scenarios
+```
+
+Minimum roadmap contract:
+
+- **Normal product path.** Replace dependence on disposable proof fixtures
+  with a normal bounded persistent sandbox initialization path. Initial
+  conditions may define finite founders, settlement sites, resources,
+  equipment and configuration, but must not prescribe professions,
+  descendants, cultural winners or desired historical outcomes.
+- **Initial scale.** Approximately 24 founders are the first accepted measured
+  configuration. Normal initialization must support roughly 20–30 founders
+  without redesign. Higher populations are characterization and scale
+  benchmarks, not mandatory demographic outcomes. Existing CIV-39 scale
+  evidence does not establish a 128-agent fully active rendered guarantee.
+- **Full-fidelity baseline.** The accepted scientific baseline uses full
+  cognition for the initial small population. `LIVE`/`NEAR`/`DORMANT`
+  reduced-fidelity operation remains a separately characterized scaling mode
+  until its integrated effects are understood.
+- **Cross-system integration.** The milestone may correct missing integration
+  edges among already acquired owners when those gaps prevent normal
+  emergence. Relevant categories include settlement-correct demography;
+  consistency between edible physical custody and demographic pressure;
+  ordinary productive and economic need activation; distributed agricultural
+  initiation; legitimate autonomous migration between initialized
+  settlements; cause-driven knowledge, language, oral and cultural activation;
+  compatible capacities and bounds; and physical simulation coverage that is
+  independent of observer camera position. No second authority may be added to
+  close an integration edge.
+- **Settlements.** One or more settlements may be initialized explicitly, and
+  emergent trajectories and migration among them may be supported. This does
+  not claim spontaneous settlement foundation, territory, polity or
+  jurisdiction.
+- **Observer.** Observer, HUD and camera remain read-only presentation or view
+  state and reuse the existing Observer and Chronicle authorities. Selection,
+  inspection, camera follow and free observation must not change sensing,
+  cognition, fidelity, physical simulation coverage or authoritative
+  trajectory. Unavailable, stale or truncated facts are displayed honestly
+  rather than invented.
+- **Time.** Safe authoritative Pause / Play / 1x is required. Bounded rendered
+  acceleration may be admitted only after complete-step equivalence is
+  demonstrated. Cognition frequency is not whole-simulation speed. This
+  milestone does not absorb CIV-59 God Observer, Historiography and Time
+  Control semantics.
+- **Persistence.** Normal free runs support safe Save/Continue and Save/Exit
+  through the existing World plus civilization persistence and reconciliation
+  contracts. No additional persistence engine is introduced.
+- **Characterization.** Bounded read-only characterization measures actual
+  integrated behavior and activation coverage across more than one seed.
+  Telemetry never feeds simulation decisions.
+
+Absence of behavior is informative only after establishing that the domain had
+inputs, an autonomous activation path, an opportunity to execute and capacity
+to retain its effects. A disconnected, capacity-saturated or fidelity-starved
+system is an integration finding, not evidence that its domain model needs more
+depth. This safeguard applies the doctrine that **depth follows observable
+causal need** without weakening any permanent invariant.
+
+Implementation and review planning must account for these known integration
+risks without treating this roadmap as an implementation specification:
+
+- disposable bootstrap leakage;
+- primary-settlement assumptions in reproduction, food, ecology and metrics;
+- abstract food pressure diverging from edible physical custody;
+- reduced-fidelity agents continuing to age or incur physiological pressure
+  while losing opportunities to eat, work, care or learn;
+- player-centered physical ticking or streaming;
+- proof/setup-dependent economic and cultural initiation;
+- a single automatically initiated agricultural plot;
+- incompatible domain population capacities;
+- long-run authority or history saturation;
+- restart-unsafe legacy paths;
+- mortality handling that cannot currently accept more than eight simultaneous
+  lethal transitions.
+
+The final risk is a hard PLAYABLE SLICE 01 acceptance blocker for a valid
+larger-population free run even when current behavior fails closed rather than
+corrupting state.
+
+Explicit non-claims: this milestone does not implement CIV-48 Generic
+Organization Kernel, CIV-49 guilds, CIV-50 heraldry, CIV-51 territory or land
+law, CIV-52 governance or law, religion, diplomacy, war, polity, deep genetics,
+a new personality architecture, full linguistic simulation, a second ecology,
+a second Observer, a second Chronicle/history authority, direct player control
+of cognition/culture/personality, LLM-dependent autonomy, a 128-agent rendered
+guarantee or an unlimited-duration guarantee. Writing, archives, long-distance
+communication, spontaneous union/house foundation and autonomous market
+foundation do not all have to become autonomous unless implementation evidence
+shows one is necessary for the minimum useful baseline.
+
+After the milestone is characterized, its evidence drives a roadmap
+recalibration before Wave 6 begins. CIV-48 remains **NOT STARTED —
+IMPLEMENTATION NOT AUTHORIZED**. Gate H remains planned and continues to
+require CIV-48 through CIV-52 unless a future separately authorized roadmap
+review changes that contract. The next authorized action after this
+documentation candidate is published is
+`REVIEW-AND-LAUNCH-PLAYABLE-SLICE-01-INCREMENT-01`, not CIV-48.
 
 ## Wave 6 — Organizations, land and law
 

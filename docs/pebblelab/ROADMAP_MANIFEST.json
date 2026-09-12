@@ -351,7 +351,7 @@
     "gateGPublicationVerified": true,
     "gateGManualPushPendingLocally": false,
     "gateGAcquisitionPublishedCanonicalHead": "8d8e32b576b384eb9a060f87bde1d42bf15f58f7",
-    "meaning": "Canonical published product history is complete through CIV-47. Gate G Evaluation 01 remains senior-review-approved immutable FAIL evidence at HEAD cb03d5bc142a36aa0c828d2350e34d579717c4fb with review ZIP SHA-256 8ab89f5570bbd0c89c5a06a2850cb9967966799f32b4885f9fca55f3ad35081a. Gate G Blocker 01 remains senior-review approved, published at canonical HEAD d5a7e450144810674b5c8adfb98b335f9ad74b5a, tree 98e54193ed8a81ad16470c175c29f39eb0ffdbfe, and independently remote verified. Independent Evaluation 02 is PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE — REMOTE VERIFIED with P0 0 / P1 0; harness commit 6425515fad675925db146c547831e8f104ee2834, tree 6b44e2e17a530a8f58204bc399b783ea4cef4ce4, and published final evidence HEAD f9f575a4c615ed3f9fdb351c96aa76d1d527e1f1, tree bcc7aa5c8e9929ce96f124c6c0adfa88334abc36, remain exact. Gate G is acquired and published at independently remote-verified acquisition canonical HEAD 8d8e32b576b384eb9a060f87bde1d42bf15f58f7. CIV-48 remains not started and implementation unauthorized; the next authorized action is REVIEW-AND-AUTHORIZE-CIV-48. Optional CIV-38 and CIV-40 remain unstarted; currency is not a Gate E or CIV-39 dependency.",
+    "meaning": "Canonical published product history is complete through CIV-47. Gate G Evaluation 01 remains senior-review-approved immutable FAIL evidence at HEAD cb03d5bc142a36aa0c828d2350e34d579717c4fb with review ZIP SHA-256 8ab89f5570bbd0c89c5a06a2850cb9967966799f32b4885f9fca55f3ad35081a. Gate G Blocker 01 remains senior-review approved, published at canonical HEAD d5a7e450144810674b5c8adfb98b335f9ad74b5a, tree 98e54193ed8a81ad16470c175c29f39eb0ffdbfe, and independently remote verified. Independent Evaluation 02 is PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE — REMOTE VERIFIED with P0 0 / P1 0; harness commit 6425515fad675925db146c547831e8f104ee2834, tree 6b44e2e17a530a8f58204bc399b783ea4cef4ce4, and published final evidence HEAD f9f575a4c615ed3f9fdb351c96aa76d1d527e1f1, tree bcc7aa5c8e9929ce96f124c6c0adfa88334abc36, remain exact. Gate G is acquired and published at independently remote-verified acquisition canonical HEAD 8d8e32b576b384eb9a060f87bde1d42bf15f58f7. PLAYABLE SLICE 01 — Autonomous Emergence Baseline is the next required non-CIV integration milestone and is not started. The next authorized action is REVIEW-AND-LAUNCH-PLAYABLE-SLICE-01-INCREMENT-01. CIV-48 remains not started, implementation unauthorized and deferred until that milestone and evidence-driven roadmap recalibration are complete. Gate H remains planned. Optional CIV-38 and CIV-40 remain unstarted; currency is not a Gate E or CIV-39 dependency.",
     "safeBootstrapHardeningPublished": true
   },
   "documents": {
@@ -432,8 +432,14 @@
     "activePhase": null,
     "completedThrough": "CIV-47",
     "publishedThrough": "CIV-47",
-    "nextEligiblePhase": "CIV-48",
-    "nextAuthorizedAction": "REVIEW-AND-AUTHORIZE-CIV-48",
+    "nextRequiredMilestone": "V4-MILESTONE-PLAYABLE-SLICE-01-v1",
+    "playableSlice01Status": "notStarted",
+    "playableSlice01Required": true,
+    "playableSlice01Acquired": false,
+    "playableSlice01ImplementationComplete": false,
+    "nextEligiblePhase": null,
+    "nextEligibleCivPhaseAfterRequiredMilestone": "CIV-48",
+    "nextAuthorizedAction": "REVIEW-AND-LAUNCH-PLAYABLE-SLICE-01-INCREMENT-01",
     "gateGStatus": "acquired",
     "gateGAcquired": true,
     "gateGPublished": true,
@@ -462,6 +468,9 @@
     "gateGEvaluation02RemoteEvidencePublicationVerified": true,
     "civ48Status": "notStarted",
     "civ48Authorized": false,
+    "civ48DeferredBy": "V4-MILESTONE-PLAYABLE-SLICE-01-v1",
+    "civ48DeferredPendingRoadmapRecalibration": true,
+    "gateHStatus": "planned",
     "civ46Status": "completedPublished",
     "civ46ImplementedLocally": true,
     "civ46Tested": true,
@@ -956,7 +965,7 @@
     "gateAcquired": true,
     "acquisitionPublishedCanonicalHead": "8d8e32b576b384eb9a060f87bde1d42bf15f58f7",
     "acquisitionPublicationVerified": true,
-    "nextAuthorizedAction": "REVIEW-AND-AUTHORIZE-CIV-48",
+    "nextAuthorizedAction": "REVIEW-AND-LAUNCH-PLAYABLE-SLICE-01-INCREMENT-01",
     "civ48ImplementationAuthorized": false,
     "evidence": "docs/pebblelab/GATE_G_EVALUATION_02_REPORT.md",
     "machineReadableEvidence": "docs/pebblelab/GATE_G_EVALUATION_02_REPORT.json"
@@ -2655,6 +2664,34 @@
       "requiredByGate": "V4-GATE-D-v1",
       "contract": "At least one physical subsistence loop renews and completes a new productive cycle through normal Pebble mechanics across the relevant lifecycle and restart boundary.",
       "evidence": "docs/pebblelab/RENEWABLE_SUBSISTENCE_MILESTONE_SUMMARY.md"
+    },
+    {
+      "id": "V4-MILESTONE-PLAYABLE-SLICE-01-v1",
+      "title": "PLAYABLE SLICE 01 — Autonomous Emergence Baseline",
+      "kind": "requiredNonCivIntegrationMilestone",
+      "governanceDecision": "OPTION_1_AUTHORIZE_PLAYABLE_SLICE_01_BEFORE_CIV48",
+      "status": "notStarted",
+      "requiredForCanonicalProgression": true,
+      "isGate": false,
+      "acquired": false,
+      "implementationComplete": false,
+      "after": "V4-GATE-G-v1",
+      "before": "CIV-48",
+      "evidenceDrivenRoadmapRecalibrationRequiredBeforeCIV48": true,
+      "nextAuthorizedAction": "REVIEW-AND-LAUNCH-PLAYABLE-SLICE-01-INCREMENT-01",
+      "contract": "Operate already acquired systems together through a normal bounded persistent, non-scripted and observable product path, then characterize autonomous emergence across more than one seed before Wave 6 adds institutional authority.",
+      "initialMeasuredFounderConfiguration": 24,
+      "normalInitializationFounderRange": {
+        "minimum": 20,
+        "maximum": 30
+      },
+      "acceptedBaselineFidelity": "fullCognition",
+      "reducedFidelityScalingMode": "separatelyCharacterized",
+      "observerAuthority": "existingReadOnlyObserverAndChronicle",
+      "persistenceAuthority": "existingWorldAndCivilizationPersistenceReconciliation",
+      "timeContract": "safePausePlay1x; accelerationOnlyAfterCompleteStepEquivalence",
+      "telemetryMayFeedSimulationDecisions": false,
+      "hardAcceptanceBlocker": "mortalityMustAcceptMoreThanEightSimultaneousLethalTransitionsForAValidLargerPopulationFreeRun"
     }
   ],
   "gates": {
@@ -3312,7 +3349,7 @@
         "materialWrittenPreservation": true,
         "reconstructibleCulturalHistory": true
       },
-      "nextAuthorizedAction": "REVIEW-AND-AUTHORIZE-CIV-48",
+      "nextAuthorizedAction": "REVIEW-AND-LAUNCH-PLAYABLE-SLICE-01-INCREMENT-01",
       "requiredPhases": [
         "CIV-41",
         "CIV-42",
@@ -4124,11 +4161,14 @@
       "title": "Generic Organization Kernel V1",
       "status": "notStarted",
       "implementationAuthorized": false,
-      "nextEligibleAuthorizationDecision": true,
+      "nextEligibleAuthorizationDecision": false,
+      "deferredBy": "V4-MILESTONE-PLAYABLE-SLICE-01-v1",
+      "deferredPendingRoadmapRecalibration": true,
       "wave": "wave-6-organizations-land-law",
       "requiredForCanonicalProgression": true,
       "dependsOn": [
-        "V4-GATE-G-v1"
+        "V4-GATE-G-v1",
+        "V4-MILESTONE-PLAYABLE-SLICE-01-v1"
       ]
     },
     {

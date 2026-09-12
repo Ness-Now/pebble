@@ -222,9 +222,14 @@ for the compact status. In particular:
   senior-review-approved published PASS evidence with remote verification.
   Gate G is **ACQUIRED AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE
   PUBLICATION VERIFIED** at acquisition canonical HEAD
-  `8d8e32b576b384eb9a060f87bde1d42bf15f58f7`. The next authorized action is
-  `REVIEW-AND-AUTHORIZE-CIV-48`; CIV-48 remains **NOT STARTED** and
-  implementation is not authorized. Gate H remains planned. See
+  `8d8e32b576b384eb9a060f87bde1d42bf15f58f7`.
+- `PLAYABLE SLICE 01 — Autonomous Emergence Baseline` is the next required
+  non-CIV integration milestone. It is **NOT STARTED** and is not a gate.
+  The next authorized action is
+  `REVIEW-AND-LAUNCH-PLAYABLE-SLICE-01-INCREMENT-01`.
+- CIV-48 remains **NOT STARTED**, implementation is not authorized, and it is
+  deferred until PLAYABLE SLICE 01 and the resulting evidence-driven roadmap
+  recalibration are complete. Gate H remains planned. See
   [`CIV_45_PHASE_SUMMARY.md`](docs/pebblelab/CIV_45_PHASE_SUMMARY.md),
   [`CIV_46_PHASE_SUMMARY.md`](docs/pebblelab/CIV_46_PHASE_SUMMARY.md) and
   [`CIV_47_PHASE_SUMMARY.md`](docs/pebblelab/CIV_47_PHASE_SUMMARY.md), plus

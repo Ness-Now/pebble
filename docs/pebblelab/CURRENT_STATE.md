@@ -44,13 +44,39 @@ All seven cumulative-culture requirements passed in composition.
 
 `V4-GATE-G-v1 — Cumulative Culture` is **ACQUIRED AND PUBLISHED — SENIOR
 REVIEW APPROVED — REMOTE PUBLICATION VERIFIED** at acquisition canonical HEAD
-`8d8e32b576b384eb9a060f87bde1d42bf15f58f7`. The next authorized action is
-`REVIEW-AND-AUTHORIZE-CIV-48`; CIV-48 remains **NOT STARTED** and
-implementation is not authorized by this reconciliation. Gate H remains
-future/planned and requires CIV-48 through CIV-52.
+`8d8e32b576b384eb9a060f87bde1d42bf15f58f7`.
 See
 [`GATE_G_BLOCKER_01_CAUSAL_DIALECT_DIVERGENCE.md`](GATE_G_BLOCKER_01_CAUSAL_DIALECT_DIVERGENCE.md)
 and [`GATE_G_EVALUATION_02_REPORT.md`](GATE_G_EVALUATION_02_REPORT.md).
+
+## Required next integration milestone
+
+`PLAYABLE SLICE 01 — Autonomous Emergence Baseline` is **REQUIRED — NOT
+STARTED**. It is a non-CIV integration/playability milestone between acquired
+Gate G and Wave 6, not a new gate, CIV-48, part of CIV-48, a retroactive Gate G
+change or a new civilization authority.
+
+The milestone must establish a normal bounded persistent sandbox path, first
+measured with approximately 24 full-cognition founders and designed for roughly
+20–30 without redesign. It must support safe Pause / Play / 1x, read-only free
+observation and Pebble follow/inspection through the existing Observer and
+Chronicle authorities, safe Save/Continue and Save/Exit through existing World
+and civilization persistence, and bounded multi-seed characterization of
+unscripted integrated behavior. Reduced-fidelity operation and any rendered
+acceleration remain separately characterized until complete-step equivalence
+and integrated effects are understood.
+
+The implementation/review phase may repair missing edges among already
+acquired owners, but must not add a second authority. In particular, a valid
+larger-population free run is blocked until mortality can safely accept more
+than eight simultaneous lethal transitions. Other known integration risks are
+recorded in the roadmap milestone contract.
+
+The next authorized action is
+`REVIEW-AND-LAUNCH-PLAYABLE-SLICE-01-INCREMENT-01`. CIV-48 remains **NOT
+STARTED — IMPLEMENTATION NOT AUTHORIZED** and is deferred until PLAYABLE SLICE
+01 and the resulting evidence-driven roadmap recalibration are complete. Gate H
+remains planned and continues to require CIV-48 through CIV-52.
 
 ## Published CIV-47 closure
 
@@ -887,7 +913,9 @@ the Gate E acquisition are now published and independently remote verified.
 ```text
 active CIV phase: none
 completed and published through: CIV-47 (CIV-38 and CIV-40 remain optional and unstarted)
-next authorized action: REVIEW-AND-AUTHORIZE-CIV-48
+next required milestone: PLAYABLE SLICE 01 — Autonomous Emergence Baseline
+PLAYABLE SLICE 01 status: REQUIRED — NOT STARTED
+next authorized action: REVIEW-AND-LAUNCH-PLAYABLE-SLICE-01-INCREMENT-01
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -1011,6 +1039,7 @@ Gate G Evaluation 02 review ZIP SHA-256: b0c877f5e8b0c0e995f4f9492365bd58bfc800e
 V4-GATE-G-v1 status: ACQUIRED AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE PUBLICATION VERIFIED
 V4-GATE-G-v1 acquisition published canonical HEAD: 8d8e32b576b384eb9a060f87bde1d42bf15f58f7
 CIV-48 status: NOT STARTED — IMPLEMENTATION NOT AUTHORIZED
+Gate H status: PLANNED
 roadmap generation: V4
 ```
 
@@ -1306,14 +1335,18 @@ golden regeneration: NOT ATTEMPTED
 
 ## Next authorized action
 
-The next authorized action is `REVIEW-AND-AUTHORIZE-CIV-48`. Gate G Evaluation
+The next authorized action is
+`REVIEW-AND-LAUNCH-PLAYABLE-SLICE-01-INCREMENT-01`. Gate G Evaluation
 01 remains frozen historical FAIL evidence. Blocker 01 is senior-review
 approved, published and independently remote verified. Evaluation 02 is
 senior-review-approved published PASS evidence and its exact published HEAD is
 independently remote verified. Gate G is **ACQUIRED AND PUBLISHED — SENIOR
 REVIEW APPROVED — REMOTE PUBLICATION VERIFIED** at acquisition canonical HEAD
-`8d8e32b576b384eb9a060f87bde1d42bf15f58f7`. CIV-48 remains **NOT STARTED**
-and this reconciliation does not authorize its implementation.
+`8d8e32b576b384eb9a060f87bde1d42bf15f58f7`. PLAYABLE SLICE 01 is the next
+required non-CIV milestone and is not complete or acquired. CIV-48 remains
+**NOT STARTED — IMPLEMENTATION NOT AUTHORIZED** and deferred behind the slice
+and its evidence-driven roadmap recalibration. Gate H remains planned with its
+existing CIV-48 through CIV-52 contract.
 
 Gate E Evaluation 05 is
 **PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE**. Evaluations 01–04

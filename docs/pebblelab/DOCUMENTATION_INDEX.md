@@ -112,10 +112,12 @@ CIV-37: COMPLETE AND PUBLISHED
 CIV-38: OPTIONAL — NOT STARTED
 V4-GATE-E-v1: ACQUIRED AND PUBLISHED
 V4-GATE-E-v1 acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f76744f83
-active phase: NONE — CIV-48 AUTHORIZATION REVIEW NEXT
+active phase: NONE — PLAYABLE SLICE 01 INCREMENT REVIEW/LAUNCH NEXT
 completed through: CIV-47 (CIV-38 and CIV-40 optional and unstarted)
 published through: CIV-47
-next eligible phase: CIV-48 — NOT STARTED
+next required milestone: PLAYABLE SLICE 01 — Autonomous Emergence Baseline
+PLAYABLE SLICE 01: REQUIRED — NOT STARTED
+next eligible CIV phase: CIV-48 — DEFERRED / NOT STARTED / IMPLEMENTATION NOT AUTHORIZED
 Gate E Evaluation 01: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 01: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 02: FAIL — HISTORICAL IMMUTABLE EVIDENCE
@@ -125,7 +127,7 @@ V4-GATE-E-v1 Blocker 03: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 04: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 04: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 05: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
-next authorized action: REVIEW-AND-AUTHORIZE-CIV-48
+next authorized action: REVIEW-AND-LAUNCH-PLAYABLE-SLICE-01-INCREMENT-01
 CIV-39: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 V4-GATE-F-v1: ACQUIRED AND PUBLISHED — REMOTE VERIFIED
@@ -200,6 +202,7 @@ Gate G Blocker 01: PASS — SENIOR REVIEW APPROVED — PUBLISHED — REMOTE VERI
 Gate G Evaluation 02: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE — REMOTE VERIFIED
 V4-GATE-G-v1: ACQUIRED AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE PUBLICATION VERIFIED
 V4-GATE-G-v1 acquisition published canonical HEAD: 8d8e32b576b384eb9a060f87bde1d42bf15f58f7
+PLAYABLE SLICE 01 — Autonomous Emergence Baseline: REQUIRED — NOT STARTED
 CIV-48: NOT STARTED — IMPLEMENTATION NOT AUTHORIZED
 V4-GATE-H-v1: PLANNED
 ```
@@ -506,8 +509,10 @@ historical FAIL evidence; Blocker 01 is fixed, senior-review approved,
 published and remote verified; Evaluation 02 is senior-review-approved
 published PASS evidence with remote verification. Gate G is acquired,
 published and independently remote verified at acquisition canonical HEAD
-`8d8e32b576b384eb9a060f87bde1d42bf15f58f7`. CIV-48 remains not started and
-implementation is not authorized; Gate H remains planned. See
+`8d8e32b576b384eb9a060f87bde1d42bf15f58f7`. PLAYABLE SLICE 01 is the next
+required non-CIV integration milestone and is not started. CIV-48 remains not
+started, implementation is not authorized and it is deferred behind the slice
+and evidence-driven roadmap recalibration; Gate H remains planned. See
 [`CIV_45_PHASE_SUMMARY.md`](CIV_45_PHASE_SUMMARY.md) and
 [`CIV_46_PHASE_SUMMARY.md`](CIV_46_PHASE_SUMMARY.md) and
 [`CIV_47_PHASE_SUMMARY.md`](CIV_47_PHASE_SUMMARY.md), plus
