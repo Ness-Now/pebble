@@ -3,7 +3,7 @@
 This file is the compact canonical status. It records product state, not the
 SHA of the documentation commit that contains it.
 
-## Gate G acquisition publication candidate
+## Published Gate G acquisition
 
 `V4-GATE-G-v1 Evaluation 01` is frozen **FAIL —
 EVALUATED_FAIL_NOT_ACQUIRED — SENIOR REVIEW APPROVED — HISTORICAL IMMUTABLE
@@ -42,13 +42,12 @@ passed. The accepted review ZIP SHA-256 is
 `b0c877f5e8b0c0e995f4f9492365bd58bfc800ebc3615affe153e4636838f495`.
 All seven cumulative-culture requirements passed in composition.
 
-Gate G is locally an **ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH**.
-The canonical commit containing this status is the acquisition publication
-commit; this document does not invent its SHA or claim that the still-local
-commit is remote verified. After manual publication, `V4-GATE-G-v1 —
-Cumulative Culture` is **ACQUIRED AND PUBLISHED — SENIOR REVIEW APPROVED**.
-The next eligible action is `REVIEW-AND-AUTHORIZE-CIV-48`; CIV-48 remains
-**NOT STARTED** and implementation is not authorized by this closure.
+`V4-GATE-G-v1 — Cumulative Culture` is **ACQUIRED AND PUBLISHED — SENIOR
+REVIEW APPROVED — REMOTE PUBLICATION VERIFIED** at acquisition canonical HEAD
+`8d8e32b576b384eb9a060f87bde1d42bf15f58f7`. The next authorized action is
+`REVIEW-AND-AUTHORIZE-CIV-48`; CIV-48 remains **NOT STARTED** and
+implementation is not authorized by this reconciliation. Gate H remains
+future/planned and requires CIV-48 through CIV-52.
 See
 [`GATE_G_BLOCKER_01_CAUSAL_DIALECT_DIVERGENCE.md`](GATE_G_BLOCKER_01_CAUSAL_DIALECT_DIVERGENCE.md)
 and [`GATE_G_EVALUATION_02_REPORT.md`](GATE_G_EVALUATION_02_REPORT.md).
@@ -87,7 +86,9 @@ remains historical **CORRECTION REQUIRED — P0 0 / P1 4** evidence; Correction
 01 re-review returned **P0 0 / P1 0**. Published progression is complete through
 CIV-47. Gate G Evaluation 01 remains frozen historical FAIL evidence;
 Evaluation 02 is senior-review-approved, published and remote-verified PASS
-evidence, and Gate G is the local acquisition publication candidate. See
+evidence, and Gate G is acquired, published and independently remote verified
+at acquisition canonical HEAD `8d8e32b576b384eb9a060f87bde1d42bf15f58f7`.
+See
 [`CIV_46_PHASE_SUMMARY.md`](CIV_46_PHASE_SUMMARY.md) and
 [`CIV_47_PHASE_SUMMARY.md`](CIV_47_PHASE_SUMMARY.md), plus
 [`CIV_47_SENIOR_REVIEW_CORRECTION_01.md`](CIV_47_SENIOR_REVIEW_CORRECTION_01.md).
@@ -268,9 +269,9 @@ evidence, and Gate G is the local acquisition publication candidate. See
   [`CIV_46_PHASE_SUMMARY.md`](CIV_46_PHASE_SUMMARY.md) and
   [`CIV_47_PHASE_SUMMARY.md`](CIV_47_PHASE_SUMMARY.md).
 - Gate G — Cumulative Culture:
-  **ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH** under contract
-  `V4-GATE-G-v1`; its target canonical status after manual publication is
-  **ACQUIRED AND PUBLISHED — SENIOR REVIEW APPROVED**.
+  **ACQUIRED AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE PUBLICATION
+  VERIFIED** under contract `V4-GATE-G-v1` at acquisition canonical HEAD
+  `8d8e32b576b384eb9a060f87bde1d42bf15f58f7`.
 - Post-Gate-B safe-bootstrap hardening: **PUBLISHED**.
 
 Gate F correction history:
@@ -485,8 +486,9 @@ Gate F correction history:
   `54d9e4ba37340178927411b3bf5f3bd5cedae4c5` also remain **CORRECTION
   REQUIRED** historical evidence. Gate G Evaluation 01 remains frozen
   historical FAIL evidence; Evaluation 02 is senior-review-approved,
-  published and remote-verified PASS evidence, and Gate G is the local
-  acquisition publication candidate.
+  published and remote-verified PASS evidence, and Gate G is acquired,
+  published and independently remote verified at acquisition canonical HEAD
+  `8d8e32b576b384eb9a060f87bde1d42bf15f58f7`.
 
 Published Gate E history:
 
@@ -885,7 +887,7 @@ the Gate E acquisition are now published and independently remote verified.
 ```text
 active CIV phase: none
 completed and published through: CIV-47 (CIV-38 and CIV-40 remain optional and unstarted)
-next eligible action: REVIEW-AND-AUTHORIZE-CIV-48
+next authorized action: REVIEW-AND-AUTHORIZE-CIV-48
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -1006,8 +1008,8 @@ Gate G Evaluation 02 harness tree: 6b44e2e17a530a8f58204bc399b783ea4cef4ce4
 Gate G Evaluation 02 published evidence HEAD: f9f575a4c615ed3f9fdb351c96aa76d1d527e1f1
 Gate G Evaluation 02 published evidence tree: bcc7aa5c8e9929ce96f124c6c0adfa88334abc36
 Gate G Evaluation 02 review ZIP SHA-256: b0c877f5e8b0c0e995f4f9492365bd58bfc800ebc3615affe153e4636838f495
-V4-GATE-G-v1 local status: ACQUIRED_PUBLICATION_CANDIDATE — AWAITING USER PUSH
-V4-GATE-G-v1 target canonical status after manual publication: ACQUIRED AND PUBLISHED — SENIOR REVIEW APPROVED
+V4-GATE-G-v1 status: ACQUIRED AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE PUBLICATION VERIFIED
+V4-GATE-G-v1 acquisition published canonical HEAD: 8d8e32b576b384eb9a060f87bde1d42bf15f58f7
 CIV-48 status: NOT STARTED — IMPLEMENTATION NOT AUTHORIZED
 roadmap generation: V4
 ```
@@ -1304,14 +1306,14 @@ golden regeneration: NOT ATTEMPTED
 
 ## Next authorized action
 
-The next eligible action is `REVIEW-AND-AUTHORIZE-CIV-48`. Gate G Evaluation
+The next authorized action is `REVIEW-AND-AUTHORIZE-CIV-48`. Gate G Evaluation
 01 remains frozen historical FAIL evidence. Blocker 01 is senior-review
 approved, published and independently remote verified. Evaluation 02 is
 senior-review-approved published PASS evidence and its exact published HEAD is
-independently remote verified. Gate G is the local acquisition publication
-candidate and becomes **ACQUIRED AND PUBLISHED** when the containing commit is
-manually published. CIV-48 remains **NOT STARTED** and this closure does not
-authorize its implementation.
+independently remote verified. Gate G is **ACQUIRED AND PUBLISHED — SENIOR
+REVIEW APPROVED — REMOTE PUBLICATION VERIFIED** at acquisition canonical HEAD
+`8d8e32b576b384eb9a060f87bde1d42bf15f58f7`. CIV-48 remains **NOT STARTED**
+and this reconciliation does not authorize its implementation.
 
 Gate E Evaluation 05 is
 **PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE**. Evaluations 01–04
@@ -1479,7 +1481,8 @@ P0 0 / P1 4**, while Correction 01 re-review returned **P0 0 / P1 0**.
 Published progression is complete through CIV-47. Gate G Evaluation 01
 remains frozen historical FAIL evidence; Evaluation 02 is
 senior-review-approved, published and remote-verified PASS evidence, and Gate
-G is the local acquisition publication candidate.
+G is acquired, published and independently remote verified at acquisition
+canonical HEAD `8d8e32b576b384eb9a060f87bde1d42bf15f58f7`.
 See
 [`CIV_45_PHASE_SUMMARY.md`](CIV_45_PHASE_SUMMARY.md) and
 [`CIV_46_PHASE_SUMMARY.md`](CIV_46_PHASE_SUMMARY.md), plus

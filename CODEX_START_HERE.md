@@ -216,9 +216,15 @@ for the compact status. In particular:
   `70cb245e089987bc829ac138b0988eb3fc825d57`. Original reviewed candidate
   `27806ac721e8e3570cc31f9e8cac2a001de4d4ca` remains historical **CORRECTION
   REQUIRED — P0 0 / P1 4** evidence; Correction 01 re-review returned **P0 0 /
-  P1 0**. Published progression is complete through CIV-47. Gate G remains
-  planned, unevaluated and not acquired; the next authorized action is
-  `REVIEW-AND-AUTHORIZE-GATE-G`. See
+  P1 0**. Published progression is complete through CIV-47. Gate G Evaluation
+  01 remains immutable historical FAIL evidence; Blocker 01 is fixed,
+  senior-review approved, published and remote verified; Evaluation 02 is
+  senior-review-approved published PASS evidence with remote verification.
+  Gate G is **ACQUIRED AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE
+  PUBLICATION VERIFIED** at acquisition canonical HEAD
+  `8d8e32b576b384eb9a060f87bde1d42bf15f58f7`. The next authorized action is
+  `REVIEW-AND-AUTHORIZE-CIV-48`; CIV-48 remains **NOT STARTED** and
+  implementation is not authorized. Gate H remains planned. See
   [`CIV_45_PHASE_SUMMARY.md`](docs/pebblelab/CIV_45_PHASE_SUMMARY.md),
   [`CIV_46_PHASE_SUMMARY.md`](docs/pebblelab/CIV_46_PHASE_SUMMARY.md) and
   [`CIV_47_PHASE_SUMMARY.md`](docs/pebblelab/CIV_47_PHASE_SUMMARY.md), plus

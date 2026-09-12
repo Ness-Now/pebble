@@ -35,7 +35,7 @@ These documents form the minimal permanent memory of the project:
 | Document | Role |
 | --- | --- |
 | [`CODEX_START_HERE.md`](../../CODEX_START_HERE.md) | Short entry point, authority map and mission-specific reading routes. |
-| [`CURRENT_STATE.md`](CURRENT_STATE.md) | Compact acquired state, product baseline, debt and next eligible action. |
+| [`CURRENT_STATE.md`](CURRENT_STATE.md) | Compact acquired state, product baseline, debt and next authorized action. |
 | [`PEBBLE_CIVILIZATION_VISION.md`](PEBBLE_CIVILIZATION_VISION.md) | Durable V4 product purpose and invariants. |
 | [`PEBBLE_CIVILIZATION_ROADMAP.md`](PEBBLE_CIVILIZATION_ROADMAP.md) | Canonical human V4 program, required/optional phases, slices and versioned gates. |
 | [`ROADMAP_MANIFEST.json`](ROADMAP_MANIFEST.json) | Deterministic machine projection of the V4 roadmap and status. |
@@ -49,8 +49,11 @@ These documents form the minimal permanent memory of the project:
 | [`CIV_44_PHASE_SUMMARY.md`](CIV_44_PHASE_SUMMARY.md) | Published CIV-44 architecture, embodied carrier composition, immutable pickup commitment, accepted-movement provenance, post-arrival CIV-43 handoff, schema-39 restart/replay, lifecycle, bounds, Senior Review Corrections 01–02, validation, publication history and deliberate V1 limits. |
 | [`CIV_45_PHASE_SUMMARY.md`](CIV_45_PHASE_SUMMARY.md) | Published and independently remote-verified CIV-45: Correction 09 passed senior review, the canonical nine-invariant decode contract closes 513 fail-closed behavior and C08 streaming boundedness, and nine historical Correction Required verdicts remain explicit. |
 | [`CIV_46_PHASE_SUMMARY.md`](CIV_46_PHASE_SUMMARY.md) | Published and independently remote-verified CIV-46: senior-review-approved bounded metadata-only catalogues and reconstructed indexes over CIV-45 material carriers, with release, restart/loss/rebuild/replay proofs and two-seed live evidence. |
-| [`CIV_47_PHASE_SUMMARY.md`](CIV_47_PHASE_SUMMARY.md) | Published and independently remote-verified CIV-47 architecture and immutable review history: original candidate remains Correction Required; Correction 01 is senior-review approved with sparse per-individual culture, bound oral content, causal schema-42 validation and two-settlement divergence; Gate G remains unevaluated. |
+| [`CIV_47_PHASE_SUMMARY.md`](CIV_47_PHASE_SUMMARY.md) | Published and independently remote-verified CIV-47 architecture and immutable review history: original candidate remains Correction Required; Correction 01 is senior-review approved with sparse per-individual culture, bound oral content, causal schema-42 validation and two-settlement divergence. |
 | [`CIV_47_SENIOR_REVIEW_CORRECTION_01.md`](CIV_47_SENIOR_REVIEW_CORRECTION_01.md) | Senior Review Correction 01 record for carrier/content binding, locality by identity, public-input pre-bounds and hostile schema-42 causal linkage; original P0 0 / P1 4 verdict preserved and corrected candidate independently approved at P0 0 / P1 0. |
+| [`GATE_G_BLOCKER_01_CAUSAL_DIALECT_DIVERGENCE.md`](GATE_G_BLOCKER_01_CAUSAL_DIALECT_DIVERGENCE.md) | Published, independently remote-verified Blocker 01 correction record; preserves Evaluation 01 historical immutable FAIL and documents bounded causal dialect innovation and transmission. |
+| [`GATE_G_EVALUATION_02_REPORT.md`](GATE_G_EVALUATION_02_REPORT.md) | Senior-review-approved published Gate G Evaluation 02 PASS evidence covering all seven cumulative-culture requirements; remote evidence publication verified. |
+| [`GATE_G_EVALUATION_02_REPORT.json`](GATE_G_EVALUATION_02_REPORT.json) | Machine-readable Evaluation 02 identities, contract results, adversarial controls, validation and published evidence state. |
 | [`GATE_F_BLOCKER_01_SETTLEMENT_ADMISSION_CAPACITY.md`](GATE_F_BLOCKER_01_SETTLEMENT_ADMISSION_CAPACITY.md) | Published, independently remote-verified Blocker 01 correction record; preserves Gate F Evaluation 01 historical FAIL and documents shared publication/restore per-settlement admission capacity, atomic refusal and two-process schema-35 proof. |
 | [`GATE_F_BLOCKER_02_MIGRATION_DESTINATION_CAPACITY.md`](GATE_F_BLOCKER_02_MIGRATION_DESTINATION_CAPACITY.md) | Published, independently remote-verified Blocker 02 correction record; preserves Evaluation 02 historical FAIL and documents derived durable destination-slot authority, atomic full-destination refusal, exact arrival/death/failure release, schema-35 restart and two-process proof. |
 | [`GATE_F_BLOCKER_03_DYNAMIC_FIDELITY_AUTHORITY.md`](GATE_F_BLOCKER_03_DYNAMIC_FIDELITY_AUTHORITY.md) | Published, independently remote-verified Blocker 03 correction record; preserves Evaluation 03 historical FAIL and documents shared dynamic-member fidelity composition, exact birth refusal/retry, legacy migration, mortality, rotation and two-process schema-35 proof. |
@@ -109,10 +112,10 @@ CIV-37: COMPLETE AND PUBLISHED
 CIV-38: OPTIONAL — NOT STARTED
 V4-GATE-E-v1: ACQUIRED AND PUBLISHED
 V4-GATE-E-v1 acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f76744f83
-active phase: NONE — GATE G GOVERNANCE STEP NEXT
+active phase: NONE — CIV-48 AUTHORIZATION REVIEW NEXT
 completed through: CIV-47 (CIV-38 and CIV-40 optional and unstarted)
 published through: CIV-47
-next eligible phase: NONE — NEXT STEP IS GATE G GOVERNANCE
+next eligible phase: CIV-48 — NOT STARTED
 Gate E Evaluation 01: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 01: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 02: FAIL — HISTORICAL IMMUTABLE EVIDENCE
@@ -122,7 +125,7 @@ V4-GATE-E-v1 Blocker 03: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 04: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 04: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 05: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
-next authorized action: REVIEW-AND-AUTHORIZE-GATE-G
+next authorized action: REVIEW-AND-AUTHORIZE-CIV-48
 CIV-39: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 V4-GATE-F-v1: ACQUIRED AND PUBLISHED — REMOTE VERIFIED
@@ -192,7 +195,13 @@ CIV-47 Correction 01 product/test commit: 45701f56169218b70f2e698dc0dea67bb1d027
 CIV-47 Correction 01 reviewed candidate: 874a844ba54b66210ac303912193038c9f4ee6e0
 CIV-47: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 CIV-47 published canonical HEAD: 51169802ec76770b4c80850c7dee33cf94ee5524
-V4-GATE-G-v1: PLANNED / UNEVALUATED / NOT ACQUIRED
+Gate G Evaluation 01: FAIL — EVALUATED_FAIL_NOT_ACQUIRED — SENIOR REVIEW APPROVED — HISTORICAL IMMUTABLE EVIDENCE
+Gate G Blocker 01: PASS — SENIOR REVIEW APPROVED — PUBLISHED — REMOTE VERIFIED
+Gate G Evaluation 02: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE — REMOTE VERIFIED
+V4-GATE-G-v1: ACQUIRED AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE PUBLICATION VERIFIED
+V4-GATE-G-v1 acquisition published canonical HEAD: 8d8e32b576b384eb9a060f87bde1d42bf15f58f7
+CIV-48: NOT STARTED — IMPLEMENTATION NOT AUTHORIZED
+V4-GATE-H-v1: PLANNED
 ```
 
 The `CIV-33` completion is published on the canonical branch at
@@ -492,8 +501,13 @@ candidate `874a844ba54b66210ac303912193038c9f4ee6e0` and product/test commit
 `45701f56169218b70f2e698dc0dea67bb1d027c0`; original reviewed candidate
 `27806ac721e8e3570cc31f9e8cac2a001de4d4ca` remains **CORRECTION REQUIRED —
 P0 0 / P1 4**, and Correction 01 re-review returned **P0 0 / P1 0**. Published
-progression is complete through CIV-47. Gate G remains planned,
-unevaluated and not acquired. See
+progression is complete through CIV-47. Gate G Evaluation 01 remains immutable
+historical FAIL evidence; Blocker 01 is fixed, senior-review approved,
+published and remote verified; Evaluation 02 is senior-review-approved
+published PASS evidence with remote verification. Gate G is acquired,
+published and independently remote verified at acquisition canonical HEAD
+`8d8e32b576b384eb9a060f87bde1d42bf15f58f7`. CIV-48 remains not started and
+implementation is not authorized; Gate H remains planned. See
 [`CIV_45_PHASE_SUMMARY.md`](CIV_45_PHASE_SUMMARY.md) and
 [`CIV_46_PHASE_SUMMARY.md`](CIV_46_PHASE_SUMMARY.md) and
 [`CIV_47_PHASE_SUMMARY.md`](CIV_47_PHASE_SUMMARY.md), plus
