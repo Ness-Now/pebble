@@ -1,9 +1,22 @@
 # PS01 Increment 01 — Normal Founder Sandbox Bootstrap
 
-Status: **LOCAL REVIEW CANDIDATE**.
+Status: **COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE
+VERIFIED**.
 PLAYABLE SLICE 01 is required and not complete. CIV-48 remains **NOT STARTED —
 IMPLEMENTATION NOT AUTHORIZED**. This increment establishes initialization;
 it does not authorize the subsequent slice increments.
+
+## Published identity and review
+
+- Publication HEAD: `a5bded01dcfc934dc5aed6aab0990fc61ffd30c7`.
+- Tree: `4e3081cf29ee099092e16cce7e9fbac9da0e3cbb`.
+- Parent: `196c6f770acc9bb416e04d03f39a7e1191f9329e`.
+- Commit message: `feat(ps01): add atomic normal founder bootstrap`.
+- Accepted review artifact SHA-256:
+  `bff4786795c9f09239fe8a45e3acd2f8993eabdfb24d7e792d944ca0ea6a81b6`.
+- Independent senior review: **PASS — P0 0 / P1 0 / P2 blocking 0**.
+- Manual publication: completed.
+- Independent canonical remote verification: completed.
 
 ## Exact starting boundary
 
@@ -114,6 +127,13 @@ safe positions (including reception) cause explicit refusal. Two-block founder
 spacing prevents another newly staged founder from occupying a selected
 founder's cardinal egress cell. Player and foreign entity collisions remain
 Core-owned checks.
+
+The normal profile's population capacity of 30 is correct for this bounded
+initialization contract. It is not demographic headroom for long-run PS01
+characterization: 30 founders leave zero admission or birth slots, while 24
+founders leave six. Selecting the next coherent capacity or demographic work
+remains part of the next PS01 review step, alongside the existing limit of eight
+simultaneous lethal transitions; neither boundary is changed here.
 
 Population scaling is not activated by founder startup, including when its
 feature gate is available. Thus every initial founder receives ordinary full
@@ -272,8 +292,9 @@ The complete baseline diff and new files were reviewed for ownership,
 transaction ordering, bounds and compatibility. Product code was frozen after
 the 18/18 live PASS. Nine product files, three test/proof files and this phase
 document are necessary; no unnecessary file was retained. No P0, P1 or P2
-finding was identified within Increment 01's bounded contract. This is a local
-implementation review, not independent reviewer approval.
+finding was identified within Increment 01's bounded contract. Independent
+senior review subsequently approved the increment with P0 0 / P1 0 / P2
+blocking 0, and independent remote verification confirmed publication.
 
 Commands, complete output, machine-readable checkpoint/Observer evidence and
 fault traces are retained under `runs/ps01-increment01/evidence`. The review ZIP

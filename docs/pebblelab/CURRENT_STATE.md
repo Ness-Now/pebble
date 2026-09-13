@@ -49,12 +49,24 @@ See
 [`GATE_G_BLOCKER_01_CAUSAL_DIALECT_DIVERGENCE.md`](GATE_G_BLOCKER_01_CAUSAL_DIALECT_DIVERGENCE.md)
 and [`GATE_G_EVALUATION_02_REPORT.md`](GATE_G_EVALUATION_02_REPORT.md).
 
-## Required next integration milestone
+## Required integration milestone in progress
 
-`PLAYABLE SLICE 01 — Autonomous Emergence Baseline` is **REQUIRED — NOT
-STARTED**. It is a non-CIV integration/playability milestone between acquired
+`PLAYABLE SLICE 01 — Autonomous Emergence Baseline` is **REQUIRED — IN
+PROGRESS / NOT COMPLETE**. It is a non-CIV integration/playability milestone between acquired
 Gate G and Wave 6, not a new gate, CIV-48, part of CIV-48, a retroactive Gate G
 change or a new civilization authority.
+
+Increment 01, Normal Founder Sandbox Bootstrap, is **COMPLETE AND PUBLISHED —
+PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical HEAD
+`a5bded01dcfc934dc5aed6aab0990fc61ffd30c7`, tree
+`4e3081cf29ee099092e16cce7e9fbac9da0e3cbb`, from parent
+`196c6f770acc9bb416e04d03f39a7e1191f9329e`. Its accepted review ZIP SHA-256 is
+`bff4786795c9f09239fe8a45e3acd2f8993eabdfb24d7e792d944ca0ea6a81b6`; senior
+review found P0 0 / P1 0 / P2 blocking 0. It publishes the normal
+non-disposable 20–30 founder initializer, first measured at 24 full-cognition
+founders, with natural World placement, no starter-resource fixture, atomic
+publication and rollback, checkpoint/Observer composition and the historical
+three-founder path retained.
 
 The milestone must establish a normal bounded persistent sandbox path, first
 measured with approximately 24 full-cognition founders and designed for roughly
@@ -70,10 +82,14 @@ The implementation/review phase may repair missing edges among already
 acquired owners, but must not add a second authority. In particular, a valid
 larger-population free run is blocked until mortality can safely accept more
 than eight simultaneous lethal transitions. Other known integration risks are
-recorded in the roadmap milestone contract.
+recorded in the roadmap milestone contract. The Increment 01 population
+capacity of 30 also leaves zero admission/birth headroom at 30 founders and six
+slots at 24, so long-run demographic capacity remains a PS01 integration issue.
 
 The next authorized action is
-`REVIEW-AND-LAUNCH-PLAYABLE-SLICE-01-INCREMENT-01`. CIV-48 remains **NOT
+`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-02`. This authorizes review of
+the published boundary and selection of the smallest next coherent increment;
+it does not authorize Increment 02 implementation. CIV-48 remains **NOT
 STARTED — IMPLEMENTATION NOT AUTHORIZED** and is deferred until PLAYABLE SLICE
 01 and the resulting evidence-driven roadmap recalibration are complete. Gate H
 remains planned and continues to require CIV-48 through CIV-52.
@@ -914,8 +930,10 @@ the Gate E acquisition are now published and independently remote verified.
 active CIV phase: none
 completed and published through: CIV-47 (CIV-38 and CIV-40 remain optional and unstarted)
 next required milestone: PLAYABLE SLICE 01 — Autonomous Emergence Baseline
-PLAYABLE SLICE 01 status: REQUIRED — NOT STARTED
-next authorized action: REVIEW-AND-LAUNCH-PLAYABLE-SLICE-01-INCREMENT-01
+PLAYABLE SLICE 01 status: REQUIRED — IN PROGRESS / NOT COMPLETE
+PLAYABLE SLICE 01 Increment 01: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+PLAYABLE SLICE 01 Increment 01 published HEAD: a5bded01dcfc934dc5aed6aab0990fc61ffd30c7
+next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-02
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -1336,7 +1354,8 @@ golden regeneration: NOT ATTEMPTED
 ## Next authorized action
 
 The next authorized action is
-`REVIEW-AND-LAUNCH-PLAYABLE-SLICE-01-INCREMENT-01`. Gate G Evaluation
+`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-02`. It is a review and
+selection step, not authorization to implement Increment 02. Gate G Evaluation
 01 remains frozen historical FAIL evidence. Blocker 01 is senior-review
 approved, published and independently remote verified. Evaluation 02 is
 senior-review-approved published PASS evidence and its exact published HEAD is

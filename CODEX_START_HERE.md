@@ -223,10 +223,15 @@ for the compact status. In particular:
   Gate G is **ACQUIRED AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE
   PUBLICATION VERIFIED** at acquisition canonical HEAD
   `8d8e32b576b384eb9a060f87bde1d42bf15f58f7`.
-- `PLAYABLE SLICE 01 — Autonomous Emergence Baseline` is the next required
-  non-CIV integration milestone. It is **NOT STARTED** and is not a gate.
+- `PLAYABLE SLICE 01 — Autonomous Emergence Baseline` is the required non-CIV
+  integration milestone in progress. It is **REQUIRED — IN PROGRESS / NOT
+  COMPLETE** and is not a gate. Increment 01 is **COMPLETE AND PUBLISHED —
+  SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical HEAD
+  `a5bded01dcfc934dc5aed6aab0990fc61ffd30c7`; its accepted review ZIP SHA-256
+  is `bff4786795c9f09239fe8a45e3acd2f8993eabdfb24d7e792d944ca0ea6a81b6`.
   The next authorized action is
-  `REVIEW-AND-LAUNCH-PLAYABLE-SLICE-01-INCREMENT-01`.
+  `REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-02`, a review and selection
+  step that does not authorize Increment 02 implementation.
 - CIV-48 remains **NOT STARTED**, implementation is not authorized, and it is
   deferred until PLAYABLE SLICE 01 and the resulting evidence-driven roadmap
   recalibration are complete. Gate H remains planned. See
