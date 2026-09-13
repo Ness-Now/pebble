@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 import PebbleCore
 
 extension PebbleAgentController {
@@ -108,7 +108,7 @@ extension PebbleAgentController {
         return resolved.count == agentIDs.count
     }
 
-    func start(world: World, player: Player) -> PebbleAgentCommandResult {
+    func start(world: World, player: Player, founders: PebbleNormalFounderProfile? = nil) -> PebbleAgentCommandResult {
         if let candidatePhysicalHardFailure {
             return failure(
                 "PebbleAgents start refused after candidate physical hard failure: "
@@ -118,6 +118,15 @@ extension PebbleAgentController {
         guard featureEnabled else {
             trace("error disabled; set PEBBLELAB_APP_AGENTS=1")
             return failure("PebbleAgents disabled. Set PEBBLELAB_APP_AGENTS=1 before launch.")
+        }
+        if founders != nil {
+            guard session == nil, activeWorld == nil else {
+                return failure("Founder start requires an inactive session; stop explicitly before replacing it.")
+            }
+            guard probesFeatureEnabled, debugEntitiesEnabled, populationFeatureEnabled,
+                  persistenceFeatureEnabled else {
+                return failure("Founder start requires APP_PROBES, DEBUG_ENTITIES, AGENTS_POPULATION and AGENTS_PERSISTENCE gates.")
+            }
         }
         let anchor = AgentPosition(
             x: Int(player.x.rounded(.down)),
@@ -129,7 +138,8 @@ extension PebbleAgentController {
             player: player,
             anchor: anchor,
             seed: world.seed,
-            resetSpeed: true
+            resetSpeed: true,
+            founders: founders
         )
     }
 
@@ -138,7 +148,8 @@ extension PebbleAgentController {
         player: Player,
         anchor: AgentPosition,
         seed: UInt32,
-        resetSpeed: Bool
+        resetSpeed: Bool,
+        founders: PebbleNormalFounderProfile? = nil
     ) -> PebbleAgentCommandResult {
         if let candidatePhysicalHardFailure {
             return failure(
@@ -185,13 +196,14 @@ extension PebbleAgentController {
                 world: world,
                 anchor: anchor,
                 player: player,
-                socialEnabled: socialFeatureEnabled
+                socialEnabled: socialFeatureEnabled,
+                founders: founders?.specification
             )
             trace(
                 "bootstrap placement status=accepted anchor=\(positionText(anchor)) "
                     + placement.traceSummary
             )
-            let survivalConfiguration = autonomousCivilizationFeatureEnabled
+            let survivalConfiguration = founders == nil && autonomousCivilizationFeatureEnabled
                 ? try AgentSurvivalConfiguration(
                     hungerPerTick: 0.0008, fatiguePerTick: 0.0006,
                     hungryThreshold: 0.40, criticalHungerThreshold: 0.80,
@@ -209,11 +221,11 @@ extension PebbleAgentController {
                 memoryPolicy: .bounded(maxEntries: 128),
                 survivalConfiguration: survivalConfiguration
             )
-            let candidateSession = try AgentSimulationSession(
+            var candidateSession = try AgentSimulationSession(
                 configuration: configuration,
-                agents: try initialAgentStates(
-                    positionsByAgentID: placement.positionsByAgentID
-                ),
+                agents: try founders.map {
+                    try $0.specification.initialStates(positionsByAgentID: placement.positionsByAgentID)
+                } ?? initialAgentStates(positionsByAgentID: placement.positionsByAgentID),
                 initialTick: 0,
                 simulationID: try AgentSimulationID(
                     validating: "live-\(seed)-\(anchor.x)-\(anchor.y)-\(anchor.z)"
@@ -225,12 +237,40 @@ extension PebbleAgentController {
                 in: world
             )
             do {
+                if let founders {
+                    if environment["PEBBLELAB_DISPOSABLE_WORLD_PROOF"] == "1",
+                       let rawStage = environment["PEBBLELAB_DISPOSABLE_FOUNDER_AUTHORITY_FAILURE"],
+                       let stage = AgentFounderInitializationStage(rawValue: rawStage) {
+                        try candidateSession.initializeFounderAuthorities(
+                            specification: founders.specification, settlementAnchor: anchor,
+                            receptionPosition: placement.receptionPosition!,
+                            populationConfiguration: founders.populationConfiguration,
+                            householdConfiguration: founders.householdConfiguration,
+                            failAfter: stage
+                        )
+                    } else {
+                        try candidateSession.initializeFounderAuthorities(
+                            specification: founders.specification, settlementAnchor: anchor,
+                            receptionPosition: placement.receptionPosition!,
+                            lifecycle: lifecycleFeatureEnabled, kinship: kinshipFeatureEnabled,
+                            households: householdFeatureEnabled, dependentCare: dependentCareFeatureEnabled,
+                            childhood: childhoodFeatureEnabled, family: familyFeatureEnabled,
+                            mortality: mortalityFeatureEnabled, homeostasis: homeostasisFeatureEnabled,
+                            genetics: geneticsFeatureEnabled,
+                            populationConfiguration: founders.populationConfiguration,
+                            householdConfiguration: founders.householdConfiguration
+                        )
+                    }
+                }
                 try verifyInitialBootstrap(
                     session: candidateSession,
                     probes: stagedProbes,
                     world: world,
                     player: player
                 )
+                if let founders {
+                    try verifyFounderProjection(candidateSession, specification: founders.specification)
+                }
             } catch {
                 try rollbackInitialProbes(
                     stagedProbes.values.sorted { $0.labAgentId > $1.labAgentId },
@@ -243,6 +283,7 @@ extension PebbleAgentController {
             // This is the publication boundary: both sides have already been
             // constructed and verified, and no throwing work remains.
             session = candidateSession
+            bootstrapFounderProfile = founders
             probesByAgentId = stagedProbes
             self.seed = seed
             self.anchor = anchor
@@ -303,8 +344,23 @@ extension PebbleAgentController {
                     + "sessionAgents=\(candidateSession.snapshot().agentCount) "
                     + "worldProbes=\(stagedProbes.count) rollbackRequired=0"
             )
-            trace("\(verb) seed=\(seed) agents=3 tick=0 hz=\(cognitiveHz) movement=\(movementEnabled ? "on" : "off") worldTick=\(world.time) dayTime=\(world.dayTime) weather=\(weather) randomTickSpeed=\(world.randomTickSpeed) mobSpawning=\(Int(world.gameRules["doMobSpawning"] ?? -1))")
-            return success(resetSpeed ? "PebbleAgents started: 3 agents at 4 Hz." : "PebbleAgents reset to tick 0.")
+            trace("\(verb) seed=\(seed) agents=\(candidateSession.snapshot().agentCount) tick=0 hz=\(cognitiveHz) movement=\(movementEnabled ? "on" : "off") worldTick=\(world.time) dayTime=\(world.dayTime) weather=\(weather) randomTickSpeed=\(world.randomTickSpeed) mobSpawning=\(Int(world.gameRules["doMobSpawning"] ?? -1))")
+            return success(resetSpeed ? "PebbleAgents started: \(candidateSession.snapshot().agentCount) agents at \(cognitiveHz) Hz." : "PebbleAgents reset to tick 0.")
+        } catch ControllerError.bootstrapRollbackBoundary(let reason) {
+            candidatePhysicalHardFailure = PebbleCandidatePhysicalHardFailure(
+                operation: "founder bootstrap", transactionID: "bootstrap-\(seed)",
+                mutation: "initial probes", expectedPhysicalState: "no staged probes",
+                observedPhysicalState: world.entities.compactMap { ($0 as? LabCoreAgentEntity)?.labAgentId }.sorted().joined(separator: ","),
+                compensationAttempt: "rollbackInitialProbes", compensationError: reason,
+                completedCompensations: [], remainingCompensations: ["rollbackInitialProbes"],
+                publishedSessionStatus: "none", physicalWorldTick: world.time,
+                candidateReceiptIDs: [], worldID: persistenceWorldID ?? "unknown",
+                sessionID: "unpublished", checkpointID: nil, agentID: nil, probeID: nil
+            )
+            isPaused = true
+            lastError = "bootstrap rollback hard failure: \(reason)"
+            trace("CANDIDATE_PHYSICAL_HARD_FAILURE \(lastError!)")
+            return failure(lastError!)
         } catch let error as PebbleAgentBootstrapPlacementResolver.ResolutionError {
             let reason: String
             switch error {
@@ -384,7 +440,7 @@ extension PebbleAgentController {
             for agent in snapshot.agents.sorted(by: { $0.id < $1.id }) {
                 let probe = try createProbe(for: agent, in: world)
                 staged[agent.id] = probe
-                if safeBootstrapLateFailureProofEnabled, staged.count == 2 {
+                if safeBootstrapLateFailureProofEnabled, staged.count == (snapshot.agentCount == 3 ? 2 : snapshot.agentCount - 1) {
                     throw ControllerError.bootstrapPlacementBoundary(
                         "injected late bootstrap failure"
                     )
@@ -478,7 +534,8 @@ extension PebbleAgentController {
                   removedIDs.contains(probe.labAgentId) else { return nil }
             return probe.labAgentId
         }.sorted()
-        guard residual.isEmpty else {
+        guard residual.isEmpty,
+              probes.allSatisfy({ world.entityById[$0.id] == nil }) else {
             throw ControllerError.bootstrapRollbackBoundary(
                 "residual probes after rollback: \(residual)"
             )

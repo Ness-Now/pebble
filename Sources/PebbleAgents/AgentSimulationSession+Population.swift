@@ -137,6 +137,19 @@ extension AgentSimulationSession {
         receptionPosition: AgentPosition,
         configuration: AgentPopulationConfiguration = .live
     ) throws {
+        var candidate = self
+        try candidate.initializePopulationRegistryInPlace(
+            settlementAnchor: settlementAnchor, receptionPosition: receptionPosition,
+            configuration: configuration
+        )
+        self = candidate
+    }
+
+    private mutating func initializePopulationRegistryInPlace(
+        settlementAnchor: AgentPosition,
+        receptionPosition: AgentPosition,
+        configuration: AgentPopulationConfiguration
+    ) throws {
         guard causalLedger.isEnabled else {
             throw AgentSessionError.population(.causalLedgerRequired)
         }
@@ -144,10 +157,14 @@ extension AgentSimulationSession {
             throw AgentSessionError.population(.alreadyEnabled)
         }
         let founderIDs = sortedIds
-        guard founderIDs == ["agent_0", "agent_1", "agent_2"] else {
+        guard !founderIDs.isEmpty,
+              founderIDs == (0..<founderIDs.count).map({ "agent_\($0)" }).sorted() else {
             throw AgentSessionError.population(
                 .invalidFounder(founderIDs.joined(separator: ","))
             )
+        }
+        guard founderIDs.count <= configuration.maximumActivePopulation else {
+            throw AgentSessionError.population(.capacityReached)
         }
         try prevalidateCausalAppend(count: founderIDs.count + 1)
         let initialized = try requiredPopulationEvent(
@@ -165,7 +182,8 @@ extension AgentSimulationSession {
         )
         var members: [AgentPopulationMemberRecord] = []
         var latest = initialized.eventID
-        for (ordinalValue, rawID) in founderIDs.enumerated() {
+        for rawID in founderIDs {
+            let ordinalValue = Int(rawID.dropFirst("agent_".count))!
             let agentID = AgentID(rawValue: rawID)!
             let ordinal = AgentPopulationOrdinal(rawValue: ordinalValue)!
             let event = try requiredPopulationEvent(
@@ -211,7 +229,7 @@ extension AgentSimulationSession {
             ),
             members: members,
             migrations: [],
-            nextPopulationOrdinal: AgentPopulationOrdinal(rawValue: 3)!,
+            nextPopulationOrdinal: AgentPopulationOrdinal(rawValue: founderIDs.count)!,
             evictionCounts: AgentPopulationEvictionCounts(),
             initializedEventID: initialized.eventID,
             lastPopulationEventID: latest

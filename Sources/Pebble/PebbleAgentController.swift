@@ -72,6 +72,7 @@ final class PebbleAgentController {
     let migrationAdmissionAdapter = PebbleAgentMigrationAdmissionAdapter()
     let localEcologyAdapter = PebbleAgentLocalEcologyAdapter()
     let birthSiteAdapter = PebbleAgentBirthSiteAdapter()
+    var bootstrapFounderProfile: PebbleNormalFounderProfile?
     let bootstrapPlacementResolver = PebbleAgentBootstrapPlacementResolver()
     let movementExecutor = PebbleAgentMovementExecutor()
     let cameraFollow = PebbleAgentCameraFollow()

@@ -2,15 +2,17 @@ import PebbleAgents
 import PebbleCore
 
 struct PebbleAgentBootstrapPlacementPlan {
-    static let agentIDs = ["agent_0", "agent_1", "agent_2"]
+    static let legacyAgentIDs = ["agent_0", "agent_1", "agent_2"]
 
+    let agentIDs: [String]
+    let receptionPosition: AgentPosition?
     let positionsByAgentID: [String: AgentPosition]
     let candidatesEvaluated: Int
     let maximumCandidateEvaluations: Int
     let rejectionCounts: [EntityPlacementRejection: Int]
 
     var traceSummary: String {
-        let positions = Self.agentIDs.compactMap { id in
+        let positions = agentIDs.compactMap { id in
             positionsByAgentID[id].map { position in
                 "\(id):\(position.x),\(position.y),\(position.z)"
             }
@@ -36,7 +38,7 @@ struct PebbleAgentBootstrapPlacementResolver {
     }
 
     static let configuration = BoundedEntityPlacementSearchConfiguration(
-        requiredCount: PebbleAgentBootstrapPlacementPlan.agentIDs.count,
+        requiredCount: PebbleAgentBootstrapPlacementPlan.legacyAgentIDs.count,
         horizontalRadius: 12,
         verticalRadius: 8,
         maximumCandidateEvaluations: 12_000,
@@ -52,7 +54,8 @@ struct PebbleAgentBootstrapPlacementResolver {
         world: World,
         anchor: AgentPosition,
         player: Player,
-        socialEnabled: Bool
+        socialEnabled: Bool,
+        founders: AgentFounderSpecification? = nil
     ) throws -> PebbleAgentBootstrapPlacementPlan {
         let recipient = socialEnabled
             ? AgentPosition(x: anchor.x + 8, y: anchor.y, z: anchor.z - 3)
@@ -62,6 +65,18 @@ struct PebbleAgentBootstrapPlacementResolver {
             AgentPosition(x: anchor.x + 7, y: anchor.y, z: anchor.z - 3),
             recipient,
         ]
+        let agentIDs = founders?.agentIDs ?? PebbleAgentBootstrapPlacementPlan.legacyAgentIDs
+        let base = Self.configuration
+        let configuration = BoundedEntityPlacementSearchConfiguration(
+            requiredCount: agentIDs.count + (founders == nil ? 0 : 1),
+            horizontalRadius: base.horizontalRadius, verticalRadius: base.verticalRadius,
+            maximumCandidateEvaluations: base.maximumCandidateEvaluations,
+            bodyWidth: base.bodyWidth, bodyHeight: base.bodyHeight,
+            // Two-block spacing leaves a cardinal egress cell between founders.
+            minimumSelectedHorizontalDistance: founders == nil ? base.minimumSelectedHorizontalDistance : 2,
+            minimumReservedHorizontalDistance: base.minimumReservedHorizontalDistance,
+            minimumEgressCount: base.minimumEgressCount, maximumSafeDrop: base.maximumSafeDrop
+        )
         let result = findSafeEntityPlacements(
             in: world,
             anchor: corePosition(anchor),
@@ -71,7 +86,7 @@ struct PebbleAgentBootstrapPlacementResolver {
                 y: player.y,
                 z: player.z
             )],
-            configuration: Self.configuration
+            configuration: configuration
         )
         let rejectionSummary = result.rejectionCounts.keys
             .sorted { $0.rawValue < $1.rawValue }
@@ -87,10 +102,12 @@ struct PebbleAgentBootstrapPlacementResolver {
             )
         }
         let positions = Dictionary(uniqueKeysWithValues: zip(
-            PebbleAgentBootstrapPlacementPlan.agentIDs,
+            agentIDs,
             result.positions.map(agentPosition)
         ))
         return PebbleAgentBootstrapPlacementPlan(
+            agentIDs: agentIDs,
+            receptionPosition: founders == nil ? nil : result.positions.last.map(agentPosition),
             positionsByAgentID: positions,
             candidatesEvaluated: result.candidatesEvaluated,
             maximumCandidateEvaluations: result.maximumCandidateEvaluations,

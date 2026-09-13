@@ -270,7 +270,7 @@ extension PebbleAgentController {
             "renewableBlock=\(renewable?.blockReason ?? "none")",
             "settlement=\(populationContext?.settlementID.rawValue ?? "none")",
             "fidelity=\(populationContext?.fidelity.rawValue ?? "none")",
-            "population=\(populationScale?.fidelityRecords.count ?? 0)",
+            "population=\(snapshot.individuals.count + snapshot.truncation.agentsOmitted)",
             "settlements=\(populationScale?.settlements.count ?? 0)",
             "live=\(populationScale?.liveCount ?? 0)",
             "near=\(populationScale?.nearCount ?? 0)",

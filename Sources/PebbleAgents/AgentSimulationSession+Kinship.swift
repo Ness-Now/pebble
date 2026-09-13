@@ -257,6 +257,10 @@ extension AgentSimulationSession {
             initializedEventID: initialized.eventID,
             lastKinshipEventID: initialized.eventID
         )
+        // Stored people use canonical AgentID order; allocation ordinals stay
+        // attached to their identities independently of that ordering.
+        state.historicalPersons.sort { $0.agentID < $1.agentID }
+        state.parentageRecords.sort { $0.childID < $1.childID }
         do {
             try Self.validateKinshipState(
                 state,
@@ -270,8 +274,6 @@ extension AgentSimulationSession {
         } catch let error as AgentKinshipError {
             throw AgentSessionError.kinship(error)
         }
-        state.historicalPersons.sort { $0.agentID < $1.agentID }
-        state.parentageRecords.sort { $0.childID < $1.childID }
         kinshipState = state
     }
 

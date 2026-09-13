@@ -57,8 +57,14 @@ extension PebbleAgentController {
                 Array(arguments.dropFirst()), world: world, player: player
             )
         case "start":
-            guard arguments.count == 1 else { return failure("Usage: /lab start") }
-            return start(world: world, player: player)
+            if arguments.count == 1 { return start(world: world, player: player) }
+            guard arguments.count == 3, arguments[1] == "founders",
+                  let count = Int(arguments[2]) else {
+                return failure("Usage: /lab start [founders 20...30]")
+            }
+            do {
+                return start(world: world, player: player, founders: try PebbleNormalFounderProfile(count: count))
+            } catch { return failure("Founder start refused: \(error)") }
         case "stop", "clear":
             guard arguments.count == 1 else { return failure("Usage: /lab \(command)") }
             let removed = stop(reason: command, fallbackWorld: world)
@@ -124,7 +130,8 @@ extension PebbleAgentController {
                 player: player,
                 anchor: anchor,
                 seed: seed,
-                resetSpeed: false
+                resetSpeed: false,
+                founders: bootstrapFounderProfile
             )
         case "movement":
             guard session != nil else { return failure("No active PebbleAgents session.") }
