@@ -1376,18 +1376,102 @@ extension AgentSimulationSession {
             throw AgentSessionError.workCommitment(.invalidState("bounds or canonical order"))
         }
         let knownAgents = Set(lifecycleState?.members.map(\.agentID) ?? [])
-        guard state.demands.allSatisfy({
-            knownAgents.contains($0.observerID)
-                && ($0.suggestedWorkerID.map(knownAgents.contains) ?? true)
+        let historicalAgents = Set(mortalityState?.records.map(\.agentID) ?? [])
+            .union(
+                mortalityState?.compactedDeathSummaries?.map(\.agentID) ?? []
+            )
+        let knownIdentities = knownAgents.union(historicalAgents)
+        let deathTickByAgentID = Dictionary(uniqueKeysWithValues:
+            (mortalityState?.records.map { ($0.agentID, $0.deathTick) } ?? [])
+                + (mortalityState?.compactedDeathSummaries?.map {
+                    ($0.agentID, $0.deathTick)
+                } ?? [])
+        )
+        let retainedEventByID = Dictionary(uniqueKeysWithValues:
+            causalLedger.events.map { ($0.eventID, $0) }
+        )
+        func historicalReferenceIsBeforeDeath(
+            _ agentID: AgentID,
+            at referenceTick: Int
+        ) -> Bool {
+            knownAgents.contains(agentID)
+                || deathTickByAgentID[agentID].map {
+                    referenceTick <= $0
+                } == true
+        }
+        func historicalCommitmentIsValid(
+            _ commitment: AgentWorkCommitment
+        ) -> Bool {
+            if knownAgents.contains(commitment.workerID) { return true }
+            guard let deathTick = deathTickByAgentID[commitment.workerID],
+                  !commitment.status.isOpen,
+                  let terminalTick = commitment.terminalTick,
+                  let terminalEventID = commitment.terminalEventID,
+                  terminalTick <= deathTick else { return false }
+            guard let terminalEvent = retainedEventByID[terminalEventID]
+            else {
+                // A bounded ledger may compact an older authentic work event.
+                // The durable terminal metadata and actual mortality history
+                // remain required; an open or provenance-free record can
+                // never use this historical path.
+                return terminalEventID.sequence.rawValue
+                    <= causalLedger.droppedEventCount
+            }
+            guard terminalEvent.actorID == commitment.workerID,
+                  terminalEvent.subjectID == commitment.workerID,
+                  terminalEvent.simulationTick.rawValue == terminalTick,
+                  case let .work(
+                      _, commitmentID, workerID, _, _, _, status, _, _, _
+                  ) = terminalEvent.payload,
+                  commitmentID == commitment.commitmentID.rawValue,
+                  workerID == commitment.workerID.rawValue else {
+                return false
+            }
+            if terminalTick == deathTick {
+                return commitment.status == .ended
+                    && terminalEvent.kind == .workCommitmentEnded
+                    && status == "ended:workerDied"
+            }
+            return terminalEvent.kind == .workCommitmentEnded
+                || terminalEvent.kind == .workCommitmentFulfilled
+        }
+        guard state.demands.allSatisfy({ demand in
+            knownIdentities.contains(demand.observerID)
+                && (demand.suggestedWorkerID.map(knownIdentities.contains) ?? true)
+                && (!demand.status.isActive
+                    || (knownAgents.contains(demand.observerID)
+                        && (demand.suggestedWorkerID.map(knownAgents.contains)
+                            ?? true)))
+                && historicalReferenceIsBeforeDeath(
+                    demand.observerID,
+                    at: demand.refreshedAtTick
+                )
+                && (demand.suggestedWorkerID.map {
+                    historicalReferenceIsBeforeDeath(
+                        $0, at: demand.refreshedAtTick
+                    )
+                } ?? true)
         }), state.commitments.allSatisfy({
-            knownAgents.contains($0.workerID) && $0.startedAtTick <= tick
+            knownIdentities.contains($0.workerID)
+                && historicalCommitmentIsValid($0)
+                && $0.startedAtTick <= tick
                 && $0.startedEventID.simulationID == simulationID
         }), state.retainedEvidence.allSatisfy({
-            knownAgents.contains($0.workerID) && $0.recordedAtTick <= tick
+            knownIdentities.contains($0.workerID) && $0.recordedAtTick <= tick
                 && $0.sourceEventID.sequence < $0.workEventID.sequence
+                && historicalReferenceIsBeforeDeath(
+                    $0.workerID, at: $0.recordedAtTick
+                )
         }), state.localReputations.allSatisfy({
-            knownAgents.contains($0.observerID) && knownAgents.contains($0.workerID)
+            knownIdentities.contains($0.observerID)
+                && knownIdentities.contains($0.workerID)
                 && (-100...100).contains($0.score)
+                && historicalReferenceIsBeforeDeath(
+                    $0.observerID, at: $0.lastChangedAtTick
+                )
+                && historicalReferenceIsBeforeDeath(
+                    $0.workerID, at: $0.lastChangedAtTick
+                )
         }), state.initializedEventID.simulationID == simulationID,
               state.lastWorkEventID.simulationID == simulationID else {
             throw AgentSessionError.workCommitment(.invalidState("identity or causal references"))

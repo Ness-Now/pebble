@@ -163,6 +163,55 @@ extension AgentSimulationSession {
         }
     }
 
+    /// Completes only care state made historical by a lifecycle transition at
+    /// a terminal boundary. It never selects a caregiver, moves a household,
+    /// raises a need, or starts an engagement.
+    mutating func applyDependentCarePassiveLifecycleBoundary(
+        at careTick: Int
+    ) throws {
+        guard var care = dependentCareState else { return }
+        if care.transitionTick != careTick {
+            care.transitionTick = careTick
+            care.transitionsAtTick = 0
+        }
+        try applyChildhoodV2PassiveLifecycleBoundary(
+            at: careTick, care: &care
+        )
+        let dependentSet = Set(dependentLifecycleIDs())
+        let staleAssignments = care.assignments.indices.filter {
+            care.assignments[$0].status == .active
+                && !dependentSet.contains(care.assignments[$0].dependentID)
+        }.sorted {
+            care.assignments[$0].dependentID
+                < care.assignments[$1].dependentID
+        }
+        for index in staleAssignments {
+            try endCareAssignment(
+                at: index, reason: .dependentMatured,
+                causeEventID: care.lastCareEventID,
+                tick: careTick, state: &care
+            )
+        }
+        let staleNeedIDs = Set(care.activeNeeds.compactMap { need in
+            dependentSet.contains(need.dependentID) ? nil : need.needID
+        })
+        for needID in staleNeedIDs.sorted() {
+            try closeCareNeed(
+                needID: needID, reason: .dependentMatured,
+                caregiverID: nil, tick: careTick, state: &care
+            )
+        }
+        care.assignments.sort(by: careAssignmentSort)
+        care.activeNeeds.sort(by: careNeedSort)
+        care.activeEngagements.sort(by: careEngagementSort)
+        care.rollingDigest = AgentDependentCareDigest.make(
+            "\(care.rollingDigest)|tick|\(careTick)|"
+                + "\(care.assignments.count)|\(care.activeNeeds.count)|"
+                + "\(care.activeEngagements.count)"
+        )
+        dependentCareState = care
+    }
+
     mutating func applyDependentCareTickBoundary(at careTick: Int) throws {
         guard var care = dependentCareState else { return }
         if care.transitionTick != careTick {
@@ -1703,6 +1752,9 @@ extension AgentSimulationSession {
             supervisionIntervalTicks: state.configuration.supervisionIntervalTicks
         )
         let activeIDs = Set(agents.map(\.agentID))
+        let pendingTerminalIDs = Set(
+            mortality?.pendingTransitions.map(\.agentID) ?? []
+        )
         let healthByID = Dictionary(uniqueKeysWithValues: agents.map {
             ($0.agentID, $0.health)
         })
@@ -1772,7 +1824,10 @@ extension AgentSimulationSession {
                       assignment.endedReason == nil,
                       activeIDs.contains(assignment.dependentID),
                       activeIDs.contains(assignment.caregiverID),
-                      !incapacitatedIDs.contains(assignment.caregiverID),
+                      (!incapacitatedIDs.contains(assignment.caregiverID)
+                        || pendingTerminalIDs.contains(
+                            assignment.caregiverID
+                        )),
                       residents.contains(assignment.dependentID),
                       residents.contains(assignment.caregiverID),
                       (stageByID[assignment.dependentID] == .newborn
@@ -1818,8 +1873,10 @@ extension AgentSimulationSession {
                           && $0.caregiverID == engagement.caregiverID
                   }),
                   activeIDs.contains(engagement.caregiverID),
-                  (healthByID[engagement.caregiverID] ?? 0) > 0,
-                  !incapacitatedIDs.contains(engagement.caregiverID),
+                  (healthByID[engagement.caregiverID] ?? 0) > 0
+                    || pendingTerminalIDs.contains(engagement.caregiverID),
+                  !incapacitatedIDs.contains(engagement.caregiverID)
+                    || pendingTerminalIDs.contains(engagement.caregiverID),
                   stageByID[engagement.caregiverID] == .mature,
                   engagement.startedTick >= 0,
                   engagement.startedTick <= clock.tick.rawValue,

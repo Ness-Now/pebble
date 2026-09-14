@@ -956,3 +956,311 @@ func runPebbleAgentsDependentCareSmoke() {
                 $0.dependentID == mortalityBirth.newbornID
             })
 }
+
+func runPebbleAgentsTerminalCohortDependentAuthoritySmoke() {
+    let survival = try! AgentSurvivalConfiguration(
+        hungerPerTick: 0.15,
+        fatiguePerTick: 0.001,
+        hungryThreshold: 0.4,
+        criticalHungerThreshold: 0.9,
+        hungerRecoveryThreshold: 0.15,
+        fatigueThreshold: 0.65,
+        fatigueRecoveryThreshold: 0.2,
+        foodNutrition: 1,
+        restRecoveryPerTick: 1,
+        starvationGraceTicks: 0,
+        starvationDamagePerTick: 100
+    )
+    let home = AgentPosition(x: 0, y: 64, z: 0)
+    var session = try! AgentSimulationSession(
+        configuration: try! AgentSessionConfiguration(
+            seed: 202,
+            nearbyRadius: 8,
+            resourceObservationRadius: 8,
+            recentMemorySnapshotLimit: 8,
+            memoryPolicy: .bounded(maxEntries: 64),
+            survivalConfiguration: survival
+        ),
+        agents: [
+            careAgent(0, home: home),
+            careAgent(1, home: home),
+            careAgent(2, home: AgentPosition(x: 5, y: 64, z: 0)),
+        ],
+        simulationID: try! AgentSimulationID(
+            validating: "ps01-terminal-care-cohort"
+        ),
+        causalLedgerPolicy: .bounded(maxEvents: 16_384)
+    )
+    session.setSurvivalEnabled(true)
+    try! session.initializePopulationRegistry(
+        settlementAnchor: home,
+        receptionPosition: AgentPosition(x: 0, y: 64, z: 3),
+        configuration: .live
+    )
+    try! session.initializeLocalEcology(observations: [careHabitat])
+    _ = try! session.applyLocalEcologyEndOfTick(
+        habitatValidations: [careHabitat]
+    )
+    try! session.setLifecycleEnabled(
+        true,
+        configuration: careLifecycleConfiguration
+    )
+    try! session.setKinshipEnabled(true)
+    try! session.setHouseholdsEnabled(true)
+    let sharedHousehold = try! session.currentMembership(
+        of: AgentID(rawValue: "agent_0")!
+    )!.householdID
+    try! session.moveMembers(
+        memberIDs: [
+            AgentID(rawValue: "agent_2")!,
+        ],
+        to: sharedHousehold
+    )
+    try! session.setDependentCareEnabled(
+        true,
+        configuration: try! AgentDependentCareConfiguration(
+            nourishmentHungerThreshold: 0.9
+        )
+    )
+    try! session.setChildhoodV2Enabled(true)
+    try! session.setFamilyV1Enabled(true)
+    try! session.setReproductionEnabled(true)
+    var recorder = try! AgentReplayRecorder(
+        checkpoint: session.makeCheckpoint(),
+        session: session
+    )
+    let birth = careBirth(
+        &recorder,
+        &session,
+        position: AgentPosition(x: 0, y: 64, z: 1),
+        candidateIndex: 0
+    )
+    let parents = session.kinshipSnapshot().parentageRecords.first {
+        $0.childID == birth.newbornID
+    }!.canonicalParentIDs.sorted()
+    let originalCaregiver = try! session.currentCareAssignment(
+        for: birth.newbornID
+    )!.caregiverID
+    let originalGuardian = try! session.currentGuardian(
+        for: birth.newbornID
+    )!.guardianID
+    for engagement in session.dependentCareSnapshot()
+        .activeEngagements where engagement.kind == .supervise {
+        _ = try! session.verifyDependentCareSupervisionTick(
+            caregiverID: engagement.caregiverID,
+            dependentID: engagement.dependentID
+        )
+    }
+    try! session.setMortalityEnabled(
+        true,
+        configuration: .embodiedPopulationBounded(
+            maximumActivePopulation: 8
+        )
+    )
+    let allCaregiversTerminalBase = session
+
+    let survivor = AgentID(rawValue: "agent_2")!
+    var terminalResult: AgentSessionTickResult?
+    for _ in 0..<12 where session.pendingMortalityTransitions().isEmpty {
+        for (offset, protectedID) in [survivor].enumerated() {
+            let protectedState = try! session.state(for: protectedID)
+            try! session.applyInteractionOutcome(AgentInteractionOutcome(
+                interactionId:
+                    "ps01-care-food-\(protectedID.rawValue)-t\(session.tick)",
+                agentId: protectedID.rawValue,
+                tick: session.tick,
+                target: AgentPosition(
+                    x: 5 + offset,
+                    y: 64,
+                    z: session.tick + 1
+                ),
+                resource: .foodRaw,
+                status: .succeeded,
+                inventoryDelta: AgentInventoryDelta(
+                    resource: .foodRaw,
+                    quantity: 1
+                ),
+                reason: "bounded survivor fixture food"
+            ))
+            try! session.applyConsumptionOutcome(AgentConsumptionOutcome(
+                consumptionId:
+                    "ps01-care-consume-\(protectedID.rawValue)-t\(session.tick)",
+                agentId: protectedID.rawValue,
+                tick: session.tick,
+                resource: .foodRaw,
+                quantity: 1,
+                status: .succeeded,
+                hungerBefore: protectedState.needs.hunger,
+                hungerAfter: 0,
+                reason: "one foodRaw consumed atomically"
+            ))
+        }
+        terminalResult = try! session.advanceTick()
+        if session.pendingMortalityTransitions().isEmpty {
+            for engagement in session.dependentCareSnapshot()
+                .activeEngagements where engagement.kind == .supervise {
+                _ = try! session.verifyDependentCareSupervisionTick(
+                    caregiverID: engagement.caregiverID,
+                    dependentID: engagement.dependentID
+                )
+            }
+        }
+    }
+    let pending = session.pendingMortalityTransitions()
+    let pendingIDs = Set(pending.map(\.agentID))
+    check("terminal caregiver cohort detected at one causal boundary",
+          pending.count == 2
+            && pendingIDs == Set(parents)
+            && Set(pending.map(\.detectedAtTick)).count == 1
+            && terminalResult?.agents.isEmpty == true
+            && pendingIDs.contains(originalCaregiver)
+            && pendingIDs.contains(originalGuardian))
+    let pendingBytes = try! session.durableStateBytes()
+    let pendingRestored = try! AgentSimulationSession.restoring(
+        session.makeCheckpoint()
+    )
+    check("terminal caregiver cohort persists before physical completion",
+          try! pendingRestored.durableStateBytes() == pendingBytes
+            && pendingRestored.pendingMortalityTransitions().count == 2)
+
+    for transition in pending {
+        _ = try! session.applyMortalityPhysicalCustodyOutcome(
+            AgentMortalityPhysicalCustodyOutcome(
+                operationID: "ps01-care-empty-\(transition.agentID.rawValue)",
+                terminalAgentID: transition.agentID,
+                kind: .verifiedEmpty,
+                physicalReceiptID:
+                    "ps01-care-empty-receipt-\(transition.agentID.rawValue)",
+                destinationHolderID: nil,
+                stackCount: 0,
+                itemCount: 0,
+                verifiedAtTick: session.tick
+            )
+        )
+    }
+    for transition in pending {
+        _ = try! session.finalizePendingMortality(
+            for: transition.agentID
+        )
+    }
+    let replacementCaregiver = try! session.currentCareAssignment(
+        for: birth.newbornID
+    )
+    let replacementGuardian = try! session.currentGuardian(
+        for: birth.newbornID
+    )
+    let care = session.dependentCareSnapshot()
+    let childhood = session.childhoodSnapshot()
+    check("replacement caregiver excludes the entire terminal cohort",
+          replacementCaregiver?.caregiverID == survivor
+            && replacementGuardian?.guardianID == survivor
+            && !pendingIDs.contains(replacementCaregiver!.caregiverID)
+            && !pendingIDs.contains(replacementGuardian!.guardianID))
+    check("terminal cohort closes household care and guardian authority",
+          session.populationSummary().memberCount == 2
+            && session.householdSnapshot().currentMemberships.allSatisfy {
+                !pendingIDs.contains($0.agentID)
+            }
+            && care.assignments.filter {
+                pendingIDs.contains($0.caregiverID)
+            }.allSatisfy { $0.status == .ended }
+            && childhood.guardianships.filter {
+                pendingIDs.contains($0.guardianID)
+            }.allSatisfy { $0.status == .ended }
+            && session.kinshipSnapshot().parentageRecords.contains {
+                $0.childID == birth.newbornID
+                    && Set($0.canonicalParentIDs) == pendingIDs
+            })
+    check("dependent authority cohort restore is exact", {
+        guard let restored = try? AgentSimulationSession.restoring(
+            session.makeCheckpoint()
+        ) else { return false }
+        let restoredCare = try? restored.currentCareAssignment(
+            for: birth.newbornID
+        )
+        let restoredGuardian = try? restored.currentGuardian(
+            for: birth.newbornID
+        )
+        return (try? restored.durableStateBytes())
+                == (try? session.durableStateBytes())
+            && restoredCare?.caregiverID == survivor
+            && restoredGuardian?.guardianID == survivor
+    }())
+
+    func allCaregiversTerminal(
+        reverseFinalization: Bool
+    ) -> AgentSimulationSession {
+        var candidate = allCaregiversTerminalBase
+        var result: AgentSessionTickResult?
+        for _ in 0..<12 where candidate.pendingMortalityTransitions().isEmpty {
+            result = try! candidate.advanceTick()
+            if candidate.pendingMortalityTransitions().isEmpty {
+                for engagement in candidate.dependentCareSnapshot()
+                    .activeEngagements where engagement.kind == .supervise {
+                    _ = try! candidate.verifyDependentCareSupervisionTick(
+                        caregiverID: engagement.caregiverID,
+                        dependentID: engagement.dependentID
+                    )
+                }
+            }
+        }
+        let pending = candidate.pendingMortalityTransitions()
+        precondition(pending.count == 3 && result?.agents.isEmpty == true)
+        for transition in pending {
+            _ = try! candidate.applyMortalityPhysicalCustodyOutcome(
+                AgentMortalityPhysicalCustodyOutcome(
+                    operationID: "ps01-no-care-empty-"
+                        + transition.agentID.rawValue,
+                    terminalAgentID: transition.agentID,
+                    kind: .verifiedEmpty,
+                    physicalReceiptID: "ps01-no-care-empty-receipt-"
+                        + transition.agentID.rawValue,
+                    destinationHolderID: nil,
+                    stackCount: 0,
+                    itemCount: 0,
+                    verifiedAtTick: candidate.tick
+                )
+            )
+        }
+        let order = reverseFinalization ? Array(pending.reversed()) : pending
+        for transition in order {
+            _ = try! candidate.finalizePendingMortality(
+                for: transition.agentID
+            )
+        }
+        return candidate
+    }
+    let noCareForward = allCaregiversTerminal(reverseFinalization: false)
+    let noCareReverse = allCaregiversTerminal(reverseFinalization: true)
+    let forwardCare = noCareForward.dependentCareSnapshot()
+    let reverseCare = noCareReverse.dependentCareSnapshot()
+    check("all eligible caregivers terminal leaves honest at-risk dependent",
+          noCareForward.populationSummary().memberCount == 1
+            && noCareForward.snapshot().agents.map(\.id)
+                == [birth.newbornID.rawValue]
+            && (try! noCareForward.currentCareAssignment(
+                for: birth.newbornID
+            )) == nil
+            && (try! noCareForward.currentGuardian(
+                for: birth.newbornID
+            )) == nil
+            && forwardCare.atRiskDependentIDs.contains(birth.newbornID)
+            && noCareForward.childhoodSnapshot().atRiskDependentIDs
+                .contains(birth.newbornID))
+    check("care outcome is independent of staged finalization order",
+          (try! noCareReverse.currentCareAssignment(
+            for: birth.newbornID
+          )) == nil
+            && (try! noCareReverse.currentGuardian(
+                for: birth.newbornID
+            )) == nil
+            && reverseCare.atRiskDependentIDs
+                == forwardCare.atRiskDependentIDs
+            && reverseCare.assignments.map {
+                "\($0.dependentID.rawValue)|\($0.caregiverID.rawValue)|"
+                    + $0.status.rawValue
+            } == forwardCare.assignments.map {
+                "\($0.dependentID.rawValue)|\($0.caregiverID.rawValue)|"
+                    + $0.status.rawValue
+            })
+}

@@ -2815,7 +2815,43 @@ extension AgentSimulationSession {
                 // Otherwise, its failure is historical only when the current
                 // post-failure CIV-44 boundary and counters cover that causal
                 // event; the population exit remains its mortality owner.
-                let communicationTransportFailures = exit.causes.filter {
+                let communicationBoundaryEvents = exit.causes.compactMap {
+                    event($0)
+                }.filter { boundary in
+                    guard boundary.kind
+                            == .communicationTransportProvenanceBoundary,
+                          boundary.origin
+                            == .communicationTransportTransition,
+                          boundary.actorID == nil,
+                          boundary.subjectID == nil,
+                          boundary.simulationTick.rawValue
+                            == record.deathTick,
+                          boundary.sequence < exit.sequence,
+                          case let .communicationTransport(
+                              transportID, authorID, carrierID,
+                              destinationID, status, _
+                          ) = boundary.payload else {
+                        return false
+                    }
+                    return transportID
+                            == "communication-transport-provenance"
+                        && authorID == nil
+                        && carrierID == nil
+                        && destinationID == nil
+                        && status == "provenanceBoundary"
+                }
+                let communicationFailureCandidateIDs = Set(
+                    state.causalLedger.events.filter { failure in
+                        failure.kind == .communicationTransportFailed
+                            && failure.causes.contains(lethal.eventID)
+                            && (exit.causes.contains(failure.eventID)
+                                || communicationBoundaryEvents.contains {
+                                    $0.causes.contains(failure.eventID)
+                                })
+                    }.map(\.eventID)
+                )
+                let communicationTransportFailures =
+                    communicationFailureCandidateIDs.sorted().filter {
                     causeID in
                     guard let failure = event(causeID),
                           failure.kind == .communicationTransportFailed,
@@ -2885,6 +2921,25 @@ extension AgentSimulationSession {
                     reconciledCommunicationFailureIDs.insert(causeID)
                     return true
                 }
+                let directCommunicationFailureIDs = exit.causes.filter {
+                    communicationTransportFailures.contains($0)
+                }
+                let validCommunicationBoundaryIDs =
+                    communicationBoundaryEvents.filter { boundary in
+                        communicationTransportFailures.contains {
+                            boundary.causes.contains($0)
+                        }
+                    }.map(\.eventID)
+                guard communicationBoundaryEvents.count
+                        == validCommunicationBoundaryIDs.count else {
+                    throw AgentCheckpointError.invalidBound(
+                        "mortality communication provenance boundary"
+                    )
+                }
+                let communicationExitCauseIDs = Array(Set(
+                    directCommunicationFailureIDs
+                        + validCommunicationBoundaryIDs
+                )).sorted()
                 let careExit = exit.causes.compactMap { causeID in
                     event(causeID)
                 }.filter {
@@ -3038,7 +3093,7 @@ extension AgentSimulationSession {
                           familyExit,
                           householdExit,
                       ].compactMap({ $0 })
-                        + communicationTransportFailures).sorted(),
+                        + communicationExitCauseIDs).sorted(),
                       finalized.causes == [exit.eventID],
                       lethal.sequence < resources.sequence,
                       resources.sequence < commitments.sequence,

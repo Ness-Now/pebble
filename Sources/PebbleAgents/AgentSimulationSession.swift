@@ -423,6 +423,105 @@ public struct AgentSimulationSession {
             )
             self = candidate
         }
+        if let pending = mortalityState?.pendingTransitions,
+           !pending.isEmpty {
+            // Age has already reached this mortality tick. Preserve the
+            // corresponding lifecycle stage before recording terminal history;
+            // this passive demographic boundary grants no cognition or roles.
+            try applyLifecycleStageBoundary(at: nextTick)
+            // Close only care and guardianship records invalidated by that
+            // lifecycle transition. This never selects replacements or creates
+            // needs, engagements, household moves, or other obligations.
+            try applyDependentCarePassiveLifecycleBoundary(at: nextTick)
+            // Revoke unavailable custody while terminal identities still have
+            // lifecycle evidence. Administrator replacement remains owned by
+            // mortality cleanup with the complete cohort exclusion set.
+            try revalidateEstateCustodyAssignments(for: nil, at: nextTick)
+            let terminalAgentIDs = Set(pending.map(\.agentID))
+            for id in sortedIds {
+                guard let agentID = AgentID(rawValue: id),
+                      !terminalAgentIDs.contains(agentID),
+                      var state = statesById[id] else { continue }
+                let perception = perceptionsById[id]
+                var memoriesAdded = perception?.externalMemoryEntries ?? []
+                appendMemories(memoriesAdded, to: &state.memory)
+                state.lastResourceObservations =
+                    resourceObservationsById[id] ?? []
+                var worldPerceptionEffect: AgentWorldPerceptionEffect?
+                if let observation = perception?.worldObservation {
+                    let effect = AgentWorldPerceptionInterpreter.interpret(
+                        agentId: id,
+                        tick: nextTick,
+                        observation: observation,
+                        needs: state.needs,
+                        fear: state.fear
+                    )
+                    state.lastWorldObservation = observation
+                    state.lastWorldPerceptionEffect = effect
+                    state.needs.safety = effect.safetyAfter
+                    state.needs.curiosity = effect.curiosityAfter
+                    state.fear = effect.fearAfter
+                    state.observationCount += 1
+                    let memory = AgentMemoryEntry(
+                        tick: nextTick,
+                        type: "world_observed",
+                        summary: effect.memorySummary,
+                        importance: effect.memoryImportance
+                    )
+                    appendMemory(memory, to: &state.memory)
+                    memoriesAdded.append(memory)
+                    worldPerceptionEffect = effect
+                }
+                state.observationCount +=
+                    perception?.observationCountIncrement ?? 0
+                statesById[id] = state
+                let perceptionEvent = try recordCausalEvent(
+                    kind: .perception,
+                    origin: .externalObservation,
+                    actorID: agentID,
+                    subjectID: agentID,
+                    payload: .perception(
+                        worldObserved: worldPerceptionEffect != nil,
+                        resourceObservationCount:
+                            state.lastResourceObservations.count
+                                + (socialResourceObservationsById[id]?.count
+                                    ?? 0),
+                        memoriesAdded: memoriesAdded.count
+                    ),
+                    summary: "terminal-boundary survivor perception actor="
+                        + id
+                )
+                if let eventID = perceptionEvent?.eventID {
+                    lastPerceptionEventByAgentID[agentID] = eventID
+                    if !isMigratingAgent(id) {
+                        try recordGroundedSocialFacts(
+                            observerID: agentID,
+                            observations: (
+                                state.lastResourceObservations
+                                    + (socialResourceObservationsById[id]
+                                        ?? [])
+                            ).sorted(by: AgentResourcePerception.sortsBefore),
+                            perceptionEventID: eventID,
+                            at: tick
+                        )
+                    }
+                }
+            }
+            try recordCausalEvent(
+                kind: .tickCompleted,
+                origin: .mortalityTransition,
+                causes: pending.last.map { [$0.pendingEventID] } ?? [],
+                payload: .lifecycle(
+                    status: "terminalCohortPendingPhysical",
+                    agentCount: 0
+                ),
+                summary: "tick \(tick) terminal cohort pending physical "
+                    + "count=\(pending.count)"
+            )
+            try validateHouseholdCrossDomainIfEnabled()
+            try validateDependentCareCrossDomainIfEnabled()
+            return AgentSessionTickResult(tick: tick, agents: [])
+        }
         try applyLifecycleStageBoundary(at: nextTick)
         if dependentCareState != nil, !mortalityWasEnabled, survivalEnabled {
             for id in sortedIds {

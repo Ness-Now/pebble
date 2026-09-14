@@ -89,7 +89,7 @@ public struct AgentMortalityConfiguration: Codable, Equatable, Sendable {
         maximumMaterialExitsPerDeath: Int = 16,
         requiresTerminalPhysicalCustodyVerification: Bool = false
     ) throws {
-        guard (1...8).contains(maximumDeathsPerTick) else {
+        guard (1...512).contains(maximumDeathsPerTick) else {
             throw AgentMortalityError.invalidConfiguration("deaths per tick")
         }
         guard (1...64).contains(maximumRetainedDeathRecords) else {
@@ -128,6 +128,23 @@ public struct AgentMortalityConfiguration: Codable, Equatable, Sendable {
     public static let embodiedLive = try! AgentMortalityConfiguration(
         requiresTerminalPhysicalCustodyVerification: true
     )
+
+    /// Binds the largest admissible terminal cohort to the canonical active
+    /// population authority. Callers may still configure a smaller strict
+    /// mortality budget for focused or historical scenarios.
+    public static func embodiedPopulationBounded(
+        maximumActivePopulation: Int
+    ) throws -> AgentMortalityConfiguration {
+        guard (3...512).contains(maximumActivePopulation) else {
+            throw AgentMortalityError.invalidConfiguration(
+                "population-bounded deaths per tick"
+            )
+        }
+        return try AgentMortalityConfiguration(
+            maximumDeathsPerTick: maximumActivePopulation,
+            requiresTerminalPhysicalCustodyVerification: true
+        )
+    }
 
     private enum CodingKeys: String, CodingKey {
         case maximumDeathsPerTick

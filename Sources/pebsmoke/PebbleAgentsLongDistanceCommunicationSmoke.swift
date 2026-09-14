@@ -1453,6 +1453,111 @@ private func communicationMortalityProof() {
                 .transports[0].status == .inTransit)
 }
 
+func runPebbleAgentsTerminalCohortCommunicationSmoke() {
+    var (session, propositionID) = communicationPrepared(
+        id: "ps01-terminal-shared-transport",
+        lethalID: communicationCarrier,
+        healthByAgentID: [communicationDestination: 26]
+    )
+    let transport = try! session.beginLongDistanceCommunication(
+        authorID: communicationAuthor,
+        carrierID: communicationCarrier,
+        destinationID: communicationDestination,
+        propositionID: propositionID,
+        renderingMode: .noRendering
+    )
+    try! session.initializePopulationRegistry(
+        settlementAnchor: AgentPosition(x: 0, y: 64, z: 0),
+        receptionPosition: AgentPosition(x: 0, y: 64, z: 0)
+    )
+    session.setSurvivalEnabled(true)
+    try! session.setMortalityEnabled(
+        true,
+        configuration: .embodiedPopulationBounded(
+            maximumActivePopulation: 8
+        )
+    )
+    let result = try! session.advanceTick()
+    let pending = session.pendingMortalityTransitions()
+    check("shared transport participants enter one terminal cohort",
+          result.agents.isEmpty
+            && pending.map(\.agentID)
+                == [communicationCarrier, communicationDestination]
+            && Set(pending.map(\.detectedAtTick)).count == 1)
+    for transition in pending {
+        _ = try! session.applyMortalityPhysicalCustodyOutcome(
+            AgentMortalityPhysicalCustodyOutcome(
+                operationID: "ps01-communication-empty-"
+                    + transition.agentID.rawValue,
+                terminalAgentID: transition.agentID,
+                kind: .verifiedEmpty,
+                physicalReceiptID: "ps01-communication-empty-receipt-"
+                    + transition.agentID.rawValue,
+                destinationHolderID: nil,
+                stackCount: 0,
+                itemCount: 0,
+                verifiedAtTick: session.tick
+            )
+        )
+    }
+    for transition in pending {
+        _ = try! session.finalizePendingMortality(for: transition.agentID)
+    }
+    let communication = session.longDistanceCommunicationSnapshot()
+    let failed = communication.transports.first {
+        $0.transportID == transport.transportID
+    }
+    let failureEvents = session.causalLedgerSnapshot().events.filter {
+        $0.kind == .communicationTransportFailed
+            && $0.eventID == failed?.failureEventID
+    }
+    check("shared terminal transport fails exactly once",
+          failed?.status == .failed
+            && failed?.failure == .carrierDied
+            && communication.totalFailedCount == 1
+            && failureEvents.count == 1
+            && session.mortalitySnapshot().totalDeathCount == 2
+            && session.populationSummary().memberCount == 1)
+    let failureEvent = failureEvents.first
+    let provenanceBoundary = session.causalLedgerSnapshot().events.first {
+        boundary in
+        boundary.kind == .communicationTransportProvenanceBoundary
+            && failureEvent.map {
+                boundary.causes.contains($0.eventID)
+            } == true
+    }
+    check("shared terminal transport uses bounded causal boundary",
+          session.mortalitySnapshot().records.allSatisfy {
+              $0.populationExitEventID.sequence
+                  < $0.deathEventID.sequence
+          } && provenanceBoundary != nil)
+    let terminalCheckpoint = try! session.makeCheckpoint()
+    let restored = try! AgentSimulationSession.restoring(terminalCheckpoint)
+    check("shared terminal transport cannot resurrect after restore",
+          restored.longDistanceCommunicationSnapshot().transports.first {
+              $0.transportID == transport.transportID
+          }?.status == .failed
+            && restored.longDistanceCommunicationSnapshot().totalFailedCount
+                == 1
+            && restored.mortalitySnapshot().totalDeathCount == 2)
+
+    let unparentedFailureBoundary = communicationResignedCheckpoint(
+        terminalCheckpoint
+    ) { durable in
+        var ledger = durable["causalLedger"] as! [String: Any]
+        var events = ledger["events"] as! [[String: Any]]
+        let index = events.firstIndex {
+            $0["kind"] as? String
+                == "communicationTransportProvenanceBoundary"
+        }!
+        events[index]["causes"] = []
+        ledger["events"] = events
+        durable["causalLedger"] = ledger
+    }
+    check("unparented mortality communication boundary is refused",
+          communicationRestoreError(unparentedFailureBoundary) != nil)
+}
+
 private func communicationCausalCompactionProof() {
     var (session, propositionID) = communicationPrepared(
         id: "civ44-causal-compaction",

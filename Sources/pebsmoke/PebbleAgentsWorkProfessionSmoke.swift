@@ -3,11 +3,67 @@ import PebbleAgents
 
 private let workHome = AgentPosition(x: 0, y: 64, z: 0)
 
-private func workAgent(_ ordinal: Int) -> AgentSessionAgentState {
+private func workResignedCheckpoint(
+    _ checkpoint: AgentSessionCheckpoint,
+    mutateDurable: (inout [String: Any]) -> Void
+) -> AgentSessionCheckpoint {
+    var root = try! JSONSerialization.jsonObject(
+        with: AgentCheckpointCodec.encode(checkpoint)
+    ) as! [String: Any]
+    var durable = root["durableState"] as! [String: Any]
+    mutateDurable(&durable)
+    let mutatedBytes = try! JSONSerialization.data(
+        withJSONObject: durable,
+        options: [.sortedKeys, .withoutEscapingSlashes]
+    )
+    let mutatedState = try! AgentCheckpointCodec.decode(
+        AgentSessionDurableState.self, from: mutatedBytes
+    )
+    let canonicalBytes = try! AgentCheckpointCodec.encode(mutatedState)
+    let canonical = try! JSONSerialization.jsonObject(
+        with: canonicalBytes
+    ) as! [String: Any]
+    let clock = canonical["clock"] as! [String: Any]
+    let simulationID = clock["simulationID"] as! String
+    let tick = clock["tick"] as! Int
+    let digest = AgentCheckpointDigest.sha256(canonicalBytes)
+    let simulationDigest = AgentCheckpointDigest.sha256(
+        Data(simulationID.utf8)
+    )
+    root["durableState"] = canonical
+    root["schemaVersion"] = canonical["schemaVersion"]
+    root["semanticDigest"] = digest.rawValue
+    root["checkpointID"] =
+        "checkpoint-\(simulationDigest.rawValue.prefix(12))"
+            + "-t\(tick)-\(digest.rawValue.prefix(16))"
+    return try! AgentCheckpointCodec.decode(
+        AgentSessionCheckpoint.self,
+        from: JSONSerialization.data(
+            withJSONObject: root,
+            options: [.sortedKeys, .withoutEscapingSlashes]
+        )
+    )
+}
+
+private func workRestoreRefused(
+    _ checkpoint: AgentSessionCheckpoint
+) -> Bool {
+    do {
+        _ = try AgentSimulationSession.restoring(checkpoint)
+        return false
+    } catch {
+        return true
+    }
+}
+
+private func workAgent(
+    _ ordinal: Int,
+    hunger: Double = 0
+) -> AgentSessionAgentState {
     let position = AgentPosition(x: ordinal, y: 64, z: 0)
     return AgentSessionAgentState(
         id: "agent_\(ordinal)", state: "idle", position: position,
-        needs: AgentNeeds(hunger: 0, fatigue: 0, curiosity: 0, safety: 1),
+        needs: AgentNeeds(hunger: hunger, fatigue: 0, curiosity: 0, safety: 1),
         health: 100, fear: 0, homePosition: position, nearbyAgents: [],
         currentGoal: AgentGoal(
             kind: .idle, reason: "work fixture", startedAtTick: 0, urgency: 0
@@ -21,13 +77,23 @@ private func workAgent(_ ordinal: Int) -> AgentSessionAgentState {
     )
 }
 
-private func workBase(_ id: String) -> AgentSimulationSession {
+private func workBase(
+    _ id: String,
+    survivalConfiguration: AgentSurvivalConfiguration = .live,
+    hungerByAgentID: [String: Double] = [:]
+) -> AgentSimulationSession {
     var session = try! AgentSimulationSession(
         configuration: try! AgentSessionConfiguration(
             seed: 46, nearbyRadius: 12, resourceObservationRadius: 8,
-            recentMemorySnapshotLimit: 8, memoryPolicy: .bounded(maxEntries: 128)
+            recentMemorySnapshotLimit: 8, memoryPolicy: .bounded(maxEntries: 128),
+            survivalConfiguration: survivalConfiguration
         ),
-        agents: [workAgent(0), workAgent(1), workAgent(2)],
+        agents: (0..<3).map { ordinal in
+            workAgent(
+                ordinal,
+                hunger: hungerByAgentID["agent_\(ordinal)"] ?? 0
+            )
+        },
         simulationID: try! AgentSimulationID(validating: id),
         causalLedgerPolicy: .bounded(maxEvents: 16_384)
     )
@@ -176,8 +242,16 @@ private func workWildObservation(
     )
 }
 
-private func workWildSession(_ id: String) -> AgentSimulationSession {
-    var session = workBase(id)
+private func workWildSession(
+    _ id: String,
+    survivalConfiguration: AgentSurvivalConfiguration = .live,
+    hungerByAgentID: [String: Double] = [:]
+) -> AgentSimulationSession {
+    var session = workBase(
+        id,
+        survivalConfiguration: survivalConfiguration,
+        hungerByAgentID: hungerByAgentID
+    )
     try! session.setEcologicalObservationEnabled(true)
     try! session.setWildSubsistenceEnabled(true)
     try! session.setWorkCommitmentsEnabled(true)
@@ -628,4 +702,181 @@ func runPebbleAgentsWorkProfessionSmoke() {
           profileRestored.professionProfiles() == reconversion.professionProfiles()
             && profileRestored.workCommitmentSnapshot().digest
                 == reconversion.workCommitmentSnapshot().digest)
+}
+
+func runPebbleAgentsTerminalCohortWorkSmoke() {
+    let survival = try! AgentSurvivalConfiguration(
+        hungerPerTick: 1,
+        fatiguePerTick: AgentSurvivalConfiguration.live.fatiguePerTick,
+        hungryThreshold: AgentSurvivalConfiguration.live.hungryThreshold,
+        criticalHungerThreshold:
+            AgentSurvivalConfiguration.live.criticalHungerThreshold,
+        hungerRecoveryThreshold:
+            AgentSurvivalConfiguration.live.hungerRecoveryThreshold,
+        fatigueThreshold: AgentSurvivalConfiguration.live.fatigueThreshold,
+        fatigueRecoveryThreshold:
+            AgentSurvivalConfiguration.live.fatigueRecoveryThreshold,
+        foodNutrition: AgentSurvivalConfiguration.live.foodNutrition,
+        restRecoveryPerTick:
+            AgentSurvivalConfiguration.live.restRecoveryPerTick,
+        starvationGraceTicks: 0,
+        starvationDamagePerTick: 100
+    )
+    let terminalWorker = AgentID(rawValue: "agent_0")!
+    let survivingDemandOwner = AgentID(rawValue: "agent_1")!
+    var session = workWildSession(
+        "ps01-terminal-work-commitments",
+        survivalConfiguration: survival,
+        hungerByAgentID: [
+            terminalWorker.rawValue: 0.39,
+            "agent_1": -10,
+            "agent_2": -10,
+        ]
+    )
+    let strategies: [AgentSubsistenceStrategy] = [
+        .fishing,
+        .hunting,
+        .wildGathering,
+    ]
+    for (ordinal, strategy) in strategies.enumerated() {
+        _ = try! session.recordEcologicalObservation(
+            workWildObservation(
+                session,
+                actor: survivingDemandOwner,
+                strategy: strategy
+            )
+        )
+        let opportunity = try! session.selectWildSubsistenceOpportunity(
+            AgentSubsistenceDecisionContext(
+                actorID: survivingDemandOwner,
+                fishingRodAvailable: strategy == .fishing,
+                huntingWeaponAvailable: strategy == .hunting,
+                agricultureAvailable: false,
+                subsistencePressure: 90
+            )
+        )
+        _ = try! session.applyWorkCommitmentOperation(.refreshDemands)
+        let demand = session.activeWorkDemands().first {
+            $0.source == .wildSubsistence
+                && $0.sourceKey == opportunity.opportunityID.rawValue
+        }!
+        _ = try! session.applyWorkCommitmentOperation(.start(
+            demandID: demand.demandID,
+            candidates: [AgentWorkCandidateContext(
+                agentID: terminalWorker,
+                toolsAvailable: true,
+                resourcesAvailable: true,
+                distance: 1
+            )]
+        ))
+        // The selected opportunity is only a real demand source for this
+        // work fixture. Close that source explicitly while leaving the
+        // separately owned durable commitment open for the mortality attack.
+        _ = try! session.recordWildSubsistenceOutcome(
+            AgentSubsistenceOutcome(
+                attemptID: AgentSubsistenceAttemptID(
+                    rawValue: "wild-attempt-terminal-work-\(ordinal)"
+                )!,
+                opportunityID: opportunity.opportunityID,
+                actorID: survivingDemandOwner,
+                strategy: opportunity.strategy,
+                targetKey: opportunity.targetKey,
+                targetPosition: opportunity.lastObservedPosition,
+                sourceObservationEventID:
+                    opportunity.sourceObservationEventID,
+                status: .failed,
+                completedAtTick: session.tick
+            )
+        )
+    }
+    _ = try! session.applyWorkCommitmentOperation(.refreshDemands)
+    check("terminal worker holds the real per-agent commitment maximum",
+          session.activeWorkCommitments(for: terminalWorker).count
+            == session.workCommitmentSnapshot().configuration?
+                .maximumConcurrentCommitmentsPerAgent)
+
+    session.setSurvivalEnabled(true)
+    try! session.setMortalityEnabled(
+        true,
+        configuration: .embodiedPopulationBounded(
+            maximumActivePopulation: 8
+        )
+    )
+    let result = try! session.advanceTick()
+    let pending = session.pendingMortalityTransitions()
+    check("multi-commitment worker enters terminal barrier before new work",
+          result.agents.isEmpty
+            && pending.map(\.agentID) == [terminalWorker]
+            && session.activeWorkCommitments(for: terminalWorker).count == 3)
+    let transition = pending[0]
+    _ = try! session.applyMortalityPhysicalCustodyOutcome(
+        AgentMortalityPhysicalCustodyOutcome(
+            operationID: "ps01-work-empty-" + terminalWorker.rawValue,
+            terminalAgentID: terminalWorker,
+            kind: .verifiedEmpty,
+            physicalReceiptID: "ps01-work-empty-receipt",
+            destinationHolderID: nil,
+            stackCount: 0,
+            itemCount: 0,
+            verifiedAtTick: session.tick
+        )
+    )
+    _ = try! session.finalizePendingMortality(for: terminalWorker)
+    let work = session.workCommitmentSnapshot()
+    let ended = work.commitments.filter {
+        $0.workerID == terminalWorker && $0.status == .ended
+    }
+    check("all terminal work commitments close once with causal evidence",
+          ended.count == 3
+            && ended.allSatisfy {
+                $0.terminalTick == transition.detectedAtTick
+                    && $0.terminalEventID != nil
+            }
+            && session.activeWorkCommitments(for: terminalWorker).isEmpty
+            && session.causalLedgerSnapshot().events.filter {
+                $0.kind == .workCommitmentEnded
+                    && $0.actorID == terminalWorker
+                    && $0.summary.contains("reason=workerDied")
+            }.count == 3
+            && session.mortalitySnapshot().totalDeathCount == 1)
+    let restored = try! AgentSimulationSession.restoring(
+        session.makeCheckpoint()
+    )
+    check("terminal work cleanup restores without commitment resurrection",
+          restored.activeWorkCommitments(for: terminalWorker).isEmpty
+            && restored.workCommitmentSnapshot().commitments.filter {
+                $0.workerID == terminalWorker && $0.status == .ended
+            }.count == 3
+            && restored.mortalitySnapshot().totalDeathCount == 1)
+
+    let terminalCheckpoint = try! session.makeCheckpoint()
+    let reopenedDeadCommitment = workResignedCheckpoint(
+        terminalCheckpoint
+    ) { durable in
+        var work = durable["workCommitmentState"] as! [String: Any]
+        var commitments = work["commitments"] as! [[String: Any]]
+        let index = commitments.firstIndex {
+            $0["workerID"] as? String == terminalWorker.rawValue
+        }!
+        commitments[index]["status"] = "active"
+        work["commitments"] = commitments
+        durable["workCommitmentState"] = work
+    }
+    check("active commitment to deceased worker is refused",
+          workRestoreRefused(reopenedDeadCommitment))
+
+    let provenanceFreeEndedCommitment = workResignedCheckpoint(
+        terminalCheckpoint
+    ) { durable in
+        var work = durable["workCommitmentState"] as! [String: Any]
+        var commitments = work["commitments"] as! [[String: Any]]
+        let index = commitments.firstIndex {
+            $0["workerID"] as? String == terminalWorker.rawValue
+        }!
+        commitments[index].removeValue(forKey: "terminalEventID")
+        work["commitments"] = commitments
+        durable["workCommitmentState"] = work
+    }
+    check("ended dead-worker commitment without terminal provenance is refused",
+          workRestoreRefused(provenanceFreeEndedCommitment))
 }

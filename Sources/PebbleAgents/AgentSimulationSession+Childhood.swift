@@ -381,23 +381,10 @@ extension AgentSimulationSession {
         care: inout AgentDependentCareState
     ) throws {
         guard var childhood = care.childhoodV2 else { return }
-        resetChildhoodTransitionCounter(&childhood, at: boundaryTick)
+        try closeLifecycleInvalidatedGuardianships(
+            at: boundaryTick, care: &care, childhood: &childhood
+        )
         let dependentSet = Set(dependentLifecycleIDsForChildhood())
-        for index in childhood.guardianships.indices.filter({
-            childhood.guardianships[$0].status == .active
-                && !dependentSet.contains(childhood.guardianships[$0].dependentID)
-        }).sorted(by: {
-            childhood.guardianships[$0].dependentID
-                < childhood.guardianships[$1].dependentID
-        }) {
-            let dependentID = childhood.guardianships[index].dependentID
-            let alive = statesById[dependentID.rawValue] != nil
-            try endGuardianship(
-                at: index, reason: alive ? .dependentMatured : .dependentDied,
-                causeEventID: childhood.lastEventID, at: boundaryTick,
-                care: &care, childhood: &childhood
-            )
-        }
         for dependentID in dependentSet.sorted() {
             if let index = childhood.guardianships.firstIndex(where: {
                 $0.dependentID == dependentID && $0.status == .active
@@ -486,6 +473,52 @@ extension AgentSimulationSession {
                 )
             }
         }
+        finalizeChildhoodTickState(&childhood, at: boundaryTick)
+        care.childhoodV2 = childhood
+    }
+
+    /// Completes only lifecycle-invalidated historical guardianship state.
+    /// It never selects a replacement guardian or creates a new obligation.
+    mutating func applyChildhoodV2PassiveLifecycleBoundary(
+        at boundaryTick: Int,
+        care: inout AgentDependentCareState
+    ) throws {
+        guard var childhood = care.childhoodV2 else { return }
+        try closeLifecycleInvalidatedGuardianships(
+            at: boundaryTick, care: &care, childhood: &childhood
+        )
+        finalizeChildhoodTickState(&childhood, at: boundaryTick)
+        care.childhoodV2 = childhood
+    }
+
+    private mutating func closeLifecycleInvalidatedGuardianships(
+        at boundaryTick: Int,
+        care: inout AgentDependentCareState,
+        childhood: inout AgentChildhoodState
+    ) throws {
+        resetChildhoodTransitionCounter(&childhood, at: boundaryTick)
+        let dependentSet = Set(dependentLifecycleIDsForChildhood())
+        for index in childhood.guardianships.indices.filter({
+            childhood.guardianships[$0].status == .active
+                && !dependentSet.contains(childhood.guardianships[$0].dependentID)
+        }).sorted(by: {
+            childhood.guardianships[$0].dependentID
+                < childhood.guardianships[$1].dependentID
+        }) {
+            let dependentID = childhood.guardianships[index].dependentID
+            let alive = statesById[dependentID.rawValue] != nil
+            try endGuardianship(
+                at: index, reason: alive ? .dependentMatured : .dependentDied,
+                causeEventID: childhood.lastEventID, at: boundaryTick,
+                care: &care, childhood: &childhood
+            )
+        }
+    }
+
+    private func finalizeChildhoodTickState(
+        _ childhood: inout AgentChildhoodState,
+        at boundaryTick: Int
+    ) {
         childhood.guardianships.sort(by: guardianshipSort)
         childhood.socialProfiles.sort { $0.agentID < $1.agentID }
         childhood.exposures.sort(by: socialExposureSort)
@@ -493,7 +526,6 @@ extension AgentSimulationSession {
             "\(childhood.rollingDigest)|tick|\(boundaryTick)|"
                 + "\(childhood.guardianships.count)|\(childhood.exposures.count)"
         )
-        care.childhoodV2 = childhood
     }
 
     mutating func applyChildhoodDeath(
@@ -1079,6 +1111,9 @@ extension AgentSimulationSession {
                 childhood.configuration.maximumDimensionBasisPoints
         )
         let activeAgentIDs = Set(agents.map(\.agentID))
+        let pendingTerminalIDs = Set(
+            mortality?.pendingTransitions.map(\.agentID) ?? []
+        )
         let incapacitatedIDs = Set(homeostasis?.profiles.compactMap {
             $0.vitalStatus == .incapacitated || $0.vitalStatus == .dead
                 ? $0.agentID : nil
@@ -1186,7 +1221,10 @@ extension AgentSimulationSession {
                       activeDependents.contains(assignment.dependentID),
                       activeAgentIDs.contains(assignment.dependentID),
                       activeAgentIDs.contains(assignment.guardianID),
-                      !incapacitatedIDs.contains(assignment.guardianID),
+                      (!incapacitatedIDs.contains(assignment.guardianID)
+                        || pendingTerminalIDs.contains(
+                            assignment.guardianID
+                        )),
                       activeResidentIDs.contains(assignment.guardianID),
                       stageByID[assignment.guardianID] == .mature,
                       membershipByID[assignment.dependentID]

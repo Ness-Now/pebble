@@ -513,6 +513,9 @@ extension AgentSimulationSession {
             throw AgentSessionError.mortality(.pendingMaterialExit(agentID.rawValue))
         }
         let pending = mortality.pendingTransitions[index]
+        let terminalCohortIDs = Set(mortality.pendingTransitions.compactMap {
+            $0.detectedAtTick == pending.detectedAtTick ? $0.agentID : nil
+        })
         guard pending.unresolvedMaterialAssetIDs.isEmpty,
               pending.requiredMaterialAssetIDs
                 == pending.resolvedMaterialAssetIDs.sorted(),
@@ -531,7 +534,18 @@ extension AgentSimulationSession {
                 materialExitEventIDs: pending.materialExitEventIDs,
                 physicalCustodyResolution: pending.physicalCustodyResolution
             ),
-        ], at: pending.detectedAtTick)
+        ], at: pending.detectedAtTick, terminalCohortIDs: terminalCohortIDs)
+        if mortalityState?.pendingTransitions.contains(where: {
+            $0.detectedAtTick == pending.detectedAtTick
+        }) != true {
+            // The lethal cohort barrier deliberately prevents every member
+            // from reaching post-mortality cognition. Once its last physical
+            // exit is finalized, advance only the surviving durable genetics
+            // state to the already-committed boundary tick. Doing this before
+            // the complete cohort exits would make processing order observable
+            // and could transiently treat another terminal member as living.
+            try applyGeneticsDevelopmentBoundary(at: pending.detectedAtTick)
+        }
         guard let record = mortalityState?.records.last(where: {
             $0.agentID == agentID && $0.deathTick == pending.detectedAtTick
         }) else {
@@ -544,7 +558,8 @@ extension AgentSimulationSession {
 
     private mutating func finalizeMortalityTransitions(
         _ lethal: [AgentLethalMortalityCandidate],
-        at mortalityTick: Int
+        at mortalityTick: Int,
+        terminalCohortIDs: Set<AgentID>? = nil
     ) throws {
         guard var mortality = mortalityState, var registry = populationRegistry else {
             throw AgentSessionError.mortality(.disabled)
@@ -581,8 +596,13 @@ extension AgentSimulationSession {
                 + communicationTransportEventCount
         )
         let preDeathIDs = Set(statesById.values.map(\.agentID))
+        let authoritativeTerminalCohort = terminalCohortIDs
+            ?? Set(lethal.map(\.agentID))
         guard lethal.map(\.agentID) == lethal.map(\.agentID).sorted(),
-              Set(lethal.map(\.agentID)).count == lethal.count else {
+              Set(lethal.map(\.agentID)).count == lethal.count,
+              Set(lethal.map(\.agentID)).isSubset(
+                  of: authoritativeTerminalCohort
+              ) else {
             throw AgentSessionError.mortality(.invalidState("lethal order"))
         }
         var prevalidatedDeathIDs: [AgentID: AgentDeathID] = [:]
@@ -793,7 +813,7 @@ extension AgentSimulationSession {
             try endWorkCommitmentsForTerminalAgent(item.agentID)
             let careEventID = try applyDependentCareDeath(
                 agentID: item.agentID,
-                lethalAgentIDs: Set(lethal.map(\.agentID)),
+                lethalAgentIDs: authoritativeTerminalCohort,
                 causeEventID: lethalEvent.eventID,
                 at: mortalityTick
             )
@@ -807,14 +827,14 @@ extension AgentSimulationSession {
                     ))
                 }
                 try applyEstateAdministratorDeaths(
-                    Set(lethal.map(\.agentID)),
+                    authoritativeTerminalCohort,
                     causeEventID: lethalEvent.eventID,
                     at: mortalityTick
                 )
                 guard let estateOpening = try openEstateForMortality(
                     decedentID: item.agentID,
                     deathID: deathID,
-                    lethalAgentIDs: Set(lethal.map(\.agentID)),
+                    lethalAgentIDs: authoritativeTerminalCohort,
                     mortality: mortality,
                     physicalCustodyResolution: physicalCustodyResolution,
                     causeEventID: lethalEvent.eventID,

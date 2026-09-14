@@ -848,8 +848,15 @@ extension AgentSimulationSession {
             try commitLongDistanceCommunicationProvenanceBoundary(
                 causes: causes
             )
+            guard let boundary = longDistanceCommunicationState?
+                    .provenanceBoundary?.eventID else {
+                throw AgentSessionError.longDistanceCommunication(
+                    .invalidState("mortality provenance boundary")
+                )
+            }
+            return [boundary]
         }
-        return causes
+        return []
     }
 
     func retainedLongDistanceCommunicationOralTransmissionIDs()

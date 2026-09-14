@@ -85,12 +85,19 @@ extension PebbleAgentController {
                 guard !candidate.mortalityEnabled else {
                     return failure("Mortality is already enabled.")
                 }
+                let mortalityConfiguration = try AgentMortalityConfiguration
+                    .embodiedPopulationBounded(
+                        maximumActivePopulation:
+                            candidate.populationSummary().capacity
+                    )
                 if try applyCommandMutationIfRecording(
-                    .setMortalityEnabled(true, configuration: .embodiedLive),
+                    .setMortalityEnabled(
+                        true, configuration: mortalityConfiguration
+                    ),
                     session: &candidate
                 ) == nil {
                     try candidate.setMortalityEnabled(
-                        true, configuration: .embodiedLive
+                        true, configuration: mortalityConfiguration
                     )
                 }
                 session = candidate
@@ -101,8 +108,8 @@ extension PebbleAgentController {
                 )
                 return success(
                     "Mortality enabled: active=\(summary.activeAgentCount) "
-                        + "maximumDeathsPerTick=\(AgentMortalityConfiguration.embodiedLive.maximumDeathsPerTick) "
-                        + "records=\(AgentMortalityConfiguration.embodiedLive.maximumRetainedDeathRecords) "
+                        + "maximumDeathsPerTick=\(mortalityConfiguration.maximumDeathsPerTick) "
+                        + "records=\(mortalityConfiguration.maximumRetainedDeathRecords) "
                         + "physicalCustodyVerification=required."
                 )
             case "off":
@@ -495,9 +502,10 @@ extension PebbleAgentController {
                 let sourceCustody = try materialCustodyGateway.inspect(source)
                 let allCarried = sourceCustody.slots.compactMap { $0 }
                 let probeInventoryBefore = copyItemInventory(probe.carriedItems)
-                guard allCarried.count <= AgentMortalityConfiguration
-                        .embodiedLive
-                        .maximumMaterialExitsPerDeath else {
+                guard let mortalityConfiguration = session.mortalitySnapshot()
+                        .configuration,
+                      allCarried.count
+                        <= mortalityConfiguration.maximumMaterialExitsPerDeath else {
                     throw ControllerError.mortalityBoundary(
                         "terminal carried material bound"
                     )

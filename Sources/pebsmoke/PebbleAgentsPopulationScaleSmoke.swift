@@ -115,6 +115,7 @@ private func civ39Session(
         = civ39ScaleConfiguration(),
     economicAsset: Bool = false,
     lethalAgentID: String? = nil,
+    lethalAgentIDs: Set<String> = [],
     progressionMortalityAgentID: String? = nil
 ) -> AgentSimulationSession {
     precondition((3...128).contains(population))
@@ -127,19 +128,22 @@ private func civ39Session(
         agents: [
             civ39Agent(
                 "agent_0", ordinal: 0,
-                lethalNextTick: lethalAgentID == "agent_0",
+                lethalNextTick: lethalAgentID == "agent_0"
+                    || lethalAgentIDs.contains("agent_0"),
                 mortalityAfterProgression:
                     progressionMortalityAgentID == "agent_0"
             ),
             civ39Agent(
                 "agent_1", ordinal: 1,
-                lethalNextTick: lethalAgentID == "agent_1",
+                lethalNextTick: lethalAgentID == "agent_1"
+                    || lethalAgentIDs.contains("agent_1"),
                 mortalityAfterProgression:
                     progressionMortalityAgentID == "agent_1"
             ),
             civ39Agent(
                 "agent_2", ordinal: 2,
-                lethalNextTick: lethalAgentID == "agent_2",
+                lethalNextTick: lethalAgentID == "agent_2"
+                    || lethalAgentIDs.contains("agent_2"),
                 mortalityAfterProgression:
                     progressionMortalityAgentID == "agent_2"
             ),
@@ -161,7 +165,10 @@ private func civ39Session(
             state: civ39Agent(
                 String(format: "agent_%03d", ordinal), ordinal: ordinal,
                 lethalNextTick: lethalAgentID
-                    == String(format: "agent_%03d", ordinal),
+                    == String(format: "agent_%03d", ordinal)
+                    || lethalAgentIDs.contains(
+                        String(format: "agent_%03d", ordinal)
+                    ),
                 mortalityAfterProgression: progressionMortalityAgentID
                     == String(format: "agent_%03d", ordinal)
             ),
@@ -964,4 +971,82 @@ func runPebbleAgentsPopulationScaleSmoke() {
     check("CIV-39 feature-off bytes omit scale fields",
           !String(data: oldBytes, encoding: .utf8)!
             .contains("scaleState"))
+}
+
+func runPebbleAgentsTerminalCohortMigrationSmoke() {
+    let terminalIDs = Set(["agent_0", "agent_1"])
+    var session = civ39Session(
+        id: "ps01-terminal-active-migration",
+        lethalAgentIDs: terminalIDs
+    )
+    let migration = try! session.beginSettlementMigration(
+        agentID: AgentID(rawValue: "agent_0")!,
+        destinationSettlementID: civ39EastID,
+        verifiedRoute: civ39MigrationRoute
+    )
+    try! session.setLifecycleEnabled(true)
+    session.setSurvivalEnabled(true)
+    try! session.setMortalityEnabled(
+        true,
+        configuration: .embodiedPopulationBounded(
+            maximumActivePopulation: 24
+        )
+    )
+    let result = try! session.advanceTick()
+    let pending = session.pendingMortalityTransitions()
+    check("active migrant participates in one terminal cohort",
+          result.agents.isEmpty && pending.count == 2
+            && Set(pending.map { $0.agentID.rawValue }) == terminalIDs
+            && Set(pending.map(\.detectedAtTick)).count == 1)
+    for transition in pending {
+        _ = try! session.applyMortalityPhysicalCustodyOutcome(
+            AgentMortalityPhysicalCustodyOutcome(
+                operationID: "ps01-migration-empty-"
+                    + transition.agentID.rawValue,
+                terminalAgentID: transition.agentID,
+                kind: .verifiedEmpty,
+                physicalReceiptID: "ps01-migration-empty-receipt-"
+                    + transition.agentID.rawValue,
+                destinationHolderID: nil,
+                stackCount: 0,
+                itemCount: 0,
+                verifiedAtTick: session.tick
+            )
+        )
+    }
+    for transition in pending {
+        _ = try! session.finalizePendingMortality(for: transition.agentID)
+    }
+    let scale = session.populationScaleSnapshot()
+    let terminalMigration = scale.settlementMigrations.filter {
+        $0.migrationID == migration.migrationID
+    }
+    check("terminal cohort migration fails once and loses all current authority",
+          terminalMigration.count == 1
+            && terminalMigration[0].status == .failed
+            && terminalMigration[0].failure == .memberDied
+            && session.causalLedgerSnapshot().events.filter {
+                $0.kind == .settlementMigrationFailed
+                    && $0.actorID?.rawValue == "agent_0"
+            }.count == 1
+            && session.populationSnapshot().settlements.allSatisfy {
+                $0.residentIDs.allSatisfy {
+                    !terminalIDs.contains($0.rawValue)
+                } && $0.inTransitIDs.allSatisfy {
+                    !terminalIDs.contains($0.rawValue)
+                }
+            }
+            && scale.fidelityRecords.allSatisfy {
+                !terminalIDs.contains($0.agentID.rawValue)
+            }
+            && session.populationSummary().memberCount == 22)
+    let restored = try! AgentSimulationSession.restoring(
+        session.makeCheckpoint()
+    )
+    check("terminal cohort migration restore stays failed without resurrection",
+          restored.populationScaleSnapshot().settlementMigrations.filter {
+              $0.migrationID == migration.migrationID
+          }.first?.status == .failed
+            && restored.mortalitySnapshot().totalDeathCount == 2
+            && restored.populationSummary().memberCount == 22)
 }

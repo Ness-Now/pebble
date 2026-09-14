@@ -32,7 +32,7 @@ reject_trace() {
 if [ "${1:-}" = "--dry-run" ]; then
     printf 'CIV-29 rendered homeostasis proof (dry run)\n'
     printf '  World: %s seed=%s\n' "$WORLD_NAME" "$WORLD_SEED"
-    printf '  Process 1: tracked asset plus untracked inventory, late rollback, retry, causal death, v21 post-death save.\n'
+    printf '  Process 1: tracked asset plus untracked inventory, late rollback, retry, causal death, v22 post-death save.\n'
     printf '  Process 2: real restore/reconcile, same physical items, no invented social record, Observer capture, cleanup.\n'
     printf '  Product tests are not run by this script.\n'
     exit 0
@@ -89,6 +89,7 @@ run_app() {
         PEBBLELAB_APP_AGENTS_MORTALITY=1 \
         PEBBLELAB_APP_AGENTS_LIFECYCLE=1 \
         PEBBLELAB_APP_AGENTS_HOMEOSTASIS=1 \
+        PEBBLELAB_APP_AGENTS_GENETICS=1 \
         PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
         PEBBLE_CMD="$commands" \
         PEBBLE_SHOT="$shots" \
@@ -110,6 +111,7 @@ run_app() {
         PEBBLELAB_APP_AGENTS_MORTALITY=1 \
         PEBBLELAB_APP_AGENTS_LIFECYCLE=1 \
         PEBBLELAB_APP_AGENTS_HOMEOSTASIS=1 \
+        PEBBLELAB_APP_AGENTS_GENETICS=1 \
         PEBBLELAB_DISPOSABLE_WORLD_PROOF=1 \
         PEBBLE_CMD="$commands" \
         PEBBLE_SHOT="$shots" \
@@ -120,7 +122,7 @@ run_app() {
     fi
 }
 
-PHASE1_COMMANDS='/gamerule randomTickSpeed 0;/gamerule doMobSpawning false;/gamerule doDaylightCycle false;/gamerule doWeatherCycle false;/time set 1000;/weather clear;/tp 14 68 -18|/lab start;/lab pause;/lab movement off;/lab follow off;/lab overlay off;/lab persistence-reconciliation setup;/lab survival on;/lab population on;/lab mortality on;/lab lifecycle on;/lab physical-food-survival on;/lab homeostasis on;/lab homeostasis proof setup;/lab homeostasis proof advance 22;/lab homeostasis status;/lab checkpoint save civ29-predeath|/lab observer open;/lab observer select agent_2;/lab observer status;/tp 18 71 -14 135 24|/lab homeostasis proof rollback;/lab homeostasis proof advance 1;/lab homeostasis status;/lab observer global;/lab observer status;/tp 18 71 -14 135 24|/lab checkpoint save civ29-postdeath;/tp 14 68 -18;/lab status'
+PHASE1_COMMANDS='/gamerule randomTickSpeed 0;/gamerule doMobSpawning false;/gamerule doDaylightCycle false;/gamerule doWeatherCycle false;/time set 1000;/weather clear;/tp 14 68 -18|/lab start;/lab pause;/lab movement off;/lab follow off;/lab overlay off;/lab persistence-reconciliation setup;/lab survival on;/lab population on;/lab mortality on;/lab lifecycle on;/lab physical-food-survival on;/lab homeostasis on;/lab genetics on;/lab homeostasis proof setup;/lab homeostasis proof advance 22;/lab homeostasis status;/lab checkpoint save civ29-predeath|/lab observer open;/lab observer select agent_2;/lab observer status;/tp 18 71 -14 135 24|/lab homeostasis proof rollback;/lab homeostasis proof advance 1;/lab homeostasis status;/lab observer global;/lab observer status;/tp 18 71 -14 135 24|/lab checkpoint save civ29-postdeath;/tp 14 68 -18;/lab status'
 PHASE2_COMMANDS='/lab start;/lab pause;/lab movement off;/lab follow off;/lab overlay off;/lab checkpoint load civ29-postdeath;/lab persistence-reconciliation status;/lab homeostasis status;/lab observer open;/lab observer global;/lab observer status;/tp 18 71 -14 135 24|/lab homeostasis proof advance 2;/lab homeostasis status;/lab observer select agent_0;/lab observer status|/lab homeostasis proof cleanup;/lab observer close;/lab persistence-reconciliation cleanup;/lab checkpoint delete civ29-predeath;/lab checkpoint delete civ29-postdeath;/lab status'
 
 printf '\nCIV-29 phase 1: agent-held asset, deprivation, rollback, verified material exit, and death.\n'
@@ -134,14 +136,14 @@ require_trace "$PHASE1_TRACE" \
     'homeostasis proof advance ticks=22 tick=0>22 .*deprivedAgent=agent_2 vital=incapacitated condition=incapacitated health=[1-9][0-9]* .*deaths=0>0 claimPreserved=1 holder=agent:agent_2 custodian=agent_1 owner=agent_0 claims=agent_0,agent_2 permissions=agent_1 untrackedItem=cobblestone:3 activeAgents=3 probes=3 runtimeErrors=0' \
     'real food/recovery, causal incapacity, and physical/social divergence'
 require_trace "$PHASE1_TRACE" \
-    'observer status open=1 view=individual selected=agent_2 schema=2 .*reason=blocked:physiologicalIncapacity .*vital=incapacitated .*healthCondition=incapacitated .*deaths=0 .*mutation=none tickStable=1 causalStable=1 digestStable=1' \
+    'observer status open=1 view=individual selected=agent_2 schema=3 .*reason=blocked:physiologicalIncapacity .*vital=incapacitated .*healthCondition=incapacitated .*deaths=0 .*mutation=none tickStable=1 causalStable=1 digestStable=1' \
     'rendered authoritative incapacity and read-only Observer'
 require_trace "$PHASE1_TRACE" \
     'checkpoint saved name=civ29-predeath .*tick=22 .*restartSafe=1 .*physicalReferences=1 .*mutation=none' \
-    'restart-safe schema 21 pre-death checkpoint boundary'
+    'restart-safe schema 22 pre-death checkpoint boundary'
 require_trace "$PHASE1_TRACE" \
-    'homeostasis mortality-boundary rollback terminalEvent=.* pendingEvent=.* asset=asset:civ27:live-pickaxe holder=agent:agent_2 quantity=4 afterTransfer=verified afterProbeRemoval=verified beforePublication=verified session=unchanged replay=unchanged probes=unchanged inventories=unchanged deathFinalized=0 noContainer=verified retryable=1 runtimeErrors=0 rightsOffUntracked=transferred:3 rightsOnUnregistered=transferred:2 socialRecordsInvented=0 emptyCustody=verified noContainer=retryable batchSecondFailure=rolledBack batchRetryDeaths=2 duplications=0 loss=0' \
-    'late failures, unavailable destination, rights-off custody, empty custody, and two-death batch rollback are exact'
+    'homeostasis mortality-boundary rollback terminalEvent=.* pendingEvent=.* asset=asset:civ27:live-pickaxe holder=agent:agent_2 quantity=4 afterTransfer=verified afterProbeRemoval=verified beforePublication=verified session=unchanged replay=unchanged probes=unchanged inventories=unchanged deathFinalized=0 noContainer=verified retryable=1 runtimeErrors=0 rightsOffUntracked=transferred:3 rightsOnUnregistered=transferred:2 socialRecordsInvented=0 emptyCustody=verified noContainer=retryable batchSecondFailure=rolledBack batchRetryDeaths=2 staleSource=refused fullDestination=retryable massCustodyCohort=9 massTrackedAssets=1 massUntrackedItems=9 massEmptyCustody=6 massAfterFour=rolledBack massAfterProbeRemoval=rolledBack massRetryDeaths=9 massReceipts=9 duplications=0 loss=0' \
+    'late failures, stale/full destinations, and mixed-custody nine-death rollback/retry are exact'
 require_trace "$PHASE1_TRACE" \
     'mortality physical custody tick=23 agent=agent_2 kind=transferred trackedAssets=asset:civ27:live-pickaxe physicalStacks=.*cobblestone:3.*iron_pickaxe:1.*receipt=.* destination=container:.* probeEmpty=1 socialRecordsInvented=0' \
     'all real carried stacks transfer while only the registered asset is projected socially'
@@ -155,7 +157,7 @@ require_trace "$PHASE1_TRACE" \
     'mortality exit tick=23 .*agent=agent_2 cause=compoundedHomeostaticFailure .*population=3>2 .*probes=3>2 .*corpse=none worldMutation=none' \
     'death finalized once only after the verified physical exit'
 require_trace "$PHASE1_TRACE" \
-    'observer status open=1 view=global .*schema=2 .*deaths=1 .*mutation=none tickStable=1 causalStable=1 digestStable=1' \
+    'observer status open=1 view=global .*schema=3 .*deaths=1 .*mutation=none tickStable=1 causalStable=1 digestStable=1' \
     'rendered causal mortality Chronicle after material resolution'
 require_trace "$PHASE1_TRACE" \
     'checkpoint saved name=civ29-postdeath .*tick=23 .*restartSafe=1 .*physicalReferences=1 .*mutation=none' \
@@ -171,9 +173,9 @@ DB_PATH="$SESSION_HOME/Library/Application Support/Pebble/pebble.db"
 PERSISTENCE_ROOT="$SESSION_HOME/Library/Application Support/Pebble/PebbleLabAgents"
 MANIFEST=$(/usr/bin/find "$PERSISTENCE_ROOT" -type f \
     -path '*/checkpoints/civ29-postdeath/manifest.json' -print -quit)
-[ -n "$MANIFEST" ] || fail "schema 21 checkpoint manifest missing"
-/usr/bin/grep -q '"schemaVersion":21' "$MANIFEST" \
-    || fail "checkpoint manifest is not schema 21"
+[ -n "$MANIFEST" ] || fail "schema 22 checkpoint manifest missing"
+/usr/bin/grep -q '"schemaVersion":22' "$MANIFEST" \
+    || fail "checkpoint manifest is not schema 22"
 
 PHASE1_SIM=$(/usr/bin/sed -n \
     's/.*checkpoint saved name=civ29-postdeath .* simulation=\([^ ]*\) digest=.*/\1/p' \
@@ -189,13 +191,13 @@ run_app "$PHASE2_TRACE" "$PHASE2_COMMANDS" \
     "$RESTORED_CAPTURE|-|-" 0
 
 require_trace "$PHASE2_TRACE" \
-    "checkpoint loaded name=civ29-postdeath .*tick=23 simulation=$PHASE1_SIM digest=$PHASE1_DIGEST .*restartSafe=1 probes=2 paused=1 .*physicalReconciliation=applied:matched worldMutation=none" \
-    'same schema 21 post-death state restored and physically reconciled in a new process'
+    "checkpoint loaded name=civ29-postdeath .*tick=23 simulation=$PHASE1_SIM digest=$PHASE1_DIGEST .*restartSafe=1 .*probes=2 paused=1 .*physicalReconciliation=applied:matched .*worldMutation=none" \
+    'same schema 22 post-death state restored and physically reconciled in a new process'
 require_trace "$PHASE2_TRACE" \
     'homeostasis status enabled=1 schema=21 tick=23 .*deaths=1 latestDeath=agent_2 deathCause=compoundedHomeostaticFailure terminalClaim=1 asset=asset:civ27:live-pickaxe holder=container:.* quantity=1 custodian=agent_1 owner=agent_0 claims=agent_0,agent_2 permissions=agent_1 untrackedItem=cobblestone:3 physicalItemTotal=4 probes=2 .*runtimeErrors=0 worldMutation=none' \
     'same tracked and untracked physical items with unchanged social rights after real restart'
 require_trace "$PHASE2_TRACE" \
-    'observer status open=1 view=global .*schema=2 .*deaths=1 .*mutation=none tickStable=1 causalStable=1 digestStable=1' \
+    'observer status open=1 view=global .*schema=3 .*deaths=1 .*mutation=none tickStable=1 causalStable=1 digestStable=1' \
     'persisted causal death chain remains inspectable and read-only after restart'
 require_trace "$PHASE2_TRACE" \
     'homeostasis proof advance ticks=2 tick=23>25 .*deaths=1>1 claimPreserved=1 .*activeAgents=2 probes=2 runtimeErrors=0' \
@@ -264,7 +266,7 @@ fi
     printf 'cleanup=exact\n'
 } > "$EVIDENCE_ROOT/civ29-homeostasis-trace.txt"
 
-printf '\nPASS: terminal causality, tracked and untracked physical conservation, full-boundary rollback, retry, schema 21 restart, read-only Observer, zero duplication/loss, and cleanup verified.\n'
+printf '\nPASS: terminal causality, tracked and untracked physical conservation, full-boundary rollback, retry, schema 22 restart, read-only Observer, zero duplication/loss, and cleanup verified.\n'
 printf 'Evidence: %s\n' "$EVIDENCE_ROOT"
 printf 'Agent-held before-death capture: %s\n' "$BEFORE_CAPTURE"
 printf 'Material-exit after-death capture: %s\n' "$AFTER_DEATH_CAPTURE"

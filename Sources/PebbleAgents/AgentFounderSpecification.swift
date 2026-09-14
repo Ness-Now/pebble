@@ -148,7 +148,13 @@ extension AgentSimulationSession {
             try injectedFailure(.family)
         }
         if mortality {
-            try candidate.setMortalityEnabled(true, configuration: .embodiedLive)
+            try candidate.setMortalityEnabled(
+                true,
+                configuration: try .embodiedPopulationBounded(
+                    maximumActivePopulation:
+                        populationConfiguration.maximumActivePopulation
+                )
+            )
             try injectedFailure(.mortality)
         }
         if homeostasis {

@@ -161,21 +161,57 @@ extension PebbleAgentController {
             trace(message)
             return success(message)
         }
-        guard let snapshot = observerSnapshot(world: world),
-              let selected = selectedObserverIndividual(snapshot) else {
+        guard let snapshot = observerSnapshot(world: world) else {
             return failure("Observer could not produce its authoritative projection.")
         }
-        let asset = selected.materialAssets.first
-        let physiology = selected.physiology
-        let genetics = selected.genetics
-        let childhood = selected.childhood
-        let family = selected.family
         let view: String
         switch observerUIState.view {
         case .individual: view = "individual"
         case .globalChronicle: view = "global"
         case let .causalEvent(id): view = "event:\(id.sequence.rawValue)"
         }
+        guard let selected = selectedObserverIndividual(snapshot) else {
+            guard snapshot.individuals.isEmpty else {
+                return failure(
+                    "Observer could not select an individual from its authoritative projection."
+                )
+            }
+            observerUIState.selectedAgentID = nil
+            let latestDeath = snapshot.recentDeaths.first
+            let message = [
+                "observer status",
+                "open=\(observerUIState.isOpen ? 1 : 0)",
+                "view=\(view)",
+                "selected=none",
+                "schema=\(snapshot.header.schemaVersion)",
+                "world=\(snapshot.header.worldBinding.worldID)",
+                "storage=\(snapshot.header.worldBinding.storageIdentity)",
+                "simulation=\(snapshot.header.sessionIdentity.rawValue)",
+                "tick=\(snapshot.header.asOfTick)",
+                "sequence=\(snapshot.header.causalSequence)",
+                "generation=\(snapshot.header.snapshotGeneration)",
+                "activity=none",
+                "reason=terminal:extinction",
+                "reasonEvent=\(latestDeath?.deathEventID.sequence.rawValue ?? 0)",
+                "vital=extinct",
+                "population=0",
+                "deaths=\(snapshot.recentDeaths.count)",
+                "deathsOmitted=\(snapshot.truncation.deathsOmitted)",
+                "extinction=1",
+                "truncated=\(snapshot.truncation.isTruncated ? 1 : 0)",
+                "mutation=none",
+                "tickStable=1",
+                "causalStable=1",
+                "digestStable=1",
+            ].joined(separator: " ")
+            trace(message)
+            return success(message)
+        }
+        let asset = selected.materialAssets.first
+        let physiology = selected.physiology
+        let genetics = selected.genetics
+        let childhood = selected.childhood
+        let family = selected.family
         let reasonEventText = selected.activity.reason.causalSequence
             .map(String.init) ?? "none"
         let contributorText = genetics?.contributorIDs.map(\.rawValue)

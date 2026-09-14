@@ -455,6 +455,39 @@ extension PebbleAgentController {
                     physicalObservations: physicalInputs
                 )
             }
+            if session.mortalityEnabled,
+               !session.pendingMortalityTransitions().isEmpty {
+                guard result.agents.isEmpty else {
+                    throw ControllerError.mortalityBoundary(
+                        "terminal cohort produced post-boundary actions"
+                    )
+                }
+                try reconcileMortalityProbes(
+                    previous: preCognitive,
+                    current: &session,
+                    recorder: &recorder,
+                    world: world
+                )
+                if session.ecologicalObservationEnabled {
+                    try reconcileWorldEcologicalObservationReceiptRetention(
+                        for: session,
+                        transaction: &receiptTransaction
+                    )
+                    try reconcileWorldAgriculturalActionReceiptRetention(
+                        for: session,
+                        transaction: &receiptTransaction
+                    )
+                    try validateWorldEcologicalObservationReceipts(
+                        for: session,
+                        dimension: world.dim.rawValue
+                    )
+                }
+                receiptTransaction.commit()
+                self.session = session
+                replayRecorder = recorder
+                candidatePhysicalTransaction.commit()
+                return true
+            }
             try presentPhysicalSignals(
                 world: world,
                 session: &session,
