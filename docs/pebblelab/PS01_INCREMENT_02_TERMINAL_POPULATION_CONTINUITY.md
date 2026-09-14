@@ -1,11 +1,26 @@
 # PS01 Increment 02 — Terminal Population Continuity
 
-Status: **LOCAL REVIEW CANDIDATE**.
+Status: **COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE
+VERIFIED**.
 
 PLAYABLE SLICE 01 remains **REQUIRED — IN PROGRESS / NOT COMPLETE**.
-CIV-48 remains **NOT STARTED — IMPLEMENTATION NOT AUTHORIZED**. This report
-does not authorize Increment 03. The selection review's expected runner-up,
-Authoritative Time / Physical Coverage, remains informational only.
+CIV-48 remains **NOT STARTED — IMPLEMENTATION NOT AUTHORIZED**. The next
+authorized action is `REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-03`, a
+review and selection step only. It does not preselect or authorize Increment 03
+implementation. Authoritative Time / Physical Coverage remains historical
+runner-up context, not a canonical Increment 03 selection.
+
+## Published identity and review
+
+- Publication HEAD: `056c6b625d7482581028cf149329bc292948d53d`.
+- Tree: `24e92e7c8a1982a886146ba79187f2fcc8987d0f`.
+- Parent: `7f732c320bb5685bed436868367ce2fb10385953`.
+- Commit message: `feat(ps01): add terminal population continuity`.
+- Accepted review ZIP SHA-256:
+  `47a6fcdb48ede97412cfc5568171eb53086eb2cd1038351bb7580636592de92f`.
+- Independent senior review: **PASS — P0 0 / P1 0 / P2 blocking 0**.
+- Manual publication: completed.
+- Independent canonical remote verification: completed.
 
 ## Baseline and scope
 
@@ -319,7 +334,7 @@ scripts/verify-pebblelab.sh
 - Regold: **false**; `PEBBLE_REGOLD` was absent and the gate refuses it.
 - Deterministic paired scenario outputs and repository hygiene: PASS.
 
-Local candidate assessment: **P0 0 / P1 0 / P2 0 known**.
+Published senior-review classification: **P0 0 / P1 0 / P2 blocking 0**.
 
 ## Explicit nonclaims
 

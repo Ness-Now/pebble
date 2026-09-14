@@ -57,8 +57,13 @@ PROGRESS / NOT COMPLETE**. Increment 01 is **COMPLETE AND PUBLISHED — PASS —
 SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical HEAD
 `a5bded01dcfc934dc5aed6aab0990fc61ffd30c7`, tree
 `4e3081cf29ee099092e16cce7e9fbac9da0e3cbb`, with accepted review ZIP SHA-256
-`bff4786795c9f09239fe8a45e3acd2f8993eabdfb24d7e792d944ca0ea6a81b6`. The next
-authorized action is `REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-02`, which
+`bff4786795c9f09239fe8a45e3acd2f8993eabdfb24d7e792d944ca0ea6a81b6`.
+Increment 02 is **COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED —
+REMOTE VERIFIED** at canonical HEAD
+`056c6b625d7482581028cf149329bc292948d53d`, tree
+`24e92e7c8a1982a886146ba79187f2fcc8987d0f`, with accepted review ZIP SHA-256
+`47a6fcdb48ede97412cfc5568171eb53086eb2cd1038351bb7580636592de92f`. The next
+authorized action is `REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-03`, which
 authorizes review and selection only. CIV-48 remains not started,
 implementation unauthorized and deferred behind that milestone and the
 resulting evidence-driven roadmap recalibration.
@@ -198,7 +203,10 @@ next required milestone: PLAYABLE SLICE 01 — Autonomous Emergence Baseline
 PLAYABLE SLICE 01 status: REQUIRED — IN PROGRESS / NOT COMPLETE
 PLAYABLE SLICE 01 Increment 01: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 PLAYABLE SLICE 01 Increment 01 published HEAD: a5bded01dcfc934dc5aed6aab0990fc61ffd30c7
-next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-02
+PLAYABLE SLICE 01 Increment 02: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+PLAYABLE SLICE 01 Increment 02 published HEAD: 056c6b625d7482581028cf149329bc292948d53d
+PLAYABLE SLICE 01 Increment 02 published tree: 24e92e7c8a1982a886146ba79187f2fcc8987d0f
+next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-03
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
@@ -1596,7 +1604,7 @@ Evaluation 05 product correction: NO
 Evaluation 05 verdict: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 Gate E status: ACQUIRED AND PUBLISHED
 Gate E acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f76744f83
-next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-02
+next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-03
 CIV-39 status: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 Gate F status: ACQUIRED AND PUBLISHED — REMOTE VERIFIED
@@ -2145,6 +2153,25 @@ full cognition, natural World placement, no starter-resource fixture, atomic
 candidate publication and exact rollback, checkpoint/Observer composition and
 the historical three-founder path retained.
 
+Increment 02, Terminal Population Continuity, is **COMPLETE AND PUBLISHED —
+PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical HEAD
+`056c6b625d7482581028cf149329bc292948d53d`, tree
+`24e92e7c8a1982a886146ba79187f2fcc8987d0f`, from parent
+`7f732c320bb5685bed436868367ce2fb10385953`. Its accepted review ZIP SHA-256 is
+`47a6fcdb48ede97412cfc5568171eb53086eb2cd1038351bb7580636592de92f` and
+senior review found P0 0 / P1 0 / P2 blocking 0. The published terminal-cohort
+barrier is session-owned; terminal identities receive no perception, cognition
+or productive/survivor-role participation, while survivors advance only after
+the cohort finalizes. Existing lifecycle, care and estate owners perform only
+their required passive boundary completion. Pebble remains physical
+reconciliation owner, and controller publication remains atomic after complete
+custody, finalization, replay and receipt verification with rollback to the
+previous complete boundary. Natural 20-, 24- and 30-founder extinction,
+zero-population restart, read-only Observer extinction and the canonical gate
+passed without regold. Historical `.live` and `.embodiedLive` mortality
+defaults remain 8; the normal founder path derives its bound from the unchanged
+active-population configuration of 30.
+
 Canonical ordering:
 
 ```text
@@ -2245,19 +2272,15 @@ risks without treating this roadmap as an implementation specification:
 - a single automatically initiated agricultural plot;
 - incompatible domain population capacities;
 - long-run authority or history saturation;
-- restart-unsafe legacy paths;
-- mortality handling that cannot currently accept more than eight simultaneous
-  lethal transitions.
+- restart-unsafe legacy paths.
 
 Increment 01's population capacity of 30 is correct for its bounded founder
 contract but is not enough for long-run demographic characterization: 30
 founders leave zero admission or birth headroom, while 24 leave six slots.
-Capacity headroom and the greater-than-eight lethal-transition limit remain
-whole-slice integration issues; this reconciliation changes neither.
-
-The final risk is a hard PLAYABLE SLICE 01 acceptance blocker for a valid
-larger-population free run even when current behavior fails closed rather than
-corrupting state.
+Capacity headroom remains a whole-slice integration issue. Increment 02 retires
+the previous greater-than-eight simultaneous-lethal-transition blocker for the
+validated bounded normal founder sandbox through 30, but it does not establish
+arbitrary population-scale mortality or long-run demographic continuity.
 
 Explicit non-claims: this milestone does not implement CIV-48 Generic
 Organization Kernel, CIV-49 guilds, CIV-50 heraldry, CIV-51 territory or land
@@ -2275,9 +2298,10 @@ recalibration before Wave 6 begins. CIV-48 remains **NOT STARTED —
 IMPLEMENTATION NOT AUTHORIZED**. Gate H remains planned and continues to
 require CIV-48 through CIV-52 unless a future separately authorized roadmap
 review changes that contract. The next authorized action is
-`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-02`. It authorizes inspection of
-the published Increment 01 boundary and selection of the smallest next coherent
-increment; it does not authorize Increment 02 implementation or CIV-48.
+`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-03`. It authorizes inspection of
+the newly published Increment 02 boundary and selection of the smallest next
+coherent causal prerequisite; it does not preselect or authorize Increment 03
+implementation or authorize CIV-48.
 
 ## Wave 6 — Organizations, land and law
 

@@ -68,6 +68,21 @@ founders, with natural World placement, no starter-resource fixture, atomic
 publication and rollback, checkpoint/Observer composition and the historical
 three-founder path retained.
 
+Increment 02, Terminal Population Continuity, is **COMPLETE AND PUBLISHED —
+PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical HEAD
+`056c6b625d7482581028cf149329bc292948d53d`, tree
+`24e92e7c8a1982a886146ba79187f2fcc8987d0f`, from parent
+`7f732c320bb5685bed436868367ce2fb10385953`. Its accepted review ZIP SHA-256 is
+`47a6fcdb48ede97412cfc5568171eb53086eb2cd1038351bb7580636592de92f`; senior
+review found P0 0 / P1 0 / P2 blocking 0. The published session-owned
+same-tick cohort barrier excludes terminal identities from perception,
+cognition and survivor-role semantics, completes only required passive
+lifecycle/care/estate boundaries, preserves Pebble-owned physical
+reconciliation and publishes the controller transition only after complete
+custody, finalization, replay and receipt verification. Natural 20-, 24- and
+30-founder extinction campaigns, exact zero-population checkpoint/restart,
+read-only Observer extinction and the canonical gate passed without regold.
+
 The milestone must establish a normal bounded persistent sandbox path, first
 measured with approximately 24 full-cognition founders and designed for roughly
 20–30 without redesign. It must support safe Pause / Play / 1x, read-only free
@@ -79,17 +94,20 @@ acceleration remain separately characterized until complete-step equivalence
 and integrated effects are understood.
 
 The implementation/review phase may repair missing edges among already
-acquired owners, but must not add a second authority. In particular, a valid
-larger-population free run is blocked until mortality can safely accept more
-than eight simultaneous lethal transitions. Other known integration risks are
-recorded in the roadmap milestone contract. The Increment 01 population
-capacity of 30 also leaves zero admission/birth headroom at 30 founders and six
-slots at 24, so long-run demographic capacity remains a PS01 integration issue.
+acquired owners, but must not add a second authority. Increment 02 retires the
+greater-than-eight simultaneous-lethal-transition blocker for the validated
+bounded normal founder sandbox through 30. It does not validate arbitrary
+population scales or solve long-run demographic capacity. The unchanged active
+population capacity of 30 leaves zero admission/birth headroom at 30 founders
+and six slots at 24, so demographic continuity/headroom remains a PS01
+integration issue. Other known integration risks are recorded in the roadmap
+milestone contract.
 
 The next authorized action is
-`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-02`. This authorizes review of
-the published boundary and selection of the smallest next coherent increment;
-it does not authorize Increment 02 implementation. CIV-48 remains **NOT
+`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-03`. This authorizes review of
+the published Increment 02 boundary and selection of the smallest next coherent
+causal prerequisite; it does not authorize Increment 03 implementation or
+preselect its scope. CIV-48 remains **NOT
 STARTED — IMPLEMENTATION NOT AUTHORIZED** and is deferred until PLAYABLE SLICE
 01 and the resulting evidence-driven roadmap recalibration are complete. Gate H
 remains planned and continues to require CIV-48 through CIV-52.
@@ -933,7 +951,10 @@ next required milestone: PLAYABLE SLICE 01 — Autonomous Emergence Baseline
 PLAYABLE SLICE 01 status: REQUIRED — IN PROGRESS / NOT COMPLETE
 PLAYABLE SLICE 01 Increment 01: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 PLAYABLE SLICE 01 Increment 01 published HEAD: a5bded01dcfc934dc5aed6aab0990fc61ffd30c7
-next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-02
+PLAYABLE SLICE 01 Increment 02: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+PLAYABLE SLICE 01 Increment 02 published HEAD: 056c6b625d7482581028cf149329bc292948d53d
+PLAYABLE SLICE 01 Increment 02 published tree: 24e92e7c8a1982a886146ba79187f2fcc8987d0f
+next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-03
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -1354,8 +1375,10 @@ golden regeneration: NOT ATTEMPTED
 ## Next authorized action
 
 The next authorized action is
-`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-02`. It is a review and
-selection step, not authorization to implement Increment 02. Gate G Evaluation
+`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-03`. It is a review and
+selection step from the published Increment 02 boundary, not authorization to
+implement Increment 03 or CIV-48 and not a preselection of its scope. Gate G
+Evaluation
 01 remains frozen historical FAIL evidence. Blocker 01 is senior-review
 approved, published and independently remote verified. Evaluation 02 is
 senior-review-approved published PASS evidence and its exact published HEAD is

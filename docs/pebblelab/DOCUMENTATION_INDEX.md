@@ -55,6 +55,7 @@ These documents form the minimal permanent memory of the project:
 | [`GATE_G_EVALUATION_02_REPORT.md`](GATE_G_EVALUATION_02_REPORT.md) | Senior-review-approved published Gate G Evaluation 02 PASS evidence covering all seven cumulative-culture requirements; remote evidence publication verified. |
 | [`GATE_G_EVALUATION_02_REPORT.json`](GATE_G_EVALUATION_02_REPORT.json) | Machine-readable Evaluation 02 identities, contract results, adversarial controls, validation and published evidence state. |
 | [`PS01_INCREMENT_01_NORMAL_BOOTSTRAP.md`](PS01_INCREMENT_01_NORMAL_BOOTSTRAP.md) | Published, senior-review-approved and remote-verified PS01 Increment 01 contract, evidence, publication identity and non-claims for atomic normal founder bootstrap. |
+| [`PS01_INCREMENT_02_TERMINAL_POPULATION_CONTINUITY.md`](PS01_INCREMENT_02_TERMINAL_POPULATION_CONTINUITY.md) | Published, senior-review-approved and remote-verified PS01 Increment 02 contract, terminal-cohort architecture, physical/custody proof, natural extinction evidence, publication identity and bounded non-claims. |
 | [`GATE_F_BLOCKER_01_SETTLEMENT_ADMISSION_CAPACITY.md`](GATE_F_BLOCKER_01_SETTLEMENT_ADMISSION_CAPACITY.md) | Published, independently remote-verified Blocker 01 correction record; preserves Gate F Evaluation 01 historical FAIL and documents shared publication/restore per-settlement admission capacity, atomic refusal and two-process schema-35 proof. |
 | [`GATE_F_BLOCKER_02_MIGRATION_DESTINATION_CAPACITY.md`](GATE_F_BLOCKER_02_MIGRATION_DESTINATION_CAPACITY.md) | Published, independently remote-verified Blocker 02 correction record; preserves Evaluation 02 historical FAIL and documents derived durable destination-slot authority, atomic full-destination refusal, exact arrival/death/failure release, schema-35 restart and two-process proof. |
 | [`GATE_F_BLOCKER_03_DYNAMIC_FIDELITY_AUTHORITY.md`](GATE_F_BLOCKER_03_DYNAMIC_FIDELITY_AUTHORITY.md) | Published, independently remote-verified Blocker 03 correction record; preserves Evaluation 03 historical FAIL and documents shared dynamic-member fidelity composition, exact birth refusal/retry, legacy migration, mortality, rotation and two-process schema-35 proof. |
@@ -120,6 +121,9 @@ next required milestone: PLAYABLE SLICE 01 — Autonomous Emergence Baseline
 PLAYABLE SLICE 01: REQUIRED — IN PROGRESS / NOT COMPLETE
 PLAYABLE SLICE 01 Increment 01: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 PLAYABLE SLICE 01 Increment 01 published HEAD: a5bded01dcfc934dc5aed6aab0990fc61ffd30c7
+PLAYABLE SLICE 01 Increment 02: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+PLAYABLE SLICE 01 Increment 02 published HEAD: 056c6b625d7482581028cf149329bc292948d53d
+PLAYABLE SLICE 01 Increment 02 published tree: 24e92e7c8a1982a886146ba79187f2fcc8987d0f
 next eligible CIV phase: CIV-48 — DEFERRED / NOT STARTED / IMPLEMENTATION NOT AUTHORIZED
 Gate E Evaluation 01: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 01: FIXED + PUBLISHED + REMOTE VERIFIED
@@ -130,7 +134,7 @@ V4-GATE-E-v1 Blocker 03: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 04: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 04: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 05: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
-next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-02
+next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-03
 CIV-39: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 V4-GATE-F-v1: ACQUIRED AND PUBLISHED — REMOTE VERIFIED
@@ -208,6 +212,8 @@ V4-GATE-G-v1 acquisition published canonical HEAD: 8d8e32b576b384eb9a060f87bde1d
 PLAYABLE SLICE 01 — Autonomous Emergence Baseline: REQUIRED — IN PROGRESS / NOT COMPLETE
 PLAYABLE SLICE 01 Increment 01: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 PLAYABLE SLICE 01 Increment 01 published HEAD: a5bded01dcfc934dc5aed6aab0990fc61ffd30c7
+PLAYABLE SLICE 01 Increment 02: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+PLAYABLE SLICE 01 Increment 02 published HEAD: 056c6b625d7482581028cf149329bc292948d53d
 CIV-48: NOT STARTED — IMPLEMENTATION NOT AUTHORIZED
 V4-GATE-H-v1: PLANNED
 ```
@@ -518,9 +524,15 @@ published and independently remote verified at acquisition canonical HEAD
 non-CIV integration milestone in progress and remains incomplete. Increment 01
 is complete and published, senior-review approved and remote verified at
 canonical HEAD `a5bded01dcfc934dc5aed6aab0990fc61ffd30c7`, with accepted review ZIP SHA-256
-`bff4786795c9f09239fe8a45e3acd2f8993eabdfb24d7e792d944ca0ea6a81b6`. The next
-authorized action is `REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-02`; it
-authorizes review and selection only. CIV-48 remains not started,
+`bff4786795c9f09239fe8a45e3acd2f8993eabdfb24d7e792d944ca0ea6a81b6`.
+Increment 02 is complete and published, senior-review approved and remote
+verified at canonical HEAD `056c6b625d7482581028cf149329bc292948d53d`,
+tree `24e92e7c8a1982a886146ba79187f2fcc8987d0f`, with accepted review ZIP SHA-256
+`47a6fcdb48ede97412cfc5568171eb53086eb2cd1038351bb7580636592de92f`. Its
+greater-than-eight mortality correction is bounded to the validated normal
+founder sandbox; demographic admission/birth headroom remains unresolved. The
+next authorized action is `REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-03`;
+it authorizes review and selection only. CIV-48 remains not started,
 implementation is not authorized and it is deferred behind the slice and
 evidence-driven roadmap recalibration; Gate H remains planned. See
 [`CIV_45_PHASE_SUMMARY.md`](CIV_45_PHASE_SUMMARY.md) and
@@ -528,7 +540,9 @@ evidence-driven roadmap recalibration; Gate H remains planned. See
 [`CIV_47_PHASE_SUMMARY.md`](CIV_47_PHASE_SUMMARY.md), plus
 [`CIV_47_SENIOR_REVIEW_CORRECTION_01.md`](CIV_47_SENIOR_REVIEW_CORRECTION_01.md).
 See also
-[`PS01_INCREMENT_01_NORMAL_BOOTSTRAP.md`](PS01_INCREMENT_01_NORMAL_BOOTSTRAP.md).
+[`PS01_INCREMENT_01_NORMAL_BOOTSTRAP.md`](PS01_INCREMENT_01_NORMAL_BOOTSTRAP.md)
+and
+[`PS01_INCREMENT_02_TERMINAL_POPULATION_CONTINUITY.md`](PS01_INCREMENT_02_TERMINAL_POPULATION_CONTINUITY.md).
 `CIV-38` remains
 optional and not started; `CIV-40` remains optional tooling and not started.
 Currency is not a Gate E or CIV-39 prerequisite.

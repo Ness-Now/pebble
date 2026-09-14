@@ -229,9 +229,17 @@ for the compact status. In particular:
   SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical HEAD
   `a5bded01dcfc934dc5aed6aab0990fc61ffd30c7`; its accepted review ZIP SHA-256
   is `bff4786795c9f09239fe8a45e3acd2f8993eabdfb24d7e792d944ca0ea6a81b6`.
-  The next authorized action is
-  `REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-02`, a review and selection
-  step that does not authorize Increment 02 implementation.
+  Increment 02, Terminal Population Continuity, is **COMPLETE AND PUBLISHED —
+  PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical HEAD
+  `056c6b625d7482581028cf149329bc292948d53d`, tree
+  `24e92e7c8a1982a886146ba79187f2fcc8987d0f`; its accepted review ZIP SHA-256
+  is `47a6fcdb48ede97412cfc5568171eb53086eb2cd1038351bb7580636592de92f`.
+  The former greater-than-eight simultaneous-mortality blocker is resolved for
+  the validated bounded normal 20–30-founder sandbox, not for arbitrary
+  population scales. Long-run demographic admission/birth headroom remains
+  unresolved. The next authorized action is
+  `REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-03`, a review and selection
+  step that does not authorize Increment 03 implementation.
 - CIV-48 remains **NOT STARTED**, implementation is not authorized, and it is
   deferred until PLAYABLE SLICE 01 and the resulting evidence-driven roadmap
   recalibration are complete. Gate H remains planned. See
