@@ -11,8 +11,51 @@ import Foundation
 // ---------------------------------------------------------------------------
 // Pathfinding (grid A*)
 // ---------------------------------------------------------------------------
-public struct PathNode {
+public struct PathNode: Equatable {
     public var x: Int, y: Int, z: Int
+}
+
+/// Opt-in physical search authority for Pebble's live-agent bridge.
+///
+/// The domain is a snapshot of the exact chunks already guaranteed by the
+/// World-owned coverage scheduler. It does not load chunks and cannot expand
+/// the search. Ordinary Core callers continue to use the legacy `findPath`
+/// overload below without this domain.
+public struct PhysicalPathSearchDomain {
+    public let status: PhysicalSimulationCoverageStatus
+    public let chunks: [PhysicalSimulationChunk]
+    private let chunkKeys: Set<Int64>
+
+    public init(coverage: PhysicalSimulationCoverageSnapshot) {
+        status = coverage.status
+        chunks = coverage.coveredChunks
+        chunkKeys = Set(coverage.coveredChunks.map(\.key))
+    }
+
+    fileprivate func contains(x: Int, z: Int) -> Bool {
+        chunkKeys.contains(chunkKey(floorDiv(x, CHUNK_W), floorDiv(z, CHUNK_W)))
+    }
+
+    fileprivate func isReady(in world: World) -> Bool {
+        status == .ready
+            && !chunks.isEmpty
+            && chunkKeys.count == chunks.count
+            && chunks.allSatisfy { world.isChunkReady($0.x, $0.z) }
+    }
+}
+
+/// Truthful outcome for an opt-in coverage-bounded physical path search.
+///
+/// `noPath` is reserved for exhaustion of the complete ready domain.
+/// `coverageLimited` means the search encountered a possible continuation at
+/// the domain edge without reading beyond it. `nodeBudgetExhausted` never
+/// publishes the legacy best-effort partial path as a proven route.
+public enum PhysicalPathSearchResult: Equatable {
+    case path([PathNode])
+    case noPath
+    case coverageLimited
+    case coverageUnavailable
+    case nodeBudgetExhausted
 }
 
 private let NEIGHBORS: [(Int, Int, Int)] = [
@@ -35,41 +78,100 @@ func walkable(_ world: World, _ x: Int, _ y: Int, _ z: Int, _ avoidWater: Bool) 
     return bid != 0 && blockDefs[bid].solid
 }
 
-public func findPath(_ world: World, _ fromX: Double, _ fromY: Double, _ fromZ: Double,
-                     _ toX: Double, _ toY: Double, _ toZ: Double,
-                     _ maxNodes: Int = 600, _ avoidWater: Bool = false) -> [PathNode]? {
-    let sx = ifloor(fromX), sy = ifloor(fromY), sz = ifloor(fromZ)
-    let tx = ifloor(toX), ty = ifloor(toY), tz = ifloor(toZ)
-    if sx == tx && sy == ty && sz == tz { return [] }
-    struct K: Hashable { let x: Int, y: Int, z: Int }
-    final class Node {
-        let x: Int, y: Int, z: Int
-        let g: Double, f: Double
-        let parent: Node?
-        init(_ x: Int, _ y: Int, _ z: Int, _ g: Double, _ f: Double, _ parent: Node?) {
-            self.x = x; self.y = y; self.z = z; self.g = g; self.f = f; self.parent = parent
-        }
+private struct PathSearchKey: Hashable {
+    let x: Int
+    let y: Int
+    let z: Int
+}
+
+private final class PathSearchNode {
+    let x: Int
+    let y: Int
+    let z: Int
+    let g: Double
+    let f: Double
+    let parent: PathSearchNode?
+
+    init(
+        _ x: Int,
+        _ y: Int,
+        _ z: Int,
+        _ g: Double,
+        _ f: Double,
+        _ parent: PathSearchNode?
+    ) {
+        self.x = x
+        self.y = y
+        self.z = z
+        self.g = g
+        self.f = f
+        self.parent = parent
     }
-    var open: [Node] = [Node(sx, sy, sz, 0, 0, nil)]
-    var seen: [K: Double] = [K(x: sx, y: sy, z: sz): 0]
-    var best: Node? = nil
-    var bestH = Double.infinity
+}
+
+private struct PathSearchExecution {
+    let best: PathSearchNode?
+    let bestDistance: Double
+    let reachedTarget: Bool
+    let touchedDomainBoundary: Bool
+    let exhaustedNodeBudget: Bool
+}
+
+private func executePathSearch(
+    _ world: World,
+    startX sx: Int,
+    startY sy: Int,
+    startZ sz: Int,
+    targetX tx: Int,
+    targetY ty: Int,
+    targetZ tz: Int,
+    maxNodes: Int,
+    avoidWater: Bool,
+    domain: PhysicalPathSearchDomain?
+) -> PathSearchExecution {
+    var open: [PathSearchNode] = [PathSearchNode(sx, sy, sz, 0, 0, nil)]
+    var seen: [PathSearchKey: Double] = [
+        PathSearchKey(x: sx, y: sy, z: sz): 0
+    ]
+    var best: PathSearchNode?
+    var bestDistance = Double.infinity
+    var reachedTarget = false
+    var touchedDomainBoundary = false
+    var exhaustedNodeBudget = false
     var iter = 0
+
     while !open.isEmpty {
         iter += 1
-        if iter > maxNodes { break }
-        // pop lowest f
+        if iter > maxNodes {
+            exhaustedNodeBudget = true
+            break
+        }
+        // Preserve the legacy deterministic lowest-f selection and first-match
+        // tie behavior.
         var bi = 0
         for i in 1..<open.count where open[i].f < open[bi].f { bi = i }
         let cur = open.remove(at: bi)
         let h = Double(abs(cur.x - tx) + abs(cur.y - ty) + abs(cur.z - tz))
-        if h < bestH { bestH = h; best = cur }
-        if cur.x == tx && abs(cur.y - ty) <= 1 && cur.z == tz { best = cur; break }
+        if h < bestDistance {
+            bestDistance = h
+            best = cur
+        }
+        if cur.x == tx && abs(cur.y - ty) <= 1 && cur.z == tz {
+            best = cur
+            reachedTarget = true
+            break
+        }
         for (dx, _, dz) in NEIGHBORS {
             let diag = dx != 0 && dz != 0
             for dy in [0, 1, -1, -2, -3] {
                 if diag && dy != 0 { continue }
-                let nx = cur.x + dx, ny = cur.y + dy, nz = cur.z + dz
+                let nx = cur.x + dx
+                let ny = cur.y + dy
+                let nz = cur.z + dz
+                if let domain, !domain.contains(x: nx, z: nz) {
+                    touchedDomainBoundary = true
+                    continue
+                }
                 if dy == 1 {
                     // need headroom to jump
                     let above = world.getBlock(cur.x, cur.y + 2, cur.z) >> 4
@@ -77,29 +179,115 @@ public func findPath(_ world: World, _ fromX: Double, _ fromY: Double, _ fromZ: 
                 }
                 if !walkable(world, nx, ny, nz, avoidWater) { continue }
                 if diag {
+                    let cardinalX = (x: cur.x + dx, z: cur.z)
+                    let cardinalZ = (x: cur.x, z: cur.z + dz)
+                    if let domain,
+                       (!domain.contains(x: cardinalX.x, z: cardinalX.z)
+                        || !domain.contains(x: cardinalZ.x, z: cardinalZ.z)) {
+                        touchedDomainBoundary = true
+                        continue
+                    }
                     // both cardinals must be passable
-                    if !walkable(world, cur.x + dx, cur.y, cur.z, avoidWater) && !walkable(world, cur.x, cur.y, cur.z + dz, avoidWater) { continue }
+                    if !walkable(
+                        world, cardinalX.x, cur.y, cardinalX.z, avoidWater
+                    ) && !walkable(
+                        world, cardinalZ.x, cur.y, cardinalZ.z, avoidWater
+                    ) {
+                        continue
+                    }
                 }
-                let cost = (diag ? 1.41 : 1) + Double(abs(dy)) * 0.5 + (dy < -1 ? (dy < -2 ? 4.0 : 2.0) : 0.0)
+                let cost = (diag ? 1.41 : 1)
+                    + Double(abs(dy)) * 0.5
+                    + (dy < -1 ? (dy < -2 ? 4.0 : 2.0) : 0.0)
                 let g = cur.g + cost
-                let k = K(x: nx, y: ny, z: nz)
-                if let prev = seen[k], prev <= g { continue }
-                seen[k] = g
-                let hh = Double(abs(nx - tx) + abs(ny - ty) + abs(nz - tz))
-                open.append(Node(nx, ny, nz, g, g + hh * 1.1, cur))
+                let key = PathSearchKey(x: nx, y: ny, z: nz)
+                if let previous = seen[key], previous <= g { continue }
+                seen[key] = g
+                let nextDistance = Double(
+                    abs(nx - tx) + abs(ny - ty) + abs(nz - tz)
+                )
+                open.append(PathSearchNode(
+                    nx, ny, nz, g, g + nextDistance * 1.1, cur
+                ))
                 break // take first valid dy per direction
             }
         }
     }
-    guard let bestNode = best, bestH <= 24 else { return nil }
+    return PathSearchExecution(
+        best: best,
+        bestDistance: bestDistance,
+        reachedTarget: reachedTarget,
+        touchedDomainBoundary: touchedDomainBoundary,
+        exhaustedNodeBudget: exhaustedNodeBudget
+    )
+}
+
+private func pathNodes(to best: PathSearchNode) -> [PathNode] {
     var path: [PathNode] = []
-    var n: Node? = bestNode
-    while let cur = n {
-        path.insert(PathNode(x: cur.x, y: cur.y, z: cur.z), at: 0)
-        n = cur.parent
+    var node: PathSearchNode? = best
+    while let current = node {
+        path.insert(PathNode(x: current.x, y: current.y, z: current.z), at: 0)
+        node = current.parent
     }
     if !path.isEmpty { path.removeFirst() }
     return path
+}
+
+public func findPath(_ world: World, _ fromX: Double, _ fromY: Double, _ fromZ: Double,
+                     _ toX: Double, _ toY: Double, _ toZ: Double,
+                     _ maxNodes: Int = 600, _ avoidWater: Bool = false) -> [PathNode]? {
+    let sx = ifloor(fromX), sy = ifloor(fromY), sz = ifloor(fromZ)
+    let tx = ifloor(toX), ty = ifloor(toY), tz = ifloor(toZ)
+    if sx == tx && sy == ty && sz == tz { return [] }
+    let execution = executePathSearch(
+        world,
+        startX: sx, startY: sy, startZ: sz,
+        targetX: tx, targetY: ty, targetZ: tz,
+        maxNodes: maxNodes,
+        avoidWater: avoidWater,
+        domain: nil
+    )
+    guard let best = execution.best,
+          execution.bestDistance <= 24 else { return nil }
+    return pathNodes(to: best)
+}
+
+/// Opt-in coverage-bounded form used by Pebble's live-agent movement bridge.
+/// It never reads outside `domain`, never loads chunks, and never returns a
+/// best-effort partial route as though the target had been proven reachable.
+public func findPath(
+    _ world: World,
+    _ fromX: Double,
+    _ fromY: Double,
+    _ fromZ: Double,
+    _ toX: Double,
+    _ toY: Double,
+    _ toZ: Double,
+    _ maxNodes: Int = 600,
+    _ avoidWater: Bool = false,
+    within domain: PhysicalPathSearchDomain
+) -> PhysicalPathSearchResult {
+    guard domain.isReady(in: world) else { return .coverageUnavailable }
+    let sx = ifloor(fromX), sy = ifloor(fromY), sz = ifloor(fromZ)
+    let tx = ifloor(toX), ty = ifloor(toY), tz = ifloor(toZ)
+    guard domain.contains(x: sx, z: sz),
+          domain.contains(x: tx, z: tz) else { return .coverageLimited }
+    if sx == tx && sy == ty && sz == tz { return .path([]) }
+
+    let execution = executePathSearch(
+        world,
+        startX: sx, startY: sy, startZ: sz,
+        targetX: tx, targetY: ty, targetZ: tz,
+        maxNodes: maxNodes,
+        avoidWater: avoidWater,
+        domain: domain
+    )
+    if execution.reachedTarget, let target = execution.best {
+        return .path(pathNodes(to: target))
+    }
+    if execution.exhaustedNodeBudget { return .nodeBudgetExhausted }
+    if execution.touchedDomainBoundary { return .coverageLimited }
+    return .noPath
 }
 
 public final class Navigation {

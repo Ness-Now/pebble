@@ -1594,6 +1594,29 @@ extension PebbleAgentController {
                     + "publishedRecorder=unchanged physicalWorldTick=\(world.time) "
                     + "probes=\(restoredProbeStates)"
             )
+            let pathReadinessUnavailable:
+                (agentID: String, result: PhysicalPathSearchResult)?
+            if case let PebbleAgentMovementExecutor.ExecutionError
+                .pathReadinessUnavailable(agentID, result) = error {
+                pathReadinessUnavailable = (agentID, result)
+            } else {
+                pathReadinessUnavailable = nil
+            }
+            if let pathReadinessUnavailable {
+                // This is explicit technical unavailability, not a physical
+                // negative and not a runtime fault. The candidate Civilization
+                // tick and any earlier movement in its batch remain unpublished.
+                replayRecorder = publishedRecorder
+                credit = 0
+                lastError = nil
+                trace(
+                    "physical path readiness status=unavailable "
+                        + "agent=\(pathReadinessUnavailable.agentID) "
+                        + "result=\(pathReadinessUnavailable.result) "
+                        + "publishedSession=unchanged cognitionPublication=none"
+                )
+                return false
+            }
             let isKinshipLateFailure: Bool
             if case ControllerError.kinshipLateFailureProof = error {
                 isKinshipLateFailure = true

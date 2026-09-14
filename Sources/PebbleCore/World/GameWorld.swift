@@ -117,6 +117,9 @@ public final class World {
     public var simCenterX = 0, simCenterZ = 0
     public var simDistance = 6
     public var randomTickSpeed = 3
+    public private(set) var physicalSimulationCoverage =
+        PhysicalSimulationCoverageSnapshot.inactive
+    private var physicalSimulationCoverageGenerationRequests = 0
     public var gameRules: [String: Double] = [
         "doDaylightCycle": 1, "doWeatherCycle": 1, "doMobSpawning": 1, "doFireTick": 1,
         "mobGriefing": 1, "keepInventory": 0, "doMobLoot": 1, "doTileDrops": 1,
@@ -138,6 +141,55 @@ public final class World {
     }
 
     @inline(__always) public func rule(_ name: String) -> Bool { (gameRules[name] ?? 0) != 0 }
+
+    /// Installs derived scheduling state for this tick. The request is
+    /// revalidated against current chunk readiness every time and is never
+    /// serialized with World or Civilization state.
+    public func applyPhysicalSimulationCoverage(
+        _ request: PhysicalSimulationCoverageRequest,
+        refusedChunks: Set<PhysicalSimulationChunk> = [],
+        generationRequestsThisTick: Int = 0
+    ) {
+        if case .inactive = request {
+            physicalSimulationCoverageGenerationRequests = 0
+        } else {
+            physicalSimulationCoverageGenerationRequests +=
+                max(0, generationRequestsThisTick)
+        }
+        physicalSimulationCoverage =
+            PhysicalSimulationCoveragePlanner.makeSnapshot(
+                request: request,
+                isChunkReady: { [weak self] cx, cz in
+                    self?.isChunkReady(cx, cz) == true
+                },
+                refusedChunks: refusedChunks,
+                generationRequestsThisTick: max(0, generationRequestsThisTick),
+                cumulativeGenerationRequests:
+                    physicalSimulationCoverageGenerationRequests
+            )
+        if physicalSimulationCoverage.status == .refused,
+           physicalSimulationCoverage.roots.isEmpty {
+            physicalSimulationCoverageGenerationRequests = 0
+        }
+    }
+
+    public func hasAgentSimulationCoverage(
+        chunkX: Int,
+        chunkZ: Int
+    ) -> Bool {
+        physicalSimulationCoverage.covers(
+            chunkX: chunkX,
+            chunkZ: chunkZ
+        )
+    }
+
+    public func hasReadyAgentSimulationCoverage(
+        chunkX: Int,
+        chunkZ: Int
+    ) -> Bool {
+        hasAgentSimulationCoverage(chunkX: chunkX, chunkZ: chunkZ)
+            && isChunkReady(chunkX, chunkZ)
+    }
 
     // MARK: - chunk access
     public func getChunk(_ cx: Int, _ cz: Int) -> Chunk? {
@@ -301,6 +353,57 @@ public final class World {
     }
 
     private var dueScratch: [ScheduledTick] = []
+
+    @inline(__always)
+    private func physicalSimulationSeed(
+        operationDomain: UInt32,
+        x: Int,
+        y: Int,
+        z: Int,
+        ordinal: Int = 0
+    ) -> UInt32 {
+        let dimensionSalt = UInt32(truncatingIfNeeded: dim.rawValue) &* 0x9e37_79b9
+        let timeSalt = UInt32(truncatingIfNeeded: time) &* 0x85eb_ca6b
+        let ordinalSalt = UInt32(truncatingIfNeeded: ordinal) &* 0xc2b2_ae35
+        var mixed = mix32(seed ^ 0x51a7_e001)
+        mixed = mix32(mixed ^ dimensionSalt)
+        mixed = mix32(mixed ^ timeSalt)
+        mixed = mix32(mixed ^ operationDomain)
+        mixed = mix32(mixed ^ ordinalSalt)
+        return hash3(mixed, x, y, z, 0x0c0e_3a01)
+    }
+
+    /// Covered work receives a deterministic World-owned substream keyed by
+    /// its physical target and World tick. Camera-only work can therefore use
+    /// the legacy global streams without advancing the stream seen by a
+    /// covered target. The previous streams are restored even when a handler
+    /// schedules or spawns more physical work.
+    func withPhysicalSimulationRandomness(
+        operationDomain: UInt32,
+        x: Int,
+        y: Int,
+        z: Int,
+        ordinal: Int = 0,
+        _ body: () -> Void
+    ) {
+        let previousGameRNG = gameRng
+        let previousFarmingRNG = farmingRng
+        let scoped = physicalSimulationSeed(
+            operationDomain: operationDomain,
+            x: x,
+            y: y,
+            z: z,
+            ordinal: ordinal
+        )
+        gameRng = RandomX(scoped ^ 0x6a57_4f31)
+        farmingRng = RandomX(scoped ^ 0x0000_fa01)
+        defer {
+            gameRng = previousGameRNG
+            farmingRng = previousFarmingRNG
+        }
+        body()
+    }
+
     public func tick() {
         time += 1
         if rule("doDaylightCycle") && info.hasSky {
@@ -315,35 +418,142 @@ public final class World {
         popDueTicks(&dueScratch)
         let fluidA = Int(B.water), fluidB = Int(B.lava)
         var fluidBudget = 512
-        for t in dueScratch {
+        func runScheduledTick(_ t: ScheduledTick) {
             if t.id == fluidA || t.id == fluidB {
                 if fluidBudget <= 0 {
                     scheduleTick(t.x, t.y, t.z, t.id, 1)
-                    continue
+                    return
                 }
                 fluidBudget -= 1
             }
             let cell = getBlock(t.x, t.y, t.z)
-            if (cell >> 4) != t.id { continue }
+            if (cell >> 4) != t.id { return }
             if let h = blockTickHandlers[t.id] {
                 h(self, t.x, t.y, t.z, cell)
+            }
+        }
+        for tick in dueScratch {
+            let covered = hasAgentSimulationCoverage(
+                chunkX: floorDiv(tick.x, CHUNK_W),
+                chunkZ: floorDiv(tick.z, CHUNK_W)
+            )
+            if covered {
+                guard physicalSimulationCoverage.isReady,
+                      isChunkReady(
+                        floorDiv(tick.x, CHUNK_W),
+                        floorDiv(tick.z, CHUNK_W)
+                      ) else {
+                    // Required coverage is explicit and pending; do not consume
+                    // a due physical opportunity as an absent block.
+                    scheduleTick(
+                        tick.x, tick.y, tick.z, tick.id, 1, tick.priority
+                    )
+                    continue
+                }
+                withPhysicalSimulationRandomness(
+                    operationDomain: 0x5c4e_d001,
+                    x: tick.x,
+                    y: tick.y,
+                    z: tick.z,
+                    ordinal: tick.id
+                ) {
+                    runScheduledTick(tick)
+                }
+            } else {
+                runScheduledTick(tick)
             }
         }
 
         // random ticks in sim-range chunks
         if randomTickSpeed > 0 {
             let sd = simDistance
-            for dz in -sd...sd {
-                for dx in -sd...sd {
-                    guard let c = getChunk(simCenterX + dx, simCenterZ + dz), c.status != .empty else { continue }
-                    for s in 0..<c.sections {
-                        for _ in 0..<randomTickSpeed {
-                            let rx = rng.nextInt(16), rz = rng.nextInt(16), ry = info.minY + s * 16 + rng.nextInt(16)
-                            let cell = Int(c.get(rx, ry, rz))
-                            let id = cell >> 4
-                            if id != 0 && RANDOM_TICKS[id] == 1 {
-                                if let h = randomTickHandlers[id] {
-                                    h(self, c.cx * 16 + rx, ry, c.cz * 16 + rz, cell)
+            if physicalSimulationCoverage.isRequested {
+                // Covered chunks are one deterministic set, independent of
+                // root enumeration and observer position.
+                if physicalSimulationCoverage.isReady {
+                    for position in physicalSimulationCoverage.coveredChunks {
+                        guard let c = getChunk(position.x, position.z),
+                              c.status != .empty else { continue }
+                        for section in 0..<c.sections {
+                            var coordinateRNG = RandomX(physicalSimulationSeed(
+                                operationDomain: 0x7a11_c001,
+                                x: c.cx,
+                                y: section,
+                                z: c.cz
+                            ))
+                            for sample in 0..<randomTickSpeed {
+                                let rx = coordinateRNG.nextInt(CHUNK_W)
+                                let rz = coordinateRNG.nextInt(CHUNK_W)
+                                let ry = info.minY + section * CHUNK_W
+                                    + coordinateRNG.nextInt(CHUNK_W)
+                                let cell = Int(c.get(rx, ry, rz))
+                                let id = cell >> 4
+                                if id != 0 && RANDOM_TICKS[id] == 1,
+                                   let handler = randomTickHandlers[id] {
+                                    let worldX = c.cx * CHUNK_W + rx
+                                    let worldZ = c.cz * CHUNK_W + rz
+                                    withPhysicalSimulationRandomness(
+                                        operationDomain: 0x7a11_d001,
+                                        x: worldX,
+                                        y: ry,
+                                        z: worldZ,
+                                        ordinal: sample
+                                    ) {
+                                        handler(self, worldX, ry, worldZ, cell)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                // Player-only chunks retain their baseline nested order and
+                // shared World/farming RNG behavior. Overlap is skipped so no
+                // target can receive two random-tick passes.
+                for dz in -sd...sd {
+                    for dx in -sd...sd {
+                        let cx = simCenterX + dx
+                        let cz = simCenterZ + dz
+                        if hasAgentSimulationCoverage(chunkX: cx, chunkZ: cz) {
+                            continue
+                        }
+                        guard let c = getChunk(cx, cz),
+                              c.status != .empty else { continue }
+                        for section in 0..<c.sections {
+                            for _ in 0..<randomTickSpeed {
+                                let rx = rng.nextInt(CHUNK_W)
+                                let rz = rng.nextInt(CHUNK_W)
+                                let ry = info.minY + section * CHUNK_W
+                                    + rng.nextInt(CHUNK_W)
+                                let cell = Int(c.get(rx, ry, rz))
+                                let id = cell >> 4
+                                if id != 0 && RANDOM_TICKS[id] == 1,
+                                   let handler = randomTickHandlers[id] {
+                                    handler(
+                                        self,
+                                        c.cx * CHUNK_W + rx,
+                                        ry,
+                                        c.cz * CHUNK_W + rz,
+                                        cell
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Frozen legacy path for Worlds without agent coverage.
+                for dz in -sd...sd {
+                    for dx in -sd...sd {
+                        guard let c = getChunk(simCenterX + dx, simCenterZ + dz), c.status != .empty else { continue }
+                        for s in 0..<c.sections {
+                            for _ in 0..<randomTickSpeed {
+                                let rx = rng.nextInt(16), rz = rng.nextInt(16), ry = info.minY + s * 16 + rng.nextInt(16)
+                                let cell = Int(c.get(rx, ry, rz))
+                                let id = cell >> 4
+                                if id != 0 && RANDOM_TICKS[id] == 1 {
+                                    if let h = randomTickHandlers[id] {
+                                        h(self, c.cx * 16 + rx, ry, c.cz * 16 + rz, cell)
+                                    }
                                 }
                             }
                         }
@@ -354,9 +564,45 @@ public final class World {
 
         // ticking block entities (array is CoW — the loop iterates a snapshot,
         // so handlers may add/remove BEs safely)
-        for be in tickingBEList {
-            if let h = beTickHandlers[be.type] {
-                h(self, be)
+        if physicalSimulationCoverage.isRequested {
+            let covered = tickingBEList.filter {
+                hasAgentSimulationCoverage(
+                    chunkX: floorDiv($0.x, CHUNK_W),
+                    chunkZ: floorDiv($0.z, CHUNK_W)
+                )
+            }.sorted {
+                if $0.z != $1.z { return $0.z < $1.z }
+                if $0.x != $1.x { return $0.x < $1.x }
+                if $0.y != $1.y { return $0.y < $1.y }
+                return $0.type < $1.type
+            }
+            let coveredIDs = Set(covered.map(ObjectIdentifier.init))
+            if physicalSimulationCoverage.isReady {
+                for be in covered {
+                    if let handler = beTickHandlers[be.type] {
+                        withPhysicalSimulationRandomness(
+                            operationDomain: 0xbe00_0001,
+                            x: be.x,
+                            y: be.y,
+                            z: be.z,
+                            ordinal: Int(hashString(be.type))
+                        ) {
+                            handler(self, be)
+                        }
+                    }
+                }
+            }
+            for be in tickingBEList
+                where !coveredIDs.contains(ObjectIdentifier(be)) {
+                if let handler = beTickHandlers[be.type] {
+                    handler(self, be)
+                }
+            }
+        } else {
+            for be in tickingBEList {
+                if let h = beTickHandlers[be.type] {
+                    h(self, be)
+                }
             }
         }
 
@@ -368,14 +614,32 @@ public final class World {
         if rule("doWeatherCycle") {
             weatherTimer -= 1
             if weatherTimer <= 0 {
-                if raining {
-                    raining = false
-                    thundering = false
-                    weatherTimer = 12000 + rng.nextInt(156000)
+                if physicalSimulationCoverage.isRequested {
+                    var weatherRNG = RandomX(physicalSimulationSeed(
+                        operationDomain: 0x7ea7_4e01,
+                        x: raining ? 1 : 0,
+                        y: thundering ? 1 : 0,
+                        z: 0
+                    ))
+                    if raining {
+                        raining = false
+                        thundering = false
+                        weatherTimer = 12000 + weatherRNG.nextInt(156000)
+                    } else {
+                        raining = true
+                        thundering = weatherRNG.chance(0.3)
+                        weatherTimer = 12000 + weatherRNG.nextInt(12000)
+                    }
                 } else {
-                    raining = true
-                    thundering = rng.chance(0.3)
-                    weatherTimer = 12000 + rng.nextInt(12000)
+                    if raining {
+                        raining = false
+                        thundering = false
+                        weatherTimer = 12000 + rng.nextInt(156000)
+                    } else {
+                        raining = true
+                        thundering = rng.chance(0.3)
+                        weatherTimer = 12000 + rng.nextInt(12000)
+                    }
                 }
             }
         }

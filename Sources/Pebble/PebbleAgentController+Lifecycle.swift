@@ -693,6 +693,7 @@ extension PebbleAgentController {
         candidateMovementLateFailureProofInjected = false
         candidateRenewableLateFailureProofInjected = false
         candidateAgricultureNavigationFailureProofInjected = false
+        lastPhysicalSimulationCoverageTraceKey = nil
     }
 
     @discardableResult
@@ -889,6 +890,7 @@ extension PebbleAgentController {
         activeWorld = nil
         lifecyclePreparedWorld = nil
         probesByAgentId.removeAll()
+        cleanupWorld?.applyPhysicalSimulationCoverage(.inactive)
         isPaused = false
         credit = 0
         lastWorldTick = nil

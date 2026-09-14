@@ -25,6 +25,7 @@ struct PebbleAgentMovementExecutor {
         case outcomeSetMismatch
         case unboundedPhysicalDrift(String)
         case duplicatePhysicalPosition(String)
+        case pathReadinessUnavailable(String, PhysicalPathSearchResult)
         case rollbackPerformed(String)
         case rollbackVerificationFailed(String)
     }
@@ -143,20 +144,43 @@ struct PebbleAgentMovementExecutor {
                 // node is deliberately not the live physical path authority.
                 let destination = agent.navigationProgress.route?.positions.last
                     ?? intent.toPosition
-                guard let path = findPath(
+                let pathResult = findPath(
                     world,
                     embodiment.x, embodiment.y, embodiment.z,
                     Double(destination.x) + 0.5,
                     Double(destination.y),
                     Double(destination.z) + 0.5,
                     600,
-                    true
-                ), let node = path.first else {
+                    true,
+                    within: PhysicalPathSearchDomain(
+                        coverage: world.physicalSimulationCoverage
+                    )
+                )
+                let path: [PathNode]
+                switch pathResult {
+                case .path(let resolved):
+                    path = resolved
+                case .noPath:
                     verified.append(blocked(
                         intent: intent,
                         agent: agent,
                         at: embodiment.position,
-                        reason: "PebbleCore path unavailable",
+                        reason: "PebbleCore bounded path absent",
+                        worldTick: world.time
+                    ))
+                    continue
+                case .coverageLimited, .coverageUnavailable,
+                     .nodeBudgetExhausted:
+                    throw ExecutionError.pathReadinessUnavailable(
+                        id, pathResult
+                    )
+                }
+                guard let node = path.first else {
+                    verified.append(blocked(
+                        intent: intent,
+                        agent: agent,
+                        at: embodiment.position,
+                        reason: "PebbleCore bounded path has no next step",
                         worldTick: world.time
                     ))
                     continue
@@ -341,6 +365,12 @@ struct PebbleAgentMovementExecutor {
                 )
             } catch {
                 throw ExecutionError.rollbackVerificationFailed(String(describing: error))
+            }
+            if case ExecutionError.pathReadinessUnavailable = error {
+                // An indeterminate physical path is expected fail-closed
+                // readiness, not a blocked movement result. Any earlier actor
+                // movement in this batch has been restored above.
+                throw error
             }
             throw ExecutionError.rollbackPerformed(String(describing: error))
         }

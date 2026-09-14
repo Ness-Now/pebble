@@ -145,6 +145,7 @@ final class PebbleAgentController {
         PebbleWorldEcologicalObservationReceiptTransaction?
     var candidatePhysicalHardFailure: PebbleCandidatePhysicalHardFailure?
     var worldReceiptAttemptSerial: UInt64 = 0
+    var lastPhysicalSimulationCoverageTraceKey: String?
 
     let environment = ProcessInfo.processInfo.environment
     var featureEnabled: Bool { environment["PEBBLELAB_APP_AGENTS"] == "1" }
@@ -290,6 +291,75 @@ final class PebbleAgentController {
         applyFollow(player: player)
 
         let worldTick = world.time
+        let expectedCoverage = physicalSimulationCoverageRequest(for: world)
+        let coverage = world.physicalSimulationCoverage
+        let coverageMismatchReason: String?
+        let coverageReady: Bool
+        switch expectedCoverage {
+        case .inactive:
+            coverageReady = coverage.status == .inactive
+            coverageMismatchReason = coverageReady
+                ? nil : "inactive authority still has World coverage"
+        case .active(let roots):
+            coverageReady = coverage.status == .ready
+                && coverage.roots.count == roots.count
+                && Set(coverage.roots) == Set(roots)
+            coverageMismatchReason = coverageReady
+                ? nil : "derived roots not yet reconciled by World coverage"
+        case .refused(let reason):
+            coverageReady = false
+            coverageMismatchReason = reason
+        }
+        guard coverageReady else {
+            // Coverage readiness is a pre-observation boundary. No sensor,
+            // path request or Civilization tick may convert unavailable World
+            // state into a negative physical fact.
+            lastWorldTick = worldTick
+            credit = 0
+            let expectedRefused: Bool
+            if case .refused = expectedCoverage {
+                expectedRefused = true
+            } else {
+                expectedRefused = false
+            }
+            let effectiveStatus: PhysicalSimulationCoverageStatus =
+                expectedRefused || coverage.status == .refused
+                    ? .refused : .pending
+            let effectiveReason = coverageMismatchReason ?? coverage.reason
+            let key = "\(effectiveStatus.rawValue)|\(coverage.stableDigest)"
+                + "|\(effectiveReason ?? "none")"
+            if key != lastPhysicalSimulationCoverageTraceKey {
+                if effectiveStatus == .refused {
+                    runtimeErrorCount += 1
+                    lastError = effectiveReason
+                        ?? "physical simulation coverage refused"
+                }
+                trace(
+                    "physical coverage status=\(effectiveStatus.rawValue) "
+                        + "roots=\(coverage.roots.count) "
+                        + "chunks=\(coverage.deduplicatedChunkCount) "
+                        + "ready=\(coverage.readyChunks.count) "
+                        + "unavailable=\(coverage.unavailableChunks.count) "
+                        + "generationRequests="
+                        + "\(coverage.generationRequestsThisTick) "
+                        + "digest=\(coverage.stableDigest) "
+                        + "reason=\(effectiveReason ?? "none")"
+                )
+                lastPhysicalSimulationCoverageTraceKey = key
+            }
+            return
+        }
+        let readyKey = "\(coverage.status.rawValue)|\(coverage.stableDigest)"
+        if readyKey != lastPhysicalSimulationCoverageTraceKey {
+            trace(
+                "physical coverage status=\(coverage.status.rawValue) "
+                    + "roots=\(coverage.roots.count) "
+                    + "chunks=\(coverage.deduplicatedChunkCount) "
+                    + "overlapSavings=\(coverage.overlapSavings) "
+                    + "digest=\(coverage.stableDigest)"
+            )
+            lastPhysicalSimulationCoverageTraceKey = readyKey
+        }
         guard let previousTick = lastWorldTick else {
             lastWorldTick = worldTick
             return

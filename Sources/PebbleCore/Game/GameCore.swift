@@ -224,6 +224,18 @@ public struct ChunkSaveFreshnessEvent {
     public let latestSequence: UInt64
 }
 
+/// Read-only view of the one authoritative streaming queue. This contains no
+/// root ownership and is never persisted; it exists so bounded coverage and
+/// player-fairness claims can be measured in deterministic proofs and traces.
+public struct PhysicalSimulationCoverageRuntimeDiagnostics {
+    public let loadedChunkCount: Int
+    public let coveredResidentChunkCount: Int
+    public let totalGenerationJobsInFlight: Int
+    public let agentGenerationJobsInFlight: Int
+    public let playerGenerationJobsInFlight: Int
+    public let pendingCoveredChunkCount: Int
+}
+
 // =============================================================================
 // The Game
 // =============================================================================
@@ -236,6 +248,13 @@ public final class GameCore {
     /// lifecycle save, while irreversible runtime teardown remains post-save.
     public var prepareExternalLifecycleState: (() -> Bool)?
     public var finalizeExternalLifecycleState: (() -> Void)?
+    /// Pebble supplies derived live-embodiment coverage. GameCore remains the
+    /// sole owner of generation, retention and physical ticking.
+    public var physicalSimulationCoverageProvider:
+        ((World) -> PhysicalSimulationCoverageRequest)?
+    /// Default-nil deterministic refusal seam for bounded fault proofs.
+    public var testingPhysicalSimulationCoverageRequestRefusal:
+        ((World, Int, Int) -> Bool)?
     private var lifecyclePersistencePrepared = false
 
     // world state
@@ -249,6 +268,9 @@ public final class GameCore {
 
     // streaming
     private var genInFlight = Set<DimChunk>()
+    /// Queue provenance only, not coverage authority. It enforces bounded
+    /// fairness inside the existing generation queue and is discarded with it.
+    private var physicalCoverageGenInFlight = Set<DimChunk>()
     /// keys of chunks that exist on disk — fresh chunks skip the read entirely
     private var savedChunkKeys = Set<String>()
     /// keys whose DB record holds full block data — an unload rewrite of these
@@ -330,6 +352,28 @@ public final class GameCore {
         saveCaptureLock.lock()
         defer { saveCaptureLock.unlock() }
         return unresolvedChunkSaveCaptures[key]?.sequence
+    }
+
+    public func physicalSimulationCoverageRuntimeDiagnostics(
+        for world: World
+    ) -> PhysicalSimulationCoverageRuntimeDiagnostics {
+        let belongsToCore = worlds[world.dim] === world
+        let total = belongsToCore ? genInFlight.count : 0
+        let agent = belongsToCore ? physicalCoverageGenInFlight.count : 0
+        return PhysicalSimulationCoverageRuntimeDiagnostics(
+            loadedChunkCount: belongsToCore ? world.chunks.count : 0,
+            coveredResidentChunkCount: belongsToCore
+                ? world.physicalSimulationCoverage.coveredChunks.filter {
+                    world.getChunk($0.x, $0.z) != nil
+                }.count
+                : 0,
+            totalGenerationJobsInFlight: total,
+            agentGenerationJobsInFlight: agent,
+            playerGenerationJobsInFlight: max(0, total - agent),
+            pendingCoveredChunkCount: belongsToCore
+                ? world.physicalSimulationCoverage.unavailableChunks.count
+                : 0
+        )
     }
 
     /// Deterministic proof seam that invokes the production unload path.
@@ -532,6 +576,7 @@ public final class GameCore {
         for d in lightQueue.keys { lightQueue[d]!.removeAll() }
         meshJobs.removeAll()
         genInFlight.removeAll()
+        physicalCoverageGenInFlight.removeAll()
         savedChunkKeys.removeAll()
         savedFullKeys.removeAll()
         if let exitingWorldID { clearChunkSaveTracking(worldID: exitingWorldID) }
@@ -1060,18 +1105,23 @@ public final class GameCore {
     // ===========================================================================
     // Chunk streaming
     // ===========================================================================
+    @discardableResult
     private func requestChunk(
         _ w: World,
         _ cx: Int,
         _ cz: Int,
-        ignoringGenerationLimit: Bool = false
-    ) {
+        ignoringGenerationLimit: Bool = false,
+        physicalCoverage: Bool = false
+    ) -> Bool {
         let key = chunkKey(cx, cz)
         let flight = DimChunk(dim: w.dim.rawValue, key: key)
-        if w.chunks[key] != nil || genInFlight.contains(flight) { return }
-        if !ignoringGenerationLimit && genInFlight.count >= MAX_GEN_INFLIGHT { return }
-        guard let rec = worldRec else { return }
+        if w.chunks[key] != nil || genInFlight.contains(flight) { return false }
+        if !ignoringGenerationLimit && genInFlight.count >= MAX_GEN_INFLIGHT {
+            return false
+        }
+        guard let rec = worldRec else { return false }
         genInFlight.insert(flight)
+        if physicalCoverage { physicalCoverageGenInFlight.insert(flight) }
         let worldId = rec.id
         let d = w.dim
         let seed = w.seed
@@ -1109,11 +1159,17 @@ public final class GameCore {
             DispatchQueue.main.async {
                 guard let self else { return }
                 self.genInFlight.remove(flight)
+                self.physicalCoverageGenInFlight.remove(flight)
                 guard self.inWorld, self.worlds[d] === w, w.chunks[key] == nil else { return }
                 self.saveCaptureLock.lock()
                 guard (self.latestChunkSaveCaptureSequence[dbKey] ?? 0) == selectedSequence else {
                     self.saveCaptureLock.unlock()
-                    self.requestChunk(w, cx, cz)
+                    self.requestChunk(
+                        w,
+                        cx,
+                        cz,
+                        physicalCoverage: physicalCoverage
+                    )
                     return
                 }
                 defer { self.saveCaptureLock.unlock() }
@@ -1122,6 +1178,7 @@ public final class GameCore {
                 self.enqueueLightAround(w, cx, cz)
             }
         }
+        return true
     }
 
     /// A saved record is only trustworthy if its arrays have the exact expected sizes
@@ -1436,6 +1493,45 @@ public final class GameCore {
         w.simCenterX = pcx
         w.simCenterZ = pcz
         let R = settings.renderDistance + GEN_RADIUS_PAD
+        let coverageRequest = physicalSimulationCoverageProvider?(w) ?? .inactive
+        let plannedCoverage = PhysicalSimulationCoveragePlanner.makeSnapshot(
+            request: coverageRequest,
+            isChunkReady: { w.isChunkReady($0, $1) }
+        )
+        var refusedCoverageChunks = Set<PhysicalSimulationChunk>()
+        var agentGenerationRequests = 0
+        let availableGenerationSlots = max(
+            0,
+            MAX_GEN_INFLIGHT - genInFlight.count
+        )
+        let initialAgentBudget = min(
+            PhysicalSimulationCoverageContract
+                .maximumAgentGenerationJobsInFlight
+                - physicalCoverageGenInFlight.count,
+            availableGenerationSlots
+        )
+        for position in plannedCoverage.unavailableChunks {
+            guard agentGenerationRequests < initialAgentBudget else { break }
+            if testingPhysicalSimulationCoverageRequestRefusal?(
+                w, position.x, position.z
+            ) == true {
+                refusedCoverageChunks.insert(position)
+                continue
+            }
+            if requestChunk(
+                w,
+                position.x,
+                position.z,
+                physicalCoverage: true
+            ) {
+                agentGenerationRequests += 1
+            }
+        }
+        w.applyPhysicalSimulationCoverage(
+            coverageRequest,
+            refusedChunks: refusedCoverageChunks,
+            generationRequestsThisTick: agentGenerationRequests
+        )
         // request missing chunks ring by ring (closest first)
         outer: for r in 0...R {
             for dz in -r...r {
@@ -1451,6 +1547,7 @@ public final class GameCore {
         let dropR = R + 2
         for c in Array(w.chunks.values) {
             if (abs(c.cx - pcx) > dropR || abs(c.cz - pcz) > dropR)
+                && !w.hasAgentSimulationCoverage(chunkX: c.cx, chunkZ: c.cz)
                 && !containsLabCoreAgentProbe(w, c) {
                 unloadChunk(w, c)
             }
@@ -1459,6 +1556,7 @@ public final class GameCore {
         if w.time % 100 == 0 {
             for (d, other) in worlds {
                 if d == dim { continue }
+                other.applyPhysicalSimulationCoverage(.inactive)
                 for c in Array(other.chunks.values)
                     where !containsLabCoreAgentProbe(other, c) {
                     unloadChunk(other, c)
@@ -1946,15 +2044,62 @@ public final class GameCore {
         // ---- world & entities ----
         w.tick()
         let simR = Double(w.simDistance * 16) * Double(w.simDistance * 16)
-        for e in Array(w.entities) {
-            if e === p || e.dead { continue }
-            guard let ent = e as? Entity else { continue }
-            let dx = ent.x - p.x, dz = ent.z - p.z
-            if dx * dx + dz * dz > simR && !ALWAYS_TICK.contains(ent.type) { continue }
-            ent.tick()
-            // sculk catalyst blooms on death
-            if let liv = ent as? LivingEntity, liv.deathTime == 1 {
-                tryCatalystBloom(w, ent.x, ent.y, ent.z, liv.xpReward)
+        if w.physicalSimulationCoverage.isRequested {
+            let entitySnapshot = Array(w.entities)
+            let covered = entitySnapshot.compactMap { reference -> Entity? in
+                guard reference !== p,
+                      let entity = reference as? Entity,
+                      !entity.dead,
+                      w.hasAgentSimulationCoverage(
+                        chunkX: floorDiv(ifloor(entity.x), CHUNK_W),
+                        chunkZ: floorDiv(ifloor(entity.z), CHUNK_W)
+                      ) else { return nil }
+                return entity
+            }.sorted { $0.id < $1.id }
+            let coveredIDs = Set(covered.map(\.id))
+            if w.physicalSimulationCoverage.isReady {
+                for ent in covered {
+                    w.withPhysicalSimulationRandomness(
+                        operationDomain: 0xe171_7001,
+                        x: ifloor(ent.x),
+                        y: ifloor(ent.y),
+                        z: ifloor(ent.z),
+                        ordinal: ent.id
+                    ) {
+                        ent.tick()
+                    }
+                    if let liv = ent as? LivingEntity, liv.deathTime == 1 {
+                        tryCatalystBloom(w, ent.x, ent.y, ent.z, liv.xpReward)
+                    }
+                }
+            }
+            // The observer-only side keeps the baseline entity-list order and
+            // eligibility rule. Covered IDs are skipped even on overlap.
+            for e in entitySnapshot {
+                if e === p || e.dead { continue }
+                guard let ent = e as? Entity,
+                      !coveredIDs.contains(ent.id) else { continue }
+                let dx = ent.x - p.x, dz = ent.z - p.z
+                if dx * dx + dz * dz > simR
+                    && !ALWAYS_TICK.contains(ent.type) { continue }
+                ent.tick()
+                if let liv = ent as? LivingEntity, liv.deathTime == 1 {
+                    tryCatalystBloom(w, ent.x, ent.y, ent.z, liv.xpReward)
+                }
+            }
+        } else {
+            // Frozen legacy path for Worlds without agent coverage.
+            for e in Array(w.entities) {
+                if e === p || e.dead { continue }
+                guard let ent = e as? Entity else { continue }
+                let dx = ent.x - p.x, dz = ent.z - p.z
+                if dx * dx + dz * dz > simR
+                    && !ALWAYS_TICK.contains(ent.type) { continue }
+                ent.tick()
+                // sculk catalyst blooms on death
+                if let liv = ent as? LivingEntity, liv.deathTime == 1 {
+                    tryCatalystBloom(w, ent.x, ent.y, ent.z, liv.xpReward)
+                }
             }
         }
         for e in Array(w.entities) where e.dead {

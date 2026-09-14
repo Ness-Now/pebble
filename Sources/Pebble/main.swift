@@ -428,6 +428,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         ], let value = Int(raw), (240...7200).contains(value) else { return nil }
         return value
     }()
+    private let increment03CoverageBatchFrames: Int? = {
+        let environment = ProcessInfo.processInfo.environment
+        guard environment["PEBBLELAB_PS01_INCREMENT03_LIVE_PROOF"] == "1",
+              let raw = environment[
+                  "PEBBLELAB_PS01_INCREMENT03_BATCH_FRAMES"
+              ], let value = Int(raw), (30...240).contains(value) else {
+            return nil
+        }
+        return value
+    }()
     private let gateB3AcceptanceHorizon: Int? = {
         let environment = ProcessInfo.processInfo.environment
         guard environment["PEBBLELAB_GATE_B3_ACCEPTANCE"] == "1",
@@ -519,6 +529,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         let parts = v.components(separatedBy: "@")
         return (parts[0], parts.count > 1 ? Int(parts[1]) ?? 240 : 240)
     }()
+    private let increment03CoverageLiveProof =
+        PebbleIncrement03CoverageLiveProof.fromEnvironment()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         gAppDelegate = self
@@ -530,6 +542,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         game = GameCore()
         game.host = host
         agentController.worldSideReceiptDatabase = game.db
+        game.physicalSimulationCoverageProvider = { [weak agentController] world in
+            agentController?.physicalSimulationCoverageRequest(for: world)
+                ?? .inactive
+        }
         game.prepareExternalLifecycleState = { [weak self] in
             guard let self else { return false }
             guard self.game.hasWorld() else {
@@ -1242,8 +1258,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
                 commandBatchReady = game.world.time == targetTick
             } else {
                 pendingCmdDelay += 1
-                let requiredFrames = agentController.passiveProductProofSnapshot() != nil
-                    ? (passiveObserverBatchFrames ?? 240) : 240
+                let requiredFrames = increment03CoverageBatchFrames
+                    ?? (agentController.passiveProductProofSnapshot() != nil
+                        ? (passiveObserverBatchFrames ?? 240) : 240)
                 commandBatchReady = pendingCmdDelay > requiredFrames
             }
             if commandBatchReady {
@@ -1254,6 +1271,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
                 for c in cmds.components(separatedBy: ";") where !c.isEmpty {
                     runCommand(game, c.trimmingCharacters(in: .whitespaces))
                 }
+                increment03CoverageLiveProof?.markCommandBatchExecuted()
                 if usesBatchShots, !pendingBatchShots.isEmpty {
                     let shot = pendingBatchShots.removeFirst()
                     if shot != "-", !shot.isEmpty {
@@ -1319,6 +1337,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
                 dimension: game.dim.rawValue,
                 maximumSimulationTick: gateB3AcceptanceHorizon
             )
+            if let evidence = increment03CoverageLiveProof?.afterFrame(
+                game: game,
+                controller: agentController,
+                frameMilliseconds: dt,
+                framesPerSecond: fps
+            ) {
+                print(evidence)
+            }
             driveGateB3Acceptance()
             passiveObserverInputProof?.afterFrame()
             driveGateB3Passive(now: now)
