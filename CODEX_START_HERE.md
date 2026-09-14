@@ -234,12 +234,19 @@ for the compact status. In particular:
   `056c6b625d7482581028cf149329bc292948d53d`, tree
   `24e92e7c8a1982a886146ba79187f2fcc8987d0f`; its accepted review ZIP SHA-256
   is `47a6fcdb48ede97412cfc5568171eb53086eb2cd1038351bb7580636592de92f`.
-  The former greater-than-eight simultaneous-mortality blocker is resolved for
-  the validated bounded normal 20–30-founder sandbox, not for arbitrary
-  population scales. Long-run demographic admission/birth headroom remains
-  unresolved. The next authorized action is
-  `REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-03`, a review and selection
-  step that does not authorize Increment 03 implementation.
+  Increment 03, Observer-Independent Physical Coverage, is **COMPLETE AND
+  PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical
+  HEAD `0e7f36202debd088e4f1c84de96078be78b6b6fd`, tree
+  `33a3675301a6fe088fde62b373f7e73505ba346d`; its accepted review ZIP SHA-256
+  is `4183fedfb071f900afe349b317ecd58e215206efd5afb8427b004c2bcc3c6f04`.
+  It establishes one derived PebbleCore coverage schedule for at most 30 roots,
+  a one-chunk/3×3 halo and a 270-chunk worst bound, with explicit unavailable
+  readiness and no false physical absence. It does not validate arbitrary
+  population scale or whole-World camera invariance; future agent-relevant RNG
+  consumers still require audit. Long-run demographic admission/birth headroom
+  remains unresolved. The next authorized action is
+  `REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-04`, a review and selection
+  step only; it does not authorize implementation or preselect scope.
 - CIV-48 remains **NOT STARTED**, implementation is not authorized, and it is
   deferred until PLAYABLE SLICE 01 and the resulting evidence-driven roadmap
   recalibration are complete. Gate H remains planned. See

@@ -83,6 +83,24 @@ custody, finalization, replay and receipt verification. Natural 20-, 24- and
 30-founder extinction campaigns, exact zero-population checkpoint/restart,
 read-only Observer extinction and the canonical gate passed without regold.
 
+Increment 03, Observer-Independent Physical Coverage, is **COMPLETE AND
+PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical
+HEAD `0e7f36202debd088e4f1c84de96078be78b6b6fd`, tree
+`33a3675301a6fe088fde62b373f7e73505ba346d`, from parent
+`757cad2742e4b76e13010035f246da1e375a01a4`. Its accepted review ZIP SHA-256 is
+`4183fedfb071f900afe349b317ecd58e215206efd5afb8427b004c2bcc3c6f04`; senior
+review found P0 0 / P1 0 / P2 blocking 0. One PebbleCore World scheduler now
+receives derived, sorted and deduplicated coverage for at most 30 valid live
+roots, each with a one-chunk/3×3 halo and a 270-chunk theoretical worst bound.
+Pending, refused and unavailable state is explicit; sensors and bounded paths
+cannot publish false physical absence. Zero-agent World scheduling and default
+path callers preserve their legacy behavior.
+
+The Increment 03 proof is bounded to agent-relevant work inside the current
+coverage set. It is not an arbitrary-scale or whole-World camera-invariance
+claim: player-only prior history may differ, and each future agent-relevant
+shared RNG consumer requires its own audit.
+
 The milestone must establish a normal bounded persistent sandbox path, first
 measured with approximately 24 full-cognition founders and designed for roughly
 20–30 without redesign. It must support safe Pause / Play / 1x, read-only free
@@ -100,13 +118,14 @@ bounded normal founder sandbox through 30. It does not validate arbitrary
 population scales or solve long-run demographic capacity. The unchanged active
 population capacity of 30 leaves zero admission/birth headroom at 30 founders
 and six slots at 24, so demographic continuity/headroom remains a PS01
-integration issue. Other known integration risks are recorded in the roadmap
-milestone contract.
+integration issue. Increment 03 retires player location as authority for the
+bounded covered physical opportunity, but not every remaining integration
+risk. Other known risks are recorded in the roadmap milestone contract.
 
 The next authorized action is
-`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-03`. This authorizes review of
-the published Increment 02 boundary and selection of the smallest next coherent
-causal prerequisite; it does not authorize Increment 03 implementation or
+`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-04`. This authorizes review of
+the published Increment 03 boundary and selection of the smallest next coherent
+causal prerequisite; it does not authorize Increment 04 implementation or
 preselect its scope. CIV-48 remains **NOT
 STARTED — IMPLEMENTATION NOT AUTHORIZED** and is deferred until PLAYABLE SLICE
 01 and the resulting evidence-driven roadmap recalibration are complete. Gate H
@@ -954,7 +973,10 @@ PLAYABLE SLICE 01 Increment 01 published HEAD: a5bded01dcfc934dc5aed6aab0990fc61
 PLAYABLE SLICE 01 Increment 02: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 PLAYABLE SLICE 01 Increment 02 published HEAD: 056c6b625d7482581028cf149329bc292948d53d
 PLAYABLE SLICE 01 Increment 02 published tree: 24e92e7c8a1982a886146ba79187f2fcc8987d0f
-next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-03
+PLAYABLE SLICE 01 Increment 03: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+PLAYABLE SLICE 01 Increment 03 published HEAD: 0e7f36202debd088e4f1c84de96078be78b6b6fd
+PLAYABLE SLICE 01 Increment 03 published tree: 33a3675301a6fe088fde62b373f7e73505ba346d
+next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-04
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -1375,9 +1397,9 @@ golden regeneration: NOT ATTEMPTED
 ## Next authorized action
 
 The next authorized action is
-`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-03`. It is a review and
-selection step from the published Increment 02 boundary, not authorization to
-implement Increment 03 or CIV-48 and not a preselection of its scope. Gate G
+`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-04`. It is a review and
+selection step from the published Increment 03 boundary, not authorization to
+implement Increment 04 or CIV-48 and not a preselection of its scope. Gate G
 Evaluation
 01 remains frozen historical FAIL evidence. Blocker 01 is senior-review
 approved, published and independently remote verified. Evaluation 02 is

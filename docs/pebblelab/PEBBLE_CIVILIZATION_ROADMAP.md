@@ -62,8 +62,13 @@ Increment 02 is **COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED —
 REMOTE VERIFIED** at canonical HEAD
 `056c6b625d7482581028cf149329bc292948d53d`, tree
 `24e92e7c8a1982a886146ba79187f2fcc8987d0f`, with accepted review ZIP SHA-256
-`47a6fcdb48ede97412cfc5568171eb53086eb2cd1038351bb7580636592de92f`. The next
-authorized action is `REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-03`, which
+`47a6fcdb48ede97412cfc5568171eb53086eb2cd1038351bb7580636592de92f`.
+Increment 03 is **COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED —
+REMOTE VERIFIED** at canonical HEAD
+`0e7f36202debd088e4f1c84de96078be78b6b6fd`, tree
+`33a3675301a6fe088fde62b373f7e73505ba346d`, with accepted review ZIP SHA-256
+`4183fedfb071f900afe349b317ecd58e215206efd5afb8427b004c2bcc3c6f04`. The next
+authorized action is `REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-04`, which
 authorizes review and selection only. CIV-48 remains not started,
 implementation unauthorized and deferred behind that milestone and the
 resulting evidence-driven roadmap recalibration.
@@ -206,7 +211,10 @@ PLAYABLE SLICE 01 Increment 01 published HEAD: a5bded01dcfc934dc5aed6aab0990fc61
 PLAYABLE SLICE 01 Increment 02: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 PLAYABLE SLICE 01 Increment 02 published HEAD: 056c6b625d7482581028cf149329bc292948d53d
 PLAYABLE SLICE 01 Increment 02 published tree: 24e92e7c8a1982a886146ba79187f2fcc8987d0f
-next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-03
+PLAYABLE SLICE 01 Increment 03: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+PLAYABLE SLICE 01 Increment 03 published HEAD: 0e7f36202debd088e4f1c84de96078be78b6b6fd
+PLAYABLE SLICE 01 Increment 03 published tree: 33a3675301a6fe088fde62b373f7e73505ba346d
+next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-04
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
@@ -1604,7 +1612,7 @@ Evaluation 05 product correction: NO
 Evaluation 05 verdict: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 Gate E status: ACQUIRED AND PUBLISHED
 Gate E acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f76744f83
-next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-03
+next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-04
 CIV-39 status: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 Gate F status: ACQUIRED AND PUBLISHED — REMOTE VERIFIED
@@ -2172,6 +2180,26 @@ passed without regold. Historical `.live` and `.embodiedLive` mortality
 defaults remain 8; the normal founder path derives its bound from the unchanged
 active-population configuration of 30.
 
+Increment 03, Observer-Independent Physical Coverage, is **COMPLETE AND
+PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical
+HEAD `0e7f36202debd088e4f1c84de96078be78b6b6fd`, tree
+`33a3675301a6fe088fde62b373f7e73505ba346d`, from parent
+`757cad2742e4b76e13010035f246da1e375a01a4`. Its accepted review ZIP SHA-256 is
+`4183fedfb071f900afe349b317ecd58e215206efd5afb8427b004c2bcc3c6f04` and
+senior review found P0 0 / P1 0 / P2 blocking 0. It supplies at most 30 valid
+live roots to the one PebbleCore World scheduler, with a one-chunk/3×3 halo,
+canonical union/deduplication and a 270-chunk theoretical worst bound. Coverage
+is derived and not a persisted roster. Pending, refused and unavailable states
+are explicit; sensors and bounded path results do not turn missing physical
+readiness into absence. Covered scheduling is deterministic across camera paths,
+while zero-root World behavior and default path callers remain legacy exact.
+
+This contract is not arbitrary-scale validation, global simulation
+independence or whole-World camera invariance. Player-only physical history
+before a location becomes agent-relevant remains outside the stronger claim.
+Future agent-relevant mechanics that consume an additional shared RNG domain
+must be audited rather than assumed to inherit camera independence.
+
 Canonical ordering:
 
 ```text
@@ -2267,7 +2295,7 @@ risks without treating this roadmap as an implementation specification:
 - abstract food pressure diverging from edible physical custody;
 - reduced-fidelity agents continuing to age or incur physiological pressure
   while losing opportunities to eat, work, care or learn;
-- player-centered physical ticking or streaming;
+- future agent-relevant physical mechanisms consuming unaudited shared RNG;
 - proof/setup-dependent economic and cultural initiation;
 - a single automatically initiated agricultural plot;
 - incompatible domain population capacities;
@@ -2281,6 +2309,9 @@ Capacity headroom remains a whole-slice integration issue. Increment 02 retires
 the previous greater-than-eight simultaneous-lethal-transition blocker for the
 validated bounded normal founder sandbox through 30, but it does not establish
 arbitrary population-scale mortality or long-run demographic continuity.
+Increment 03 retires player position as authority for agent-relevant physical
+opportunity inside its bounded coverage contract; it does not make all prior
+or player-only World history camera-invariant.
 
 Explicit non-claims: this milestone does not implement CIV-48 Generic
 Organization Kernel, CIV-49 guilds, CIV-50 heraldry, CIV-51 territory or land
@@ -2298,9 +2329,9 @@ recalibration before Wave 6 begins. CIV-48 remains **NOT STARTED —
 IMPLEMENTATION NOT AUTHORIZED**. Gate H remains planned and continues to
 require CIV-48 through CIV-52 unless a future separately authorized roadmap
 review changes that contract. The next authorized action is
-`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-03`. It authorizes inspection of
-the newly published Increment 02 boundary and selection of the smallest next
-coherent causal prerequisite; it does not preselect or authorize Increment 03
+`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-04`. It authorizes inspection of
+the newly published Increment 03 boundary and selection of the smallest next
+coherent causal prerequisite; it does not preselect or authorize Increment 04
 implementation or authorize CIV-48.
 
 ## Wave 6 — Organizations, land and law

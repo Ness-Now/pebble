@@ -1,12 +1,43 @@
 # PS01 Increment 03 — Observer-Independent Physical Coverage
 
-Status: **LOCAL REVIEW CANDIDATE — NOT PUBLISHED**.
+Status: **COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE
+VERIFIED**.
 
 PLAYABLE SLICE 01 remains **REQUIRED — IN PROGRESS / NOT COMPLETE**.
-CIV-48 remains **NOT STARTED — IMPLEMENTATION NOT AUTHORIZED**. Increment 04
-has not been selected or implemented.
+CIV-48 remains **NOT STARTED — IMPLEMENTATION NOT AUTHORIZED**. The next
+authorized action is `REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-04`, a
+review, audit and selection step only. It does not preselect or authorize
+Increment 04 implementation.
 
-## Candidate scope
+## Published identity and review
+
+- Publication HEAD: `0e7f36202debd088e4f1c84de96078be78b6b6fd`.
+- Tree: `33a3675301a6fe088fde62b373f7e73505ba346d`.
+- Parent: `757cad2742e4b76e13010035f246da1e375a01a4`.
+- Commit message: `feat(ps01): add observer-independent physical coverage`.
+- Accepted review ZIP SHA-256:
+  `4183fedfb071f900afe349b317ecd58e215206efd5afb8427b004c2bcc3c6f04`.
+- Independent senior review: **PASS — P0 0 / P1 0 / P2 blocking 0**.
+- Manual publication: completed.
+- Independent canonical remote verification: completed.
+
+## Canonical program position
+
+- Increment 01: **COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED —
+  REMOTE VERIFIED**.
+- Increment 02: **COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED —
+  REMOTE VERIFIED**.
+- Increment 03: **COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED —
+  REMOTE VERIFIED**.
+- PLAYABLE SLICE 01: **REQUIRED — IN PROGRESS / NOT COMPLETE**.
+- Next authorized action:
+  `REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-04`, review/audit/selection
+  only, with no implementation authority or preselected scope.
+- CIV-48: **NOT STARTED — IMPLEMENTATION NOT AUTHORIZED**.
+- Gate H: **PLANNED**, still dependent on CIV-48 through CIV-52. No Gate H
+  acquisition work is authorized.
+
+## Published bounded scope
 
 This increment gives each valid, active Pebble founder a finite physical
 simulation opportunity that does not disappear or change merely because the
@@ -32,8 +63,8 @@ or Observer-authority behavior is added or changed.
 - Implementation branch:
   `codex/ps01-increment-03-observer-independent-physical-coverage`.
 
-The implementation branch was created directly from that remote commit. It
-contains no unrelated commit and has not been pushed.
+The implementation branch was created directly from that baseline. Its sole
+product commit is the published identity above.
 
 ## Architecture and authority
 
@@ -466,12 +497,16 @@ launch-gated, read-only, non-authoritative, and non-persistent.
 - P1: 0. The bounded-path readiness finding is closed.
 - P2: 0.
 
-Increment 03 status: **LOCAL REVIEW CANDIDATE — NOT PUBLISHED**.
+Increment 03 status: **COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED
+— REMOTE VERIFIED**.
 
 PLAYABLE SLICE 01 status: **REQUIRED — IN PROGRESS / NOT COMPLETE**.
 
 CIV-48 status: **NOT STARTED — IMPLEMENTATION NOT AUTHORIZED**.
 
-This report does not select Increment 04, canonize publication, claim survival,
-or claim generic simulation scale beyond the validated maximum of 30 active
-coverage roots.
+This report does not select Increment 04, claim survival, claim whole-World
+camera invariance, or claim generic simulation scale beyond the validated
+maximum of 30 active coverage roots. Physical history that was player-only
+before later entering agent coverage is outside the stronger proven contract.
+Any future agent-relevant mechanic that consumes another shared RNG domain
+must be audited; camera independence is not inherited automatically.
