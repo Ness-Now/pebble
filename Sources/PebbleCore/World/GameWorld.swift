@@ -404,6 +404,38 @@ public final class World {
         body()
     }
 
+    /// Direct physical actions use a target- and attempt-keyed World-owned
+    /// substream. This keeps their drop and ItemEntity randomness independent
+    /// of camera/render activity while preserving the legacy global streams
+    /// before and after the action.
+    public func withDirectPhysicalActionRandomness<T>(
+        operationDomain: UInt32,
+        x: Int,
+        y: Int,
+        z: Int,
+        stableAttemptID: String,
+        _ body: () -> T
+    ) -> T {
+        var identity: UInt32 = 2_166_136_261
+        for byte in stableAttemptID.utf8 {
+            identity ^= UInt32(byte)
+            identity &*= 16_777_619
+        }
+        let previousGameRNG = gameRng
+        let scoped = physicalSimulationSeed(
+            operationDomain: operationDomain,
+            x: x,
+            y: y,
+            z: z,
+            ordinal: Int(identity)
+        )
+        gameRng = RandomX(scoped ^ identity ^ 0x6a57_4f31)
+        defer {
+            gameRng = previousGameRNG
+        }
+        return body()
+    }
+
     public func tick() {
         time += 1
         if rule("doDaylightCycle") && info.hasSky {

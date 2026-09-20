@@ -241,25 +241,100 @@ extension PebbleAgentController {
             }
         }
         if session.wildSubsistenceEnabled {
-            for agent in session.snapshot().agents.sorted(by: { $0.id < $1.id }) {
+            let normalPhysicalFoodPolicy = bootstrapFounderProfile != nil
+                && session.physicalFoodSurvivalEnabled
+                && !session.agricultureEnabled
+                && !session.livestockEnabled
+                && !session.productionEnabled
+            let wildSnapshot = session.wildSubsistenceSnapshot()
+            let opportunityCapacity = wildSnapshot
+                .configuration?.maximumActiveOpportunities ?? 0
+            let agents = session.snapshot().agents.sorted { lhs, rhs in
+                guard normalPhysicalFoodPolicy,
+                      let lhsID = AgentID(rawValue: lhs.id),
+                      let rhsID = AgentID(rawValue: rhs.id) else {
+                    return lhs.id < rhs.id
+                }
+                func rank(
+                    _ agent: AgentSnapshot,
+                    _ actorID: AgentID
+                ) -> (pressure: Int, distance: Int, prior: Int, id: String) {
+                    let distance = session.ecologicalObservations(for: actorID)
+                        .first(where: {
+                            $0.observation.isFresh(atSimulationTick: session.tick)
+                        })?.observation.plants.filter {
+                            $0.edibleSourceEvidence?.canonicalMaterialName
+                                == "sweet_berries"
+                        }.map {
+                            abs(agent.position.x - $0.position.x)
+                                + abs(agent.position.y - $0.position.y)
+                                + abs(agent.position.z - $0.position.z)
+                        }.min() ?? Int.max
+                    return (
+                        Int(agent.needs.hunger * 100),
+                        distance,
+                        wildSnapshot.opportunities.filter {
+                            $0.actorID == actorID
+                        }.count,
+                        agent.id
+                    )
+                }
+                let left = rank(lhs, lhsID)
+                let right = rank(rhs, rhsID)
+                if left.pressure != right.pressure {
+                    return left.pressure > right.pressure
+                }
+                if left.distance != right.distance {
+                    return left.distance < right.distance
+                }
+                if left.prior != right.prior {
+                    return left.prior < right.prior
+                }
+                return left.id < right.id
+            }
+            for agent in agents {
                 guard let actorID = AgentID(rawValue: agent.id),
                       !session.wildSubsistenceSnapshot().opportunities.contains(where: {
                           $0.actorID == actorID && $0.status == .selected
                               && $0.expiresAtTick >= session.tick
                       }), let probe = probesByAgentId[agent.id], probe.world === world,
                       !probe.dead else { continue }
+                if normalPhysicalFoodPolicy {
+                    guard session.needsPhysicalFoodAcquisition(for: actorID),
+                          !foodConsumptionExecutor.hasEligibleFood(
+                            in: PebbleAgentMaterialCustodyEndpoint.liveAgent(
+                                probe, in: world
+                            )
+                          ) else { continue }
+                }
+                let activeOpportunityCount = session.wildSubsistenceSnapshot()
+                    .opportunities.filter {
+                        $0.status == .selected && $0.expiresAtTick >= session.tick
+                    }.count
+                guard activeOpportunityCount < opportunityCapacity else {
+                    trace(
+                        "need-driven subsistence capacity saturated active="
+                            + "\(activeOpportunityCount) limit=\(opportunityCapacity) "
+                            + "policy=bounded-no-failure"
+                    )
+                    break
+                }
                 let itemNames = probe.carriedItems.compactMap { stack in
                     stack.map { itemDef($0.id).name }
                 }
                 let context = AgentSubsistenceDecisionContext(
                     actorID: actorID,
-                    fishingRodAvailable: itemNames.contains("fishing_rod"),
-                    huntingWeaponAvailable: itemNames.contains { $0.hasSuffix("_sword") },
+                    fishingRodAvailable: !normalPhysicalFoodPolicy
+                        && itemNames.contains("fishing_rod"),
+                    huntingWeaponAvailable: !normalPhysicalFoodPolicy
+                        && itemNames.contains { $0.hasSuffix("_sword") },
                     // Agriculture is exposed below from its canonical plot intent.
                     // Wild Subsistence must not create a second agricultural receipt path.
                     agricultureAvailable: false,
                     maximumDistance: 16,
-                    subsistencePressure: max(0, min(100, Int(agent.needs.hunger * 100)))
+                    subsistencePressure: max(0, min(100, Int(agent.needs.hunger * 100))),
+                    requiredEdibleMaterialName: normalPhysicalFoodPolicy
+                        ? "sweet_berries" : nil
                 )
                 guard let eligible = try? session.eligibleSubsistenceStrategies(context),
                       !eligible.isEmpty else { continue }
@@ -406,7 +481,9 @@ extension PebbleAgentController {
                     physicalTarget: opportunity.lastObservedPosition,
                     approachPosition: navigationTarget,
                     materialFingerprint:
-                        productiveSource?.materialFingerprint
+                        opportunity.edibleSourceEvidence.map {
+                            $0.physicalSourceFingerprint
+                        } ?? productiveSource?.materialFingerprint
                             ?? AgentAutonomousActivityDigest.make(
                                 "\(opportunity.strategy.rawValue)|"
                                     + "\(opportunity.targetKey)|"
@@ -414,8 +491,10 @@ extension PebbleAgentController {
                                     + "\(opportunity.lastObservedPosition.y),"
                                     + "\(opportunity.lastObservedPosition.z)"
                             ),
-                    source: work == nil ? .opportunity : .commitment,
-                    priorityBand: work == nil ? 35 : 20,
+                    source: opportunity.edibleSourceEvidence == nil
+                        ? (work == nil ? .opportunity : .commitment) : .need,
+                    priorityBand: opportunity.edibleSourceEvidence == nil
+                        ? (work == nil ? 35 : 20) : 8,
                     urgency: max(50, min(90, opportunity.score)),
                     distance: distance(agent.position, navigationTarget),
                     commitmentID: work?.commitmentID,

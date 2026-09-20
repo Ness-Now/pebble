@@ -482,6 +482,9 @@ public enum AgentReplayOperation: Codable {
         AgentEcologicalObservation,
         physicalReceiptID: AgentPhysicalObservationReceiptID
     )
+    case recordEcologicalObservationBatchWithPhysicalReceipts(
+        [AgentEcologicalObservationReceiptBinding]
+    )
     case setAgricultureEnabled(Bool, configuration: AgentAgricultureConfiguration)
     case planAgriculturalPlot(
         plannerID: AgentID,
@@ -745,7 +748,8 @@ public enum AgentReplayOperation: Codable {
         case .linkGuidedPractice: return .guidedPractice
         case .setEcologicalObservationEnabled: return .ecologicalObservationFeature
         case .recordEcologicalObservation,
-             .recordEcologicalObservationWithPhysicalReceipt:
+             .recordEcologicalObservationWithPhysicalReceipt,
+             .recordEcologicalObservationBatchWithPhysicalReceipts:
             return .ecologicalObservationRecord
         case .setAgricultureEnabled: return .agricultureFeature
         case .planAgriculturalPlot: return .agriculturalPlotPlanning
@@ -968,6 +972,14 @@ public enum AgentReplayOperation: Codable {
             raw = "ecological-observation:\(observation.observerID.rawValue):"
                 + "\(observation.observedAtSimulationTick):\(observation.digest):"
                 + physicalReceiptID.rawValue
+        case let .recordEcologicalObservationBatchWithPhysicalReceipts(bindings):
+            let source = bindings.map {
+                "\($0.observation.observerID.rawValue):"
+                    + "\($0.observation.observedAtSimulationTick):"
+                    + "\($0.observation.digest):\($0.physicalReceiptID.rawValue)"
+            }.joined(separator: "|")
+            raw = "ecological-observation-batch:\(bindings.count):"
+                + AgentCheckpointDigest.sha256(Data(source.utf8)).rawValue
         case let .recordAgriculturalAction(outcome): raw = outcome.actionID.rawValue
         case let .renewAgriculturalPlot(
             plotID, plannerID, sourceObservationEventID
@@ -1440,9 +1452,16 @@ public struct AgentReplayRecorder {
             }
             schemaVersion = AgentReplaySchema.ecologicalObservationVersion
         }
-        if case .recordEcologicalObservationWithPhysicalReceipt = operation,
-           schemaVersion
-            < AgentReplaySchema.independentEcologicalReceiptVersion {
+        let recordsIndependentEcologicalReceipts: Bool
+        switch operation {
+        case .recordEcologicalObservationWithPhysicalReceipt,
+             .recordEcologicalObservationBatchWithPhysicalReceipts:
+            recordsIndependentEcologicalReceipts = true
+        default:
+            recordsIndependentEcologicalReceipts = false
+        }
+        if recordsIndependentEcologicalReceipts,
+           schemaVersion < AgentReplaySchema.independentEcologicalReceiptVersion {
             schemaVersion = AgentReplaySchema
                 .independentEcologicalReceiptVersion
         }
@@ -2554,6 +2573,8 @@ extension AgentSimulationSession {
                 observation,
                 physicalReceiptID: physicalReceiptID
             )
+        case let .recordEcologicalObservationBatchWithPhysicalReceipts(bindings):
+            _ = try candidate.recordEcologicalObservations(bindings)
         case let .setAgricultureEnabled(enabled, configuration):
             try candidate.setAgricultureEnabled(enabled, configuration: configuration)
         case let .planAgriculturalPlot(

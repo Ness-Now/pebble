@@ -509,12 +509,17 @@ extension PebbleAgentController {
                 x: Int(floor($0.x)), y: Int(floor($0.y)), z: Int(floor($0.z))
             )
         }
+        let expectedCell = world.getBlock(
+            fixture.berryPosition.x,
+            fixture.berryPosition.y,
+            fixture.berryPosition.z
+        )
         let result = try wildSubsistenceExecutor.gather(
             world: world, actor: actor,
             target: PhysicalBlockPosition(
                 x: fixture.berryPosition.x, y: fixture.berryPosition.y, z: fixture.berryPosition.z
             ),
-            expectedBlockID: Int(B.sweet_berry_bush), attemptID: attemptID.rawValue,
+            expectedCell: expectedCell, attemptID: attemptID.rawValue,
             occupiedPositions: occupied, physicalGateway: physicalActionGateway,
             materialGateway: materialCustodyGateway
         ) { ids, acquired, fingerprint, attribution in

@@ -124,8 +124,17 @@ extension PebbleAgentController {
                 return failure("Founder start requires an inactive session; stop explicitly before replacing it.")
             }
             guard probesFeatureEnabled, debugEntitiesEnabled, populationFeatureEnabled,
-                  persistenceFeatureEnabled else {
-                return failure("Founder start requires APP_PROBES, DEBUG_ENTITIES, AGENTS_POPULATION and AGENTS_PERSISTENCE gates.")
+                  persistenceFeatureEnabled, movementFeatureEnabled,
+                  interactionFeatureEnabled, materialFeatureEnabled,
+                  skillFeatureEnabled, ecologicalObservationFeatureEnabled,
+                  wildSubsistenceFeatureEnabled,
+                  autonomousCivilizationFeatureEnabled else {
+                return failure(
+                    "Founder start requires probes, debug entities, population, "
+                        + "persistence, movement, interaction, material, skills, "
+                        + "ecological observation, wild subsistence, and autonomous "
+                        + "civilization gates."
+                )
             }
         }
         let anchor = AgentPosition(
@@ -184,6 +193,7 @@ extension PebbleAgentController {
         materialCustodyGateway.reset()
         productionGateway.reset()
         ecologicalObservationSensor.invalidateAll()
+        ecologicalObservationReceiptValidationCache.clear()
         worldReceiptAttemptSerial = 0
         livestockRuntimeEntityIDByRecord.removeAll()
         let probeCount = world.entities.compactMap { $0 as? LabCoreAgentEntity }.count
@@ -261,6 +271,9 @@ extension PebbleAgentController {
                             householdConfiguration: founders.householdConfiguration
                         )
                     }
+                    try initializeNormalFounderSubsistenceAuthorities(
+                        session: &candidateSession
+                    )
                 }
                 try verifyInitialBootstrap(
                     session: candidateSession,

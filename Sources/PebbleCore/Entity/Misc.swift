@@ -2,9 +2,9 @@
 // falling blocks, primed TNT, lightning bolts, end crystals, area effect
 // clouds, eyes of ender.
 //
-// cosmetic jitter (bob phase, drop velocities, anvil-degrade chance,
-// eye-of-ender survival) is deliberately nondeterministic; golden tests
-// must not hash values derived from it.
+// Legacy cosmetic jitter (including item bob phase) is deliberately
+// nondeterministic; golden tests must not hash values derived from it. A
+// bounded direct physical action may inject its World-owned bob substream.
 
 import Foundation
 
@@ -19,9 +19,17 @@ public final class ItemEntity: Entity {
     public var custodyProvenance: String?
     public var pickupDelay = 10
     public var lifeTime = 6000
-    public var bobOffset = Double.random(in: 0..<1) * .pi * 2
+    public var bobOffset: Double
 
     public override init(world: World) {
+        bobOffset = Double.random(in: 0..<1) * .pi * 2
+        super.init(world: world)
+        width = 0.25
+        height = 0.25
+    }
+
+    public init(world: World, bobOffset: Double) {
+        self.bobOffset = bobOffset
         super.init(world: world)
         width = 0.25
         height = 0.25
@@ -415,8 +423,11 @@ public final class EyeOfEnderEntity: Entity {
 // ---------------------------------------------------------------------------
 @discardableResult
 public func spawnItem(_ world: World, _ x: Double, _ y: Double, _ z: Double, _ stack: ItemStack,
-                      _ vx: Double = 0, _ vy: Double = 0.2, _ vz: Double = 0) -> ItemEntity {
-    let e = ItemEntity(world: world)
+                      _ vx: Double = 0, _ vy: Double = 0.2, _ vz: Double = 0,
+                      bobOffsetRandom: (() -> Double)? = nil) -> ItemEntity {
+    let e = bobOffsetRandom.map {
+        ItemEntity(world: world, bobOffset: $0() * .pi * 2)
+    } ?? ItemEntity(world: world)
     e.setPos(x, y, z)
     e.stack = stack
     e.vx = vx + (gameRng.nextFloat() - 0.5) * 0.08

@@ -1353,9 +1353,6 @@ extension PebbleAgentController {
                     world: world, session: &session, recorder: &recorder,
                     receiptTransaction: &receiptTransaction
                 )
-                try validateWorldEcologicalObservationReceipts(
-                    for: session, dimension: world.dim.rawValue
-                )
             }
             if session.agricultureEnabled {
                 try reconcileLiveAgriculturalLifecycle(
@@ -1390,7 +1387,8 @@ extension PebbleAgentController {
             if session.ecologicalObservationEnabled {
                 try reconcileWorldEcologicalObservationReceiptRetention(
                     for: session,
-                    transaction: &receiptTransaction
+                    transaction: &receiptTransaction,
+                    validateProtectedEvidence: false
                 )
                 try reconcileWorldAgriculturalActionReceiptRetention(
                     for: session,

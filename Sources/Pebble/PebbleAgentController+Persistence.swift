@@ -1482,6 +1482,28 @@ extension PebbleAgentController {
                 "Checkpoint load refused: ecological observation gate or dependency is disabled."
             )
         }
+        if candidate.wildSubsistenceEnabled
+            && (!wildSubsistenceFeatureEnabled || !skillFeatureEnabled
+                || !ecologicalObservationFeatureEnabled || !materialFeatureEnabled
+                || !interactionFeatureEnabled || !movementFeatureEnabled) {
+            trace("checkpoint load refused name=\(name.rawValue) reason=wildSubsistenceGate")
+            return failure(
+                "Checkpoint load refused: wild subsistence gate or dependency is disabled."
+            )
+        }
+        if candidate.physicalFoodSurvivalEnabled && !materialFeatureEnabled {
+            trace("checkpoint load refused name=\(name.rawValue) reason=physicalFoodGate")
+            return failure(
+                "Checkpoint load refused: physical food material gate is disabled."
+            )
+        }
+        if candidate.autonomousActivityEnabled
+            && !autonomousCivilizationFeatureEnabled {
+            trace("checkpoint load refused name=\(name.rawValue) reason=autonomousActivityGate")
+            return failure(
+                "Checkpoint load refused: autonomous civilization gate is disabled."
+            )
+        }
         if candidate.agricultureEnabled
             && (!agricultureFeatureEnabled || !featureEnabled || !persistenceFeatureEnabled
                 || !populationFeatureEnabled || !lifecycleFeatureEnabled

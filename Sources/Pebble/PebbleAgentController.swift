@@ -143,8 +143,12 @@ final class PebbleAgentController {
     var activeCandidatePhysicalTransaction: PebbleCandidatePhysicalTransaction?
     var activeCandidateReceiptTransaction:
         PebbleWorldEcologicalObservationReceiptTransaction?
+    var activeEcologicalObservationReplayBatch:
+        [AgentEcologicalObservationReceiptBinding]?
     var candidatePhysicalHardFailure: PebbleCandidatePhysicalHardFailure?
     var worldReceiptAttemptSerial: UInt64 = 0
+    var ecologicalObservationReceiptValidationCache =
+        PebbleEcologicalObservationReceiptValidationCache()
     var lastPhysicalSimulationCoverageTraceKey: String?
 
     let environment = ProcessInfo.processInfo.environment

@@ -306,6 +306,36 @@ extension AgentSimulationSession {
         return record
     }
 
+    /// Atomically records one deterministic sensor batch. This preserves the
+    /// per-observation transition, retention and causal-event order while
+    /// allowing the replay owner to compute its whole-state integrity record
+    /// once for the completed batch.
+    @discardableResult
+    public mutating func recordEcologicalObservations(
+        _ bindings: [AgentEcologicalObservationReceiptBinding]
+    ) throws -> [AgentEcologicalObservationRecord] {
+        guard !bindings.isEmpty,
+              let configuration = ecologicalObservationState?.configuration,
+              bindings.count <= configuration.maximumScansPerSimulationTick,
+              Set(bindings.map(\.physicalReceiptID)).count == bindings.count else {
+            throw AgentSessionError.ecologicalObservation(
+                .invalidObservation("receipt batch identity or bound")
+            )
+        }
+        var candidate = self
+        var records: [AgentEcologicalObservationRecord] = []
+        records.reserveCapacity(bindings.count)
+        for binding in bindings {
+            records.append(try candidate.recordEcologicalObservationInPlace(
+                binding.observation,
+                physicalReceiptID: binding.physicalReceiptID
+            ))
+        }
+        try candidate.validateEcologicalObservationStateIfEnabled()
+        self = candidate
+        return records
+    }
+
     private mutating func recordEcologicalObservationInPlace(
         _ observation: AgentEcologicalObservation,
         physicalReceiptID: AgentPhysicalObservationReceiptID

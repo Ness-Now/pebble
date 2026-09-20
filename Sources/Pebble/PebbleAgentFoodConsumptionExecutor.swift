@@ -42,6 +42,21 @@ struct PebbleAgentFoodConsumptionResult {
 final class PebbleAgentFoodConsumptionExecutor {
     private let bridge = PebbleAgentMaterialSnapshotBridge()
 
+    func hasEligibleFood(
+        in source: PebbleAgentMaterialCustodyEndpoint
+    ) -> Bool {
+        source.read()?.contains { stack in
+            guard let stack,
+                  let descriptor = foodConsumptionDescriptor(for: stack) else {
+                return false
+            }
+            return descriptor.food.hunger > 0
+                && !descriptor.food.alwaysEat
+                && descriptor.food.effects.isEmpty
+                && descriptor.hasSimpleDebit
+        } == true
+    }
+
     func prepare(
         _ intent: AgentPhysicalFoodConsumptionIntent,
         session: AgentSimulationSession,

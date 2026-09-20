@@ -2,6 +2,16 @@ import Foundation
 import PebbleAgents
 import PebbleCore
 
+func pebbleAgentEdibleSourceFingerprint(
+    sourceCell: Int,
+    blockName: String,
+    canonicalMaterialName: String
+) -> String {
+    AgentEcologicalObservationDigest.make(
+        "physical-food-source|\(sourceCell)|\(blockName)|\(canonicalMaterialName)"
+    )
+}
+
 struct PebbleAgentEcologicalObservationSensorSnapshot: Equatable {
     let scans: Int
     let cacheHits: Int
@@ -366,9 +376,26 @@ final class PebbleAgentEcologicalObservationSensor {
                 ))
                 emitted += 1
             } else if Self.plantNames.contains(name), emitted < reserve {
+                let edible = name == "sweet_berry_bush"
+                    ? edibleBlockBreakDropQualifications(for: cell, heldItem: nil)
+                        .first(where: { qualification in
+                            qualification.blockName == "sweet_berry_bush"
+                                && qualification.canonicalMaterialName == "sweet_berries"
+                        })
+                    : nil
                 plants.append(AgentPlantObservation(
                     plantKey: name, position: position,
-                    renewability: definition.randomTicks ? .conditional : .unknown
+                    renewability: definition.randomTicks ? .conditional : .unknown,
+                    edibleSourceEvidence: edible.map {
+                        AgentObservedEdibleSourceEvidence(
+                            canonicalMaterialName: $0.canonicalMaterialName,
+                            physicalSourceFingerprint: pebbleAgentEdibleSourceFingerprint(
+                                sourceCell: $0.sourceCell,
+                                blockName: $0.blockName,
+                                canonicalMaterialName: $0.canonicalMaterialName
+                            )
+                        )
+                    }
                 ))
                 emitted += 1
             }

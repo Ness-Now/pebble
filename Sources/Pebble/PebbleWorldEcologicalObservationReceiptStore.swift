@@ -149,6 +149,56 @@ struct PebbleEcologicalObservationReceipt: Codable, Equatable {
     }
 }
 
+/// Bounded, non-authoritative acceleration for immutable receipt validation.
+/// Cached evidence is reusable only while the current database bytes remain
+/// exactly equal; missing or changed bytes always fail or revalidate.
+struct PebbleEcologicalObservationReceiptValidationCache {
+    static let maximumEntries = 256
+
+    struct Entry {
+        let bytes: Data
+        let receipt: PebbleEcologicalObservationReceipt
+    }
+
+    private(set) var entries:
+        [AgentPhysicalObservationReceiptID: Entry] = [:]
+
+    mutating func receipt(
+        for id: AgentPhysicalObservationReceiptID,
+        bytes: Data
+    ) -> PebbleEcologicalObservationReceipt? {
+        guard let entry = entries[id], entry.bytes == bytes else {
+            entries.removeValue(forKey: id)
+            return nil
+        }
+        return entry.receipt
+    }
+
+    mutating func store(
+        _ receipt: PebbleEcologicalObservationReceipt,
+        bytes: Data
+    ) {
+        if entries.count >= Self.maximumEntries,
+           entries[receipt.receiptID] == nil,
+           let evicted = entries.keys.sorted().first {
+            entries.removeValue(forKey: evicted)
+        }
+        entries[receipt.receiptID] = Entry(bytes: bytes, receipt: receipt)
+    }
+
+    mutating func retain(
+        _ ids: Set<AgentPhysicalObservationReceiptID>
+    ) {
+        entries = entries.filter { ids.contains($0.key) }
+    }
+
+    mutating func remove(_ id: AgentPhysicalObservationReceiptID) {
+        entries.removeValue(forKey: id)
+    }
+
+    mutating func clear() { entries.removeAll(keepingCapacity: true) }
+}
+
 struct PebbleWorldEcologicalObservationReceiptStore {
     static let maximumReceiptsPerWorld = 73_728
 
@@ -192,7 +242,22 @@ struct PebbleWorldEcologicalObservationReceiptStore {
         )
     }
 
-    func insert(_ receipt: PebbleEcologicalObservationReceipt) throws {
+    func prevalidateCapacity(additionalReceiptCount: Int) throws {
+        guard additionalReceiptCount > 0 else { return }
+        let rows = database.listWorldReceipts(
+            worldID: worldID,
+            kind: PebbleEcologicalObservationReceipt.kind
+        )
+        guard rows.count <= maximumReceipts - additionalReceiptCount else {
+            throw PebbleWorldEcologicalObservationReceiptError.capacityReached
+        }
+    }
+
+    @discardableResult
+    func insert(
+        _ receipt: PebbleEcologicalObservationReceipt,
+        capacityPrevalidated: Bool = false
+    ) throws -> Data {
         guard receipt.isValid,
               receipt.worldID == worldID,
               receipt.storageIdentity == storageIdentity else {
@@ -200,12 +265,8 @@ struct PebbleWorldEcologicalObservationReceiptStore {
                 receipt.receiptID.rawValue
             )
         }
-        let rows = database.listWorldReceipts(
-            worldID: worldID,
-            kind: PebbleEcologicalObservationReceipt.kind
-        )
-        guard rows.count < maximumReceipts else {
-            throw PebbleWorldEcologicalObservationReceiptError.capacityReached
+        if !capacityPrevalidated {
+            try prevalidateCapacity(additionalReceiptCount: 1)
         }
         let bytes = try JSONEncoder.sorted.encode(receipt)
         guard database.putWorldReceiptIfAbsent(
@@ -217,6 +278,7 @@ struct PebbleWorldEcologicalObservationReceiptStore {
             throw PebbleWorldEcologicalObservationReceiptError
                 .duplicateReceipt(receipt.receiptID.rawValue)
         }
+        return bytes
     }
 
     func receipt(
@@ -230,6 +292,13 @@ struct PebbleWorldEcologicalObservationReceiptStore {
             throw PebbleWorldEcologicalObservationReceiptError
                 .missingReceipt(receiptID.rawValue)
         }
+        return try validatedReceipt(receiptID, bytes: bytes)
+    }
+
+    private func validatedReceipt(
+        _ receiptID: AgentPhysicalObservationReceiptID,
+        bytes: Data
+    ) throws -> PebbleEcologicalObservationReceipt {
         guard let receipt = try? JSONDecoder().decode(
             PebbleEcologicalObservationReceipt.self, from: bytes
         ), receipt.receiptID == receiptID, receipt.worldID == worldID,
@@ -251,6 +320,41 @@ struct PebbleWorldEcologicalObservationReceiptStore {
         return try receiptIDs.sorted().map { try receipt($0).evidence }
     }
 
+    func evidence(
+        for receiptIDs: [AgentPhysicalObservationReceiptID],
+        validationCache: inout
+            PebbleEcologicalObservationReceiptValidationCache
+    ) throws -> [AgentEcologicalPhysicalReceiptEvidence] {
+        guard receiptIDs.count == Set(receiptIDs).count else {
+            throw PebbleWorldEcologicalObservationReceiptError
+                .duplicateReceipt("requested")
+        }
+        let requested = Set(receiptIDs)
+        let rows = database.listWorldReceipts(
+            worldID: worldID,
+            kind: PebbleEcologicalObservationReceipt.kind
+        )
+        let bytesByID = Dictionary(uniqueKeysWithValues: rows.map {
+            ($0.receiptID, $0.data)
+        })
+        let receipts = try receiptIDs.sorted().map { receiptID in
+            guard let bytes = bytesByID[receiptID.rawValue] else {
+                throw PebbleWorldEcologicalObservationReceiptError
+                    .missingReceipt(receiptID.rawValue)
+            }
+            if let cached = validationCache.receipt(
+                for: receiptID, bytes: bytes
+            ) {
+                return cached
+            }
+            let validated = try validatedReceipt(receiptID, bytes: bytes)
+            validationCache.store(validated, bytes: bytes)
+            return validated
+        }
+        validationCache.retain(requested)
+        return receipts.map(\.evidence)
+    }
+
     func remove(
         _ receiptID: AgentPhysicalObservationReceiptID
     ) throws -> PebbleEcologicalObservationReceipt {
@@ -263,6 +367,32 @@ struct PebbleWorldEcologicalObservationReceiptStore {
             throw PebbleWorldEcologicalObservationReceiptError
                 .rollbackFailed(receiptID.rawValue)
         }
+        return prior
+    }
+
+    func remove(
+        _ receiptID: AgentPhysicalObservationReceiptID,
+        knownBytes: Data,
+        validationCache: inout
+            PebbleEcologicalObservationReceiptValidationCache
+    ) throws -> PebbleEcologicalObservationReceipt {
+        let prior: PebbleEcologicalObservationReceipt
+        if let cached = validationCache.receipt(
+            for: receiptID, bytes: knownBytes
+        ) {
+            prior = cached
+        } else {
+            prior = try validatedReceipt(receiptID, bytes: knownBytes)
+        }
+        guard database.deleteWorldReceipt(
+            worldID: worldID,
+            kind: PebbleEcologicalObservationReceipt.kind,
+            receiptID: receiptID.rawValue
+        ) else {
+            throw PebbleWorldEcologicalObservationReceiptError
+                .rollbackFailed(receiptID.rawValue)
+        }
+        validationCache.remove(receiptID)
         return prior
     }
 
@@ -572,6 +702,9 @@ extension PebbleAgentController {
             let store = try worldEcologicalObservationReceiptStore()
             for receipt in transaction.inserted.reversed() {
                 _ = try store.remove(receipt.receiptID)
+                ecologicalObservationReceiptValidationCache.remove(
+                    receipt.receiptID
+                )
             }
             for receipt in transaction.removed.reversed() {
                 try store.restore(receipt)
@@ -604,36 +737,14 @@ extension PebbleAgentController {
         )
     }
 
-    func causalWorldEcologicalObservationReceiptIDs(
-        for session: AgentSimulationSession
-    ) -> Set<AgentPhysicalObservationReceiptID> {
-        var required: Set<AgentPhysicalObservationReceiptID> = []
-        for event in session.causalLedgerSnapshot().events
-        where event.kind == .ecologicalObservationRecorded
-            && event.origin == .ecologicalObservationTransition {
-            if case let .ecologicalObservation(
-                _, _, _, physicalReceiptID, _, _, _, _, _
-            ) = event.payload,
-               let physicalReceiptID,
-               let receiptID = AgentPhysicalObservationReceiptID(
-                    rawValue: physicalReceiptID
-               ) {
-                required.insert(receiptID)
-            }
-        }
-        return required
-    }
-
     func reconcileWorldEcologicalObservationReceiptRetention(
         for candidate: AgentSimulationSession,
-        transaction: inout PebbleWorldEcologicalObservationReceiptTransaction
+        transaction: inout PebbleWorldEcologicalObservationReceiptTransaction,
+        validateProtectedEvidence: Bool = true
     ) throws {
         let store = try worldEcologicalObservationReceiptStore()
         var protected = requiredWorldEcologicalObservationReceiptIDs(
             for: candidate
-        )
-        protected.formUnion(
-            causalWorldEcologicalObservationReceiptIDs(for: candidate)
         )
         if let worldID = persistenceWorldID {
             let persistence = try PebbleAgentPersistenceStore(worldID: worldID)
@@ -651,7 +762,12 @@ extension PebbleAgentController {
                 )
             }
         }
-        _ = try store.evidence(for: protected.sorted())
+        if validateProtectedEvidence {
+            _ = try store.evidence(
+                for: protected.sorted(),
+                validationCache: &ecologicalObservationReceiptValidationCache
+            )
+        }
         for row in store.database.listWorldReceipts(
             worldID: store.worldID,
             kind: PebbleEcologicalObservationReceipt.kind
@@ -663,7 +779,11 @@ extension PebbleAgentController {
                     .invalidReceipt(row.receiptID)
             }
             guard !protected.contains(receiptID) else { continue }
-            let removed = try store.remove(receiptID)
+            let removed = try store.remove(
+                receiptID,
+                knownBytes: row.data,
+                validationCache: &ecologicalObservationReceiptValidationCache
+            )
             transaction.recordRemoval(removed)
         }
     }
@@ -750,7 +870,10 @@ extension PebbleAgentController {
         let uniqueIDs = Set(ids).sorted()
         let store = try worldEcologicalObservationReceiptStore()
         try session.validateIndependentEcologicalObservationReceipts(
-            store.evidence(for: uniqueIDs),
+            store.evidence(
+                for: uniqueIDs,
+                validationCache: &ecologicalObservationReceiptValidationCache
+            ),
             worldID: store.worldID,
             storageIdentity: store.storageIdentity,
             dimension: dimension

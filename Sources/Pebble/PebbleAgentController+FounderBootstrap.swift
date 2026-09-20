@@ -18,6 +18,18 @@ struct PebbleNormalFounderProfile {
 }
 
 extension PebbleAgentController {
+    func initializeNormalFounderSubsistenceAuthorities(
+        session: inout AgentSimulationSession
+    ) throws {
+        // Dependencies first; each operation remains the canonical owner and
+        // the unpublished candidate keeps startup atomic.
+        try session.setSkillsEnabled(true)
+        try session.setEcologicalObservationEnabled(true)
+        try session.setWildSubsistenceEnabled(true)
+        try session.setPhysicalFoodSurvivalEnabled(true)
+        try session.setAutonomousActivityEnabled(true)
+    }
+
     /// Uses the ordinary Observer and durable codec on the unpublished candidate.
     /// The trace is evidence only; it is never read back as simulation authority.
     func verifyFounderProjection(
@@ -39,9 +51,21 @@ extension PebbleAgentController {
               try restored.durableStateBytes() == before,
               observer.individuals.map(\.agentID.rawValue) == ids,
               try candidate.durableStateBytes() == before,
-              !candidate.populationScalingEnabled else {
+              !candidate.populationScalingEnabled,
+              candidate.skillsEnabled,
+              candidate.ecologicalObservationEnabled,
+              candidate.wildSubsistenceEnabled,
+              candidate.physicalFoodSurvivalEnabled,
+              candidate.autonomousActivityEnabled,
+              !candidate.agricultureEnabled,
+              !candidate.livestockEnabled,
+              !candidate.productionEnabled,
+              !candidate.workCommitmentsEnabled,
+              !candidate.barterEnabled,
+              !candidate.contractsEnabled,
+              !candidate.marketEnabled else {
             throw ControllerError.bootstrapPlacementBoundary("founder projection/restore mismatch")
         }
-        trace("founder candidate count=\(ids.count) ids=\(ids.joined(separator: ",")) population=\(candidate.populationSummary().memberCount) nextOrdinal=\(candidate.populationSummary().nextPopulationOrdinal ?? -1) lifecycle=\(candidate.lifecycleSnapshot().members.count) kinship=\(candidate.kinshipSnapshot().historicalPersons.count) households=\(candidate.householdSnapshot().currentMemberships.count) genotypes=\(candidate.geneticsSnapshot().genotypes.count) physiology=\(candidate.homeostasisSnapshot().profiles.count) fullCognition=ALL scaling=inactive resources=0 observer=exact observerMutation=0 checkpoint=exact digest=\(checkpoint.semanticDigest.rawValue)")
+        trace("founder candidate count=\(ids.count) ids=\(ids.joined(separator: ",")) population=\(candidate.populationSummary().memberCount) nextOrdinal=\(candidate.populationSummary().nextPopulationOrdinal ?? -1) lifecycle=\(candidate.lifecycleSnapshot().members.count) kinship=\(candidate.kinshipSnapshot().historicalPersons.count) households=\(candidate.householdSnapshot().currentMemberships.count) genotypes=\(candidate.geneticsSnapshot().genotypes.count) physiology=\(candidate.homeostasisSnapshot().profiles.count) fullCognition=ALL scaling=inactive resources=0 subsistence=needDrivenPhysicalBerries unrelatedDomains=off observer=exact observerMutation=0 checkpoint=exact digest=\(checkpoint.semanticDigest.rawValue)")
     }
 }

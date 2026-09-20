@@ -622,28 +622,49 @@ extension PebbleAgentController {
             y: opportunity.lastObservedPosition.y,
             z: opportunity.lastObservedPosition.z
         )
-        let expected = world.getBlock(target.x, target.y, target.z) >> 4
+        let expected = world.getBlock(target.x, target.y, target.z)
         var candidate = session
         var candidateRecorder = recorder
-        let physical = try wildSubsistenceExecutor.gather(
-            world: world, actor: actor, target: target, expectedBlockID: expected,
-            attemptID: attemptID.rawValue, occupiedPositions: occupied,
-            physicalGateway: physicalActionGateway, materialGateway: materialCustodyGateway
-        ) { ids, acquired, fingerprint, attribution in
+        let physical: PebbleAgentWildSubsistencePhysicalResult
+        do {
+            physical = try wildSubsistenceExecutor.gather(
+                world: world, actor: actor, target: target, expectedCell: expected,
+                edibleSourceEvidence: opportunity.edibleSourceEvidence,
+                attemptID: attemptID.rawValue, occupiedPositions: occupied,
+                physicalGateway: physicalActionGateway, materialGateway: materialCustodyGateway
+            ) { ids, acquired, fingerprint, attribution in
+                let outcome = AgentSubsistenceOutcome(
+                    attemptID: attemptID, opportunityID: opportunity.opportunityID,
+                    actorID: opportunity.actorID, strategy: .wildGathering,
+                    targetKey: opportunity.targetKey,
+                    targetPosition: opportunity.lastObservedPosition,
+                    sourceObservationEventID: opportunity.sourceObservationEventID,
+                    status: .succeeded, physicalCausalIDs: ids, acquiredItems: acquired,
+                    custodyFingerprint: fingerprint, attribution: attribution,
+                    completedAtTick: candidate.tick
+                )
+                if try applyRecordedOperationIfActive(
+                    .recordWildSubsistenceOutcome(outcome),
+                    session: &candidate, recorder: &candidateRecorder
+                ) == nil { _ = try candidate.recordWildSubsistenceOutcome(outcome) }
+            }
+        } catch PebbleAgentWildSubsistenceExecutor.ExecutionError.staleWorld {
             let outcome = AgentSubsistenceOutcome(
                 attemptID: attemptID, opportunityID: opportunity.opportunityID,
                 actorID: opportunity.actorID, strategy: .wildGathering,
                 targetKey: opportunity.targetKey,
                 targetPosition: opportunity.lastObservedPosition,
                 sourceObservationEventID: opportunity.sourceObservationEventID,
-                status: .succeeded, physicalCausalIDs: ids, acquiredItems: acquired,
-                custodyFingerprint: fingerprint, attribution: attribution,
+                status: .failed, attribution: "physical-source-stale-or-depleted",
                 completedAtTick: candidate.tick
             )
             if try applyRecordedOperationIfActive(
                 .recordWildSubsistenceOutcome(outcome),
                 session: &candidate, recorder: &candidateRecorder
             ) == nil { _ = try candidate.recordWildSubsistenceOutcome(outcome) }
+            session = candidate
+            recorder = candidateRecorder
+            throw PebbleAgentWildSubsistenceExecutor.ExecutionError.staleWorld
         }
         guard physical.status == .succeeded else {
             throw ControllerError.feedbackBoundary("gathering physical outcome failed")

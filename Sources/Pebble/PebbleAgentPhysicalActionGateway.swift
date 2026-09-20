@@ -57,12 +57,34 @@ struct PebbleAgentBlockPlacementRequest {
     let orientation: BlockPlacementOrientation
 }
 
+struct PebbleAgentDirectActionRandomness {
+    let operationDomain: UInt32
+    let stableAttemptID: String
+}
+
 struct PebbleAgentBlockBreakRequest {
     let actorID: String
     let target: PhysicalBlockPosition
     let expectedCell: Int
     let heldItem: ItemStack?
     let isCreative: Bool
+    let directActionRandomness: PebbleAgentDirectActionRandomness?
+
+    init(
+        actorID: String,
+        target: PhysicalBlockPosition,
+        expectedCell: Int,
+        heldItem: ItemStack?,
+        isCreative: Bool,
+        directActionRandomness: PebbleAgentDirectActionRandomness? = nil
+    ) {
+        self.actorID = actorID
+        self.target = target
+        self.expectedCell = expectedCell
+        self.heldItem = heldItem
+        self.isCreative = isCreative
+        self.directActionRandomness = directActionRandomness
+    }
 }
 
 struct PebbleAgentBlockTillingRequest {
@@ -716,20 +738,39 @@ final class PebbleAgentPhysicalActionGateway {
             gameRng = gameRngBefore
             return actorStateRestored && gameRng == gameRngBefore
         }
-        let (physical, bufferedEffects) = captureCandidateWorldEffects(world: world) {
-            executeBlockBreak(
-                BlockBreakRuleContext(
-                    world: world,
-                    heldItem: request.heldItem,
-                    isCreative: request.isCreative,
-                    vibrationSource: actor.entity,
-                    damageTool: toolState.damage
-                ),
-                request.target.x,
-                request.target.y,
-                request.target.z
-            )
+        let execute = {
+            captureCandidateWorldEffects(world: world) {
+                executeBlockBreak(
+                    BlockBreakRuleContext(
+                        world: world,
+                        heldItem: request.heldItem,
+                        isCreative: request.isCreative,
+                        vibrationSource: actor.entity,
+                        itemEntityBobOffsetRandom:
+                            request.directActionRandomness == nil
+                                ? nil : { gameRng.nextFloat() },
+                        damageTool: toolState.damage
+                    ),
+                    request.target.x,
+                    request.target.y,
+                    request.target.z
+                )
+            }
         }
+        let execution: (BlockBreakRuleResult, [PebbleCandidateBufferedWorldEffect])
+        if let randomness = request.directActionRandomness {
+            execution = world.withDirectPhysicalActionRandomness(
+                operationDomain: randomness.operationDomain,
+                x: request.target.x,
+                y: request.target.y,
+                z: request.target.z,
+                stableAttemptID: randomness.stableAttemptID,
+                execute
+            )
+        } else {
+            execution = execute()
+        }
+        let (physical, bufferedEffects) = execution
         guard physical.status == .succeeded else {
             return rolledBackFailure(
                 family: family, actorID: request.actorID, target: request.target,

@@ -235,19 +235,40 @@ public struct AgentCropObservation: Codable, Equatable, Sendable {
     }
 }
 
+/// Neutral evidence that one exact physical source was freshly qualified by
+/// the adapter as capable of yielding eligible food. Core remains authoritative
+/// for the source cell, item definition, actual drop identity, and quantity.
+public struct AgentObservedEdibleSourceEvidence: Codable, Equatable, Sendable {
+    public let canonicalMaterialName: String
+    public let physicalSourceFingerprint: String
+
+    public init(
+        canonicalMaterialName: String,
+        physicalSourceFingerprint: String
+    ) {
+        self.canonicalMaterialName = canonicalMaterialName
+        self.physicalSourceFingerprint = physicalSourceFingerprint
+    }
+}
+
 public struct AgentPlantObservation: Codable, Equatable, Sendable {
     public let plantKey: String
     public let position: AgentPosition
     public let renewability: AgentEcologicalRenewability
+    /// `nil` preserves the legacy observation encoding/digest and means that
+    /// no edible source was qualified for the exact observed physical state.
+    public let edibleSourceEvidence: AgentObservedEdibleSourceEvidence?
 
     public init(
         plantKey: String,
         position: AgentPosition,
-        renewability: AgentEcologicalRenewability
+        renewability: AgentEcologicalRenewability,
+        edibleSourceEvidence: AgentObservedEdibleSourceEvidence? = nil
     ) {
         self.plantKey = plantKey
         self.position = position
         self.renewability = renewability
+        self.edibleSourceEvidence = edibleSourceEvidence
     }
 }
 
@@ -512,7 +533,12 @@ public struct AgentEcologicalObservation: Codable, Equatable, Sendable {
             "water=" + water.map { "\($0.fluidKey)@\(point($0.position)):\($0.sourceBlock ? 1 : 0)" }.joined(separator: ";"),
             "soils=" + soils.map { "\($0.blockKey)@\(point($0.position)):\($0.tillable ? 1 : 0):\($0.alreadyFarmland ? 1 : 0):\($0.hydrated.map { $0 ? "1" : "0" } ?? "u"):\($0.supportsCrop ? 1 : 0)" }.joined(separator: ";"),
             "crops=" + crops.map { "\($0.cropKey)@\(point($0.position)):\($0.growthStage)/\($0.maximumGrowthStage):\($0.mature ? 1 : 0):\($0.supportBlockKey ?? "none")" }.joined(separator: ";"),
-            "plants=" + plants.map { "\($0.plantKey)@\(point($0.position)):\($0.renewability.rawValue)" }.joined(separator: ";"),
+            "plants=" + plants.map { plant in
+                let legacy = "\(plant.plantKey)@\(point(plant.position)):\(plant.renewability.rawValue)"
+                guard let evidence = plant.edibleSourceEvidence else { return legacy }
+                return legacy + ":edible=\(evidence.canonicalMaterialName),"
+                    + evidence.physicalSourceFingerprint
+            }.joined(separator: ";"),
             "animals=" + animals.map { "\($0.speciesKey)@\(point($0.position)):\($0.count):\($0.lifeStage.rawValue):\($0.breedableAffordanceObservable ? 1 : 0)" }.joined(separator: ";"),
             "fishing=" + fishing.map { "\($0.waterKey)@\(point($0.position)):\($0.candidate ? 1 : 0)" }.joined(separator: ";"),
             "weather=\(weather.kind.rawValue):\(weather.raining ? 1 : 0):\(weather.thundering ? 1 : 0)",
@@ -616,6 +642,23 @@ public struct AgentPhysicalObservationReceiptID: RawRepresentable, Codable,
         rhs: AgentPhysicalObservationReceiptID
     ) -> Bool {
         lhs.rawValue < rhs.rawValue
+    }
+}
+
+/// One ordered cognitive publication backed by an already-created World-side
+/// receipt. A batch of these values only amortizes replay bookkeeping; each
+/// observation still produces its own retained row and causal event.
+public struct AgentEcologicalObservationReceiptBinding: Codable, Equatable,
+    Sendable {
+    public let observation: AgentEcologicalObservation
+    public let physicalReceiptID: AgentPhysicalObservationReceiptID
+
+    public init(
+        observation: AgentEcologicalObservation,
+        physicalReceiptID: AgentPhysicalObservationReceiptID
+    ) {
+        self.observation = observation
+        self.physicalReceiptID = physicalReceiptID
     }
 }
 

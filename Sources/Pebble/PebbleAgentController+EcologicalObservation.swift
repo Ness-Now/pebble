@@ -108,16 +108,53 @@ extension PebbleAgentController {
         receiptTransaction: inout
             PebbleWorldEcologicalObservationReceiptTransaction
     ) throws {
-        for snapshot in session.snapshot().agents.sorted(by: { $0.id < $1.id }) {
+        let batchesNormalFounderReplay = bootstrapFounderProfile != nil
+            && !session.productiveSourceLifecycleEnabled
+        if batchesNormalFounderReplay {
+            guard activeEcologicalObservationReplayBatch == nil else {
+                throw ControllerError.ecologicalObservationBoundary(
+                    "nested ecological replay batch"
+                )
+            }
+            activeEcologicalObservationReplayBatch = []
+        }
+        defer {
+            if batchesNormalFounderReplay {
+                activeEcologicalObservationReplayBatch = nil
+            }
+        }
+        let snapshots = session.snapshot().agents.sorted(by: { $0.id < $1.id })
+        if batchesNormalFounderReplay, !snapshots.isEmpty {
+            try worldEcologicalObservationReceiptStore().prevalidateCapacity(
+                additionalReceiptCount: snapshots.count
+            )
+        }
+        // The enclosing candidate tick reconciles and validates the completed
+        // batch once before publication. Every insertion remains journaled in
+        // this same open receipt transaction until that final boundary.
+        for snapshot in snapshots {
             guard let observerID = AgentID(rawValue: snapshot.id) else {
                 throw ControllerError.ecologicalObservationBoundary("invalid agent identity")
             }
             let observation = try recordLiveEcologicalObservation(
                 world: world, observerID: observerID,
                 session: &session, recorder: &recorder,
-                receiptTransaction: &receiptTransaction
+                receiptTransaction: &receiptTransaction,
+                reconcileReceiptRetention: false,
+                receiptCapacityPrevalidated: batchesNormalFounderReplay
             )
             traceEcologicalObservation(observation, reason: "cognitive-tick")
+        }
+        if batchesNormalFounderReplay,
+           let bindings = activeEcologicalObservationReplayBatch,
+           !bindings.isEmpty {
+            if try applyRecordedOperationIfActive(
+                .recordEcologicalObservationBatchWithPhysicalReceipts(bindings),
+                session: &session,
+                recorder: &recorder
+            ) == nil {
+                _ = try session.recordEcologicalObservations(bindings)
+            }
         }
         if session.productiveSourceLifecycleEnabled {
             if try applyRecordedOperationIfActive(
@@ -174,7 +211,9 @@ extension PebbleAgentController {
         session: inout AgentSimulationSession,
         recorder: inout AgentReplayRecorder?,
         receiptTransaction: inout
-            PebbleWorldEcologicalObservationReceiptTransaction
+            PebbleWorldEcologicalObservationReceiptTransaction,
+        reconcileReceiptRetention: Bool = true,
+        receiptCapacityPrevalidated: Bool = false
     ) throws -> AgentEcologicalObservation {
         guard let probe = probesByAgentId[observerID.rawValue],
               probe.world === world, !probe.dead else {
@@ -203,7 +242,9 @@ extension PebbleAgentController {
             world: world,
             session: &session,
             recorder: &recorder,
-            receiptTransaction: &receiptTransaction
+            receiptTransaction: &receiptTransaction,
+            reconcileReceiptRetention: reconcileReceiptRetention,
+            receiptCapacityPrevalidated: receiptCapacityPrevalidated
         )
         if session.productiveSourceLifecycleEnabled {
             let sourceObservations = productiveSourceObservations(
@@ -232,12 +273,16 @@ extension PebbleAgentController {
         session: inout AgentSimulationSession,
         recorder: inout AgentReplayRecorder?,
         receiptTransaction: inout
-            PebbleWorldEcologicalObservationReceiptTransaction
+            PebbleWorldEcologicalObservationReceiptTransaction,
+        reconcileReceiptRetention: Bool = true,
+        receiptCapacityPrevalidated: Bool = false
     ) throws {
-        try reconcileWorldEcologicalObservationReceiptRetention(
-            for: session,
-            transaction: &receiptTransaction
-        )
+        if reconcileReceiptRetention {
+            try reconcileWorldEcologicalObservationReceiptRetention(
+                for: session,
+                transaction: &receiptTransaction
+            )
+        }
         let store = try worldEcologicalObservationReceiptStore()
         guard worldReceiptAttemptSerial < UInt64.max else {
             throw ControllerError.ecologicalObservationBoundary(
@@ -253,7 +298,13 @@ extension PebbleAgentController {
             dimension: world.dim.rawValue,
             ordinal: ordinal
         )
-        try store.insert(receipt)
+        let receiptBytes = try store.insert(
+            receipt,
+            capacityPrevalidated: receiptCapacityPrevalidated
+        )
+        ecologicalObservationReceiptValidationCache.store(
+            receipt, bytes: receiptBytes
+        )
         receiptTransaction.recordInsertion(receipt)
         trace(
             "ecological World receipt id=\(receipt.receiptID.rawValue) "
@@ -267,7 +318,13 @@ extension PebbleAgentController {
                 + "receiptDigest=\(receipt.receiptDigest.rawValue) "
                 + "authority=independent_world_side"
         )
-        if try applyRecordedOperationIfActive(
+        let binding = AgentEcologicalObservationReceiptBinding(
+            observation: observation,
+            physicalReceiptID: receipt.receiptID
+        )
+        if activeEcologicalObservationReplayBatch != nil {
+            activeEcologicalObservationReplayBatch?.append(binding)
+        } else if try applyRecordedOperationIfActive(
             .recordEcologicalObservationWithPhysicalReceipt(
                 observation,
                 physicalReceiptID: receipt.receiptID
@@ -280,10 +337,12 @@ extension PebbleAgentController {
                 physicalReceiptID: receipt.receiptID
             )
         }
-        try reconcileWorldEcologicalObservationReceiptRetention(
-            for: session,
-            transaction: &receiptTransaction
-        )
+        if reconcileReceiptRetention {
+            try reconcileWorldEcologicalObservationReceiptRetention(
+                for: session,
+                transaction: &receiptTransaction
+            )
+        }
     }
 
     func productiveSourceObservations(

@@ -825,6 +825,9 @@ public struct AgentSimulationSession {
                         && !cooperationTransitionPending,
                     isMigrating: isMigratingAgent(id),
                     hasAutonomousActivity: autonomousActivity != nil,
+                    hasNeedDrivenPhysicalFoodActivity:
+                        autonomousActivity?.candidate.source == .need
+                            && autonomousActivity?.candidate.domain == .wildGathering,
                     autonomousActivityUrgency: autonomousActivity?.candidate.urgency ?? 0,
                     currentGoalKind: state.currentGoal.kind,
                     survivalEnabled: survivalEnabled,

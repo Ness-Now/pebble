@@ -1589,6 +1589,9 @@ private extension AgentSimulationSession {
         }
 
         if let activity = activeActivity {
+            let subsistenceOpportunity = wildSubsistenceState?.opportunities.first {
+                $0.opportunityID.rawValue == activity.candidate.stableReference
+            }
             let materialUse = AgentMaterialUseKind(
                 rawValue: activity.candidate.actionKey
             )
@@ -1622,6 +1625,19 @@ private extension AgentSimulationSession {
                     return ledgerEvents.last { $0.eventID == eventID }
                 }.max { $0.sequence < $1.sequence }
             }
+            var activityData: [(String, String)] = [
+                ("activity", activity.activityID),
+                ("lifecycle", activity.lifecycle.rawValue),
+                ("source", activity.candidate.source.rawValue),
+            ]
+            if let subsistenceOpportunity {
+                activityData.append(("selectionReason", subsistenceOpportunity.reason))
+                activityData.append(("target", subsistenceOpportunity.targetKey))
+                if let edible = subsistenceOpportunity.edibleSourceEvidence {
+                    activityData.append(("edibleMaterial", edible.canonicalMaterialName))
+                    activityData.append(("sourceEvidence", edible.physicalSourceFingerprint))
+                }
+            }
             candidates.append(AgentObserverReasonCandidate(
                 reason: observerStructuredReason(
                     code: authorizationIsExact
@@ -1631,14 +1647,11 @@ private extension AgentSimulationSession {
                         ? referencedAssetID?.rawValue
                         : activity.candidate.stableReference,
                     event: authorizationEvent,
-                    presentation: "Executing "
-                        + "\(activity.candidate.actionKey) for "
+                    presentation: subsistenceOpportunity.map {
+                        "Executing \(activity.candidate.actionKey): \($0.reason)"
+                    } ?? "Executing \(activity.candidate.actionKey) for "
                         + "\(activity.candidate.source.rawValue)",
-                    data: [
-                        ("activity", activity.activityID),
-                        ("lifecycle", activity.lifecycle.rawValue),
-                        ("source", activity.candidate.source.rawValue),
-                    ],
+                    data: activityData,
                     textLimit: textLimit
                 ),
                 tick: activity.updatedAtTick,

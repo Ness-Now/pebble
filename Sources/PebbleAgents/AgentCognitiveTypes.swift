@@ -148,6 +148,7 @@ public struct AgentGoalSelectionInput {
     public let canAcceptCooperationOffer: Bool
     public let isMigrating: Bool
     public let hasAutonomousActivity: Bool
+    public let hasNeedDrivenPhysicalFoodActivity: Bool
     public let autonomousActivityUrgency: Int
     public let currentGoalKind: AgentGoalKind
     public let survivalEnabled: Bool
@@ -176,6 +177,7 @@ public struct AgentGoalSelectionInput {
         canAcceptCooperationOffer: Bool = false,
         isMigrating: Bool = false,
         hasAutonomousActivity: Bool = false,
+        hasNeedDrivenPhysicalFoodActivity: Bool = false,
         autonomousActivityUrgency: Int = 0,
         currentGoalKind: AgentGoalKind,
         survivalEnabled: Bool = false,
@@ -203,6 +205,7 @@ public struct AgentGoalSelectionInput {
         self.canAcceptCooperationOffer = canAcceptCooperationOffer
         self.isMigrating = isMigrating
         self.hasAutonomousActivity = hasAutonomousActivity
+        self.hasNeedDrivenPhysicalFoodActivity = hasNeedDrivenPhysicalFoodActivity
         self.autonomousActivityUrgency = max(0, min(100, autonomousActivityUrgency))
         self.currentGoalKind = currentGoalKind
         self.survivalEnabled = survivalEnabled

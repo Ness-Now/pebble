@@ -39,7 +39,15 @@ public enum AgentCognitiveTransitions {
         let restCommitted = input.survivalEnabled
             && input.currentGoalKind == .rest
             && input.needs.fatigue > input.fatigueRecoveryThreshold
-        if input.survivalEnabled
+        if input.survivalEnabled && input.hasNeedDrivenPhysicalFoodActivity {
+            nextGoal = AgentGoal(
+                kind: .civilizationActivity,
+                reason: "hunger motive selected a fresh physical edible opportunity",
+                startedAtTick: input.tick,
+                urgency: input.needs.hunger >= input.criticalHungerThreshold
+                    ? 110 : max(83, input.autonomousActivityUrgency)
+            )
+        } else if input.survivalEnabled
             && (input.needs.hunger >= input.criticalHungerThreshold || hungerCommitted) {
             nextGoal = AgentGoal(
                 kind: .satisfyHunger,

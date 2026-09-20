@@ -11,6 +11,20 @@ extension AgentSimulationSession {
         physicalFoodSurvivalState
     }
 
+    /// Pure need policy used by Pebble before presenting a physical edible
+    /// opportunity. A committed hunger recovery remains a need until the
+    /// configured recovery threshold is reached.
+    public func needsPhysicalFoodAcquisition(for agentID: AgentID) -> Bool {
+        guard physicalFoodSurvivalState != nil, survivalEnabled,
+              let state = statesById[agentID.rawValue], state.health > 0 else {
+            return false
+        }
+        return state.needs.hunger >= configuration.survivalConfiguration.hungryThreshold
+            || (state.currentGoal.kind == .satisfyHunger
+                && state.needs.hunger
+                    > configuration.survivalConfiguration.hungerRecoveryThreshold)
+    }
+
     public mutating func setPhysicalFoodSurvivalEnabled(_ enabled: Bool) throws {
         if enabled {
             guard survivalEnabled else {

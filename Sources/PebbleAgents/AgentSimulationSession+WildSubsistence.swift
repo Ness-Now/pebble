@@ -80,7 +80,12 @@ extension AgentSimulationSession {
             throw AgentSessionError.wildSubsistence(.disabled)
         }
         guard (1...64).contains(context.maximumDistance),
-              (0...100).contains(context.subsistencePressure) else {
+              (0...100).contains(context.subsistencePressure),
+              context.requiredEdibleMaterialName.map({
+                  !$0.isEmpty && $0.count <= 128 && $0.allSatisfy {
+                      $0.isASCII && ($0.isLowercase || $0.isNumber || $0 == "_")
+                  }
+              }) ?? true else {
             throw AgentSessionError.wildSubsistence(.invalidOpportunity("decision bounds"))
         }
         guard statesById[context.actorID.rawValue]?.health ?? 0 > 0 else {
@@ -143,6 +148,17 @@ extension AgentSimulationSession {
             where AgentWildSubsistenceMaterialPolicy.isGatherablePlant(
                 plant.plantKey
             ) {
+            let requiredEdibleEvidence = context.requiredEdibleMaterialName.flatMap {
+                material in
+                plant.edibleSourceEvidence.flatMap {
+                    $0.canonicalMaterialName == material ? $0 : nil
+                }
+            }
+            if context.requiredEdibleMaterialName != nil {
+                guard AgentWildSubsistenceMaterialPolicy
+                        .isNeedDrivenPhysicalFoodPlant(plant.plantKey),
+                      requiredEdibleEvidence != nil else { continue }
+            }
             let distance = subsistenceDistance(origin, plant.position)
             let key = "plant:\(plant.plantKey)@\(subsistencePoint(plant.position))"
             guard distance <= context.maximumDistance, !reserved.contains(key) else { continue }
@@ -150,7 +166,8 @@ extension AgentSimulationSession {
                 strategy: .wildGathering, targetKey: key, position: plant.position,
                 sourceObservationEventID: record.causalEventID, distance: distance,
                 pressure: context.subsistencePressure, actorID: context.actorID,
-                baseScore: 66, equipmentScore: 0
+                baseScore: 66, equipmentScore: 0,
+                edibleSourceEvidence: requiredEdibleEvidence
             ))
         }
         return candidates.sorted(by: subsistenceCandidateSort)
@@ -201,6 +218,10 @@ extension AgentSimulationSession {
         try prevalidateCausalAppend(count: 1)
         let digest = AgentWildSubsistenceDigest.make(
             "\(state.rollingDigest)|select|\(opportunityID.rawValue)|\(choice.score)"
+                + (choice.edibleSourceEvidence.map {
+                    "|edible=\($0.canonicalMaterialName):"
+                        + $0.physicalSourceFingerprint
+                } ?? "")
         )
         let causes = choice.sourceObservationEventID.map { [$0] } ?? []
         let event = try requiredWildSubsistenceEvent(
@@ -220,7 +241,8 @@ extension AgentSimulationSession {
             sourceObservationEventID: choice.sourceObservationEventID,
             selectedAtTick: tick,
             expiresAtTick: tick + state.configuration.opportunityLifetimeTicks,
-            score: choice.score, reason: choice.reason, status: .selected,
+            score: choice.score, reason: choice.reason,
+            edibleSourceEvidence: choice.edibleSourceEvidence, status: .selected,
             selectedEventID: event.eventID, terminalEventID: nil
         )
         state.opportunities.append(opportunity)
@@ -446,6 +468,7 @@ extension AgentSimulationSession {
                       && validReference(opportunity.selectedEventID)
                       && opportunity.sourceObservationEventID.map(validReference) ?? true
                       && opportunity.terminalEventID.map(validReference) ?? true
+                      && opportunity.edibleSourceEvidence.map(validEdibleEvidence) ?? true
               }),
               state.retainedOutcomes.allSatisfy({ record in
                   agents.contains(record.outcome.actorID)
@@ -468,7 +491,8 @@ extension AgentSimulationSession {
             strategy: .agriculture, targetKey: "agriculture:managed-local",
             targetPosition: origin, sourceObservationEventID: nil, distance: 0,
             score: 70 + context.subsistencePressure / 10 + min(8, history * 2),
-            reason: "managed plot available locally; physical execution remains CIV-22"
+            reason: "managed plot available locally; physical execution remains CIV-22",
+            edibleSourceEvidence: nil
         )
     }
 
@@ -481,7 +505,8 @@ extension AgentSimulationSession {
         pressure: Int,
         actorID: AgentID,
         baseScore: Int,
-        equipmentScore: Int
+        equipmentScore: Int,
+        edibleSourceEvidence: AgentObservedEdibleSourceEvidence? = nil
     ) -> AgentSubsistenceStrategyCandidate {
         let domain: AgentSkillDomain? = strategy == .fishing
             ? .fishing : (strategy == .hunting ? .hunting : (strategy == .wildGathering ? .foraging : nil))
@@ -493,7 +518,12 @@ extension AgentSimulationSession {
             strategy: strategy, targetKey: targetKey, targetPosition: position,
             sourceObservationEventID: sourceObservationEventID, distance: distance,
             score: score,
-            reason: "fresh local observation distance=\(distance) equipment=\(equipmentScore > 0 ? "present" : "not-required") practice=\(practice) recent=\(experience)"
+            reason: edibleSourceEvidence.map {
+                "hunger need pressure=\(pressure); fresh local source qualifies "
+                    + "\($0.canonicalMaterialName); "
+                    + "distance=\(distance) practice=\(practice) recent=\(experience)"
+            } ?? "fresh local observation distance=\(distance) equipment=\(equipmentScore > 0 ? "present" : "not-required") practice=\(practice) recent=\(experience)",
+            edibleSourceEvidence: edibleSourceEvidence
         )
     }
 
@@ -551,7 +581,10 @@ extension AgentSimulationSession {
             "enabled=1",
             "bounds=\(state.configuration.maximumActiveOpportunities),\(state.configuration.opportunityLifetimeTicks),\(state.configuration.maximumRetainedOutcomes),\(state.configuration.maximumProcessedAttemptIDs),\(state.configuration.maximumAttemptsPerTick)",
             state.opportunities.sorted(by: subsistenceOpportunitySort).map {
-                "o|\($0.opportunityID.rawValue)|\($0.actorID.rawValue)|\($0.strategy.rawValue)|\($0.targetKey)|\($0.status.rawValue)|\($0.selectedAtTick)|\($0.expiresAtTick)"
+                let legacy = "o|\($0.opportunityID.rawValue)|\($0.actorID.rawValue)|\($0.strategy.rawValue)|\($0.targetKey)|\($0.status.rawValue)|\($0.selectedAtTick)|\($0.expiresAtTick)"
+                guard let edible = $0.edibleSourceEvidence else { return legacy }
+                return legacy + "|edible=\(edible.canonicalMaterialName):"
+                    + edible.physicalSourceFingerprint
             }.joined(separator: ";"),
             state.retainedOutcomes.sorted(by: subsistenceOutcomeRecordSort).map {
                 "r|\($0.outcome.attemptID.rawValue)|\($0.outcome.strategy.rawValue)|\($0.outcome.status.rawValue)|\($0.outcome.acquiredQuantity)|\($0.subsistenceEventID.rawValue)"
@@ -577,6 +610,18 @@ extension AgentSimulationSession {
             }
         }
         state.opportunities = retained
+    }
+
+    private static func validEdibleEvidence(
+        _ evidence: AgentObservedEdibleSourceEvidence
+    ) -> Bool {
+        !evidence.canonicalMaterialName.isEmpty
+            && evidence.canonicalMaterialName.count <= 128
+            && evidence.canonicalMaterialName.allSatisfy {
+                $0.isASCII && ($0.isLowercase || $0.isNumber || $0 == "_")
+            }
+            && !evidence.physicalSourceFingerprint.isEmpty
+            && evidence.physicalSourceFingerprint.count <= 128
     }
 
     @discardableResult

@@ -60,6 +60,13 @@ public enum AgentWildSubsistenceMaterialPolicy {
     public static func isGatherablePlant(_ plantKey: String) -> Bool {
         gatherablePlantKeys.contains(plantKey)
     }
+
+    /// Increment 04 intentionally composes one naturally generated, tool-free
+    /// food domain. Other gatherable plants retain their existing generic
+    /// wild-subsistence meaning but cannot satisfy this need-driven contract.
+    public static func isNeedDrivenPhysicalFoodPlant(_ plantKey: String) -> Bool {
+        plantKey == "sweet_berry_bush"
+    }
 }
 
 public struct AgentWildSubsistenceConfiguration: Codable, Equatable, Sendable {
@@ -179,6 +186,7 @@ public struct AgentSubsistenceDecisionContext: Codable, Equatable, Sendable {
     public let agricultureAvailable: Bool
     public let maximumDistance: Int
     public let subsistencePressure: Int
+    public let requiredEdibleMaterialName: String?
 
     public init(
         actorID: AgentID,
@@ -186,7 +194,8 @@ public struct AgentSubsistenceDecisionContext: Codable, Equatable, Sendable {
         huntingWeaponAvailable: Bool,
         agricultureAvailable: Bool,
         maximumDistance: Int = 16,
-        subsistencePressure: Int = 50
+        subsistencePressure: Int = 50,
+        requiredEdibleMaterialName: String? = nil
     ) {
         self.actorID = actorID
         self.fishingRodAvailable = fishingRodAvailable
@@ -194,6 +203,7 @@ public struct AgentSubsistenceDecisionContext: Codable, Equatable, Sendable {
         self.agricultureAvailable = agricultureAvailable
         self.maximumDistance = maximumDistance
         self.subsistencePressure = subsistencePressure
+        self.requiredEdibleMaterialName = requiredEdibleMaterialName
     }
 }
 
@@ -205,6 +215,7 @@ public struct AgentSubsistenceStrategyCandidate: Codable, Equatable, Sendable {
     public let distance: Int
     public let score: Int
     public let reason: String
+    public let edibleSourceEvidence: AgentObservedEdibleSourceEvidence?
 }
 
 public struct AgentSubsistenceOpportunity: Codable, Equatable, Sendable {
@@ -218,6 +229,7 @@ public struct AgentSubsistenceOpportunity: Codable, Equatable, Sendable {
     public let expiresAtTick: Int
     public let score: Int
     public let reason: String
+    public let edibleSourceEvidence: AgentObservedEdibleSourceEvidence?
     public internal(set) var status: AgentSubsistenceOpportunityStatus
     public let selectedEventID: AgentCausalEventID
     public internal(set) var terminalEventID: AgentCausalEventID?

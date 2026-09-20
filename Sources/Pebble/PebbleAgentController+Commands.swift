@@ -228,6 +228,10 @@ extension PebbleAgentController {
             return handleWildSubsistence(
                 Array(arguments.dropFirst()), world: world, player: player
             )
+        case "ps01-increment-04-proof":
+            return handleIncrement04Proof(
+                Array(arguments.dropFirst()), world: world, player: player
+            )
         case "livestock":
             return handleLivestock(
                 Array(arguments.dropFirst()), world: world, player: player

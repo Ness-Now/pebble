@@ -163,6 +163,7 @@ public struct BlockBreakRuleContext {
     public let heldItem: ItemStack?
     public let isCreative: Bool
     public let vibrationSource: EntityRef?
+    public let itemEntityBobOffsetRandom: (() -> Double)?
     public let damageTool: (Int) -> Void
     public let recordMinedBlock: () -> Void
     public let addExhaustion: (Double) -> Void
@@ -172,6 +173,7 @@ public struct BlockBreakRuleContext {
         heldItem: ItemStack?,
         isCreative: Bool,
         vibrationSource: EntityRef? = nil,
+        itemEntityBobOffsetRandom: (() -> Double)? = nil,
         damageTool: @escaping (Int) -> Void = { _ in },
         recordMinedBlock: @escaping () -> Void = {},
         addExhaustion: @escaping (Double) -> Void = { _ in }
@@ -180,6 +182,7 @@ public struct BlockBreakRuleContext {
         self.heldItem = heldItem
         self.isCreative = isCreative
         self.vibrationSource = vibrationSource
+        self.itemEntityBobOffsetRandom = itemEntityBobOffsetRandom
         self.damageTool = damageTool
         self.recordMinedBlock = recordMinedBlock
         self.addExhaustion = addExhaustion
@@ -1746,7 +1749,8 @@ public func executeBlockBreak(
             Double(x) + 0.5,
             Double(y) + yOffset,
             Double(z) + 0.5,
-            stack
+            stack,
+            bobOffsetRandom: ctx.itemEntityBobOffsetRandom
         )
         spawnedItemEntityIDs.append(item.id)
         return item
@@ -1899,6 +1903,67 @@ public func executeBlockBreak(
     ctx.addExhaustion(0.005)
     return result(.succeeded)
 }
+
+/// Read-only, actor-neutral evidence derived from the same block-drop and item
+/// registries used by `executeBlockBreak`. Callers may use this to decide
+/// whether the exact current cell has a guaranteed, simply consumable food
+/// drop, but the eventual quantity and physical items remain owned by the
+/// canonical break operation.
+public struct EdibleBlockBreakDropQualification: Equatable, Sendable {
+    public let sourceCell: Int
+    public let blockName: String
+    public let canonicalMaterialName: String
+
+    public init(
+        sourceCell: Int,
+        blockName: String,
+        canonicalMaterialName: String
+    ) {
+        self.sourceCell = sourceCell
+        self.blockName = blockName
+        self.canonicalMaterialName = canonicalMaterialName
+    }
+}
+
+public func edibleBlockBreakDropQualifications(
+    for sourceCell: Int,
+    heldItem: ItemStack? = nil
+) -> [EdibleBlockBreakDropQualification] {
+    let blockID = sourceCell >> 4
+    guard sourceCell != 0, blockID >= 0, blockID < blockDefs.count,
+          canHarvest(heldItem, sourceCell) else { return [] }
+    let definition = blockDefs[blockID]
+    let heldDefinition = heldItem.map { itemDef($0.id) }
+    let context = DropCtx(
+        fortune: heldItem.map { enchLevel($0, "fortune") } ?? 0,
+        silkTouch: false,
+        toolType: ToolType(rawValue: heldDefinition?.tool?.type ?? "none") ?? .none,
+        toolTier: heldDefinition?.tool?.tier ?? 0,
+        shears: heldDefinition?.tool?.type == "shears",
+        random: { 0 }
+    )
+    let drops = definition.drops?(sourceCell & 15, context)
+        ?? defaultDrop(blockID)
+    return drops.compactMap { drop in
+        guard drop.chance == 1, drop.countMin > 0,
+              drop.countMax >= drop.countMin,
+              let itemID = iidOpt(drop.item),
+              let descriptor = foodConsumptionDescriptor(
+                  for: ItemStack(itemID, 1)
+              ), descriptor.food.hunger > 0,
+              !descriptor.food.alwaysEat,
+              descriptor.food.effects.isEmpty,
+              descriptor.hasSimpleDebit else { return nil }
+        return EdibleBlockBreakDropQualification(
+            sourceCell: sourceCell,
+            blockName: definition.name,
+            canonicalMaterialName: descriptor.canonicalMaterialName
+        )
+    }.sorted { lhs, rhs in
+        lhs.canonicalMaterialName < rhs.canonicalMaterialName
+    }
+}
+
 private func damageToolForBreak(_ ctx: BlockBreakRuleContext, _ c: Int) {
     guard let held = ctx.heldItem else { return }
     let toolDef = itemDef(held.id).tool

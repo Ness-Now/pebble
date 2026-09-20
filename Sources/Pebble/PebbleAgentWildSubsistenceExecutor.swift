@@ -556,7 +556,8 @@ struct PebbleAgentWildSubsistenceExecutor {
         world: World,
         actor: PebbleAgentEmbodiment,
         target: PhysicalBlockPosition,
-        expectedBlockID: Int,
+        expectedCell: Int,
+        edibleSourceEvidence: AgentObservedEdibleSourceEvidence? = nil,
         attemptID: String,
         occupiedPositions: [PhysicalBlockPosition],
         physicalGateway: PebbleAgentPhysicalActionGateway,
@@ -567,7 +568,22 @@ struct PebbleAgentWildSubsistenceExecutor {
     ) throws -> PebbleAgentWildSubsistencePhysicalResult {
         guard actor.isValid(in: world) else { throw ExecutionError.invalidActor }
         let beforeCell = world.getBlock(target.x, target.y, target.z)
-        guard beforeCell >> 4 == expectedBlockID else { throw ExecutionError.staleWorld }
+        guard beforeCell == expectedCell else { throw ExecutionError.staleWorld }
+        if let edibleSourceEvidence {
+            guard let qualification = edibleBlockBreakDropQualifications(
+                for: beforeCell, heldItem: nil
+            ).first(where: {
+                $0.blockName == "sweet_berry_bush"
+                    && $0.canonicalMaterialName
+                        == edibleSourceEvidence.canonicalMaterialName
+            }), pebbleAgentEdibleSourceFingerprint(
+                sourceCell: qualification.sourceCell,
+                blockName: qualification.blockName,
+                canonicalMaterialName: qualification.canonicalMaterialName
+            ) == edibleSourceEvidence.physicalSourceFingerprint else {
+                throw ExecutionError.staleWorld
+            }
+        }
         let destination = PebbleAgentMaterialCustodyEndpoint.liveAgent(actor, in: world)
         var acquisition: PebbleAgentItemEntityAcquisitionOutcome?
         var publicationError: Error?
@@ -575,7 +591,11 @@ struct PebbleAgentWildSubsistenceExecutor {
             world: world, actor: actor,
             request: PebbleAgentBlockBreakRequest(
                 actorID: actor.agentID, target: target, expectedCell: beforeCell,
-                heldItem: nil, isCreative: false
+                heldItem: nil, isCreative: false,
+                directActionRandomness: PebbleAgentDirectActionRandomness(
+                    operationDomain: 0x5042_4741,
+                    stableAttemptID: attemptID
+                )
             ),
             occupiedPositions: occupiedPositions,
             acquireDrops: { ids in
@@ -593,6 +613,23 @@ struct PebbleAgentWildSubsistenceExecutor {
                     from: source, to: destination,
                     verifyAfterMutation: { acquired in
                         do {
+                            if let edibleSourceEvidence {
+                                guard !acquired.acquired.isEmpty,
+                                      acquired.acquired.allSatisfy({ item in
+                                          guard item.material.count > 0,
+                                                let itemID = iidOpt(
+                                                    item.material.identity.itemKey
+                                                ), let descriptor = foodConsumptionDescriptor(
+                                                    for: ItemStack(itemID, 1)
+                                                ) else { return false }
+                                          return descriptor.canonicalMaterialName
+                                                == edibleSourceEvidence.canonicalMaterialName
+                                              && descriptor.food.hunger > 0
+                                              && !descriptor.food.alwaysEat
+                                              && descriptor.food.effects.isEmpty
+                                              && descriptor.hasSimpleDebit
+                                      }) else { return false }
+                            }
                             try publish(
                                 ids, acquired.acquired.map(\.material),
                                 acquired.destinationFingerprint ?? "", "core-canonical-block-break"
