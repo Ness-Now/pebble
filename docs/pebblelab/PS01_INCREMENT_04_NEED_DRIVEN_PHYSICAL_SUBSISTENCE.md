@@ -1,25 +1,30 @@
 # PS01 Increment 04 — Need-Driven Autonomous Physical Subsistence
 
-Status: **LOCAL REVIEW CANDIDATE — NOT PUBLISHED**.
+Status: **COMPLETE — SENIOR REVIEW APPROVED — PUBLISHED — REMOTE VERIFIED**.
 
 PLAYABLE SLICE 01 remains **REQUIRED — IN PROGRESS / NOT COMPLETE**.
 CIV-48 remains **NOT STARTED — IMPLEMENTATION NOT AUTHORIZED**. Increment 05
-has not been selected.
+has not been selected; the next permitted workflow is the separate read-only
+`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-05` mission.
 
-## Candidate position
+## Published position
 
 - Repository: `Ness-Now/pebble`.
 - Canonical branch: `lab/pebblelab-v1`.
 - Canonical baseline: `9d4642b03e398999528fd0fdef4adbbd7707bd28`.
 - Canonical tree: `3d7e8497a0e575266b949cfeb0b36a657549ea9e`.
+- Published commit: `b478fcfd75126fb5ab742916930eb8eb08c5f4f2`.
+- Published tree: `2d4ef2716412a4c121fc06e6d292418218cfb009`.
+- Published parent: `9d4642b03e398999528fd0fdef4adbbd7707bd28`.
 - Implementation branch:
   `codex/ps01-increment-04-need-driven-physical-subsistence`.
-- Candidate commit message: `feat(ps01): add need-driven physical subsistence`.
-- Publication: not attempted. The user owns publication.
+- Published commit message: `feat(ps01): add need-driven physical subsistence`.
+- Senior review: **PASS — P0 0 / P1 0 / P2 blocking 0**.
+- Publication: manual push completed; canonical remote independently verified.
 
 The implementation branch began directly at the canonical baseline. This report
-records a single local review candidate; it is not a broad canonical publication
-surface and does not declare PLAYABLE SLICE 01 complete.
+records the senior-review-approved published Increment-04 result; it does not
+declare PLAYABLE SLICE 01 complete.
 
 ## Selected scope and architecture
 
@@ -396,8 +401,8 @@ Explicitly excluded are fishing, hunting, agriculture, livestock, production,
 professions/work, markets, barter, contracts, generic gathering expansion,
 population-cap increase, scan-radius increase, default frequency reduction,
 catch-up relaxation, global player RNG replacement, Increment-03 scheduler RNG
-changes, an LLM decision owner, Increment 05 selection, CIV-48 implementation,
-and publication.
+changes, an LLM decision owner, Increment 05 selection, and CIV-48
+implementation.
 
 ## Review disposition
 
@@ -405,7 +410,8 @@ and publication.
 - P1: **0**.
 - P2: **0 known**.
 - Product state: **PRODUCT FREEZE**.
-- Increment 04: **LOCAL REVIEW CANDIDATE — NOT PUBLISHED**.
+- Increment 04: **COMPLETE — SENIOR REVIEW APPROVED — PUBLISHED — REMOTE
+  VERIFIED**.
 - PLAYABLE SLICE 01: **REQUIRED — IN PROGRESS / NOT COMPLETE**.
 - CIV-48: **NOT STARTED — IMPLEMENTATION NOT AUTHORIZED**.
-- Push attempted: **NO**.
+- Codex push attempted: **NO**; user-owned manual publication: **COMPLETE**.

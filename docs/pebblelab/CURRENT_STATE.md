@@ -101,6 +101,33 @@ coverage set. It is not an arbitrary-scale or whole-World camera-invariance
 claim: player-only prior history may differ, and each future agent-relevant
 shared RNG consumer requires its own audit.
 
+Increment 04, Need-Driven Physical Subsistence, is **COMPLETE AND PUBLISHED —
+PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical HEAD
+`b478fcfd75126fb5ab742916930eb8eb08c5f4f2`, tree
+`2d4ef2716412a4c121fc06e6d292418218cfb009`, from parent
+`9d4642b03e398999528fd0fdef4adbbd7707bd28`. Normal founders now turn hunger
+and fresh evidence of a naturally generated mature `sweet_berry_bush` into
+autonomous selection, physical movement, canonical Core mutation and real
+`sweet_berries` ItemEntity custody, then consume through the existing physical
+food authority and reduce hunger. Seed 14 supplies natural positive evidence;
+seeds 46 and 887 supply canonical natural scarcity evidence. No activation or
+provisioning command is required.
+
+PebbleCore remains the World, drop, ItemStack, ItemEntity and direct-action RNG
+authority; Pebble remains the sensor, executor, custody, verification and
+rollback authority; PebbleAgents remains the cognition, homeostasis and
+autonomous-decision authority. `foodRaw` does not mint physical food. Normal
+Increment-04 composition is restricted to mature sweet berries; fishing,
+hunting, agriculture, livestock, production, work and economy domains remain
+inactive. Direct-action RNG is distinct from Increment 03 scheduled/coverage
+RNG. Ecological receipt lifetime is bounded by legitimate retained live or
+checkpoint authority, and batched publication plus exact-byte derived receipt
+validation removes repeated integrity work without changing causal semantics.
+At the measured 4 Hz baseline, release medians/p95s were 107.183/131.911 ms at
+20 founders, 128.541/171.911 ms at 24, and 169.053/243.287 ms at 30; the
+isolated 30-founder maximum was 268.070 ms with zero catch-up drops. No support
+above 30 founders is claimed.
+
 The milestone must establish a normal bounded persistent sandbox path, first
 measured with approximately 24 full-cognition founders and designed for roughly
 20–30 without redesign. It must support safe Pause / Play / 1x, read-only free
@@ -122,11 +149,11 @@ integration issue. Increment 03 retires player location as authority for the
 bounded covered physical opportunity, but not every remaining integration
 risk. Other known risks are recorded in the roadmap milestone contract.
 
-The next authorized action is
-`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-04`. This authorizes review of
-the published Increment 03 boundary and selection of the smallest next coherent
-causal prerequisite; it does not authorize Increment 04 implementation or
-preselect its scope. CIV-48 remains **NOT
+The next authorized action is the separate read-only
+`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-05` mission. It must inspect the
+newly published Increment-04 boundary and select the smallest next coherent
+causal/playability blocker; it does not authorize Increment 05 implementation
+or preselect its technical solution. CIV-48 remains **NOT
 STARTED — IMPLEMENTATION NOT AUTHORIZED** and is deferred until PLAYABLE SLICE
 01 and the resulting evidence-driven roadmap recalibration are complete. Gate H
 remains planned and continues to require CIV-48 through CIV-52.
@@ -976,7 +1003,10 @@ PLAYABLE SLICE 01 Increment 02 published tree: 24e92e7c8a1982a886146ba79187f2fcc
 PLAYABLE SLICE 01 Increment 03: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 PLAYABLE SLICE 01 Increment 03 published HEAD: 0e7f36202debd088e4f1c84de96078be78b6b6fd
 PLAYABLE SLICE 01 Increment 03 published tree: 33a3675301a6fe088fde62b373f7e73505ba346d
-next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-04
+PLAYABLE SLICE 01 Increment 04: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+PLAYABLE SLICE 01 Increment 04 published HEAD: b478fcfd75126fb5ab742916930eb8eb08c5f4f2
+PLAYABLE SLICE 01 Increment 04 published tree: 2d4ef2716412a4c121fc06e6d292418218cfb009
+next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-05
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -1396,10 +1426,10 @@ golden regeneration: NOT ATTEMPTED
 
 ## Next authorized action
 
-The next authorized action is
-`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-04`. It is a review and
-selection step from the published Increment 03 boundary, not authorization to
-implement Increment 04 or CIV-48 and not a preselection of its scope. Gate G
+The next authorized action is the separate read-only
+`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-05` mission. It is a review and
+selection step from the published Increment 04 boundary, not authorization to
+implement Increment 05 or CIV-48 and not a preselection of its scope. Gate G
 Evaluation
 01 remains frozen historical FAIL evidence. Blocker 01 is senior-review
 approved, published and independently remote verified. Evaluation 02 is

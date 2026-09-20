@@ -363,7 +363,10 @@
     "playableSlice01Increment03PublishedCanonicalTree": "33a3675301a6fe088fde62b373f7e73505ba346d",
     "playableSlice01Increment03PublishedCanonicalParent": "757cad2742e4b76e13010035f246da1e375a01a4",
     "playableSlice01Increment03ReviewArchiveSHA256": "4183fedfb071f900afe349b317ecd58e215206efd5afb8427b004c2bcc3c6f04",
-    "meaning": "Canonical published product history is complete through CIV-47. Gate G Evaluation 01 remains senior-review-approved immutable FAIL evidence at HEAD cb03d5bc142a36aa0c828d2350e34d579717c4fb with review ZIP SHA-256 8ab89f5570bbd0c89c5a06a2850cb9967966799f32b4885f9fca55f3ad35081a. Gate G Blocker 01 remains senior-review approved, published at canonical HEAD d5a7e450144810674b5c8adfb98b335f9ad74b5a, tree 98e54193ed8a81ad16470c175c29f39eb0ffdbfe, and independently remote verified. Independent Evaluation 02 is PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE — REMOTE VERIFIED with P0 0 / P1 0; harness commit 6425515fad675925db146c547831e8f104ee2834, tree 6b44e2e17a530a8f58204bc399b783ea4cef4ce4, and published final evidence HEAD f9f575a4c615ed3f9fdb351c96aa76d1d527e1f1, tree bcc7aa5c8e9929ce96f124c6c0adfa88334abc36, remain exact. Gate G is acquired and published at independently remote-verified acquisition canonical HEAD 8d8e32b576b384eb9a060f87bde1d42bf15f58f7. PLAYABLE SLICE 01 — Autonomous Emergence Baseline is required, in progress and not complete. Increment 01 is complete and published, senior-review approved and remote verified at canonical HEAD a5bded01dcfc934dc5aed6aab0990fc61ffd30c7, tree 4e3081cf29ee099092e16cce7e9fbac9da0e3cbb, from parent 196c6f770acc9bb416e04d03f39a7e1191f9329e, with accepted review ZIP SHA-256 bff4786795c9f09239fe8a45e3acd2f8993eabdfb24d7e792d944ca0ea6a81b6. Increment 02 is complete and published, senior-review approved and remote verified at canonical HEAD 056c6b625d7482581028cf149329bc292948d53d, tree 24e92e7c8a1982a886146ba79187f2fcc8987d0f, from parent 7f732c320bb5685bed436868367ce2fb10385953, with accepted review ZIP SHA-256 47a6fcdb48ede97412cfc5568171eb53086eb2cd1038351bb7580636592de92f. Increment 03 is complete and published, senior-review approved and remote verified at canonical HEAD 0e7f36202debd088e4f1c84de96078be78b6b6fd, tree 33a3675301a6fe088fde62b373f7e73505ba346d, from parent 757cad2742e4b76e13010035f246da1e375a01a4, with accepted review ZIP SHA-256 4183fedfb071f900afe349b317ecd58e215206efd5afb8427b004c2bcc3c6f04. Its observer-independent physical coverage contract is bounded to 30 active roots, one chunk radius, a 3×3 per-root neighborhood and 270 chunks; it claims neither arbitrary population scale nor whole-World camera invariance, and future agent-relevant RNG consumers require audit. The next authorized action is REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-04, a review and selection step that does not authorize implementation or preselect scope. CIV-48 remains not started, implementation unauthorized and deferred until that milestone and evidence-driven roadmap recalibration are complete. Gate H remains planned. Optional CIV-38 and CIV-40 remain unstarted; currency is not a Gate E or CIV-39 dependency.",
+    "playableSlice01Increment04PublishedCanonicalHead": "b478fcfd75126fb5ab742916930eb8eb08c5f4f2",
+    "playableSlice01Increment04PublishedCanonicalTree": "2d4ef2716412a4c121fc06e6d292418218cfb009",
+    "playableSlice01Increment04PublishedCanonicalParent": "9d4642b03e398999528fd0fdef4adbbd7707bd28",
+    "meaning": "Canonical published product history is complete through CIV-47. Gate G Evaluation 01 remains senior-review-approved immutable FAIL evidence at HEAD cb03d5bc142a36aa0c828d2350e34d579717c4fb with review ZIP SHA-256 8ab89f5570bbd0c89c5a06a2850cb9967966799f32b4885f9fca55f3ad35081a. Gate G Blocker 01 remains senior-review approved, published at canonical HEAD d5a7e450144810674b5c8adfb98b335f9ad74b5a, tree 98e54193ed8a81ad16470c175c29f39eb0ffdbfe, and independently remote verified. Independent Evaluation 02 is PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE — REMOTE VERIFIED with P0 0 / P1 0; harness commit 6425515fad675925db146c547831e8f104ee2834, tree 6b44e2e17a530a8f58204bc399b783ea4cef4ce4, and published final evidence HEAD f9f575a4c615ed3f9fdb351c96aa76d1d527e1f1, tree bcc7aa5c8e9929ce96f124c6c0adfa88334abc36, remain exact. Gate G is acquired and published at independently remote-verified acquisition canonical HEAD 8d8e32b576b384eb9a060f87bde1d42bf15f58f7. PLAYABLE SLICE 01 — Autonomous Emergence Baseline is required, in progress and not complete. Increment 01 is complete and published, senior-review approved and remote verified at canonical HEAD a5bded01dcfc934dc5aed6aab0990fc61ffd30c7, tree 4e3081cf29ee099092e16cce7e9fbac9da0e3cbb, from parent 196c6f770acc9bb416e04d03f39a7e1191f9329e, with accepted review ZIP SHA-256 bff4786795c9f09239fe8a45e3acd2f8993eabdfb24d7e792d944ca0ea6a81b6. Increment 02 is complete and published, senior-review approved and remote verified at canonical HEAD 056c6b625d7482581028cf149329bc292948d53d, tree 24e92e7c8a1982a886146ba79187f2fcc8987d0f, from parent 7f732c320bb5685bed436868367ce2fb10385953, with accepted review ZIP SHA-256 47a6fcdb48ede97412cfc5568171eb53086eb2cd1038351bb7580636592de92f. Increment 03 is complete and published, senior-review approved and remote verified at canonical HEAD 0e7f36202debd088e4f1c84de96078be78b6b6fd, tree 33a3675301a6fe088fde62b373f7e73505ba346d, from parent 757cad2742e4b76e13010035f246da1e375a01a4, with accepted review ZIP SHA-256 4183fedfb071f900afe349b317ecd58e215206efd5afb8427b004c2bcc3c6f04. Its observer-independent physical coverage contract is bounded to 30 active roots, one chunk radius, a 3×3 per-root neighborhood and 270 chunks; it claims neither arbitrary population scale nor whole-World camera invariance, and future agent-relevant RNG consumers require audit. Increment 04, Need-Driven Physical Subsistence, is complete and published, senior-review approved and remote verified at canonical HEAD b478fcfd75126fb5ab742916930eb8eb08c5f4f2, tree 2d4ef2716412a4c121fc06e6d292418218cfb009, from parent 9d4642b03e398999528fd0fdef4adbbd7707bd28. Normal founders can turn hunger and fresh mature sweet-berry evidence into autonomous physical movement, canonical Core acquisition, exact physical custody and consumption without activation or provisioning commands. Seed 14 is the natural positive case; seeds 46 and 887 are canonical natural scarcity cases. PebbleCore remains physical truth and RNG authority, Pebble remains sensor/executor/custody/verification/rollback authority, and PebbleAgents remains cognition/homeostasis/autonomous-decision authority. Ecological receipt lifetime is bounded by legitimate retained live/checkpoint authority; batched publication and exact-byte derived validation preserve causal semantics while removing repeated work. Measured 4 Hz cognition remains supported for 20–30 founders, with no support above 30 claimed. The next authorized action is the separate read-only REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-05 mission, a review and selection step that does not authorize implementation or preselect a technical solution. CIV-48 remains not started, implementation unauthorized and deferred until that milestone and evidence-driven roadmap recalibration are complete. Gate H remains planned. Optional CIV-38 and CIV-40 remain unstarted; currency is not a Gate E or CIV-39 dependency.",
     "safeBootstrapHardeningPublished": true
   },
   "documents": {
@@ -401,6 +404,7 @@
     "playableSlice01Increment01NormalBootstrap": "docs/pebblelab/PS01_INCREMENT_01_NORMAL_BOOTSTRAP.md",
     "playableSlice01Increment02TerminalPopulationContinuity": "docs/pebblelab/PS01_INCREMENT_02_TERMINAL_POPULATION_CONTINUITY.md",
     "playableSlice01Increment03ObserverIndependentPhysicalCoverage": "docs/pebblelab/PS01_INCREMENT_03_OBSERVER_INDEPENDENT_PHYSICAL_COVERAGE.md",
+    "playableSlice01Increment04NeedDrivenPhysicalSubsistence": "docs/pebblelab/PS01_INCREMENT_04_NEED_DRIVEN_PHYSICAL_SUBSISTENCE.md",
     "gateFBlocker01SettlementAdmissionCapacity": "docs/pebblelab/GATE_F_BLOCKER_01_SETTLEMENT_ADMISSION_CAPACITY.md",
     "gateFBlocker02MigrationDestinationCapacity": "docs/pebblelab/GATE_F_BLOCKER_02_MIGRATION_DESTINATION_CAPACITY.md",
     "gateFBlocker03DynamicFidelityAuthority": "docs/pebblelab/GATE_F_BLOCKER_03_DYNAMIC_FIDELITY_AUTHORITY.md",
@@ -486,10 +490,27 @@
     "playableSlice01Increment03ArbitraryPopulationScaleValidated": false,
     "playableSlice01Increment03WholeWorldCameraInvarianceClaimed": false,
     "playableSlice01Increment03FutureRNGConsumersRequireAudit": true,
+    "playableSlice01Increment04Status": "completedPublishedSeniorReviewApprovedRemoteVerified",
+    "playableSlice01Increment04Complete": true,
+    "playableSlice01Increment04Published": true,
+    "playableSlice01Increment04PublicationVerified": true,
+    "playableSlice01Increment04PublishedCanonicalHead": "b478fcfd75126fb5ab742916930eb8eb08c5f4f2",
+    "playableSlice01Increment04PublishedCanonicalTree": "2d4ef2716412a4c121fc06e6d292418218cfb009",
+    "playableSlice01Increment04PublishedCanonicalParent": "9d4642b03e398999528fd0fdef4adbbd7707bd28",
+    "playableSlice01Increment04SeniorReview": "approvedP0ZeroP1ZeroP2BlockingZero",
+    "playableSlice01Increment04NaturalPositiveSeed": 14,
+    "playableSlice01Increment04CanonicalScarcitySeeds": [
+      46,
+      887
+    ],
+    "playableSlice01Increment04NormalFounderMinimum": 20,
+    "playableSlice01Increment04NormalFounderMaximum": 30,
+    "playableSlice01Increment04CognitionHertz": 4,
+    "playableSlice01Increment04SupportAboveThirtyClaimed": false,
     "playableSlice01RemainingDemographicHeadroomIssue": "populationCapacity30LeavesZeroAdmissionOrBirthHeadroomAt30AndSixAt24",
     "nextEligiblePhase": null,
     "nextEligibleCivPhaseAfterRequiredMilestone": "CIV-48",
-    "nextAuthorizedAction": "REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-04",
+    "nextAuthorizedAction": "REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-05",
     "gateGStatus": "acquired",
     "gateGAcquired": true,
     "gateGPublished": true,
@@ -1015,7 +1036,7 @@
     "gateAcquired": true,
     "acquisitionPublishedCanonicalHead": "8d8e32b576b384eb9a060f87bde1d42bf15f58f7",
     "acquisitionPublicationVerified": true,
-    "nextAuthorizedAction": "REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-04",
+    "nextAuthorizedAction": "REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-05",
     "civ48ImplementationAuthorized": false,
     "evidence": "docs/pebblelab/GATE_G_EVALUATION_02_REPORT.md",
     "machineReadableEvidence": "docs/pebblelab/GATE_G_EVALUATION_02_REPORT.json"
@@ -2781,10 +2802,58 @@
         "futureAgentRelevantRNGConsumersRequireAudit": true,
         "evidence": "docs/pebblelab/PS01_INCREMENT_03_OBSERVER_INDEPENDENT_PHYSICAL_COVERAGE.md"
       },
+      "increment04": {
+        "title": "Need-Driven Physical Subsistence",
+        "status": "completedPublishedSeniorReviewApprovedRemoteVerified",
+        "complete": true,
+        "published": true,
+        "remoteVerified": true,
+        "seniorReview": "approvedP0ZeroP1ZeroP2BlockingZero",
+        "publishedCanonicalHead": "b478fcfd75126fb5ab742916930eb8eb08c5f4f2",
+        "publishedCanonicalTree": "2d4ef2716412a4c121fc06e6d292418218cfb009",
+        "publishedCanonicalParent": "9d4642b03e398999528fd0fdef4adbbd7707bd28",
+        "normalFounderRange": {
+          "minimum": 20,
+          "maximum": 30
+        },
+        "cognitionHertz": 4,
+        "naturalPositiveSeed": 14,
+        "canonicalNaturalScarcitySeeds": [
+          46,
+          887
+        ],
+        "physicalSource": "matureSweetBerryBush",
+        "physicalFood": "sweetBerries",
+        "authorityBoundary": "PebbleCorePhysicalTruthPebbleExecutionPebbleAgentsCognition",
+        "foodRawMintsPhysicalFood": false,
+        "unrelatedDomainsActivated": false,
+        "directActionRNGSeparateFromIncrement03CoverageRNG": true,
+        "receiptLifetime": "boundedByLegitimateRetainedLiveOrCheckpointAuthority",
+        "receiptValidation": "authoritativeExactBytesWithBoundedDerivedCache",
+        "batchedPublicationSemanticEffect": "sameDurableCausalEventsLessRepeatedIntegrityWork",
+        "releasePerformanceMilliseconds": {
+          "founders20": {
+            "median": 107.183,
+            "p95": 131.911
+          },
+          "founders24": {
+            "median": 128.541,
+            "p95": 171.911
+          },
+          "founders30": {
+            "median": 169.053,
+            "p95": 243.287,
+            "isolatedMaximum": 268.070,
+            "catchUpDrops": 0
+          }
+        },
+        "supportAboveThirtyClaimed": false,
+        "evidence": "docs/pebblelab/PS01_INCREMENT_04_NEED_DRIVEN_PHYSICAL_SUBSISTENCE.md"
+      },
       "after": "V4-GATE-G-v1",
       "before": "CIV-48",
       "evidenceDrivenRoadmapRecalibrationRequiredBeforeCIV48": true,
-      "nextAuthorizedAction": "REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-04",
+      "nextAuthorizedAction": "REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-05",
       "contract": "Operate already acquired systems together through a normal bounded persistent, non-scripted and observable product path, then characterize autonomous emergence across more than one seed before Wave 6 adds institutional authority.",
       "initialMeasuredFounderConfiguration": 24,
       "normalInitializationFounderRange": {
@@ -3457,7 +3526,7 @@
         "materialWrittenPreservation": true,
         "reconstructibleCulturalHistory": true
       },
-      "nextAuthorizedAction": "REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-04",
+      "nextAuthorizedAction": "REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-05",
       "requiredPhases": [
         "CIV-41",
         "CIV-42",

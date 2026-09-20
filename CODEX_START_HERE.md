@@ -243,10 +243,18 @@ for the compact status. In particular:
   a one-chunk/3×3 halo and a 270-chunk worst bound, with explicit unavailable
   readiness and no false physical absence. It does not validate arbitrary
   population scale or whole-World camera invariance; future agent-relevant RNG
-  consumers still require audit. Long-run demographic admission/birth headroom
-  remains unresolved. The next authorized action is
-  `REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-04`, a review and selection
-  step only; it does not authorize implementation or preselect scope.
+  consumers still require audit. Increment 04, Need-Driven Physical
+  Subsistence, is **COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE
+  VERIFIED** at canonical HEAD
+  `b478fcfd75126fb5ab742916930eb8eb08c5f4f2`, tree
+  `2d4ef2716412a4c121fc06e6d292418218cfb009`. Normal founders can turn hunger
+  and fresh mature sweet-berry evidence into autonomous movement, canonical
+  Core acquisition, exact physical custody and consumption without activation
+  or provisioning commands. The supported measured founder range remains
+  20–30; this is not a claim above 30. Long-run demographic admission/birth
+  headroom remains unresolved. The next authorized action is the separate
+  read-only `REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-05` mission; it does
+  not authorize implementation or preselect scope.
 - CIV-48 remains **NOT STARTED**, implementation is not authorized, and it is
   deferred until PLAYABLE SLICE 01 and the resulting evidence-driven roadmap
   recalibration are complete. Gate H remains planned. See

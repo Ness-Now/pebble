@@ -67,9 +67,14 @@ Increment 03 is **COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED —
 REMOTE VERIFIED** at canonical HEAD
 `0e7f36202debd088e4f1c84de96078be78b6b6fd`, tree
 `33a3675301a6fe088fde62b373f7e73505ba346d`, with accepted review ZIP SHA-256
-`4183fedfb071f900afe349b317ecd58e215206efd5afb8427b004c2bcc3c6f04`. The next
-authorized action is `REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-04`, which
-authorizes review and selection only. CIV-48 remains not started,
+`4183fedfb071f900afe349b317ecd58e215206efd5afb8427b004c2bcc3c6f04`.
+Increment 04, Need-Driven Physical Subsistence, is **COMPLETE AND PUBLISHED —
+PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical HEAD
+`b478fcfd75126fb5ab742916930eb8eb08c5f4f2`, tree
+`2d4ef2716412a4c121fc06e6d292418218cfb009`, from parent
+`9d4642b03e398999528fd0fdef4adbbd7707bd28`. The next authorized action is the
+separate read-only `REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-05` mission,
+which authorizes review and selection only. CIV-48 remains not started,
 implementation unauthorized and deferred behind that milestone and the
 resulting evidence-driven roadmap recalibration.
 See
@@ -214,7 +219,10 @@ PLAYABLE SLICE 01 Increment 02 published tree: 24e92e7c8a1982a886146ba79187f2fcc
 PLAYABLE SLICE 01 Increment 03: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 PLAYABLE SLICE 01 Increment 03 published HEAD: 0e7f36202debd088e4f1c84de96078be78b6b6fd
 PLAYABLE SLICE 01 Increment 03 published tree: 33a3675301a6fe088fde62b373f7e73505ba346d
-next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-04
+PLAYABLE SLICE 01 Increment 04: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+PLAYABLE SLICE 01 Increment 04 published HEAD: b478fcfd75126fb5ab742916930eb8eb08c5f4f2
+PLAYABLE SLICE 01 Increment 04 published tree: 2d4ef2716412a4c121fc06e6d292418218cfb009
+next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-05
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
@@ -1612,7 +1620,10 @@ Evaluation 05 product correction: NO
 Evaluation 05 verdict: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 Gate E status: ACQUIRED AND PUBLISHED
 Gate E acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f76744f83
-next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-04
+PLAYABLE SLICE 01 Increment 04: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+PLAYABLE SLICE 01 Increment 04 published HEAD: b478fcfd75126fb5ab742916930eb8eb08c5f4f2
+PLAYABLE SLICE 01 Increment 04 published tree: 2d4ef2716412a4c121fc06e6d292418218cfb009
+next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-05
 CIV-39 status: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 Gate F status: ACQUIRED AND PUBLISHED — REMOTE VERIFIED
@@ -2313,6 +2324,33 @@ Increment 03 retires player position as authority for agent-relevant physical
 opportunity inside its bounded coverage contract; it does not make all prior
 or player-only World history camera-invariant.
 
+Increment 04 retires the absence of a normal need-driven physical food loop for
+the bounded founder sandbox. Without activation or provisioning commands, a
+hungry founder can observe a naturally generated mature `sweet_berry_bush`,
+select acquisition autonomously, move physically, perform the canonical Core
+mutation, take custody of real `sweet_berries`, consume through the existing
+physical-food authority and reduce hunger. Seed 14 is the natural positive
+case; seeds 46 and 887 are canonical natural scarcity cases.
+
+PebbleCore remains physical World/drop/ItemStack/ItemEntity/direct-action-RNG
+authority; Pebble remains sensor/executor/custody/verification/rollback
+authority; PebbleAgents remains cognition/homeostasis/autonomous-decision
+authority. There is no second engine or cognitive owner, no PebbleAgents World
+mutation and no physical food minted through `foodRaw`. Normal Increment-04
+composition is restricted to mature sweet berries, with fishing, hunting,
+agriculture, livestock, production, work and economy domains inactive. Its
+direct-action RNG contract is separate from Increment 03 scheduled/coverage
+RNG.
+
+Ecological receipts are retained only by legitimate live/checkpoint authority.
+Batched ecological publication preserves the same durable causal events, and
+exact-byte derived receipt validation avoids repeated whole-session work
+without changing causal semantics. This closed the only Increment-04
+performance P1. At 4 Hz, final release medians/p95s were 107.183/131.911 ms for
+20 founders, 128.541/171.911 ms for 24, and 169.053/243.287 ms for 30; the
+isolated 30-founder maximum was 268.070 ms with zero catch-up drops. No support
+above 30 founders is claimed.
+
 Explicit non-claims: this milestone does not implement CIV-48 Generic
 Organization Kernel, CIV-49 guilds, CIV-50 heraldry, CIV-51 territory or land
 law, CIV-52 governance or law, religion, diplomacy, war, polity, deep genetics,
@@ -2324,15 +2362,16 @@ communication, spontaneous union/house foundation and autonomous market
 foundation do not all have to become autonomous unless implementation evidence
 shows one is necessary for the minimum useful baseline.
 
-After the milestone is characterized, its evidence drives a roadmap
+As the milestone is characterized, its evidence drives a roadmap
 recalibration before Wave 6 begins. CIV-48 remains **NOT STARTED —
 IMPLEMENTATION NOT AUTHORIZED**. Gate H remains planned and continues to
 require CIV-48 through CIV-52 unless a future separately authorized roadmap
 review changes that contract. The next authorized action is
-`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-04`. It authorizes inspection of
-the newly published Increment 03 boundary and selection of the smallest next
-coherent causal prerequisite; it does not preselect or authorize Increment 04
-implementation or authorize CIV-48.
+the separate read-only `REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-05`
+mission. It authorizes inspection of the newly published Increment 04 boundary
+and selection of the smallest next coherent causal/playability blocker; it
+does not preselect or authorize Increment 05 implementation or authorize
+CIV-48.
 
 ## Wave 6 — Organizations, land and law
 
