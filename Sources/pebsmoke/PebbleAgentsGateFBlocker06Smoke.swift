@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private let gateFB06Agent0 = AgentID(rawValue: "agent_0")!
 private let gateFB06Agent1 = AgentID(rawValue: "agent_1")!
@@ -125,6 +125,9 @@ private func gateFB06Session(
             maximumConcurrentSettlementMigrations: 1,
             maximumSettlementMigrationRouteLength: 16
         )
+    )
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.populationScaleVersion
     )
     return session
 }

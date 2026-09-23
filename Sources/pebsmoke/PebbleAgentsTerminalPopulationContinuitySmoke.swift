@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private func terminalContinuityAgent(
     _ ordinal: Int,
@@ -68,6 +68,9 @@ private func terminalContinuitySession(
         causalLedgerPolicy: .bounded(maxEvents: causalEvents)
     )
     session.setSurvivalEnabled(true)
+    try session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.mortalityVersion
+    )
     let population = try AgentPopulationConfiguration(
         maximumActivePopulation: max(3, total)
     )
@@ -147,6 +150,9 @@ private func normalTerminalContinuitySession(
         householdConfiguration: AgentHouseholdConfiguration(
             maximumHouseholdTransitionsPerTick: 30
         )
+    )
+    try session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.durableHouseConsentVersion
     )
     return session
 }
@@ -254,6 +260,9 @@ func runPebbleAgentsTerminalPopulationContinuitySmoke() {
     try! geneticSurvivors.setLifecycleEnabled(true)
     try! geneticSurvivors.setHomeostasisEnabled(true)
     try! geneticSurvivors.setGeneticsEnabled(true)
+    try! geneticSurvivors.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.geneticsVersion
+    )
     while geneticSurvivors.pendingMortalityTransitions().isEmpty,
           geneticSurvivors.tick < 30 {
         _ = try! geneticSurvivors.advanceTick()

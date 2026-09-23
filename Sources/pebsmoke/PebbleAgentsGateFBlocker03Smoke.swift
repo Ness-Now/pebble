@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private let gateFB03EastID = AgentSettlementID(rawValue: "settlement-east")!
 private let gateFB03MainReception = AgentPosition(x: 0, y: 64, z: 3)
@@ -143,6 +143,9 @@ private func gateFB03Session(
             maximumFidelityTransitionHistory:
                 maximumFidelityTransitionHistory
         )
+    )
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.populationScaleVersion
     )
     while session.tick < 4 { _ = try! session.advanceTick() }
     precondition(session.pendingBirthSitePlan() != nil)

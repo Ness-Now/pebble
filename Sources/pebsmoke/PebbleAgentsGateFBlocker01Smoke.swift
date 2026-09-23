@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private let gateFBlockerEastID = AgentSettlementID(rawValue: "settlement-east")!
 private let gateFBlockerWestID = AgentSettlementID(rawValue: "settlement-west")!
@@ -49,6 +49,9 @@ private func gateFBlockerSession(
         configuration: try! AgentPopulationConfiguration(
             maximumActivePopulation: maximumPopulation
         )
+    )
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.populationScaleVersion
     )
     return session
 }

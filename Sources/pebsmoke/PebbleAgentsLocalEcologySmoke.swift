@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private func ecologyAgent(
     _ id: String,
@@ -80,6 +80,9 @@ private func ecologyBaseSession(
         settlementAnchor: AgentPosition(x: 0, y: 64, z: 0),
         receptionPosition: AgentPosition(x: 0, y: 64, z: 0)
     )
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.populationVersion
+    )
     return session
 }
 
@@ -103,6 +106,9 @@ private func ecologySession(
             fingerprint: 529
         ),
     ], configuration: configuration)
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.localEcologyVersion
+    )
     return session
 }
 

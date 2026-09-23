@@ -28,7 +28,7 @@ extension AgentSimulationSession {
             "settlement=\(lifecycle.settlementID.rawValue)",
             "reproduction=\(lifecycle.reproductionEnabled ? 1 : 0)",
             members.map { member in
-                let age = (try? member.age(at: tick)) ?? -1
+                let age = (try? physiologicalAge(for: member.agentID)) ?? -1
                 return "m|\(member.agentID.rawValue)|\(member.ordinal.rawValue)|\(member.origin.rawValue)|\(age)|\(member.currentStage.rawValue)|\(member.progenitorIDs.map(\.rawValue).joined(separator: ","))|\(member.completedBirthCount)|\(member.lastCompletedBirthTick.map(String.init) ?? "none")"
             }.joined(separator: ";"),
             plans.map {
@@ -124,10 +124,7 @@ extension AgentSimulationSession {
     }
 
     public func demographicAge(for agentID: AgentID) throws -> Int {
-        guard let member = lifecycleState?.members.first(where: { $0.agentID == agentID }) else {
-            throw AgentSessionError.lifecycle(.invalidMember(agentID.rawValue))
-        }
-        return try member.age(at: tick)
+        try physiologicalAge(for: agentID)
     }
 
     public func pendingBirthSitePlan() -> AgentReproductionPlan? {
@@ -208,6 +205,9 @@ extension AgentSimulationSession {
                 origin: origin,
                 lifecycleRegisteredTick: tick,
                 initialAgeTicks: configuration.maturityAgeTicks,
+                physiologicalRegisteredBoundary:
+                    physiologicalTimeState.appliedBoundaryCount,
+                physiologicalInitialAge: configuration.maturityAgeTicks,
                 currentStage: .mature,
                 lastStageTransitionTick: tick,
                 progenitorIDs: [],
@@ -290,7 +290,9 @@ extension AgentSimulationSession {
         )
         let transitions = try lifecycle.members.indices.compactMap { index -> (Int, AgentLifeStage, Int)? in
             guard statesById[lifecycle.members[index].agentID.rawValue] != nil else { return nil }
-            let age = try lifecycle.members[index].age(at: lifecycleTick)
+            let age = try legacyTemporalSchemaVersionOverride != nil
+                ? lifecycle.members[index].age(at: lifecycleTick)
+                : physiologicalAge(for: lifecycle.members[index].agentID)
             let stage = lifeStage(age: age, configuration: lifecycle.configuration)
             return stage == lifecycle.members[index].currentStage ? nil : (index, stage, age)
         }.sorted { lifecycle.members[$0.0].agentID < lifecycle.members[$1.0].agentID }
@@ -643,6 +645,9 @@ extension AgentSimulationSession {
             origin: .localBirth,
             lifecycleRegisteredTick: tick,
             initialAgeTicks: 0,
+            physiologicalRegisteredBoundary:
+                physiologicalTimeState.appliedBoundaryCount,
+            physiologicalInitialAge: 0,
             currentStage: .newborn,
             lastStageTransitionTick: tick,
             progenitorIDs: plan.progenitorIDs,
@@ -700,6 +705,9 @@ extension AgentSimulationSession {
         lifecycle.lastLifecycleEventID = finalized.eventID
         trimLifecycleHistories(&lifecycle)
         populationRegistry = registry
+        try refreshPopulationMembershipAuthorityAfterMembershipChange(
+            causedBy: born.eventID
+        )
         lifecycleState = lifecycle
         try registerHomeostasisProfileIfEnabled(
             for: newbornID,
@@ -738,6 +746,9 @@ extension AgentSimulationSession {
             origin: .importedMigrant,
             lifecycleRegisteredTick: tick,
             initialAgeTicks: lifecycle.configuration.maturityAgeTicks,
+            physiologicalRegisteredBoundary:
+                physiologicalTimeState.appliedBoundaryCount,
+            physiologicalInitialAge: lifecycle.configuration.maturityAgeTicks,
             currentStage: .mature,
             lastStageTransitionTick: tick,
             progenitorIDs: [],
@@ -859,6 +870,8 @@ extension AgentSimulationSession {
         _ lifecycle: AgentLifecycleState,
         population: AgentPopulationRegistry,
         agents: [AgentSessionAgentState],
+        physiologicalTime: AgentPhysiologicalTimeState,
+        usesWorldDerivedPhysiology: Bool,
         clock: AgentSimulationClock,
         causalLatestSequence: UInt64
     ) throws {
@@ -906,7 +919,11 @@ extension AgentSimulationSession {
             throw AgentCheckpointError.invalidBound("lifecycle")
         }
         for member in lifecycle.members {
-            let age = try member.age(at: clock.tick.rawValue)
+            let age = try usesWorldDerivedPhysiology
+                ? member.physiologicalAge(
+                    atBoundary: physiologicalTime.appliedBoundaryCount
+                )
+                : member.age(at: clock.tick.rawValue)
             let expected = age < lifecycle.configuration.newbornDurationTicks
                 ? AgentLifeStage.newborn
                 : (age < lifecycle.configuration.maturityAgeTicks ? .juvenile : .mature)

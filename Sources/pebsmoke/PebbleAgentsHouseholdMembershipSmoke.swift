@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private let householdHabitat = AgentEcologyHabitatObservation(
     worldTick: 0,
@@ -97,7 +97,12 @@ private func householdBase(
         simulationID: try! AgentSimulationID(validating: simulationID),
         causalLedgerPolicy: .bounded(maxEvents: 8192)
     )
-    guard enablePopulation else { return session }
+    guard enablePopulation else {
+        try! session.useLegacyCognitivePhysiologyReplayFixture(
+            schemaVersion: AgentCheckpointSchema.currentVersion
+        )
+        return session
+    }
     try! session.initializePopulationRegistry(
         settlementAnchor: homeA,
         receptionPosition: AgentPosition(x: 0, y: 64, z: 3),
@@ -107,13 +112,36 @@ private func householdBase(
     _ = try! session.applyLocalEcologyEndOfTick(
         habitatValidations: [householdHabitat]
     )
-    guard enableLifecycle else { return session }
+    guard enableLifecycle else {
+        try! session.useLegacyCognitivePhysiologyReplayFixture(
+            schemaVersion: AgentCheckpointSchema.localEcologyVersion
+        )
+        return session
+    }
     try! session.setLifecycleEnabled(
         true, configuration: householdLifecycleConfiguration
     )
-    guard enableKinship else { return session }
+    guard enableKinship else {
+        try! session.useLegacyCognitivePhysiologyReplayFixture(
+            schemaVersion: AgentCheckpointSchema.lifecycleVersion
+        )
+        return session
+    }
     try! session.setKinshipEnabled(true)
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.kinshipVersion
+    )
     return session
+}
+
+private func householdEnable(
+    _ session: inout AgentSimulationSession,
+    configuration: AgentHouseholdConfiguration = .live
+) throws {
+    try session.setHouseholdsEnabled(true, configuration: configuration)
+    try session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.householdVersion
+    )
 }
 
 private func householdAdvance(
@@ -298,7 +326,7 @@ func runPebbleAgentsHouseholdMembershipSmoke() {
         observation: householdMigrationObservation(tick: preactivationMigrant.tick)
     )
     let migratingID = preactivationMigrant.populationSnapshot().migrations.last!.migrantID
-    try! preactivationMigrant.setHouseholdsEnabled(true)
+    try! householdEnable(&preactivationMigrant)
     check("household preactivation migrant remains unassigned in transit",
           preactivationMigrant.populationSnapshot().members.first {
             $0.agentID == migratingID
@@ -322,9 +350,16 @@ func runPebbleAgentsHouseholdMembershipSmoke() {
             == [AgentID(rawValue: "agent_0")!, AgentID(rawValue: "agent_1")!]
         && (try! session.members(of: AgentHouseholdID(rawValue: "household_1")!))
             == [AgentID(rawValue: "agent_2")!])
-    check("household activation schema v8", (try! session.makeCheckpoint()).schemaVersion == 8)
-    let activationBytes = try! session.durableStateBytes()
-    let activationRestored = try! AgentSimulationSession.restoring(session.makeCheckpoint())
+    var historicalActivationSession = session
+    try! historicalActivationSession.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.householdVersion
+    )
+    check("household activation schema v8",
+          (try! historicalActivationSession.makeCheckpoint()).schemaVersion == 8)
+    let activationBytes = try! historicalActivationSession.durableStateBytes()
+    let activationRestored = try! AgentSimulationSession.restoring(
+        historicalActivationSession.makeCheckpoint()
+    )
     check("household restart before transition exact",
           try! activationRestored.durableStateBytes() == activationBytes)
 
@@ -420,6 +455,9 @@ func runPebbleAgentsHouseholdMembershipSmoke() {
         == beforeMortalityKinship.historicalPersons
         && session.kinshipSnapshot().parentageRecords == beforeMortalityKinship.parentageRecords)
 
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.householdVersion
+    )
     let finalCheckpoint = try! session.makeCheckpoint()
     let finalBytes = try! session.durableStateBytes()
     let restored = try! AgentSimulationSession.restoring(finalCheckpoint)
@@ -432,10 +470,17 @@ func runPebbleAgentsHouseholdMembershipSmoke() {
     let replayed = try! AgentSessionReplayer.replay(
         checkpoint: v7Checkpoint, journal: journal
     )
+    var historicalReplayedSession = replayed.session
+    try! historicalReplayedSession.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.householdVersion
+    )
     check("household replay schema v8", journal.manifest.schemaVersion == 8)
+    let replayBytesExact = (try! historicalReplayedSession.durableStateBytes()) == finalBytes
+    let replayHouseholdsExact = historicalReplayedSession.householdSnapshot()
+        == session.householdSnapshot()
     check("household replay byte exact", replayed.report.verified
-        && (try! replayed.session.durableStateBytes()) == finalBytes
-        && replayed.session.householdSnapshot() == session.householdSnapshot())
+        && replayBytesExact && replayHouseholdsExact,
+        "verified=\(replayed.report.verified) bytes=\(replayBytesExact) households=\(replayHouseholdsExact) divergence=\(String(describing: replayed.report.divergence))")
 
     let eventKinds = session.causalLedgerSnapshot().events.filter {
         $0.subjectID == sameHouseholdBirth.newbornID
@@ -450,7 +495,7 @@ func runPebbleAgentsHouseholdMembershipSmoke() {
             .map { "household_\($0)" })
 
     var negative = householdBase("sim-household-negative")
-    try! negative.setHouseholdsEnabled(true)
+    try! householdEnable(&negative)
     let negativeBytes = try! negative.durableStateBytes()
     check("household empty formation atomic", {
         do {
@@ -508,7 +553,7 @@ func runPebbleAgentsHouseholdMembershipSmoke() {
     }())
 
     var dissolvedTarget = householdBase("sim-household-dissolved-target")
-    try! dissolvedTarget.setHouseholdsEnabled(true)
+    try! householdEnable(&dissolvedTarget)
     _ = try! dissolvedTarget.advanceTick()
     _ = try! dissolvedTarget.formHousehold(
         memberIDs: [AgentID(rawValue: "agent_2")!],
@@ -593,7 +638,7 @@ func runPebbleAgentsHouseholdMembershipSmoke() {
     }())
 
     var historicalFormation = householdBase("sim-household-historical-formation")
-    try! historicalFormation.setHouseholdsEnabled(true, configuration:
+    try! householdEnable(&historicalFormation, configuration:
         try! AgentHouseholdConfiguration(
             maximumHistoricalHouseholds: 2,
             maximumActiveHouseholds: 2
@@ -613,7 +658,7 @@ func runPebbleAgentsHouseholdMembershipSmoke() {
         } catch { return false }
     }())
     var periodFormation = householdBase("sim-household-period-formation")
-    try! periodFormation.setHouseholdsEnabled(true, configuration:
+    try! householdEnable(&periodFormation, configuration:
         try! AgentHouseholdConfiguration(maximumMembershipPeriods: 3)
     )
     _ = try! periodFormation.advanceTick()
@@ -630,7 +675,7 @@ func runPebbleAgentsHouseholdMembershipSmoke() {
         } catch { return false }
     }())
     var memberMoveBound = householdBase("sim-household-member-move-bound")
-    try! memberMoveBound.setHouseholdsEnabled(true, configuration:
+    try! householdEnable(&memberMoveBound, configuration:
         try! AgentHouseholdConfiguration(maximumMembersPerHousehold: 2)
     )
     _ = try! memberMoveBound.advanceTick()
@@ -647,7 +692,7 @@ func runPebbleAgentsHouseholdMembershipSmoke() {
         } catch { return false }
     }())
     var transitionBound = householdBase("sim-household-transition-bound")
-    try! transitionBound.setHouseholdsEnabled(true, configuration:
+    try! householdEnable(&transitionBound, configuration:
         try! AgentHouseholdConfiguration(maximumHouseholdTransitionsPerTick: 3)
     )
     let transitionBoundBytes = try! transitionBound.durableStateBytes()
@@ -664,7 +709,7 @@ func runPebbleAgentsHouseholdMembershipSmoke() {
     }())
 
     var migrationBound = householdBase("sim-household-migration-bound")
-    try! migrationBound.setHouseholdsEnabled(true, configuration:
+    try! householdEnable(&migrationBound, configuration:
         try! AgentHouseholdConfiguration(maximumMembershipPeriods: 3)
     )
     _ = try! migrationBound.advanceTick()
@@ -683,7 +728,7 @@ func runPebbleAgentsHouseholdMembershipSmoke() {
     }())
 
     var birthBound = householdBase("sim-household-birth-bound")
-    try! birthBound.setHouseholdsEnabled(true, configuration:
+    try! householdEnable(&birthBound, configuration:
         try! AgentHouseholdConfiguration(maximumMembershipPeriods: 3)
     )
     try! birthBound.setReproductionEnabled(true)
@@ -709,7 +754,7 @@ func runPebbleAgentsHouseholdMembershipSmoke() {
     }())
 
     var deathBound = householdBase("sim-household-death-bound")
-    try! deathBound.setHouseholdsEnabled(true, configuration:
+    try! householdEnable(&deathBound, configuration:
         try! AgentHouseholdConfiguration(maximumHouseholdTransitionsPerTick: 3)
     )
     _ = try! deathBound.advanceTick()
@@ -729,7 +774,7 @@ func runPebbleAgentsHouseholdMembershipSmoke() {
     }())
 
     var corrupt = householdBase("sim-household-corrupt")
-    try! corrupt.setHouseholdsEnabled(true)
+    try! householdEnable(&corrupt)
     _ = try! corrupt.advanceTick()
     _ = try! corrupt.formHousehold(
         memberIDs: [AgentID(rawValue: "agent_2")!],

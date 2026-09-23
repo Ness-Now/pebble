@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private let languageSmokeSenseIDs = [
     AgentLanguageSenseID(rawValue: "referent.worldCell")!,
@@ -103,6 +103,9 @@ private func languageSmokeKnowledgeSession(
         simulationID: try! AgentSimulationID(validating: id),
         causalLedgerPolicy: .bounded(maxEvents: causalMaximumEvents)
     )
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.knowledgeVersion
+    )
     try! session.setSocialEnabled(true)
     try! session.setKnowledgeGraphEnabled(true)
     _ = try! session.advanceTick(perceptions: [
@@ -151,6 +154,9 @@ private func languageSmokePrepared(
         true,
         configuration: configuration,
         pack: pack
+    )
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.languageVersion
     )
     return (session, propositionID)
 }

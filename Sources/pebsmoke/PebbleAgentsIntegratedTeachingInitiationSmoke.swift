@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private let integratedTeachingHome = AgentPosition(x: 0, y: 64, z: 0)
 
@@ -60,6 +60,9 @@ private func integratedTeachingSession(
     try! session.setSkillsEnabled(true)
     try! session.setTeachingEnabled(true, configuration: teachingConfiguration)
     try! session.setAutonomousActivityEnabled(true)
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.autonomousActivityVersion
+    )
     for _ in 0..<AgentTeachingParticipationPolicy.reviewIntervalTicks {
         _ = try! session.advanceTick()
     }

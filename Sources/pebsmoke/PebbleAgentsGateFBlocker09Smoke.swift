@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private let gateFB09Origin = AgentPosition(x: 0, y: 64, z: 0)
 private let gateFB09BirthPosition = AgentPosition(x: 1, y: 64, z: 4)
@@ -125,6 +125,11 @@ private func gateFB09Session(
     try! session.setMortalityEnabled(true, configuration: .embodiedLive)
     try! session.setEstatesEnabled(true)
     try! session.setReproductionEnabled(true)
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: includeScale
+            ? AgentCheckpointSchema.populationScaleVersion
+            : AgentCheckpointSchema.estateVersion
+    )
     return session
 }
 
@@ -2153,16 +2158,16 @@ func runPebbleAgentsGateFBlocker09Smoke() {
                 decedentID: schema28.firstBirth.newbornID
             ).successorPlanProof == schema28Proof
             && gateFB09RestoreExact(schema28.session) != nil)
-    check("schema 27 remains legacy and schemas 28 through 43 remain strict",
+    check("schema 27 remains legacy and schemas 28 through 44 remain strict",
           AgentCheckpointSchema.estateValidationSemantics(for: 27)
             == .legacySuccessorPlanRevalidation
-            && (28...43).allSatisfy {
+            && (28...44).allSatisfy {
                 AgentCheckpointSchema.estateValidationSemantics(for: $0)
                     == .strictDurableSuccessorPlan
             })
     check("unsupported future schema remains rejected",
-          AgentCheckpointSchema.estateValidationSemantics(for: 44) == nil
-            && !AgentCheckpointSchema.supports(44))
+          AgentCheckpointSchema.estateValidationSemantics(for: 45) == nil
+            && !AgentCheckpointSchema.supports(45))
 
     var compacted = gateFB09BoundaryFixture(
         "gate-f-b09-compacted", causalMaximumEvents: 32

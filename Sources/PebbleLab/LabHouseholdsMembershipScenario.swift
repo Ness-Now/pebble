@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private struct HouseholdScenarioCheck: Codable, Equatable {
     let name: String
@@ -141,6 +141,9 @@ private func householdScenarioBase(seed: UInt32) -> AgentSimulationSession {
     )
     try! session.setLifecycleEnabled(true, configuration: householdScenarioLifecycle)
     try! session.setKinshipEnabled(true)
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.kinshipVersion
+    )
     return session
 }
 
@@ -223,10 +226,14 @@ func runHouseholdsAndMembershipSmoke(_ options: Options) -> Never {
     let activationSnapshot = direct.householdSnapshot()
     add("activation groups shared homes", activationSnapshot.households.count == 2
         && activationSnapshot.currentMemberships.count == 3)
-    let preTransitionCheckpoint = try! direct.makeCheckpoint()
+    var historicalActivation = direct
+    try! historicalActivation.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.householdVersion
+    )
+    let preTransitionCheckpoint = try! historicalActivation.makeCheckpoint()
     add("restart before transition exact", (try! AgentSimulationSession.restoring(
         preTransitionCheckpoint
-    ).durableStateBytes()) == (try! direct.durableStateBytes()))
+    ).durableStateBytes()) == (try! historicalActivation.durableStateBytes()))
 
     let formedAnchor = AgentPosition(x: 8, y: 64, z: 0)
     _ = try! recorder.apply(.formHousehold(
@@ -306,6 +313,9 @@ func runHouseholdsAndMembershipSmoke(_ options: Options) -> Never {
         == beforeDeathKinship.historicalPersons
         && direct.kinshipSnapshot().parentageRecords == beforeDeathKinship.parentageRecords)
 
+    try! direct.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.householdVersion
+    )
     let checkpoint = try! direct.makeCheckpoint()
     let durableBytes = try! direct.durableStateBytes()
     let restored = try! AgentSimulationSession.restoring(checkpoint)
@@ -318,10 +328,14 @@ func runHouseholdsAndMembershipSmoke(_ options: Options) -> Never {
     let replayed = try! AgentSessionReplayer.replay(
         checkpoint: v7Checkpoint, journal: journal
     )
+    var replayedHistorical = replayed.session
+    try! replayedHistorical.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.householdVersion
+    )
     add("replay v8 exact", journal.manifest.schemaVersion == 8
         && replayed.report.verified
-        && (try! replayed.session.durableStateBytes()) == durableBytes
-        && replayed.session.householdSnapshot() == direct.householdSnapshot())
+        && (try! replayedHistorical.durableStateBytes()) == durableBytes
+        && replayedHistorical.householdSnapshot() == direct.householdSnapshot())
     add("IDs monotone and never reused", direct.householdSnapshot().households
         .map(\.householdID.rawValue) == (0..<direct.householdSnapshot().households.count)
             .map { "household_\($0)" })

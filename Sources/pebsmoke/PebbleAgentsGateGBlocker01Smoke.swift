@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private let dialectInnovator = AgentID(rawValue: "dialect_innovator")!
 private let dialectLearner = AgentID(rawValue: "dialect_learner")!
@@ -163,6 +163,9 @@ private func dialectPrepared(
             senseIDs: dialectSenseIDs
         )
     }
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.oralTransmissionVersion
+    )
     return (session, local.propositionID)
 }
 
@@ -264,6 +267,9 @@ private func dialectMortalityPrepared() -> (
         recipientID: witness,
         propositionID: propositionID,
         renderingMode: .deterministicCompositional
+    )
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.oralTransmissionVersion
     )
     return (session, propositionID, origin, learner, witness)
 }
@@ -501,6 +507,9 @@ func runPebbleAgentsGateGBlocker01Smoke() {
     _ = try! cultural.innovateLanguageLexicalForm(
         for: culturalOrigin,
         senseID: dialectWoodSense
+    )
+    try! cultural.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.lexicalDivergenceVersion
     )
     let culturalLanguageBefore = cultural.languageSnapshot()
     try! cultural.initializePopulationRegistry(
@@ -928,6 +937,9 @@ func runPebbleAgentsGateGBlocker01Smoke() {
     let mortalityInnovation = try! mortality.innovateLanguageLexicalForm(
         for: mortalityOrigin,
         senseID: dialectWoodSense
+    )
+    try! mortality.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.lexicalDivergenceVersion
     )
     _ = try! mortality.transmitOralClaim(
         speakerID: mortalityOrigin,

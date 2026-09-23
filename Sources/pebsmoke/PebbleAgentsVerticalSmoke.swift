@@ -3,7 +3,180 @@ import simd
 import PebbleAgents
 import PebbleCore
 
-func runPebbleAgentsVerticalSmoke() {
+private func verticalSmokeCell(
+    _ x: Int,
+    _ z: Int,
+    y: Int = 64,
+    status: AgentNavigationCellStatus = .traversable
+) -> AgentNavigationCell {
+    AgentNavigationCell(
+        position: AgentPosition(x: x, y: y, z: z), status: status
+    )
+}
+
+private func verticalSmokeFlatCells(
+    radius: Int = 4
+) -> [AgentNavigationCell] {
+    var result: [AgentNavigationCell] = []
+    for x in -radius...radius {
+        for z in -radius...radius where abs(x) + abs(z) <= radius {
+            result.append(verticalSmokeCell(x, z))
+        }
+    }
+    return result
+}
+
+private func verticalSmokeWorldObservation(
+    _ position: AgentPosition,
+    worldTick: Int,
+    blockedDirection: AgentCardinalDirection? = nil
+) -> AgentWorldObservation {
+    let center = AgentWorldColumnObservation(
+        position: position, chunkReady: true, surfaceY: position.y,
+        height: position.y, blockBelow: 1, blockAtFeet: 0, blockAtHead: 0,
+        groundPresent: true, feetClear: true, headClear: true
+    )
+    let neighbors = AgentCardinalDirection.allCases.map { direction in
+        let neighborPosition = AgentPosition(
+            x: position.x + direction.dx,
+            y: position.y,
+            z: position.z + direction.dz
+        )
+        let traversable = direction != blockedDirection
+        return AgentWorldNeighborObservation(
+            direction: direction,
+            column: AgentWorldColumnObservation(
+                position: neighborPosition, chunkReady: true,
+                surfaceY: position.y, height: position.y, blockBelow: 1,
+                blockAtFeet: traversable ? 0 : 1, blockAtHead: 0,
+                groundPresent: true, feetClear: traversable,
+                headClear: true
+            ),
+            stepDelta: 0, traversable: traversable,
+            dangerousDrop: false
+        )
+    }
+    return try! AgentWorldObservation(
+        worldTick: worldTick, position: position, center: center,
+        neighbors: neighbors, biomeId: nil, biomeName: nil,
+        combinedLight: nil, skyLight: nil, blockLight: nil,
+        dayTime: worldTick, raining: false, thundering: false
+    )
+}
+
+private func verticalSmokeEncoder() -> JSONEncoder {
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.sortedKeys]
+    return encoder
+}
+
+private func verticalSmokeEconomyAgentState(
+    id: String = "agent_economy",
+    position: AgentPosition,
+    home: AgentPosition,
+    inventory: AgentResourceInventory = AgentResourceInventory(),
+    goal: AgentGoalKind = .idle
+) -> AgentSessionAgentState {
+    AgentSessionAgentState(
+        id: id, state: "idle", position: position,
+        needs: AgentNeeds(
+            hunger: 0, fatigue: 0, curiosity: 0, safety: 1
+        ),
+        health: 100, fear: 0, homePosition: home, nearbyAgents: [],
+        currentGoal: AgentGoal(
+            kind: goal, reason: "economy fixture",
+            startedAtTick: 0, urgency: 80
+        ),
+        lastAction: nil, lastActionEffect: nil, memory: [],
+        tickCreated: 0, ticksAlive: 0, observationCount: 0,
+        nearbyObservationCount: 0, goalSelectionCount: 0,
+        goalChangeCount: 0, actionCount: 0, actionEffectCount: 0,
+        movementCount: 0, totalManhattanDistanceMoved: 0,
+        returnHomeMoveCount: 0, totalDistanceReducedTowardHome: 0,
+        resourceInventory: inventory
+    )
+}
+
+private func verticalSmokeEconomySession(
+    states: [AgentSessionAgentState],
+    campCapacity: Int = 64,
+    quota: Int = 2,
+    maxReplans: Int = 3
+) -> AgentSimulationSession {
+    var session = try! AgentSimulationSession(
+        configuration: try! AgentSessionConfiguration(
+            seed: 303, resourceObservationRadius: 8,
+            recentMemorySnapshotLimit: 64,
+            memoryPolicy: .bounded(maxEntries: 128),
+            navigationMaxReplans: maxReplans, deliveryQuota: quota,
+            campStockCapacity: campCapacity
+        ),
+        agents: states
+    )
+    session.setEconomyEnabled(true)
+    return session
+}
+
+private let verticalSmokeSurvivalConfiguration = try! AgentSurvivalConfiguration(
+    hungerPerTick: 0.20, fatiguePerTick: 0.20,
+    hungryThreshold: 0.40, criticalHungerThreshold: 0.60,
+    hungerRecoveryThreshold: 0.20, fatigueThreshold: 0.60,
+    fatigueRecoveryThreshold: 0.20, foodNutrition: 0.75,
+    restRecoveryPerTick: 0.60, starvationGraceTicks: 2,
+    starvationDamagePerTick: 10
+)
+
+private func verticalSmokeSurvivalAgentState(
+    id: String = "agent_survival",
+    position: AgentPosition = AgentPosition(x: 0, y: 64, z: 0),
+    home: AgentPosition = AgentPosition(x: 0, y: 64, z: 0),
+    hunger: Double = 0,
+    fatigue: Double = 0,
+    health: Int = 100,
+    inventory: AgentResourceInventory = AgentResourceInventory(),
+    goal: AgentGoalKind = .idle
+) -> AgentSessionAgentState {
+    AgentSessionAgentState(
+        id: id, state: "idle", position: position,
+        needs: AgentNeeds(
+            hunger: hunger, fatigue: fatigue, curiosity: 0, safety: 1
+        ),
+        health: health, fear: 0, homePosition: home, nearbyAgents: [],
+        currentGoal: AgentGoal(
+            kind: goal, reason: "survival fixture",
+            startedAtTick: 0, urgency: 0
+        ),
+        lastAction: nil, lastActionEffect: nil, memory: [],
+        tickCreated: 0, ticksAlive: 0, observationCount: 0,
+        nearbyObservationCount: 0, goalSelectionCount: 0,
+        goalChangeCount: 0, actionCount: 0, actionEffectCount: 0,
+        movementCount: 0, totalManhattanDistanceMoved: 0,
+        returnHomeMoveCount: 0, totalDistanceReducedTowardHome: 0,
+        resourceInventory: inventory
+    )
+}
+
+private func verticalSmokeSurvivalSession(
+    states: [AgentSessionAgentState],
+    economy: Bool = false,
+    configuration: AgentSurvivalConfiguration =
+        verticalSmokeSurvivalConfiguration
+) -> AgentSimulationSession {
+    var session = try! AgentSimulationSession(
+        configuration: try! AgentSessionConfiguration(
+            seed: 404, resourceObservationRadius: 8,
+            recentMemorySnapshotLimit: 128,
+            memoryPolicy: .bounded(maxEntries: 256), deliveryQuota: 2,
+            survivalConfiguration: configuration
+        ),
+        agents: states
+    )
+    if economy { session.setEconomyEnabled(true) }
+    return session
+}
+
+@inline(never)
+private func runPebbleAgentsNavigationVerticalSmoke() {
 // ---------------------------------------------------------------------------
 section("PebbleAgents navigate-to-harvest vertical H2")
 do {
@@ -406,6 +579,25 @@ do {
     check("H2 snapshot deterministic encoding", encodedA == encodedB)
     check("H2 snapshot exposes navigation and reservation", String(data: encodedA, encoding: .utf8)?.contains("navigationProgress") == true
           && String(data: encodedA, encoding: .utf8)?.contains("resourceReservations") == true)
+}
+}
+
+@inline(never)
+private func runPebbleAgentsEconomyVerticalSmoke() {
+do {
+    func flatCells(radius: Int = 4) -> [AgentNavigationCell] {
+        verticalSmokeFlatCells(radius: radius)
+    }
+    func worldObservation(
+        _ position: AgentPosition,
+        worldTick: Int,
+        blockedDirection: AgentCardinalDirection? = nil
+    ) -> AgentWorldObservation {
+        verticalSmokeWorldObservation(
+            position, worldTick: worldTick,
+            blockedDirection: blockedDirection
+        )
+    }
 
     // -----------------------------------------------------------------------
     section("PebbleAgents closed resource economy Phase I")
@@ -913,6 +1105,43 @@ do {
         return text.contains("campStock") && text.contains("conservation") && text.contains("deliveryQuota")
     }())
 
+}
+}
+
+@inline(never)
+private func runPebbleAgentsSurvivalVerticalSmoke() {
+do {
+    let economyEncoder = verticalSmokeEncoder()
+    func resource(
+        _ observer: AgentPosition,
+        target: AgentPosition = AgentPosition(x: 4, y: 64, z: 0)
+    ) -> AgentResourceObservation {
+        AgentResourceObservation(
+            resource: .sandboxResource,
+            target: target,
+            direction: AgentResourcePerception.direction(
+                observerPosition: observer, target: target
+            )!,
+            distanceManhattan: abs(target.x - observer.x)
+                + abs(target.z - observer.z),
+            quantityAvailable: 1,
+            source: .sandboxFixture
+        )
+    }
+    func flatCells(radius: Int = 4) -> [AgentNavigationCell] {
+        verticalSmokeFlatCells(radius: radius)
+    }
+    func worldObservation(
+        _ position: AgentPosition,
+        worldTick: Int,
+        blockedDirection: AgentCardinalDirection? = nil
+    ) -> AgentWorldObservation {
+        verticalSmokeWorldObservation(
+            position, worldTick: worldTick,
+            blockedDirection: blockedDirection
+        )
+    }
+
     // -----------------------------------------------------------------------
     section("PebbleAgents autonomous survival sandbox J")
 
@@ -1038,6 +1267,22 @@ do {
         return session
     }
 
+    func advanceSurvivalBoundary(
+        _ session: inout AgentSimulationSession,
+        perceptions: [AgentPerceptionInput] = []
+    ) -> AgentSessionTickResult {
+        var temporal = session.physiologicalTimeSnapshot()
+        if temporal.lastReconciledWorldTick == nil {
+            try! session.rebasePhysiologicalTime(toWorldTick: 0)
+            temporal = session.physiologicalTimeSnapshot()
+        }
+        try! session.advancePhysiologicalTime(
+            toWorldTick: temporal.lastReconciledWorldTick!
+                + temporal.configuration.boundaryWorldTicks
+        )
+        return try! session.advanceTick(perceptions: perceptions)
+    }
+
     var survivalDefault = survivalSession(states: [survivalAgentState()])
     check("J survival disabled by default", !survivalDefault.survivalEnabled
           && !survivalDefault.snapshot().survivalEnabled
@@ -1045,8 +1290,10 @@ do {
     let legacyBefore = survivalDefault.snapshot()
     _ = try! survivalDefault.advanceTick()
     let legacyAfter = survivalDefault.snapshot()
-    check("J survival off preserves legacy hunger tick", legacyAfter.agents[0].needs.hunger == 0.01)
-    check("J survival off preserves legacy fatigue tick", legacyAfter.agents[0].needs.fatigue == 0.005)
+    check("J survival off cognitive step grants no hunger time",
+          legacyAfter.agents[0].needs.hunger == legacyBefore.agents[0].needs.hunger)
+    check("J survival off cognitive step grants no fatigue time",
+          legacyAfter.agents[0].needs.fatigue == legacyBefore.agents[0].needs.fatigue)
     check("J survival off preserves legacy state shape",
           legacyBefore.agents[0].survivalProgress == nil && legacyAfter.agents[0].survivalProgress == nil)
     let legacySnapshotText = String(
@@ -1062,7 +1309,7 @@ do {
         hunger: 0.95, fatigue: 0.95, health: 120
     )])
     boundedNeeds.setSurvivalEnabled(true)
-    _ = try! boundedNeeds.advanceTick()
+    _ = advanceSurvivalBoundary(&boundedNeeds)
     check("J survival clamps hunger and fatigue",
           boundedNeeds.snapshot().agents[0].needs.hunger == 1
             && boundedNeeds.snapshot().agents[0].needs.fatigue == 1)
@@ -1157,7 +1404,7 @@ do {
     }
     var foodSelection = survivalSession(states: [survivalAgentState(hunger: 0.3)])
     foodSelection.setSurvivalEnabled(true)
-    let foodSelectionTick = try! foodSelection.advanceTick(perceptions: [AgentPerceptionInput(
+    let foodSelectionTick = advanceSurvivalBoundary(&foodSelection, perceptions: [AgentPerceptionInput(
         agentId: "agent_survival",
         resourceObservations: [
             observedResource(.wood, target: woodTarget),
@@ -1183,7 +1430,7 @@ do {
           foodSelectionTick.agents[0].action.name == "approach_resource")
     var noFood = survivalSession(states: [survivalAgentState(hunger: 0.3)])
     noFood.setSurvivalEnabled(true)
-    let noFoodTick = try! noFood.advanceTick(perceptions: [AgentPerceptionInput(
+    let noFoodTick = advanceSurvivalBoundary(&noFood, perceptions: [AgentPerceptionInput(
         agentId: "agent_survival",
         resourceObservations: [observedResource(.wood, target: woodTarget)]
     )])
@@ -1214,7 +1461,7 @@ do {
     harvestForSurvival(.foodRaw, target: AgentPosition(x: 1, y: 64, z: 0), id: "j-food", session: &consumption)
     harvestForSurvival(.wood, target: AgentPosition(x: 0, y: 64, z: 1), id: "j-wood", session: &consumption)
     consumption.setSurvivalEnabled(true)
-    let consumptionTick = try! consumption.advanceTick()
+    let consumptionTick = advanceSurvivalBoundary(&consumption)
     check("J carried food emits consume_food", consumptionTick.agents[0].action.name == "consume_food")
     let beforeConsumption = consumption.snapshot().agents[0]
     let consumptionIntent = AgentConsumptionIntent(
@@ -1334,21 +1581,21 @@ do {
 
     var starvation = survivalSession(states: [survivalAgentState(hunger: 0.55)])
     starvation.setSurvivalEnabled(true)
-    _ = try! starvation.advanceTick()
+    _ = advanceSurvivalBoundary(&starvation)
     check("J starvation grace tick one has no damage",
           starvation.snapshot().agents[0].health == 100
             && starvation.snapshot().agents[0].survivalProgress?.consecutiveCriticalHungerTicks == 1)
-    _ = try! starvation.advanceTick()
+    _ = advanceSurvivalBoundary(&starvation)
     check("J starvation grace tick two has no damage",
           starvation.snapshot().agents[0].health == 100
             && starvation.snapshot().agents[0].survivalProgress?.consecutiveCriticalHungerTicks == 2)
-    _ = try! starvation.advanceTick()
+    _ = advanceSurvivalBoundary(&starvation)
     check("J starvation first damage occurs after grace",
           starvation.snapshot().agents[0].health == 90
             && starvation.snapshot().agents[0].survivalProgress?.starvationDamageTaken == 10)
     check("J starvation writes memory only on real damage",
           starvation.snapshot().agents[0].recentMemory.filter { $0.type == "starvation_damage" }.count == 1)
-    for _ in 0..<12 { _ = try! starvation.advanceTick() }
+    for _ in 0..<12 { _ = advanceSurvivalBoundary(&starvation) }
     check("J starvation health is bounded at zero", starvation.snapshot().agents[0].health == 0)
     check("J starvation damage total is bounded", starvation.snapshot().agents[0].survivalProgress?.starvationDamageTaken == 100)
     check("J starvation invents no resources",
@@ -1408,7 +1655,10 @@ do {
             )
         )
     }
-    let restTick1 = try! restSession.advanceTick(perceptions: [restPerception(restAway, worldTick: 201)])
+    let restTick1 = advanceSurvivalBoundary(
+        &restSession,
+        perceptions: [restPerception(restAway, worldTick: 201)]
+    )
     check("J fatigue threshold engages rest goal", restSession.snapshot().agents[0].currentGoal.kind == .rest)
     check("J rest away from home uses homeRest route",
           restSession.snapshot().agents[0].navigationProgress.route?.purpose == .homeRest)
@@ -1440,14 +1690,23 @@ do {
     let beforeRestFatigue = restSession.snapshot().agents[0].needs.fatigue
     let atHomeRestTick = try! restSession.advanceTick(perceptions: [restPerception(restHome, worldTick: 204)])
     check("J rest action occurs only at home", atHomeRestTick.agents[0].action.name == "rest")
+    check("J cognitive rest action grants no elapsed recovery",
+          restSession.snapshot().agents[0].needs.fatigue == beforeRestFatigue)
+    _ = advanceSurvivalBoundary(
+        &restSession,
+        perceptions: [restPerception(restHome, worldTick: 205)]
+    )
     check("J rest recovery exact",
           restSession.snapshot().agents[0].needs.fatigue
             == max(0, min(1, beforeRestFatigue + restConfiguration.fatiguePerTick)
                 - restConfiguration.restRecoveryPerTick))
     check("J rest progress increments", restSession.snapshot().agents[0].survivalProgress?.restTicks == 1)
     var exitedRest = false
-    for worldTick in 205...208 {
-        _ = try! restSession.advanceTick(perceptions: [restPerception(restHome, worldTick: worldTick)])
+    for worldTick in 206...209 {
+        _ = advanceSurvivalBoundary(
+            &restSession,
+            perceptions: [restPerception(restHome, worldTick: worldTick)]
+        )
         if restSession.snapshot().agents[0].currentGoal.kind != .rest { exitedRest = true; break }
     }
     check("J rest exits at recovery threshold", exitedRest)
@@ -1517,6 +1776,63 @@ do {
     check("J disabling survival preserves inventory and consumed totals",
           twoAgentConservation.snapshot().agents.first { $0.id == "agent_b" }?.resourceInventory.count(of: .wood) == 1
             && twoAgentConservation.snapshot().conservation.consumedTotal == 1)
+
+}
+}
+
+@inline(never)
+private func runPebbleAgentsNaturalResourceVerticalSmoke() {
+do {
+    let economyEncoder = verticalSmokeEncoder()
+    func economyAgentState(
+        id: String = "agent_economy",
+        position: AgentPosition,
+        home: AgentPosition,
+        inventory: AgentResourceInventory = AgentResourceInventory(),
+        goal: AgentGoalKind = .idle
+    ) -> AgentSessionAgentState {
+        verticalSmokeEconomyAgentState(
+            id: id, position: position, home: home,
+            inventory: inventory, goal: goal
+        )
+    }
+    func economySession(
+        states: [AgentSessionAgentState],
+        campCapacity: Int = 64,
+        quota: Int = 2,
+        maxReplans: Int = 3
+    ) -> AgentSimulationSession {
+        verticalSmokeEconomySession(
+            states: states, campCapacity: campCapacity,
+            quota: quota, maxReplans: maxReplans
+        )
+    }
+    func survivalAgentState(
+        id: String = "agent_survival",
+        position: AgentPosition = AgentPosition(x: 0, y: 64, z: 0),
+        home: AgentPosition = AgentPosition(x: 0, y: 64, z: 0),
+        hunger: Double = 0,
+        fatigue: Double = 0,
+        health: Int = 100,
+        inventory: AgentResourceInventory = AgentResourceInventory(),
+        goal: AgentGoalKind = .idle
+    ) -> AgentSessionAgentState {
+        verticalSmokeSurvivalAgentState(
+            id: id, position: position, home: home, hunger: hunger,
+            fatigue: fatigue, health: health, inventory: inventory,
+            goal: goal
+        )
+    }
+    func survivalSession(
+        states: [AgentSessionAgentState],
+        economy: Bool = false,
+        configuration: AgentSurvivalConfiguration =
+            verticalSmokeSurvivalConfiguration
+    ) -> AgentSimulationSession {
+        verticalSmokeSurvivalSession(
+            states: states, economy: economy, configuration: configuration
+        )
+    }
 
     // -----------------------------------------------------------------------
     section("PebbleAgents bounded natural wood and stone J to K")
@@ -2162,6 +2478,75 @@ do {
             && hungryNaturalTick.agents[0].action.name == "wait")
     check("natural integration leaves survival conservation exact",
           hungryNatural.snapshot().conservation.balanced)
+
+}
+}
+
+@inline(never)
+private func runPebbleAgentsConstructionVerticalSmoke() {
+do {
+    let economyEncoder = verticalSmokeEncoder()
+    let oakFingerprint = Int(B.oak_log) << 4
+    let stoneFingerprint = Int(B.stone) << 4
+    func worldObservation(
+        _ position: AgentPosition,
+        worldTick: Int,
+        blockedDirection: AgentCardinalDirection? = nil
+    ) -> AgentWorldObservation {
+        verticalSmokeWorldObservation(
+            position, worldTick: worldTick,
+            blockedDirection: blockedDirection
+        )
+    }
+    func economyAgentState(
+        id: String = "agent_economy",
+        position: AgentPosition,
+        home: AgentPosition,
+        inventory: AgentResourceInventory = AgentResourceInventory(),
+        goal: AgentGoalKind = .idle
+    ) -> AgentSessionAgentState {
+        verticalSmokeEconomyAgentState(
+            id: id, position: position, home: home,
+            inventory: inventory, goal: goal
+        )
+    }
+    func economySession(
+        states: [AgentSessionAgentState],
+        campCapacity: Int = 64,
+        quota: Int = 2,
+        maxReplans: Int = 3
+    ) -> AgentSimulationSession {
+        verticalSmokeEconomySession(
+            states: states, campCapacity: campCapacity,
+            quota: quota, maxReplans: maxReplans
+        )
+    }
+    func survivalAgentState(
+        id: String = "agent_survival",
+        position: AgentPosition = AgentPosition(x: 0, y: 64, z: 0),
+        home: AgentPosition = AgentPosition(x: 0, y: 64, z: 0),
+        hunger: Double = 0,
+        fatigue: Double = 0,
+        health: Int = 100,
+        inventory: AgentResourceInventory = AgentResourceInventory(),
+        goal: AgentGoalKind = .idle
+    ) -> AgentSessionAgentState {
+        verticalSmokeSurvivalAgentState(
+            id: id, position: position, home: home, hunger: hunger,
+            fatigue: fatigue, health: health, inventory: inventory,
+            goal: goal
+        )
+    }
+    func survivalSession(
+        states: [AgentSessionAgentState],
+        economy: Bool = false,
+        configuration: AgentSurvivalConfiguration =
+            verticalSmokeSurvivalConfiguration
+    ) -> AgentSimulationSession {
+        verticalSmokeSurvivalSession(
+            states: states, economy: economy, configuration: configuration
+        )
+    }
 
     // -----------------------------------------------------------------------
     section("PebbleAgents fixed shelter construction K")
@@ -2878,6 +3263,15 @@ do {
             && shelterRestSession.snapshot().agents[0].position == projectContract.restPosition)
     check("K survival rests inside completed shelter",
           shelterRestTick.agents[0].action.name == "rest")
+    check("K cognitive shelter rest grants no elapsed recovery",
+          shelterRestSession.snapshot().agents[0].needs.fatigue
+            == shelterFatigueBefore)
+    try! shelterRestSession.rebasePhysiologicalTime(toWorldTick: 0)
+    try! shelterRestSession.advancePhysiologicalTime(
+        toWorldTick: shelterRestSession.physiologicalTimeSnapshot()
+            .configuration.boundaryWorldTicks
+    )
+    _ = try! shelterRestSession.advanceTick()
     check("K shelter rest reduces fatigue",
           shelterRestSession.snapshot().agents[0].needs.fatigue < shelterFatigueBefore)
     check("K entrance remains outside construction mutation set",
@@ -2998,4 +3392,12 @@ do {
 
 }
 
+}
+
+func runPebbleAgentsVerticalSmoke() {
+    runPebbleAgentsNavigationVerticalSmoke()
+    runPebbleAgentsEconomyVerticalSmoke()
+    runPebbleAgentsSurvivalVerticalSmoke()
+    runPebbleAgentsNaturalResourceVerticalSmoke()
+    runPebbleAgentsConstructionVerticalSmoke()
 }

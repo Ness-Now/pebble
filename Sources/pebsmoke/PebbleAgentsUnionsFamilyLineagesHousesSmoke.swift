@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private let familyHabitat = AgentEcologyHabitatObservation(
     worldTick: 0, candidateIndex: 0,
@@ -122,6 +122,15 @@ private func familySession(
     if enableReproduction {
         try! session.setReproductionEnabled(true)
     }
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: enableFamily
+            ? AgentCheckpointSchema.familyVersion
+            : (enableChildhood
+                ? AgentCheckpointSchema.verifiedSupervisionVersion
+                : (lethalFirstAgent
+                    ? AgentCheckpointSchema.dependentCareVersion
+                    : AgentCheckpointSchema.geneticsVersion))
+    )
     return session
 }
 
@@ -151,18 +160,40 @@ private func familyBirth(
     _ session: inout AgentSimulationSession,
     position: AgentPosition = AgentPosition(x: 0, y: 64, z: 4)
 ) -> AgentBirthRecord {
-    while session.pendingBirthSitePlan() == nil {
+    for _ in 0..<64 where session.pendingBirthSitePlan() == nil {
         _ = try! session.advanceTick()
     }
+    precondition(session.pendingBirthSitePlan() != nil, "family birth plan bound exceeded")
     let plan = session.pendingBirthSitePlan()!
-    while session.tick < plan.dueTick {
+    for _ in 0..<64 where session.tick < plan.dueTick {
         _ = try! session.advanceTick()
     }
+    precondition(session.tick >= plan.dueTick, "family birth due bound exceeded")
     return try! session.applyBirthSiteObservation(AgentBirthSiteObservation(
         planID: plan.planID, observedTick: session.tick,
         position: position, candidateIndex: 0,
         worldFingerprint: 32_001
     ))!
+}
+
+private func familyBindDurableHouseConsent(
+    _ session: inout AgentSimulationSession
+) {
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.durableHouseConsentVersion
+    )
+}
+
+private func familyEnable(
+    _ session: inout AgentSimulationSession,
+    configuration: AgentFamilyConfiguration = .live
+) throws {
+    var candidate = session
+    try candidate.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.familyVersion
+    )
+    try candidate.setFamilyV1Enabled(true, configuration: configuration)
+    session = candidate
 }
 
 private func familyMutatedCheckpoint(
@@ -253,8 +284,8 @@ func runPebbleAgentsUnionsFamilyLineagesHousesSmoke() {
         "sim-family-bounded-projection",
         enableFamily: false, enableReproduction: true
     )
-    try! boundedProjection.setFamilyV1Enabled(
-        true,
+    try! familyEnable(
+        &boundedProjection,
         configuration: try! AgentFamilyConfiguration(
             maximumProjectedRelationsPerPerson: 1
         )
@@ -488,6 +519,7 @@ func runPebbleAgentsUnionsFamilyLineagesHousesSmoke() {
             ),
         ]
     )
+    familyBindDurableHouseConsent(&session)
     let houseProjection = try! session.houseProjection(house.houseID)
     check("active partners co-found one canonical house by two acts",
           house.founderIDs.map(\.rawValue) == ["agent_0", "agent_1"]
@@ -619,11 +651,14 @@ func runPebbleAgentsUnionsFamilyLineagesHousesSmoke() {
             return false
         }
     }())
-    while session.lifecycleSnapshot().members.first(where: {
+    for _ in 0..<8 where session.lifecycleSnapshot().members.first(where: {
         $0.agentID == childID
     })?.currentStage != .mature {
         _ = try! session.advanceTick()
     }
+    precondition(session.lifecycleSnapshot().members.first(where: {
+        $0.agentID == childID
+    })?.currentStage == .mature, "family child maturity bound exceeded")
     check("canonical parent-child union is prohibited after maturity", {
         let bytes = try! session.durableStateBytes()
         let childOrdinal = Int(childID.rawValue.split(separator: "_").last!)!
@@ -808,6 +843,8 @@ func runPebbleAgentsUnionsFamilyLineagesHousesSmoke() {
               durable["familyState"] = family
           })
 
+    @inline(never)
+    func runFamilyPendingAndReplayScenarios() {
     var pending = familySession("sim-family-pending")
     let pendingProposal = try! pending.proposeUnion(familyReceipt(
         pending, id: "pending-proposal", kind: .unionProposal,
@@ -879,7 +916,11 @@ func runPebbleAgentsUnionsFamilyLineagesHousesSmoke() {
             && replayed.session.familySnapshot().lineages.count == 1
             && (try! replayed.session.durableStateBytes())
                 == (try! replaySession.durableStateBytes()))
+    }
+    runFamilyPendingAndReplayScenarios()
 
+    @inline(never)
+    func runFamilyHouseConsentScenarios() {
     var joinedHouse = familySession("sim-family-explicit-house-join")
     let joinProposal = try! joinedHouse.proposeUnion(familyReceipt(
         joinedHouse, id: "join-grounding-proposal", kind: .unionProposal,
@@ -907,6 +948,7 @@ func runPebbleAgentsUnionsFamilyLineagesHousesSmoke() {
             kind: .houseJoinAcceptance, actor: 0, counterparty: 1
         )
     )
+    familyBindDurableHouseConsent(&joinedHouse)
     check("adult house join requires grounded request and acceptance",
           (try! joinedHouse.currentHouseMemberships(
               of: AgentID(rawValue: "agent_1")!
@@ -1083,11 +1125,14 @@ func runPebbleAgentsUnionsFamilyLineagesHousesSmoke() {
     let maturingChild = familyBirth(
         &matureChildJoin, position: AgentPosition(x: 0, y: 64, z: 2)
     ).newbornID
-    while matureChildJoin.lifecycleSnapshot().members.first(where: {
+    for _ in 0..<8 where matureChildJoin.lifecycleSnapshot().members.first(where: {
         $0.agentID == maturingChild
     })?.currentStage != .mature {
         _ = try! matureChildJoin.advanceTick()
     }
+    precondition(matureChildJoin.lifecycleSnapshot().members.first(where: {
+        $0.agentID == maturingChild
+    })?.currentStage == .mature, "family mature-child join bound exceeded")
     try! matureChildJoin.joinHouse(
         parentHouse.houseID,
         request: familyReceipt(
@@ -1099,6 +1144,7 @@ func runPebbleAgentsUnionsFamilyLineagesHousesSmoke() {
             kind: .houseJoinAcceptance, actor: 0, counterparty: 3
         )
     )
+    familyBindDurableHouseConsent(&matureChildJoin)
     let matureChildCheckpoint = try! matureChildJoin.makeCheckpoint()
     check("explicit join before the entrant maturity boundary is refused",
           familyRestoreRefused(matureChildCheckpoint) { durable in
@@ -1145,6 +1191,7 @@ func runPebbleAgentsUnionsFamilyLineagesHousesSmoke() {
             kind: .houseJoinAcceptance, actor: 0, counterparty: 1
         )
     )
+    familyBindDurableHouseConsent(&evictedJoin)
     for _ in 0..<24 { _ = try! evictedJoin.advanceTick() }
     let evictedCheckpoint = try! evictedJoin.makeCheckpoint()
     let evictedRestored = try! AgentSimulationSession.restoring(
@@ -1167,7 +1214,14 @@ func runPebbleAgentsUnionsFamilyLineagesHousesSmoke() {
               family["houseMembershipPeriods"] = periods
               durable["familyState"] = family
           })
+    }
+    runFamilyHouseConsentScenarios()
 
+    @inline(never)
+    func runFamilyHouseAuthorityScenarios(
+        checkpoint: AgentSessionCheckpoint,
+        childID: AgentID
+    ) {
     var independentAuthorities = familySession(
         "sim-family-house-household-independence",
         enableReproduction: true
@@ -1230,6 +1284,7 @@ func runPebbleAgentsUnionsFamilyLineagesHousesSmoke() {
             ),
         ]
     )
+    familyBindDurableHouseConsent(&ambiguousHouses)
     _ = try! ambiguousHouses.coFoundHouse(
         founderIDs: ambiguousUnion.partnerIDs,
         receipts: [
@@ -1302,7 +1357,14 @@ func runPebbleAgentsUnionsFamilyLineagesHousesSmoke() {
               family["houseMembershipPeriods"] = periods
               durable["familyState"] = family
           })
+    }
+    runFamilyHouseAuthorityScenarios(
+        checkpoint: checkpoint,
+        childID: childID
+    )
 
+    @inline(never)
+    func runFamilyMortalitySiblingAndOrderingScenarios() {
     var death = familySession(
         "sim-family-partner-death", lethalFirstAgent: true
     )
@@ -1335,6 +1397,7 @@ func runPebbleAgentsUnionsFamilyLineagesHousesSmoke() {
             ),
         ]
     )
+    familyBindDurableHouseConsent(&death)
     _ = try! death.advanceTick()
     let afterDeathUnion = death.familySnapshot().unions.first {
         $0.unionID == deathUnion.unionID
@@ -1400,9 +1463,10 @@ func runPebbleAgentsUnionsFamilyLineagesHousesSmoke() {
         ))
     }
     try! siblings.setReproductionEnabled(false)
-    while siblings.tick < 80 {
+    for _ in 0..<80 where siblings.tick < 80 {
         _ = try! siblings.advanceTick()
     }
+    precondition(siblings.tick >= 80, "family sibling maturity bound exceeded")
     let firstChild = siblingBirths[0].newbornID
     let halfSibling = siblingBirths[1].newbornID
     let fullSibling = siblingBirths[3].newbornID
@@ -1483,5 +1547,7 @@ func runPebbleAgentsUnionsFamilyLineagesHousesSmoke() {
     check("family durable state is neutral to founder input order",
           (try! canonicalOrder.durableStateBytes())
             == (try! permutedOrder.durableStateBytes()))
+    }
+    runFamilyMortalitySiblingAndOrderingScenarios()
     _ = familyBefore
 }

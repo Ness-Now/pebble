@@ -742,12 +742,11 @@ extension AgentSimulationSession {
         for agentID: AgentID,
         tick boundaryTick: Int
     ) throws -> Int {
-        guard let member = lifecycleState?.members.first(where: {
-            $0.agentID == agentID
-        }) else {
+        do {
+            return try physiologicalAge(for: agentID)
+        } catch {
             throw AgentSessionError.homeostasis(.unknownAgent(agentID))
         }
-        return try member.age(at: boundaryTick)
     }
 
     private func physiologicalAgeBand(
@@ -806,6 +805,8 @@ extension AgentSimulationSession {
         lifecycle: AgentLifecycleState?,
         autonomy: AgentAutonomousActivityState?,
         pendingMortalityAgentIDs: Set<AgentID>,
+        physiologicalTime: AgentPhysiologicalTimeState,
+        usesWorldDerivedPhysiology: Bool,
         clock: AgentSimulationClock,
         causalLatestSequence: UInt64
     ) throws {
@@ -866,7 +867,11 @@ extension AgentSimulationSession {
                     profile.agentID.rawValue
                 )
             }
-            let age = try member.age(at: clock.tick.rawValue)
+            let age = try usesWorldDerivedPhysiology
+                ? member.physiologicalAge(
+                    atBoundary: physiologicalTime.appliedBoundaryCount
+                )
+                : member.age(at: clock.tick.rawValue)
             let isPendingMortality = pendingMortalityAgentIDs.contains(
                 profile.agentID
             )

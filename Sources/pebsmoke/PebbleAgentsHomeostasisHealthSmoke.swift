@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private func homeostasisAgent(
     _ id: String,
@@ -107,6 +107,12 @@ private func homeostasisSession(
     try! session.setMortalityEnabled(true, configuration: mortality)
     try! session.setLifecycleEnabled(true)
     try! session.setHomeostasisEnabled(true, configuration: homeostasis)
+    // This owner is the exact schema-21 publication fixture. Preserve its
+    // historical cognitive-time continuation; current v44 World-time
+    // Homeostasis is covered by the Increment-05 temporal suite.
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.homeostasisVersion
+    )
     return session
 }
 

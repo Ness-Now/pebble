@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private let livestockOrigin = AgentPosition(x: 0, y: 64, z: 0)
 
@@ -35,6 +35,9 @@ private func livestockBase(_ id: String) -> AgentSimulationSession {
     ))
     try! session.setSkillsEnabled(true)
     try! session.setEcologicalObservationEnabled(true)
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.independentEcologicalReceiptVersion
+    )
     return session
 }
 

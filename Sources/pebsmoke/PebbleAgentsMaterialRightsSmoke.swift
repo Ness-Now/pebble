@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private func rightsAgent(_ id: String, x: Int) -> AgentSessionAgentState {
     let position = AgentPosition(x: x, y: 64, z: 0)
@@ -37,6 +37,9 @@ private func rightsSession(
         causalLedgerPolicy: .bounded(maxEvents: 4096)
     )
     try! session.setMaterialRightsEnabled(true, configuration: rightsConfiguration)
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.materialRightsVersion
+    )
     return session
 }
 
@@ -306,6 +309,9 @@ func runPebbleAgentsMaterialRightsSmoke() {
         ],
         simulationID: try! AgentSimulationID(validating: "civ26-rights-replay"),
         causalLedgerPolicy: .bounded(maxEvents: 4096)
+    )
+    try! replaySession.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.currentVersion
     )
     let replayBase = try! replaySession.makeCheckpoint()
     var recorder = try! AgentReplayRecorder(

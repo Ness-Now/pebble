@@ -37,6 +37,7 @@ extension AgentSimulationSession {
             "next=\(registry.nextPopulationOrdinal.rawValue)",
             "evicted=\(registry.evictionCounts.terminalMigrations),\(registry.evictionCounts.diagnostics)",
             "last=\(registry.lastPopulationEventID.rawValue)",
+            "membershipAuthority=\(registry.currentMembershipAuthorityEventID?.rawValue ?? "none")",
             "events=\(eventCount)",
         ].joined(separator: "|")
         return AgentPopulationSnapshot(
@@ -561,6 +562,9 @@ extension AgentSimulationSession {
             membershipCauseEventID: started.eventID
         )
         populationRegistry = registry
+        try refreshPopulationMembershipAuthorityAfterMembershipChange(
+            causedBy: started.eventID
+        )
         return migration
     }
 
@@ -803,6 +807,7 @@ extension AgentSimulationSession {
                   member.registeredTick <= clock.tick.rawValue,
                   member.arrivalTick.map({ $0 <= clock.tick.rawValue }) ?? true,
                   member.registrationEventID.simulationID == clock.simulationID,
+                  member.registrationEventID.sequence.rawValue > 0,
                   member.arrivalEventID?.simulationID == clock.simulationID
                     || member.arrivalEventID == nil else {
                 throw AgentCheckpointError.invalidReference(member.agentID.rawValue)
@@ -833,6 +838,130 @@ extension AgentSimulationSession {
             )
         } else if !(registry.additionalSettlements ?? []).isEmpty {
             throw AgentCheckpointError.invalidBound("settlements without scale state")
+        }
+    }
+
+    static func populationMembershipAuthorityRows(
+        _ registry: AgentPopulationRegistry
+    ) -> [AgentPopulationMembershipAuthorityMember] {
+        registry.members.map {
+            AgentPopulationMembershipAuthorityMember(
+                agentID: $0.agentID,
+                ordinal: $0.ordinal,
+                founder: $0.founder,
+                registeredTick: $0.registeredTick,
+                registrationEventID: $0.registrationEventID
+            )
+        }.sorted { lhs, rhs in
+            if lhs.ordinal != rhs.ordinal { return lhs.ordinal < rhs.ordinal }
+            return lhs.agentID < rhs.agentID
+        }
+    }
+
+    static func populationMembershipAuthorityDigest(
+        _ members: [AgentPopulationMembershipAuthorityMember],
+        simulationID: AgentSimulationID
+    ) -> String {
+        AgentPopulationDigest.make(
+            "active-membership|simulation=\(simulationID.rawValue)|"
+                + members.map(\.canonicalText).joined(separator: ";")
+        )
+    }
+
+    /// Schema 44 durably stores the current active-membership proof. Restore
+    /// must validate that cross-domain pointer even before another ecological
+    /// observation happens to consume it. Historical schemas retain their
+    /// original registration-evidence contract unchanged.
+    static func validateCurrentPopulationMembershipAuthority(
+        _ registry: AgentPopulationRegistry,
+        causalEvents: [AgentCausalEvent],
+        simulationID: AgentSimulationID,
+        schemaVersion: Int
+    ) throws {
+        guard schemaVersion == AgentCheckpointSchema.temporalPhysiologyVersion
+        else { return }
+
+        let expectedMembers = populationMembershipAuthorityRows(registry)
+        guard !expectedMembers.isEmpty else {
+            guard registry.currentMembershipAuthorityEventID == nil else {
+                throw AgentCheckpointError.invalidCausalState
+            }
+            return
+        }
+
+        if let authorityID = registry.currentMembershipAuthorityEventID {
+            guard authorityID.simulationID == simulationID,
+                  let event = causalEvents.first(where: {
+                      $0.eventID == authorityID
+                  }),
+                  event.simulationID == simulationID,
+                  event.kind == .populationMembershipAuthorityRetained,
+                  event.origin == .populationTransition,
+                  event.actorID == nil,
+                  event.subjectID == nil,
+                  event.operationID == nil,
+                  case let .populationMembershipAuthority(members, digest) =
+                    event.payload,
+                  members == members.sorted(by: { lhs, rhs in
+                      if lhs.ordinal != rhs.ordinal {
+                          return lhs.ordinal < rhs.ordinal
+                      }
+                      return lhs.agentID < rhs.agentID
+                  }),
+                  Set(members.map(\.agentID)).count == members.count,
+                  Set(members.map(\.ordinal)).count == members.count,
+                  members == expectedMembers,
+                  members.allSatisfy({
+                      $0.registrationEventID.simulationID == simulationID
+                          && $0.registeredTick >= 0
+                          && $0.registeredTick
+                            <= event.simulationTick.rawValue
+                  }),
+                  digest == populationMembershipAuthorityDigest(
+                      members, simulationID: simulationID
+                  ) else {
+                throw AgentCheckpointError.invalidCausalState
+            }
+            return
+        }
+
+        let retainedByID = Dictionary(
+            uniqueKeysWithValues: causalEvents.map { ($0.eventID, $0) }
+        )
+        for member in registry.members {
+            guard let event = retainedByID[member.registrationEventID],
+                  event.simulationID == simulationID,
+                  event.simulationTick.rawValue == member.registeredTick,
+                  event.subjectID == member.agentID else {
+                throw AgentCheckpointError.invalidCausalState
+            }
+            switch (event.kind, event.origin, event.payload) {
+            case let (
+                .populationMemberRegistered, .populationTransition,
+                .population(
+                    settlementID, memberID, ordinal, founder, _, _, _
+                )
+            ):
+                guard event.actorID == member.agentID,
+                      settlementID == member.settlementID.rawValue,
+                      memberID == member.agentID.rawValue,
+                      ordinal == member.ordinal.rawValue,
+                      founder == member.founder else {
+                    throw AgentCheckpointError.invalidCausalState
+                }
+            case let (
+                .populationMemberBorn, .lifecycleTransition,
+                .birth(_, _, newbornID, ordinal, _, _, _, status)
+            ):
+                guard !member.founder,
+                      newbornID == member.agentID.rawValue,
+                      ordinal == member.ordinal.rawValue,
+                      status == "born" else {
+                    throw AgentCheckpointError.invalidCausalState
+                }
+            default:
+                throw AgentCheckpointError.invalidCausalState
+            }
         }
     }
 
@@ -893,6 +1022,7 @@ extension AgentCausalEventKind {
     var isPopulation: Bool {
         switch self {
         case .populationRegistryInitialized, .populationMemberRegistered,
+             .populationMembershipAuthorityRetained,
              .migrationProposed, .migrationAdmitted, .migrationStarted,
              .migrationArrived, .migrationRejected, .migrationCancelled,
              .migrationFailed, .populationMemberExited, .populationStateCleared,

@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private func autonomousAgent(_ id: String, x: Int, hunger: Double = 0) -> AgentSessionAgentState {
     let position = AgentPosition(x: x, y: 64, z: 0)
@@ -18,7 +18,7 @@ private func autonomousAgent(_ id: String, x: Int, hunger: Double = 0) -> AgentS
 }
 
 private func autonomousSession(_ id: String) -> AgentSimulationSession {
-    try! AgentSimulationSession(
+    var session = try! AgentSimulationSession(
         configuration: try! AgentSessionConfiguration(
             seed: 46, memoryPolicy: .bounded(maxEntries: 128)
         ),
@@ -26,16 +26,34 @@ private func autonomousSession(_ id: String) -> AgentSimulationSession {
         simulationID: try! AgentSimulationID(validating: id),
         causalLedgerPolicy: .bounded(maxEvents: 4096)
     )
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.currentVersion
+    )
+    return session
 }
 
 private func hungryAutonomousSession(_ id: String) -> AgentSimulationSession {
-    try! AgentSimulationSession(
+    var session = try! AgentSimulationSession(
         configuration: try! AgentSessionConfiguration(
             seed: 46, memoryPolicy: .bounded(maxEntries: 128)
         ),
         agents: [autonomousAgent("agent_0", x: 0, hunger: 0.9)],
         simulationID: try! AgentSimulationID(validating: id),
         causalLedgerPolicy: .bounded(maxEvents: 4096)
+    )
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.currentVersion
+    )
+    return session
+}
+
+private func autonomousEnable(
+    _ session: inout AgentSimulationSession,
+    configuration: AgentAutonomousActivityConfiguration = .live
+) throws {
+    try session.setAutonomousActivityEnabled(true, configuration: configuration)
+    try session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.autonomousActivityVersion
     )
 }
 
@@ -62,7 +80,7 @@ func runPebbleAgentsAutonomousCivilizationSmoke() {
     section("PebbleAgents autonomous Civilization orchestration")
 
     var session = autonomousSession("autonomous-selection")
-    try! session.setAutonomousActivityEnabled(true)
+    try! autonomousEnable(&session)
     let agriculture = autonomousCandidate(id: "agriculture", urgency: 90)
     let care = autonomousCandidate(
         id: "care", domain: .dependentCare, source: .responsibility,
@@ -76,7 +94,7 @@ func runPebbleAgentsAutonomousCivilizationSmoke() {
 
     var hungerPriority = hungryAutonomousSession("autonomous-hunger")
     hungerPriority.setSurvivalEnabled(true)
-    try! hungerPriority.setAutonomousActivityEnabled(true)
+    try! autonomousEnable(&hungerPriority)
     _ = try! hungerPriority.selectAutonomousActivities([
         autonomousCandidate(id: "ordinary-work", urgency: 100)
     ])
@@ -84,7 +102,7 @@ func runPebbleAgentsAutonomousCivilizationSmoke() {
     check("critical hunger preempts ordinary activity", hungerTick.agents[0].snapshot.currentGoal.kind == .satisfyHunger)
 
     var commitmentPriority = autonomousSession("autonomous-commitment")
-    try! commitmentPriority.setAutonomousActivityEnabled(true)
+    try! autonomousEnable(&commitmentPriority)
     let committed = autonomousCandidate(
         id: "committed", source: .commitment, band: 20, urgency: 60
     )
@@ -95,7 +113,7 @@ func runPebbleAgentsAutonomousCivilizationSmoke() {
     check("valid commitment outranks arbitrary exploration", commitmentSelection[0].candidate.candidateID == "committed")
 
     var multiAgent = autonomousSession("autonomous-multi-agent")
-    try! multiAgent.setAutonomousActivityEnabled(true)
+    try! autonomousEnable(&multiAgent)
     let multiSelection = try! multiAgent.selectAutonomousActivities([
         autonomousCandidate(id: "gather", actor: "agent_0", domain: .wildGathering),
         autonomousCandidate(id: "livestock", actor: "agent_1", domain: .livestock),
@@ -104,8 +122,8 @@ func runPebbleAgentsAutonomousCivilizationSmoke() {
 
     var orderingA = autonomousSession("autonomous-ordering")
     var orderingB = autonomousSession("autonomous-ordering")
-    try! orderingA.setAutonomousActivityEnabled(true)
-    try! orderingB.setAutonomousActivityEnabled(true)
+    try! autonomousEnable(&orderingA)
+    try! autonomousEnable(&orderingB)
     let tieA = autonomousCandidate(id: "a", urgency: 70)
     let tieB = autonomousCandidate(id: "b", urgency: 70)
     let firstOrdering = try! orderingA.selectAutonomousActivities([tieB, tieA])
@@ -118,7 +136,7 @@ func runPebbleAgentsAutonomousCivilizationSmoke() {
         maximumCandidatesPerDecision: 2, maximumActiveActivities: 2,
         maximumRetainedRecords: 4, maximumCooldowns: 2, blockedCooldownTicks: 4
     )
-    try! replanning.setAutonomousActivityEnabled(true, configuration: replanConfiguration)
+    try! autonomousEnable(&replanning, configuration: replanConfiguration)
     let blockedCandidate = autonomousCandidate(id: "missing-tool")
     let blockedActivity = try! replanning.selectAutonomousActivities([blockedCandidate])[0]
     _ = try! replanning.recordAutonomousActivityOutcome(AgentAutonomousActivityOutcome(
@@ -145,7 +163,7 @@ func runPebbleAgentsAutonomousCivilizationSmoke() {
 
     let longID = String(repeating: "x", count: 200)
     var boundedIdentity = autonomousSession("autonomous-id-bound")
-    try! boundedIdentity.setAutonomousActivityEnabled(true)
+    try! autonomousEnable(&boundedIdentity)
     let boundedIDActivity = try! boundedIdentity.selectAutonomousActivities([
         autonomousCandidate(id: longID)
     ])[0]
@@ -165,7 +183,7 @@ func runPebbleAgentsAutonomousCivilizationSmoke() {
     check("existing action decider publishes activity action", tick.agents.first { $0.agentId == "agent_0" }?.action.name == "execute_autonomous_activity")
 
     var navigation = autonomousSession("autonomous-navigation")
-    try! navigation.setAutonomousActivityEnabled(true)
+    try! autonomousEnable(&navigation)
     _ = try! navigation.selectAutonomousActivities([
         autonomousCandidate(id: "route", distance: 3)
     ])
@@ -224,7 +242,7 @@ func runPebbleAgentsAutonomousCivilizationSmoke() {
         maximumCandidatesPerDecision: 8, maximumActiveActivities: 2,
         maximumRetainedRecords: 16, maximumCooldowns: 8, blockedCooldownTicks: 1
     )
-    try! bounded.setAutonomousActivityEnabled(true, configuration: boundedConfiguration)
+    try! autonomousEnable(&bounded, configuration: boundedConfiguration)
     for index in 0..<600 {
         let candidate = autonomousCandidate(id: "bounded-\(index)")
         let activity = try! bounded.selectAutonomousActivities([candidate])[0]

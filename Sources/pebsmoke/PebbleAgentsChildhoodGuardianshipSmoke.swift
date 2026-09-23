@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private func childhoodMutatedCheckpoint(
     _ checkpoint: AgentSessionCheckpoint,
@@ -201,6 +201,9 @@ private func childhoodMortalityBase(
     try! session.setDependentCareEnabled(true)
     try! session.setChildhoodV2Enabled(true)
     try! session.setReproductionEnabled(true)
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.verifiedSupervisionVersion
+    )
     return session
 }
 
@@ -288,6 +291,9 @@ func runPebbleAgentsChildhoodGuardianshipSmoke() {
     var session = careBase("sim-childhood-v2")
     try! session.setDependentCareEnabled(true)
     try! session.setReproductionEnabled(true)
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.dependentCareVersion
+    )
     let v9Checkpoint = try! session.makeCheckpoint()
     let socialBefore = session.socialSnapshot()
     let skillsBefore = session.skillSnapshot()
@@ -297,9 +303,13 @@ func runPebbleAgentsChildhoodGuardianshipSmoke() {
     _ = try! recorder.apply(
         .setChildhoodV2Enabled(true, configuration: live), to: &session
     )
+    var historicalActivationSession = session
+    try! historicalActivationSession.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.verifiedSupervisionVersion
+    )
     check("childhood activation promotes checkpoint schema 24",
           session.childhoodV2Enabled
-            && (try! session.makeCheckpoint()).schemaVersion
+            && (try! historicalActivationSession.makeCheckpoint()).schemaVersion
                 == AgentCheckpointSchema.verifiedSupervisionVersion
             && recorder.schemaVersion
                 == AgentReplaySchema.verifiedSupervisionVersion)
@@ -460,7 +470,11 @@ func runPebbleAgentsChildhoodGuardianshipSmoke() {
           !early
             && session.childhoodSnapshot().totalExposureCount
                 == exposureBeforeEarlyCompletion)
-    let supervisionCheckpoint = try! session.makeCheckpoint()
+    var historicalSupervisionSession = session
+    try! historicalSupervisionSession.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.verifiedSupervisionVersion
+    )
+    let supervisionCheckpoint = try! historicalSupervisionSession.makeCheckpoint()
     let supervisionRestored = try! AgentSimulationSession.restoring(
         supervisionCheckpoint
     )
@@ -679,8 +693,12 @@ func runPebbleAgentsChildhoodGuardianshipSmoke() {
 
     let orphanEngagementDependentID = session.dependentCareSnapshot()
         .activeEngagements.first!.dependentID
-    let checkpoint = try! session.makeCheckpoint()
-    let checkpointBytes = try! session.durableStateBytes()
+    var historicalCheckpointSession = session
+    try! historicalCheckpointSession.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.verifiedSupervisionVersion
+    )
+    let checkpoint = try! historicalCheckpointSession.makeCheckpoint()
+    let checkpointBytes = try! historicalCheckpointSession.durableStateBytes()
     let restored = try! AgentSimulationSession.restoring(checkpoint)
     check("schema 24 checkpoint restores guardianship and social state exactly",
           checkpoint.schemaVersion
@@ -886,6 +904,8 @@ func runPebbleAgentsChildhoodGuardianshipSmoke() {
             && !((try! AgentSimulationSession.restoring(v9Checkpoint))
                 .childhoodV2Enabled))
 
+    @inline(never)
+    func runChildhoodAvailabilityAndMortalityScenarios() {
     var oneUnavailable = childhoodAvailabilityFixture(
         simulationID: "sim-childhood-birth-one-unavailable",
         firstParentHealth: 1,
@@ -1279,6 +1299,8 @@ func runPebbleAgentsChildhoodGuardianshipSmoke() {
                   childhood["socialProfiles"] = profiles
               }
           })
+    }
+    runChildhoodAvailabilityAndMortalityScenarios()
 
     var maturityAdvanceError: String?
     while session.tick < birth.birthTick + 24 && maturityAdvanceError == nil {

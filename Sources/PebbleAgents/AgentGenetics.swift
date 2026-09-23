@@ -863,6 +863,9 @@ extension AgentSimulationSession {
             },
             lifecycle: lifecycleState,
             mortality: mortalityState,
+            physiologicalTime: physiologicalTimeState,
+            usesWorldDerivedPhysiology:
+                legacyTemporalSchemaVersionOverride == nil,
             clock: clock,
             causalLatestSequence: causalLedger.latestSequence,
             causalDroppedEventCount: causalLedger.droppedEventCount,
@@ -875,6 +878,8 @@ extension AgentSimulationSession {
         agents: [AgentSessionAgentState],
         lifecycle: AgentLifecycleState?,
         mortality: AgentMortalityState?,
+        physiologicalTime: AgentPhysiologicalTimeState,
+        usesWorldDerivedPhysiology: Bool,
         clock: AgentSimulationClock,
         causalLatestSequence: UInt64,
         causalDroppedEventCount: UInt64,
@@ -1188,7 +1193,12 @@ extension AgentSimulationSession {
                let member = lifecycle.members.first(where: {
                    $0.agentID == development.agentID
                }) {
-                guard development.ageTicks == (try member.age(at: clock.tick.rawValue)),
+                let age = try usesWorldDerivedPhysiology
+                    ? member.physiologicalAge(
+                        atBoundary: physiologicalTime.appliedBoundaryCount
+                    )
+                    : member.age(at: clock.tick.rawValue)
+                guard development.ageTicks == age,
                       development.lifeStage == member.currentStage else {
                     throw AgentCheckpointError.invalidReference(
                         development.agentID.rawValue
@@ -1276,12 +1286,17 @@ private extension AgentSimulationSession {
         for agentID: AgentID,
         at boundaryTick: Int
     ) throws -> Int {
-        guard let member = lifecycleState?.members.first(where: {
-            $0.agentID == agentID
-        }) else {
+        do {
+            if legacyTemporalSchemaVersionOverride != nil,
+               let member = lifecycleState?.members.first(where: {
+                   $0.agentID == agentID
+               }) {
+                return try member.age(at: boundaryTick)
+            }
+            return try physiologicalAge(for: agentID)
+        } catch {
             throw AgentSessionError.genetics(.unknownAgent(agentID))
         }
-        return try member.age(at: boundaryTick)
     }
 
     func geneticLifeStage(age: Int) -> AgentLifeStage {

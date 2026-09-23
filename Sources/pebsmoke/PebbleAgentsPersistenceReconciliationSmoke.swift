@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private let reconciliationAssetID = AgentMaterialAssetID(
     rawValue: "asset:civ27:iron-pickaxe"
@@ -65,6 +65,9 @@ private func reconciliationSession(
         ],
         simulationID: try! AgentSimulationID(validating: id),
         causalLedgerPolicy: .bounded(maxEvents: 4096)
+    )
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.persistenceReconciliationVersion
     )
     try! session.setMaterialRightsEnabled(true)
     let saved = reconciliationObservation(

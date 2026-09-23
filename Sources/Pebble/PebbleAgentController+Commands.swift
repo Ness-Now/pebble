@@ -2,6 +2,24 @@ import Foundation
 import PebbleAgents
 import PebbleCore
 
+private enum PebbleFatalIntegrityCommandPolicy: Equatable {
+    case observational
+    case terminateExecutionContext
+    case refuseMutation
+
+    init(command: String) {
+        switch command {
+        case "help", "status", "observer", "causality", "scale",
+             "focus", "next", "follow", "overlay":
+            self = .observational
+        case "stop", "clear":
+            self = .terminateExecutionContext
+        default:
+            self = .refuseMutation
+        }
+    }
+}
+
 extension PebbleAgentController {
     func handleCommand(
         _ arguments: [String],
@@ -10,6 +28,14 @@ extension PebbleAgentController {
         game: GameCore? = nil
     ) -> PebbleAgentCommandResult {
         let command = arguments.first?.lowercased() ?? "status"
+        if let fatalSessionIntegrityFailure,
+           PebbleFatalIntegrityCommandPolicy(command: command)
+            == .refuseMutation {
+            return failure(
+                "Command refused: civilization execution context is "
+                    + "fatally halted: \(fatalSessionIntegrityFailure)"
+            )
+        }
         if passiveObserverBootstrapComplete {
             let productive = isManualProductiveCommand(arguments)
             if productive { manualProductiveCommandsAfterBootstrap += 1 }
@@ -74,21 +100,57 @@ extension PebbleAgentController {
             return success("PebbleAgents stopped; probes removed: \(removed)")
         case "pause":
             guard arguments.count == 1 else { return failure("Usage: /lab pause") }
-            guard session != nil else { return failure("No active PebbleAgents session.") }
+            guard var candidate = session else {
+                return failure("No active PebbleAgents session.")
+            }
+            var recorder = replayRecorder
+            do {
+                try reconcilePhysiologicalTimeIfRecording(
+                    mode: isPaused ? .rebase : .advance,
+                    worldTick: world.time,
+                    session: &candidate,
+                    recorder: &recorder
+                )
+            } catch {
+                return failure("Pause temporal rebase refused: \(error)")
+            }
+            session = candidate
+            replayRecorder = recorder
             isPaused = true
             lastWorldTick = world.time
             credit = 0
             trace("pause tick=\(session?.tick ?? 0)")
             return success("PebbleAgents paused at tick \(session?.tick ?? 0).")
         case "resume":
+            if let fatalSessionIntegrityFailure {
+                return failure(
+                    "Resume refused: civilization session fatally halted: "
+                        + fatalSessionIntegrityFailure
+                )
+            }
             guard arguments.count == 1 else { return failure("Usage: /lab resume") }
-            guard session != nil else { return failure("No active PebbleAgents session.") }
+            guard var candidate = session else {
+                return failure("No active PebbleAgents session.")
+            }
             if let candidatePhysicalHardFailure {
                 return failure(
                     "Resume refused after candidate physical hard failure: "
                         + candidatePhysicalHardFailure.description
                 )
             }
+            var recorder = replayRecorder
+            do {
+                try reconcilePhysiologicalTimeIfRecording(
+                    mode: .rebase,
+                    worldTick: world.time,
+                    session: &candidate,
+                    recorder: &recorder
+                )
+            } catch {
+                return failure("Resume temporal rebase refused: \(error)")
+            }
+            session = candidate
+            replayRecorder = recorder
             isPaused = false
             lastWorldTick = world.time
             credit = 0
@@ -97,6 +159,12 @@ extension PebbleAgentController {
         case "step":
             guard arguments.count == 1 else { return failure("Usage: /lab step") }
             guard session != nil else { return failure("No active PebbleAgents session.") }
+            if let fatalSessionIntegrityFailure {
+                return failure(
+                    "Step refused: civilization session fatally halted: "
+                        + fatalSessionIntegrityFailure
+                )
+            }
             if let candidatePhysicalHardFailure {
                 return failure(
                     "Step refused after candidate physical hard failure: "
@@ -232,6 +300,11 @@ extension PebbleAgentController {
             return handleIncrement04Proof(
                 Array(arguments.dropFirst()), world: world, player: player
             )
+        case "ps01-increment-05-proof":
+            guard arguments.count == 1 else {
+                return failure("Usage: /lab ps01-increment-05-proof")
+            }
+            return handleIncrement05TemporalProof()
         case "livestock":
             return handleLivestock(
                 Array(arguments.dropFirst()), world: world, player: player
@@ -339,7 +412,7 @@ extension PebbleAgentController {
             let familyStatus = session.familyV1Enabled ? " family=on" : ""
             let skillStatus = session.skillsEnabled ? " skills=on" : ""
             let teachingStatus = session.teachingEnabled ? " teaching=on" : ""
-            let message = "PebbleAgents \(isPaused ? "paused" : "running") tick=\(snapshot.tick) hz=\(cognitiveHz) movement=\(movementEnabled ? "on" : "off") autoInteraction=\(autoInteractionEnabled ? "on" : "off") economy=\(snapshot.economyEnabled ? "on" : "off") survival=\(snapshot.survivalEnabled ? "on" : "off") natural=\(snapshot.naturalResourcesEnabled ? "on" : "off") build=\(snapshot.buildAutoEnabled ? "on" : "off")\(socialStatus)\(physicalStatus)\(cooperationStatus)\(populationStatus)\(settlementStatus)\(ecologyStatus)\(mortalityStatus)\(homeostasisStatus)\(lifecycleStatus)\(kinshipStatus)\(householdStatus)\(careStatus)\(childhoodStatus)\(familyStatus)\(skillStatus)\(teachingStatus) probes=\(probesByAgentId.count) focus=\(focusedAgentId ?? "none") follow=\(followMode.statusText) overlay=\(overlay) demo=\(demoActive ? "on" : "off") catchupDropped=\(droppedCatchUpSteps) \(positions)"
+            let message = "PebbleAgents \(schedulingStatus.statusText) tick=\(snapshot.tick) hz=\(cognitiveHz) movement=\(movementEnabled ? "on" : "off") autoInteraction=\(autoInteractionEnabled ? "on" : "off") economy=\(snapshot.economyEnabled ? "on" : "off") survival=\(snapshot.survivalEnabled ? "on" : "off") natural=\(snapshot.naturalResourcesEnabled ? "on" : "off") build=\(snapshot.buildAutoEnabled ? "on" : "off")\(socialStatus)\(physicalStatus)\(cooperationStatus)\(populationStatus)\(settlementStatus)\(ecologyStatus)\(mortalityStatus)\(homeostasisStatus)\(lifecycleStatus)\(kinshipStatus)\(householdStatus)\(careStatus)\(childhoodStatus)\(familyStatus)\(skillStatus)\(teachingStatus) probes=\(probesByAgentId.count) focus=\(focusedAgentId ?? "none") follow=\(followMode.statusText) overlay=\(overlay) demo=\(demoActive ? "on" : "off") catchupDropped=\(droppedCatchUpSteps) \(positions)"
             trace("status \(message)")
             return success(message)
         case "focus":

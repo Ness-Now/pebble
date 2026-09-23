@@ -162,6 +162,9 @@ private func culturePreparedSession(
             maximumFaithfulDistance: 1
         )
     )
+    try session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.oralTransmissionVersion
+    )
     return (session, proposition)
 }
 
@@ -1084,6 +1087,9 @@ func runPebbleAgentsCultureSmoke() {
         )
         try mortalityCulture.setSocialEnabled(true)
         try mortalityCulture.setDistributedCultureEnabled(true)
+        try mortalityCulture.useLegacyCognitivePhysiologyReplayFixture(
+            schemaVersion: AgentCheckpointSchema.cultureVersion
+        )
         let mortalPractice = try mortalityCulture.originateCulturalPractice(
             operationID: "civ47-mortal-origin",
             originatorID: cultureMain0,

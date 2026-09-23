@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private struct SettlementScenarioCheck: Codable, Equatable {
     let name: String
@@ -179,8 +179,14 @@ private func metricsSession(
         settlementAnchor: metricsAnchor,
         receptionPosition: metricsReception
     )
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.populationVersion
+    )
     if metricsEnabled {
         try! session.setSettlementMetricsEnabled(true)
+        try! session.useLegacyCognitivePhysiologyReplayFixture(
+            schemaVersion: AgentCheckpointSchema.settlementMetricsVersion
+        )
     }
     return session
 }
@@ -504,11 +510,14 @@ func runSettlementMetricsMultiscaleSmoke(_ options: Options) -> Never {
         seed: options.seed,
         memoryPolicy: .bounded(maxEntries: 16)
     )
-    let v1 = try! AgentSimulationSession(
+    var v1 = try! AgentSimulationSession(
         configuration: v1Configuration,
         agents: [metricsAgent("agent_0", x: 0)],
         simulationID: try! AgentSimulationID(validating: "settlement-v1-\(options.seed)"),
         causalLedgerPolicy: .bounded(maxEvents: 64)
+    )
+    try! v1.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.currentVersion
     )
     let v1Checkpoint = try! v1.makeCheckpoint()
     let v1BytesA = try! AgentCheckpointCodec.encode(v1Checkpoint)

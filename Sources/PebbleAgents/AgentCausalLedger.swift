@@ -92,6 +92,7 @@ public enum AgentCausalEventKind: String, Codable, CaseIterable, Sendable {
     case cooperationStateCleared
     case populationRegistryInitialized
     case populationMemberRegistered
+    case populationMembershipAuthorityRetained
     case migrationProposed
     case migrationAdmitted
     case migrationStarted
@@ -467,6 +468,10 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
         populationBefore: Int,
         populationAfter: Int
     )
+    case populationMembershipAuthority(
+        members: [AgentPopulationMembershipAuthorityMember],
+        digest: String
+    )
     case migration(
         migrationID: String,
         migrantID: String,
@@ -776,6 +781,9 @@ public enum AgentCausalPayload: Codable, Equatable, Sendable {
             settlementID, memberID, ordinal, founder, status, populationBefore, populationAfter
         ):
             return "population|\(settlementID)|\(memberID ?? "none")|\(ordinal.map(String.init) ?? "none")|\(founder.map { $0 ? "1" : "0" } ?? "none")|\(status)|\(populationBefore)|\(populationAfter)"
+        case let .populationMembershipAuthority(members, digest):
+            return "populationMembershipAuthority|\(members.count)|\(digest)|"
+                + members.map(\.canonicalText).joined(separator: ";")
         case let .migration(
             migrationID, migrantID, origin, destination, entry, reception,
             status, reason, routeLength
@@ -1070,6 +1078,8 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
              (.cooperationStateCleared, .cooperationClear),
              (.populationRegistryInitialized, .population),
              (.populationMemberRegistered, .population),
+             (.populationMembershipAuthorityRetained,
+                .populationMembershipAuthority),
              (.populationStateCleared, .population),
              (.populationScalingInitialized, .operation),
              (.settlementRegistered, .operation),

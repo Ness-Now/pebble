@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private struct MortalityScenarioCheck: Codable, Equatable {
     let name: String
@@ -119,7 +119,13 @@ private func mortalityScenarioSession(seed: UInt32) -> AgentSimulationSession {
         settlementAnchor: mortalityAnchor,
         receptionPosition: mortalityReception
     )
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.populationVersion
+    )
     try! session.setMortalityEnabled(true)
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.mortalityVersion
+    )
     _ = try! session.admitMigration(
         intent: AgentMigrationAdmissionIntent(),
         observation: mortalityAdmissionObservation(tick: 0)

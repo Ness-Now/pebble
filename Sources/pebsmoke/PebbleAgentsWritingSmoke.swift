@@ -101,9 +101,18 @@ private func writingPrepared(reversed: Bool = false, maximumArtifacts: Int = 4,
     let senses = AgentLanguagePack.frenchReference.entries.map(\.senseID)
     try session.seedLanguagePrior(for: writingAuthor, senseIDs: senses)
     if readerVocabulary { try session.seedLanguagePrior(for: writingReader, senseIDs: senses) }
-    if writingEnabled { try session.setWritingEnabled(true, worldID: "civ45-world",
-        configuration: try AgentWritingConfiguration(maximumArtifacts: maximumArtifacts,
-            maximumReadings: maximumReadings, maximumLiteracyRecords: maximumLiteracyRecords)) }
+    if writingEnabled {
+        try session.setWritingEnabled(true, worldID: "civ45-world",
+            configuration: try AgentWritingConfiguration(maximumArtifacts: maximumArtifacts,
+                maximumReadings: maximumReadings, maximumLiteracyRecords: maximumLiteracyRecords))
+        try session.useLegacyCognitivePhysiologyReplayFixture(
+            schemaVersion: AgentCheckpointSchema.writingVersion
+        )
+    } else {
+        try session.useLegacyCognitivePhysiologyReplayFixture(
+            schemaVersion: AgentCheckpointSchema.languageVersion
+        )
+    }
     return (session, proposition)
 }
 

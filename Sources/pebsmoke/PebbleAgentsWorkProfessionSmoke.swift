@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private let workHome = AgentPosition(x: 0, y: 64, z: 0)
 
@@ -103,7 +103,20 @@ private func workBase(
     )
     try! session.setLifecycleEnabled(true)
     try! session.setSkillsEnabled(true)
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.skillVersion
+    )
     return session
+}
+
+private func workEnableCommitments(
+    _ session: inout AgentSimulationSession,
+    configuration: AgentWorkCommitmentConfiguration = .live
+) throws {
+    try session.setWorkCommitmentsEnabled(true, configuration: configuration)
+    try session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.workCommitmentVersion
+    )
 }
 
 private func workProject(
@@ -189,7 +202,7 @@ private func preparedWorkSession(_ id: String) -> AgentSimulationSession {
     var recorder: AgentReplayRecorder?
     _ = workPlaceNext(&session, suffix: "practice", recorder: &recorder)
     _ = try! session.advanceTick()
-    try! session.setWorkCommitmentsEnabled(true)
+    try! workEnableCommitments(&session)
     _ = try! session.applyWorkCommitmentOperation(.refreshDemands)
     return session
 }
@@ -254,7 +267,10 @@ private func workWildSession(
     )
     try! session.setEcologicalObservationEnabled(true)
     try! session.setWildSubsistenceEnabled(true)
-    try! session.setWorkCommitmentsEnabled(true)
+    try! workEnableCommitments(&session)
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.independentEcologicalReceiptVersion
+    )
     return session
 }
 
@@ -330,7 +346,7 @@ func runPebbleAgentsWorkProfessionSmoke() {
     check("work commitments default off", !empty.workCommitmentsEnabled)
     let oldCheckpoint = try! empty.makeCheckpoint()
     check("pre-CIV-25 checkpoint remains v10", oldCheckpoint.schemaVersion == 10)
-    try! empty.setWorkCommitmentsEnabled(true)
+    try! workEnableCommitments(&empty)
     check("work activation is explicit v16 without retrocredit",
           empty.workCommitmentSnapshot().enabled
             && empty.workCommitmentSnapshot().demands.isEmpty
@@ -469,7 +485,7 @@ func runPebbleAgentsWorkProfessionSmoke() {
         &contextualTrust, suffix: "trust-practice", recorder: &trustPreparationRecorder
     )
     _ = try! contextualTrust.advanceTick()
-    try! contextualTrust.setWorkCommitmentsEnabled(true)
+    try! workEnableCommitments(&contextualTrust)
     _ = try! contextualTrust.applyWorkCommitmentOperation(.refreshDemands)
     let trustDemand = contextualTrust.activeWorkDemands().first!
     let trustedScore = contextualTrust.matchingScore(
@@ -497,7 +513,7 @@ func runPebbleAgentsWorkProfessionSmoke() {
         &carePreemption, suffix: "care-practice", recorder: &carePreparationRecorder
     )
     _ = try! carePreemption.advanceTick()
-    try! carePreemption.setWorkCommitmentsEnabled(true)
+    try! workEnableCommitments(&carePreemption)
     _ = try! carePreemption.applyWorkCommitmentOperation(.refreshDemands)
     let productiveDemand = carePreemption.activeWorkDemands().first!
     let productive = try! carePreemption.applyWorkCommitmentOperation(.start(
@@ -801,6 +817,9 @@ func runPebbleAgentsTerminalCohortWorkSmoke() {
         configuration: .embodiedPopulationBounded(
             maximumActivePopulation: 8
         )
+    )
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.independentEcologicalReceiptVersion
     )
     let result = try! session.advanceTick()
     let pending = session.pendingMortalityTransitions()

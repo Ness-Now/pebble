@@ -49,6 +49,9 @@ private func observationBase(
         settlementAnchor: observationOrigin,
         receptionPosition: receptionPosition
     )
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.populationVersion
+    )
     return session
 }
 
@@ -90,7 +93,28 @@ private func historicalObservationBase(
     try! session.setMortalityEnabled(
         true, configuration: mortalityConfiguration
     )
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.independentEcologicalReceiptVersion
+    )
     return session
+}
+
+private func ecologicalObservationEnable(
+    _ session: inout AgentSimulationSession,
+    configuration: AgentEcologicalObservationConfiguration = .live
+) throws {
+    try session.setEcologicalObservationEnabled(true, configuration: configuration)
+    try session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.ecologicalObservationVersion
+    )
+}
+
+private func ecologicalObservationUseIndependentReceiptSchema(
+    _ session: inout AgentSimulationSession
+) {
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.independentEcologicalReceiptVersion
+    )
 }
 
 private func normalizedObservation(
@@ -518,8 +542,924 @@ private func ecologicalIndependentReceiptValidationRefused(
     }
 }
 
+private func currentMembershipAuthorityBase(
+    _ id: String,
+    causalMaximumEvents: Int = 12,
+    lethalAgentZero: Bool = false
+) -> AgentSimulationSession {
+    var session = try! AgentSimulationSession(
+        configuration: try! AgentSessionConfiguration(
+            seed: 46, memoryPolicy: .bounded(maxEntries: 128)
+        ),
+        agents: (0..<3).map {
+            observationAgent(
+                $0,
+                lethalNextTick: lethalAgentZero && $0 == 0
+            )
+        },
+        simulationID: AgentSimulationID(rawValue: id)!,
+        causalLedgerPolicy: .bounded(maxEvents: causalMaximumEvents)
+    )
+    try! session.initializePopulationRegistry(
+        settlementAnchor: observationOrigin,
+        receptionPosition: observationOrigin
+    )
+    try! session.setEcologicalObservationEnabled(
+        true,
+        configuration: try! AgentEcologicalObservationConfiguration(
+            maximumScansPerSimulationTick: 16,
+            maximumRetainedObservations: 32,
+            maximumRetainedObservationsPerAgent: 16
+        )
+    )
+    try! session.rebasePhysiologicalTime(toWorldTick: 0)
+    return session
+}
+
+@discardableResult
+private func applyMembershipAuthorityPressure(
+    _ session: inout AgentSimulationSession,
+    limit: Int = 128
+) -> Int {
+    var count = 0
+    while session.populationSnapshot().members.count > 0,
+          session.populationRegistry?.currentMembershipAuthorityEventID == nil,
+          count < limit {
+        try! session.appendCausalRetentionTestEvent()
+        count += 1
+    }
+    return count
+}
+
+private func currentMembershipAuthorityEvent(
+    _ session: AgentSimulationSession
+) -> AgentCausalEvent? {
+    guard let id = session.populationRegistry?
+        .currentMembershipAuthorityEventID else { return nil }
+    return session.causalLedgerSnapshot().events.first {
+        $0.eventID == id
+    }
+}
+
+private func currentMembershipAuthorityRows(
+    _ session: AgentSimulationSession
+) -> [AgentPopulationMembershipAuthorityMember] {
+    guard let event = currentMembershipAuthorityEvent(session),
+          case let .populationMembershipAuthority(members, _) = event.payload
+    else { return [] }
+    return members
+}
+
+private func ecologicalMembershipAuthorityMembers(
+    _ authority: [String: Any]
+) -> [AgentPopulationMembershipAuthorityMember] {
+    try! AgentCheckpointCodec.decode(
+        [AgentPopulationMembershipAuthorityMember].self,
+        from: JSONSerialization.data(
+            withJSONObject: authority["members"]!,
+            options: [.sortedKeys, .withoutEscapingSlashes]
+        )
+    )
+}
+
+private func ecologicalMembershipAuthorityDigest(
+    members: [AgentPopulationMembershipAuthorityMember],
+    simulationID: String
+) -> String {
+    AgentPopulationDigest.make(
+        "active-membership|simulation=\(simulationID)|"
+            + members.map {
+                "\($0.agentID.rawValue)|\($0.ordinal.rawValue)|"
+                    + "\($0.founder ? 1 : 0)|\($0.registeredTick)|"
+                    + $0.registrationEventID.rawValue
+            }.joined(separator: ";")
+    )
+}
+
+private func ecologicalRepairMembershipAuthorityEventDigest(
+    _ event: inout [String: Any],
+    resignAuthorityPayload: Bool
+) {
+    var payload = event["payload"] as! [String: Any]
+    var authority = payload["populationMembershipAuthority"]
+        as! [String: Any]
+    let members = ecologicalMembershipAuthorityMembers(authority)
+    let simulationID = event["simulationID"] as! String
+    if resignAuthorityPayload {
+        authority["digest"] = ecologicalMembershipAuthorityDigest(
+            members: members,
+            simulationID: simulationID
+        )
+    }
+    payload["populationMembershipAuthority"] = authority
+    event["payload"] = payload
+
+    let eventID = ecologicalEventIDText(
+        event["eventID"] as! [String: Any]
+    )
+    let instant = event["instant"] as! [String: Any]
+    let causes = (event["causes"] as! [[String: Any]])
+        .map(ecologicalEventIDText).joined(separator: ",")
+    let authorityDigest = authority["digest"] as! String
+    let payloadText = "populationMembershipAuthority|\(members.count)|"
+        + "\(authorityDigest)|"
+        + members.map {
+            "\($0.agentID.rawValue)|\($0.ordinal.rawValue)|"
+                + "\($0.founder ? 1 : 0)|\($0.registeredTick)|"
+                + $0.registrationEventID.rawValue
+        }.joined(separator: ";")
+    let text = "\(eventID)|\(instant["tick"] as! Int)|"
+        + "\(event["kind"] as! String)|\(event["origin"] as! String)|"
+        + "\(event["actorID"] as? String ?? "-")|"
+        + "\(event["subjectID"] as? String ?? "-")|"
+        + "\(event["operationID"] as? String ?? "-")|"
+        + "\(causes)|\(payloadText)|\(event["summary"] as! String)"
+    event["digest"] = ecologicalCausalDigest(text)
+}
+
+private func ecologicalMutateCurrentMembershipAuthority(
+    _ durable: inout [String: Any],
+    resignAuthorityPayload: Bool = false,
+    mutation: (inout [[String: Any]], [[String: Any]]) -> Void
+) {
+    let registry = durable["populationRegistry"] as! [String: Any]
+    let authorityID = ecologicalEventIDText(
+        registry["currentMembershipAuthorityEventID"]
+            as! [String: Any]
+    )
+    var ledger = durable["causalLedger"] as! [String: Any]
+    var events = ledger["events"] as! [[String: Any]]
+    let eventIndex = events.firstIndex {
+        ecologicalEventIDText($0["eventID"] as! [String: Any])
+            == authorityID
+    }!
+    var payload = events[eventIndex]["payload"] as! [String: Any]
+    var authority = payload["populationMembershipAuthority"]
+        as! [String: Any]
+    var members = authority["members"] as! [[String: Any]]
+    mutation(&members, events)
+    authority["members"] = members
+    payload["populationMembershipAuthority"] = authority
+    events[eventIndex]["payload"] = payload
+    ecologicalRepairMembershipAuthorityEventDigest(
+        &events[eventIndex],
+        resignAuthorityPayload: resignAuthorityPayload
+    )
+    ledger["events"] = events
+    durable["causalLedger"] = ledger
+    ecologicalRecomputeCausalRollingDigest(&durable)
+}
+
+private func membershipAuthorityReplayBase(
+    _ id: String
+) -> AgentSimulationSession {
+    var session = currentMembershipAuthorityBase(
+        id
+    )
+    for index in 0..<3 {
+        _ = try! session.recordEcologicalObservation(
+            normalizedObservation(
+                session,
+                observer: "agent_\(index)",
+                physicalWorldTick: 100 + index
+            ),
+            physicalReceiptID: AgentPhysicalObservationReceiptID(
+                rawValue: "eco-membership-before-\(index)"
+            )!
+        )
+    }
+    return session
+}
+
+@inline(never)
+private func runCurrentMembershipAuthorityRestoreValidationSmoke() {
+    var direct = membershipAuthorityReplayBase(
+        "ecological-membership-authority-restore-validation"
+    )
+    _ = applyMembershipAuthorityPressure(&direct)
+    let checkpoint = try! direct.makeCheckpoint()
+    let positiveRestored = try! AgentSimulationSession.restoring(checkpoint)
+    check(
+        "post-rollover pre-observation membership authority restores",
+        direct.populationRegistry?.currentMembershipAuthorityEventID != nil
+            && (try! positiveRestored.durableStateBytes())
+                == (try! direct.durableStateBytes())
+    )
+
+    let continuation = normalizedObservation(
+        direct,
+        observer: "agent_0",
+        physicalWorldTick: 199
+    )
+    let continuationReceipt = AgentPhysicalObservationReceiptID(
+        rawValue: "eco-membership-pre-observation-restore"
+    )!
+    var restored = positiveRestored
+    _ = try! direct.recordEcologicalObservation(
+        continuation,
+        physicalReceiptID: continuationReceipt
+    )
+    _ = try! restored.recordEcologicalObservation(
+        continuation,
+        physicalReceiptID: continuationReceipt
+    )
+    check(
+        "post-rollover restore continuation publishes ecology byte exactly",
+        (try! restored.durableStateBytes())
+            == (try! direct.durableStateBytes())
+    )
+
+    check("missing current membership authority event is refused on restore", {
+        ecologicalRestoreRefused(checkpoint) { durable in
+            var registry = durable["populationRegistry"] as! [String: Any]
+            let ledger = durable["causalLedger"] as! [String: Any]
+            registry["currentMembershipAuthorityEventID"] = [
+                "simulationID": (durable["clock"] as! [String: Any])[
+                    "simulationID"
+                ] as! String,
+                "sequence": (ledger["latestSequence"] as! UInt64) + 1,
+            ]
+            durable["populationRegistry"] = registry
+        }
+    }())
+    check("wrong retained current membership authority event is refused", {
+        ecologicalRestoreRefused(checkpoint) { durable in
+            var registry = durable["populationRegistry"] as! [String: Any]
+            let ledger = durable["causalLedger"] as! [String: Any]
+            let events = ledger["events"] as! [[String: Any]]
+            registry["currentMembershipAuthorityEventID"] = events.first {
+                ($0["kind"] as! String)
+                    != "populationMembershipAuthorityRetained"
+            }!["eventID"]
+            durable["populationRegistry"] = registry
+        }
+    }())
+    check("membership authority missing-member payload is refused", {
+        ecologicalRestoreRefused(checkpoint) { durable in
+            ecologicalMutateCurrentMembershipAuthority(&durable) {
+                members, _ in members.removeLast()
+            }
+        }
+    }())
+    check("membership authority extra-member payload is refused", {
+        ecologicalRestoreRefused(checkpoint) { durable in
+            ecologicalMutateCurrentMembershipAuthority(&durable) {
+                members, _ in
+                var extra = members.last!
+                extra["agentID"] = "agent_extra"
+                extra["ordinal"] = 999
+                extra["founder"] = false
+                members.append(extra)
+            }
+        }
+    }())
+    check("membership authority wrong original registration is refused", {
+        ecologicalRestoreRefused(checkpoint) { durable in
+            ecologicalMutateCurrentMembershipAuthority(&durable) {
+                members, events in
+                members[0]["registrationEventID"] = events.first {
+                    ($0["kind"] as! String)
+                        != "populationMembershipAuthorityRetained"
+                }!["eventID"]
+            }
+        }
+    }())
+    check("coherently re-signed forged membership authority is refused", {
+        ecologicalRestoreRefused(checkpoint) { durable in
+            ecologicalMutateCurrentMembershipAuthority(
+                &durable,
+                resignAuthorityPayload: true
+            ) { members, events in
+                members[0]["registrationEventID"] = events.first {
+                    ($0["kind"] as! String)
+                        != "populationMembershipAuthorityRetained"
+                }!["eventID"]
+            }
+        }
+    }())
+    check("nil membership authority after registration compaction is refused", {
+        ecologicalRestoreRefused(checkpoint) { durable in
+            var registry = durable["populationRegistry"] as! [String: Any]
+            registry.removeValue(
+                forKey: "currentMembershipAuthorityEventID"
+            )
+            durable["populationRegistry"] = registry
+        }
+    }())
+}
+
+@inline(never)
+private func runCurrentMembershipAuthorityActiveAndCheckpointSmoke() {
+    var session = membershipAuthorityReplayBase(
+        "ecological-membership-authority-active"
+    )
+    let originalRegistrations = session.populationSnapshot().members.map(
+        \.registrationEventID
+    )
+    let beforeEvictionCheckpoint = try! session.makeCheckpoint()
+    let pressureCount = applyMembershipAuthorityPressure(&session)
+    let authorityID = session.populationRegistry?
+        .currentMembershipAuthorityEventID
+    let retainedIDs = Set(session.causalLedgerSnapshot().events.map(\.eventID))
+    let rows = currentMembershipAuthorityRows(session)
+    check(
+        "current membership authority replaces compacted founder registration",
+        pressureCount < 128
+            && authorityID != nil
+            && retainedIDs.contains(authorityID!)
+            && !retainedIDs.contains(originalRegistrations[0])
+            && rows.map(\.agentID.rawValue) == [
+                "agent_0", "agent_1", "agent_2",
+            ]
+            && session.causalLedgerSnapshot().events.count <= 12,
+        "pressure=\(pressureCount) retained=\(retainedIDs.count) "
+            + "authority=\(authorityID?.rawValue ?? "none")"
+    )
+    for index in 0..<3 {
+        _ = try! session.recordEcologicalObservation(
+            normalizedObservation(
+                session,
+                observer: "agent_\(index)",
+                physicalWorldTick: 200 + index,
+                cropStage: 7
+            ),
+            physicalReceiptID: AgentPhysicalObservationReceiptID(
+                rawValue: "eco-membership-after-\(index)"
+            )!
+        )
+    }
+    let activeValidations = try! session
+        .historicalEcologicalObservationValidations()
+    check(
+        "multiple active observers remain causally valid after registration compaction",
+        activeValidations.count == session.ecologicalObservationSnapshot()
+            .observations.count
+            && activeValidations.suffix(3).allSatisfy {
+                $0.classification == .activeAtObservation
+            }
+    )
+
+    let authorityCheckpoint = try! session.makeCheckpoint()
+    var restored = try! AgentSimulationSession.restoring(
+        authorityCheckpoint
+    )
+    let directReceipt = AgentPhysicalObservationReceiptID(
+        rawValue: "eco-membership-checkpoint-continuation"
+    )!
+    let continuation = normalizedObservation(
+        session,
+        observer: "agent_0",
+        physicalWorldTick: 300
+    )
+    _ = try! session.recordEcologicalObservation(
+        continuation,
+        physicalReceiptID: directReceipt
+    )
+    _ = try! restored.recordEcologicalObservation(
+        continuation,
+        physicalReceiptID: directReceipt
+    )
+    check(
+        "membership authority checkpoint continuation is byte exact",
+        beforeEvictionCheckpoint.schemaVersion
+            == AgentCheckpointSchema.temporalPhysiologyVersion
+            && authorityCheckpoint.schemaVersion
+                == AgentCheckpointSchema.temporalPhysiologyVersion
+            && (try! session.durableStateBytes())
+                == (try! restored.durableStateBytes())
+    )
+}
+
+@inline(never)
+private func runCurrentMembershipAuthorityReplaySmoke() {
+    let beforeEvictionCheckpoint = try! membershipAuthorityReplayBase(
+        "ecological-membership-authority-replay"
+    ).makeCheckpoint()
+    var replayed = try! AgentSimulationSession.restoring(
+        beforeEvictionCheckpoint
+    )
+    var recorder = try! AgentReplayRecorder(
+        checkpoint: beforeEvictionCheckpoint,
+        session: replayed
+    )
+    var replayPressure = 0
+    while replayed.populationRegistry?
+            .currentMembershipAuthorityEventID == nil,
+          replayPressure < 128 {
+        _ = try! recorder.apply(
+            .setEconomyEnabled(replayPressure.isMultiple(of: 2)),
+            to: &replayed
+        )
+        replayPressure += 1
+    }
+    for index in 0..<3 {
+        let observation = normalizedObservation(
+            replayed,
+            observer: "agent_\(index)",
+            physicalWorldTick: 400 + index
+        )
+        _ = try! recorder.apply(
+            .recordEcologicalObservationWithPhysicalReceipt(
+                observation,
+                physicalReceiptID: AgentPhysicalObservationReceiptID(
+                    rawValue: "eco-membership-replay-\(index)"
+                )!
+            ),
+            to: &replayed
+        )
+    }
+    let journal = try! recorder.journal(
+        named: AgentCheckpointName(
+            rawValue: "ecological-membership-authority-replay"
+        )!
+    )
+    let replay = try! AgentSessionReplayer.replay(
+        checkpoint: beforeEvictionCheckpoint,
+        journal: journal
+    )
+    check(
+        "membership authority transition replays byte exactly",
+        replay.report.verified
+            && (try! replay.session.durableStateBytes())
+                == (try! replayed.durableStateBytes())
+            && replay.session.populationRegistry?
+                .currentMembershipAuthorityEventID
+                == replayed.populationRegistry?
+                    .currentMembershipAuthorityEventID
+    )
+}
+
+@inline(never)
+private func runCurrentMembershipAuthorityDynamicSmoke() {
+    var dynamic = currentMembershipAuthorityBase(
+        "ecological-membership-authority-dynamic",
+        causalMaximumEvents: 16
+    )
+    _ = applyMembershipAuthorityPressure(&dynamic)
+    let authorityBeforeMigration = dynamic.populationRegistry?
+        .currentMembershipAuthorityEventID
+    let entry = AgentPosition(x: 0, y: 64, z: -2)
+    let mid = AgentPosition(x: 0, y: 64, z: -1)
+    let migration = try! dynamic.admitMigration(
+        intent: AgentMigrationAdmissionIntent(),
+        observation: AgentMigrationWorldObservation(
+            worldTick: 0,
+            candidateIndex: 0,
+            entryPosition: entry,
+            receptionPosition: observationOrigin,
+            route: [entry, mid, observationOrigin],
+            entryChunkReady: true,
+            entrySafe: true,
+            entryUnoccupied: true,
+            receptionChunkReady: true,
+            receptionSafe: true,
+            receptionUnoccupied: true
+        )
+    )
+    var dynamicPressure = 0
+    while dynamic.causalLedgerSnapshot().events.contains(where: {
+        $0.eventID == dynamic.populationSnapshot().members.first(where: {
+            $0.agentID == migration.migrantID
+        })!.registrationEventID
+    }), dynamicPressure < 128 {
+        try! dynamic.appendCausalRetentionTestEvent()
+        dynamicPressure += 1
+    }
+    _ = try! dynamic.recordEcologicalObservation(
+        normalizedObservation(
+            dynamic,
+            observer: migration.migrantID.rawValue,
+            physicalWorldTick: 500
+        ),
+        physicalReceiptID: AgentPhysicalObservationReceiptID(
+            rawValue: "eco-membership-dynamic"
+        )!
+    )
+    check(
+        "dynamic member is covered after its original registration compacts",
+        dynamicPressure < 128
+            && dynamic.populationRegistry?
+                .currentMembershipAuthorityEventID
+                != authorityBeforeMigration
+            && currentMembershipAuthorityRows(dynamic).contains {
+                $0.agentID == migration.migrantID
+            }
+            && (try! dynamic.historicalEcologicalObservationValidations())
+                .last?.observerID == migration.migrantID
+    )
+}
+
+@inline(never)
+private func runCurrentMembershipAuthorityDynamicMortalitySmoke() {
+    let acceleratedSurvival = try! AgentSurvivalConfiguration(
+        hungerPerTick: 1,
+        fatiguePerTick: 0.06,
+        hungryThreshold: 0.40,
+        criticalHungerThreshold: 0.80,
+        hungerRecoveryThreshold: 0.15,
+        fatigueThreshold: 0.65,
+        fatigueRecoveryThreshold: 0.20,
+        foodNutrition: 1,
+        restRecoveryPerTick: 1,
+        starvationGraceTicks: 1,
+        starvationDamagePerTick: 100
+    )
+    var dynamic = try! AgentSimulationSession(
+        configuration: try! AgentSessionConfiguration(
+            seed: 46,
+            memoryPolicy: .bounded(maxEntries: 128),
+            survivalConfiguration: acceleratedSurvival
+        ),
+        agents: (0..<3).map { observationAgent($0) },
+        simulationID: AgentSimulationID(
+            rawValue: "ecological-membership-dynamic-mortality"
+        )!,
+        causalLedgerPolicy: .bounded(maxEvents: 512)
+    )
+    try! dynamic.initializePopulationRegistry(
+        settlementAnchor: observationOrigin,
+        receptionPosition: observationOrigin
+    )
+    try! dynamic.setEcologicalObservationEnabled(
+        true,
+        configuration: try! AgentEcologicalObservationConfiguration(
+            maximumScansPerSimulationTick: 16,
+            maximumRetainedObservations: 32,
+            maximumRetainedObservationsPerAgent: 16
+        )
+    )
+    try! dynamic.rebasePhysiologicalTime(toWorldTick: 0)
+    dynamic.setSurvivalEnabled(true)
+    try! dynamic.setMortalityEnabled(true)
+    _ = applyMembershipAuthorityPressure(&dynamic)
+
+    let entry = AgentPosition(x: 0, y: 64, z: -2)
+    let mid = AgentPosition(x: 0, y: 64, z: -1)
+    let migration = try! dynamic.admitMigration(
+        intent: AgentMigrationAdmissionIntent(),
+        observation: AgentMigrationWorldObservation(
+            worldTick: 0,
+            candidateIndex: 0,
+            entryPosition: entry,
+            receptionPosition: observationOrigin,
+            route: [entry, mid, observationOrigin]
+        )
+    )
+    let migrantRegistration = dynamic.populationSnapshot().members.first {
+        $0.agentID == migration.migrantID
+    }!.registrationEventID
+    var registrationPressure = 0
+    while dynamic.causalLedgerSnapshot().events.contains(where: {
+        $0.eventID == migrantRegistration
+    }), registrationPressure < 2_048 {
+        try! dynamic.appendCausalRetentionTestEvent()
+        registrationPressure += 1
+    }
+    let priorEcologicalAuthority = dynamic.ecologicalObservationState?
+        .initializedEventID
+    var ecologicalPressure = 0
+    while dynamic.ecologicalObservationState?.initializedEventID
+            == priorEcologicalAuthority,
+          ecologicalPressure < 2_048 {
+        try! dynamic.appendCausalRetentionTestEvent()
+        ecologicalPressure += 1
+    }
+    let observation = try! dynamic.recordEcologicalObservation(
+        normalizedObservation(
+            dynamic,
+            observer: migration.migrantID.rawValue,
+            physicalWorldTick: 700
+        ),
+        physicalReceiptID: AgentPhysicalObservationReceiptID(
+            rawValue: "eco-membership-dynamic-before-death"
+        )!
+    )
+    try! dynamic.advancePhysiologicalTime(toWorldTick: 1_200)
+    _ = try! dynamic.advanceTick()
+    try! dynamic.advancePhysiologicalTime(toWorldTick: 2_400)
+    _ = try! dynamic.advanceTick()
+    let death = dynamic.mortalitySnapshot().records.first {
+        $0.agentID == migration.migrantID
+    }
+    let validation = try! dynamic.historicalEcologicalObservationValidations()
+        .first { $0.sequence == observation.sequence }
+    check(
+        "dynamic member mortality retains pre-death ecology after registration compaction",
+        registrationPressure < 2_048
+            && ecologicalPressure < 2_048
+            && !dynamic.causalLedgerSnapshot().events.contains {
+                $0.eventID == migrantRegistration
+            }
+            && death?.membershipAuthorityEventID != nil
+            && validation?.classification == .deceasedAfterObservationRetained
+            && dynamic.populationRegistry?
+                .currentMembershipAuthorityEventID == nil
+            && dynamic.snapshot().agents.isEmpty
+            && dynamic.mortalitySnapshot().records.count == 4,
+        "registrationPressure=\(registrationPressure) "
+            + "ecologicalPressure=\(ecologicalPressure) "
+            + "death=\(death != nil) validation="
+            + "\(String(describing: validation?.classification))"
+    )
+    var historicalPressure = 0
+    while dynamic.ecologicalObservationSnapshot().observations.contains(
+        where: { $0.sequence == observation.sequence }
+    ), historicalPressure < 2_048 {
+        try! dynamic.appendCausalRetentionTestEvent()
+        historicalPressure += 1
+    }
+    check(
+        "dynamic deceased ecology is later evicted within the bounded ledger",
+        historicalPressure < 2_048
+            && !dynamic.ecologicalObservationSnapshot().observations.contains(
+                where: { $0.sequence == observation.sequence }
+            )
+            && dynamic.causalLedgerSnapshot().events.count <= 512,
+        "pressure=\(historicalPressure) retained="
+            + "\(dynamic.causalLedgerSnapshot().events.count)"
+    )
+}
+
+@inline(never)
+private func runCurrentMembershipAuthorityFaultSmoke() {
+    var faultBase = currentMembershipAuthorityBase(
+        "ecological-membership-authority-fault",
+        causalMaximumEvents: 12
+    )
+    _ = try! faultBase.recordEcologicalObservation(
+        normalizedObservation(faultBase, observer: "agent_0"),
+        physicalReceiptID: AgentPhysicalObservationReceiptID(
+            rawValue: "eco-membership-fault"
+        )!
+    )
+    var faultPressure = 0
+    while faultBase.populationRegistry?
+            .currentMembershipAuthorityEventID == nil,
+          faultBase.causalLedgerSnapshot().events.first?.kind
+            != .populationMemberRegistered,
+          faultPressure < 128 {
+        try! faultBase.appendCausalRetentionTestEvent()
+        faultPressure += 1
+    }
+    let membershipFaults: [AgentCausalRetentionFaultPoint] = [
+        .afterFirstEcologicalRowEviction,
+        .afterEcologicalEvictionCounterUpdate,
+        .beforePopulationMembershipAuthorityPublication,
+        .afterPopulationMembershipAuthorityCausalAppend,
+        .afterCausalCompaction,
+        .afterPopulationMembershipAuthorityPublication,
+        .afterEcologicalValidation,
+    ]
+    let faultsRollback = faultPressure < 128
+        && membershipFaults.allSatisfy { fault in
+            var candidate = faultBase
+            let before = try! candidate.durableStateBytes()
+            do {
+                try candidate.appendCausalRetentionTestEvent(
+                    failingAt: fault
+                )
+                return false
+            } catch AgentSessionError.ecologicalObservation(
+                .invalidState("injected causal retention fault \(fault.rawValue)")
+            ) {
+                return (try! candidate.durableStateBytes()) == before
+            } catch {
+                return false
+            }
+        }
+    check(
+        "membership authority retention faults roll back byte exactly",
+        faultsRollback,
+        "ready=\(faultPressure < 128) pressure=\(faultPressure)"
+    )
+}
+
+private struct MembershipAuthorityMortalityFixture {
+    var session: AgentSimulationSession
+    let observationSequence: UInt64
+    let ecologicalAuthorityPressure: Int
+}
+
+@inline(never)
+private func membershipAuthorityMortalityFixture(
+    _ simulationID: String
+) -> MembershipAuthorityMortalityFixture {
+    var session = currentMembershipAuthorityBase(
+        simulationID,
+        causalMaximumEvents: 32,
+        lethalAgentZero: true
+    )
+    session.setSurvivalEnabled(true)
+    try! session.setMortalityEnabled(true)
+    _ = applyMembershipAuthorityPressure(&session)
+    let initialEcologicalAuthority = session.ecologicalObservationState?
+        .initializedEventID
+    var ecologicalAuthorityPressure = 0
+    while session.ecologicalObservationState?.initializedEventID
+            == initialEcologicalAuthority,
+          ecologicalAuthorityPressure < 128 {
+        try! session.appendCausalRetentionTestEvent()
+        ecologicalAuthorityPressure += 1
+    }
+    let observation = try! session.recordEcologicalObservation(
+        normalizedObservation(
+            session,
+            observer: "agent_0",
+            physicalWorldTick: 600
+        ),
+        physicalReceiptID: AgentPhysicalObservationReceiptID(
+            rawValue: "eco-membership-before-death"
+        )!
+    )
+    _ = try! session.recordEcologicalObservation(
+        normalizedObservation(
+            session,
+            observer: "agent_1",
+            physicalWorldTick: 601
+        ),
+        physicalReceiptID: AgentPhysicalObservationReceiptID(
+            rawValue: "eco-membership-survivor-before-death"
+        )!
+    )
+    return MembershipAuthorityMortalityFixture(
+        session: session,
+        observationSequence: observation.sequence,
+        ecologicalAuthorityPressure: ecologicalAuthorityPressure
+    )
+}
+
+@inline(never)
+private func runCurrentMembershipAuthorityMortalityFaultSmoke() {
+    let faults: [AgentCausalRetentionFaultPoint] = [
+        .afterMortalityStateBeforeMembershipAuthorityRefresh,
+        .beforePopulationMembershipAuthorityPublication,
+        .afterPopulationMembershipAuthorityCausalAppend,
+        .afterMembershipEcologicalDependencyCalculation,
+        .afterFirstEcologicalRowEviction,
+        .afterEcologicalEvictionCounterUpdate,
+        .afterCausalCompaction,
+        .afterPopulationMembershipAuthorityPublication,
+        .afterMortalityMembershipValidationBeforePublication,
+    ]
+    let rollbackExact = faults.allSatisfy { fault in
+        var fixture = membershipAuthorityMortalityFixture(
+            "ecological-membership-mortality-fault-\(fault.rawValue)"
+        )
+        try! fixture.session.advancePhysiologicalTime(toWorldTick: 1_200)
+        let before = try! fixture.session.durableStateBytes()
+        do {
+            _ = try fixture.session.advanceTick(
+                failingCausalRetentionAt: fault
+            )
+            return false
+        } catch AgentSessionError.ecologicalObservation(
+            .invalidState("injected causal retention fault \(fault.rawValue)")
+        ) {
+            return (try! fixture.session.durableStateBytes()) == before
+        } catch {
+            return false
+        }
+    }
+    check(
+        "mortality membership transition fault seams roll back byte exactly",
+        rollbackExact,
+        "faults=\(faults.map(\.rawValue))"
+    )
+}
+
+@inline(never)
+private func runCurrentMembershipAuthorityMortalityTransitionSmoke() {
+    var fixture = membershipAuthorityMortalityFixture(
+        "ecological-membership-authority-mortality"
+    )
+    try! fixture.session.advancePhysiologicalTime(toWorldTick: 1_200)
+    _ = try! fixture.session.advanceTick()
+    let death = fixture.session.mortalitySnapshot().records.first {
+        $0.agentID.rawValue == "agent_0"
+    }
+    let deathValidation = try! fixture.session
+        .historicalEcologicalObservationValidations().first {
+            $0.sequence == fixture.observationSequence
+        }
+    let survivorAuthorityRows = currentMembershipAuthorityRows(fixture.session)
+    let afterDeathCheckpoint = try! fixture.session.makeCheckpoint()
+    let restoredAfterDeath = try! AgentSimulationSession.restoring(
+        afterDeathCheckpoint
+    )
+    let retainedMembershipAuthorityCount = fixture.session
+        .causalLedgerSnapshot().events.filter {
+            $0.kind == .populationMembershipAuthorityRetained
+        }.count
+    check(
+        "mortality preserves compacted membership authority without resurrection",
+        fixture.ecologicalAuthorityPressure < 128
+            && death != nil
+            && death?.membershipAuthorityEventID != nil
+            && deathValidation?.classification
+                == .deceasedAfterObservationRetained
+            && survivorAuthorityRows.map(\.agentID.rawValue) == [
+                "agent_1", "agent_2",
+            ]
+            && !fixture.session.snapshot().agents.contains {
+                $0.id == "agent_0"
+            }
+            && !fixture.session.populationSnapshot().members.contains {
+                $0.agentID.rawValue == "agent_0"
+            }
+            && (try! restoredAfterDeath.durableStateBytes())
+                == (try! fixture.session.durableStateBytes()),
+        "death=\(death != nil) validation="
+            + "\(String(describing: deathValidation?.classification)) "
+            + "rows=\(survivorAuthorityRows.map(\.agentID.rawValue))"
+    )
+    check(
+        "small-ledger membership authority refresh remains bounded count=\(retainedMembershipAuthorityCount)",
+        retainedMembershipAuthorityCount >= 1
+            && retainedMembershipAuthorityCount <= 3
+            && fixture.session.causalLedgerSnapshot().events.count <= 32
+    )
+}
+
+@inline(never)
+private func runCurrentMembershipAuthorityMortalityReplaySmoke() {
+    var fixture = membershipAuthorityMortalityFixture(
+        "ecological-membership-mortality-replay"
+    )
+    let beforeDeathCheckpoint = try! fixture.session.makeCheckpoint()
+    var recorder = try! AgentReplayRecorder(
+        checkpoint: beforeDeathCheckpoint,
+        session: fixture.session
+    )
+    _ = try! recorder.apply(
+        .advanceTick(
+            physiologicalWorldTick: 1_200,
+            perceptions: [],
+            physicalObservations: []
+        ),
+        to: &fixture.session
+    )
+    let deathValidation = try! fixture.session
+        .historicalEcologicalObservationValidations().first {
+            $0.sequence == fixture.observationSequence
+        }
+    var laterPressure = 0
+    while fixture.session.ecologicalObservationSnapshot().observations.contains(
+        where: { $0.sequence == fixture.observationSequence }
+    ), laterPressure < 128 {
+        _ = try! recorder.apply(
+            .setEconomyEnabled(laterPressure.isMultiple(of: 2)),
+            to: &fixture.session
+        )
+        laterPressure += 1
+    }
+    let journal = try! recorder.journal(
+        named: AgentCheckpointName(
+            rawValue: "ecological-membership-mortality-replay"
+        )!
+    )
+    let replay = try! AgentSessionReplayer.replay(
+        checkpoint: beforeDeathCheckpoint,
+        journal: journal
+    )
+    let afterEvictionCheckpoint = try! fixture.session.makeCheckpoint()
+    let restoredAfterEviction = try! AgentSimulationSession.restoring(
+        afterEvictionCheckpoint
+    )
+    check(
+        "deceased ecological history evicts before its captured authority leaves",
+        deathValidation?.classification == .deceasedAfterObservationRetained
+            && laterPressure < 128
+            && !fixture.session.ecologicalObservationSnapshot().observations.contains(
+                where: { $0.sequence == fixture.observationSequence }
+            )
+            && fixture.session.causalLedgerSnapshot().events.count <= 32
+            && replay.report.verified
+            && (try! replay.session.durableStateBytes())
+                == (try! fixture.session.durableStateBytes())
+            && (try! restoredAfterEviction.durableStateBytes())
+                == (try! fixture.session.durableStateBytes()),
+        "pressure=\(laterPressure) retained="
+            + "\(fixture.session.causalLedgerSnapshot().events.count)"
+    )
+}
+
+@inline(never)
+private func runCurrentMembershipAuthorityRetentionSmoke() {
+    runCurrentMembershipAuthorityRestoreValidationSmoke()
+    runCurrentMembershipAuthorityActiveAndCheckpointSmoke()
+    runCurrentMembershipAuthorityReplaySmoke()
+    runCurrentMembershipAuthorityDynamicSmoke()
+    runCurrentMembershipAuthorityDynamicMortalitySmoke()
+    runCurrentMembershipAuthorityFaultSmoke()
+    runCurrentMembershipAuthorityMortalityFaultSmoke()
+    runCurrentMembershipAuthorityMortalityTransitionSmoke()
+    runCurrentMembershipAuthorityMortalityReplaySmoke()
+}
+
 func runPebbleAgentsEcologicalObservationSmoke() {
     section("pebble agents ecological observation and civil calendar")
+
+    runCurrentMembershipAuthorityRetentionSmoke()
 
     let calendar = AgentCivilCalendarConfiguration.live
     check("civil calendar default day", calendar.date(atSimulationTick: 0)
@@ -551,7 +1491,7 @@ func runPebbleAgentsEcologicalObservationSmoke() {
     }())
     check("physical World time cannot alter civil date", {
         var value = observationBase("calendar-clock-separation")
-        try! value.setEcologicalObservationEnabled(true)
+        try! ecologicalObservationEnable(&value)
         let first = normalizedObservation(value, physicalWorldTick: 100)
         let second = normalizedObservation(value, physicalWorldTick: 23_900)
         return first.civilDate == second.civilDate
@@ -583,7 +1523,7 @@ func runPebbleAgentsEcologicalObservationSmoke() {
     }
     let campBefore = session.campStock
     let causalBefore = session.causalLedgerSnapshot().summary.latestSequence
-    try! session.setEcologicalObservationEnabled(true)
+    try! ecologicalObservationEnable(&session)
     check("activation is v12 and creates no retroactive observation",
           session.durableState().schemaVersion == 12
             && session.ecologicalObservationSnapshot().observations.isEmpty
@@ -592,6 +1532,7 @@ func runPebbleAgentsEcologicalObservationSmoke() {
     let first = normalizedObservation(session)
     let firstSequence = session.causalLedgerSnapshot().summary.latestSequence
     let record = try! session.recordEcologicalObservation(first)
+    ecologicalObservationUseIndependentReceiptSchema(&session)
     check("one aggregate observation emits one causal event",
           record.sequence == 1
             && session.causalLedgerSnapshot().summary.latestSequence == firstSequence + 1)
@@ -787,7 +1728,7 @@ func runPebbleAgentsEcologicalObservationSmoke() {
         maximumRetainedObservationsPerAgent: 1
     )
     var bounded = observationBase("ecological-observation-bounded")
-    try! bounded.setEcologicalObservationEnabled(true, configuration: boundedConfiguration)
+    try! ecologicalObservationEnable(&bounded, configuration: boundedConfiguration)
     try! bounded.recordEcologicalObservation(normalizedObservation(bounded, observer: "agent_0"))
     try! bounded.recordEcologicalObservation(normalizedObservation(bounded, observer: "agent_1"))
     try! bounded.recordEcologicalObservation(normalizedObservation(bounded, observer: "agent_0", cropStage: 7))
@@ -869,8 +1810,19 @@ func runPebbleAgentsEcologicalObservationSmoke() {
         && causalFaultBase.causalLedgerSnapshot().events.first.map {
             causalFaultRequired.contains($0.eventID)
         } == true
+    let historicalEcologicalFaults = AgentCausalRetentionFaultPoint.allCases
+        .filter {
+            ![
+                .afterMortalityStateBeforeMembershipAuthorityRefresh,
+                .afterMortalityMembershipValidationBeforePublication,
+                .beforePopulationMembershipAuthorityPublication,
+                .afterPopulationMembershipAuthorityCausalAppend,
+                .afterPopulationMembershipAuthorityPublication,
+                .afterMembershipEcologicalDependencyCalculation,
+            ].contains($0)
+        }
     let causalFaultRollback = causalFaultReady
-        && AgentCausalRetentionFaultPoint.allCases.allSatisfy { fault in
+        && historicalEcologicalFaults.allSatisfy { fault in
             var candidate = causalFaultBase
             let before = try! candidate.durableStateBytes()
             do {
@@ -1147,10 +2099,11 @@ func runPebbleAgentsEcologicalObservationSmoke() {
         "ecological-observation-registered-later",
         receptionPosition: AgentPosition(x: 0, y: 64, z: 3)
     )
-    try! registeredLater.setEcologicalObservationEnabled(true)
+    try! ecologicalObservationEnable(&registeredLater)
     _ = try! registeredLater.recordEcologicalObservation(
         normalizedObservation(registeredLater, observer: "agent_0")
     )
+    ecologicalObservationUseIndependentReceiptSchema(&registeredLater)
     let migrationRoute = [
         AgentPosition(x: 4, y: 64, z: 3),
         AgentPosition(x: 3, y: 64, z: 3),
@@ -1193,10 +2146,11 @@ func runPebbleAgentsEcologicalObservationSmoke() {
     var childRegisteredLater = observationBase(
         "ecological-observation-child-registered-later"
     )
-    try! childRegisteredLater.setEcologicalObservationEnabled(true)
+    try! ecologicalObservationEnable(&childRegisteredLater)
     _ = try! childRegisteredLater.recordEcologicalObservation(
         normalizedObservation(childRegisteredLater, observer: "agent_0")
     )
+    ecologicalObservationUseIndependentReceiptSchema(&childRegisteredLater)
     try! childRegisteredLater.initializeLocalEcology(
         observations: [birthHabitat]
     )

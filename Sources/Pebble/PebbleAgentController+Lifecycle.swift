@@ -109,6 +109,12 @@ extension PebbleAgentController {
     }
 
     func start(world: World, player: Player, founders: PebbleNormalFounderProfile? = nil) -> PebbleAgentCommandResult {
+        if let fatalSessionIntegrityFailure, session != nil {
+            return failure(
+                "PebbleAgents start refused while the current session is "
+                    + "fatally halted: \(fatalSessionIntegrityFailure)"
+            )
+        }
         if let candidatePhysicalHardFailure {
             return failure(
                 "PebbleAgents start refused after candidate physical hard failure: "
@@ -292,6 +298,10 @@ extension PebbleAgentController {
                 )
                 throw error
             }
+
+            try candidateSession.rebasePhysiologicalTime(
+                toWorldTick: world.time
+            )
 
             // This is the publication boundary: both sides have already been
             // constructed and verified, and no throwing work remains.
@@ -706,6 +716,8 @@ extension PebbleAgentController {
         candidateMovementLateFailureProofInjected = false
         candidateRenewableLateFailureProofInjected = false
         candidateAgricultureNavigationFailureProofInjected = false
+        increment05IntegrityFailureProofPending = false
+        increment05IntegrityFailureProofAttemptCount = 0
         lastPhysicalSimulationCoverageTraceKey = nil
     }
 
@@ -957,6 +969,7 @@ extension PebbleAgentController {
         checkpointPhysicalCustodyFailurePoint = nil
         worldReceiptAttemptSerial = 0
         lastError = nil
+        fatalSessionIntegrityFailure = nil
         trace(
             "stop probesRemoved=\(removed) reason=\(reason) "
                 + "custodyHandoff=\(outcome.custodyHandoffProtected ? "protected" : "none") "

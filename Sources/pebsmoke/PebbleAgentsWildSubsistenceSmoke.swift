@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private let wildOrigin = AgentPosition(x: 0, y: 64, z: 0)
 private let wildLifecycle = try! AgentLifecycleConfiguration(
@@ -36,6 +36,9 @@ private func wildBase(_ id: String) -> AgentSimulationSession {
     try! session.setLifecycleEnabled(true, configuration: wildLifecycle)
     try! session.setSkillsEnabled(true)
     try! session.setEcologicalObservationEnabled(true)
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.independentEcologicalReceiptVersion
+    )
     return session
 }
 

@@ -565,13 +565,20 @@ extension PebbleAgentController {
                 guard arguments.count == 2, let name = AgentCheckpointName(rawValue: arguments[1]) else {
                     return failure(usage)
                 }
-                guard let session, activeWorld === world else {
+                guard var session, activeWorld === world else {
                     return failure("No active PebbleAgents session.")
                 }
+                var recorder = replayRecorder
                 let wasPaused = isPaused
                 isPaused = true
                 credit = 0
                 defer { isPaused = wasPaused }
+                try reconcilePhysiologicalTimeIfRecording(
+                    mode: wasPaused ? .rebase : .advance,
+                    worldTick: world.time,
+                    session: &session,
+                    recorder: &recorder
+                )
                 let readiness = checkpointReadiness(session: session)
                 guard readiness.ready else {
                     return failure(
@@ -685,6 +692,7 @@ extension PebbleAgentController {
                     )
                 }
                 self.session = session
+                replayRecorder = recorder
                 checkpointCustodyHandoff = proposedCustodyHandoff
                 let message = "checkpoint saved name=\(name.rawValue) id=\(checkpoint.checkpointID.rawValue) tick=\(checkpoint.tick.rawValue) simulation=\(checkpoint.simulationID.rawValue) digest=\(checkpoint.semanticDigest.rawValue) storageDigest=\(manifest.storageDigest.rawValue) manifestIntegrity=v\(manifest.manifestIntegrityVersion ?? 0):\(manifest.manifestIntegrityDigest?.rawValue ?? "none") bytes=\(bytes.count) causalSequence=\(causalAfter.latestSequence) restartSafe=\(safety.safe ? 1 : 0) protectedCustodyAgents=\(decodedCustody.count) protectedCustodyStacks=\(protectedStackCount) protectedCustodyQuantity=\(protectedQuantity) boundCells=\(binding.cells.count) physicalReferences=\(reconciliation?.assets.count ?? 0) world=\(binding.worldID) mutation=none"
                 trace(message)
@@ -753,14 +761,47 @@ extension PebbleAgentController {
                     return failure("Replay recording is already active.")
                 }
                 let stored = try store.loadCheckpoint(name: name)
-                let recorder = try AgentReplayRecorder(
+                let recorder: AgentReplayRecorder
+                if let exact = try? AgentReplayRecorder(
                     checkpoint: stored.checkpoint,
                     session: session
-                )
+                ) {
+                    recorder = exact
+                } else {
+                    // Loading deliberately rebases the restored World cursor
+                    // to exclude offline/suspended time. Reconstruct that one
+                    // durable difference as the first replay operation rather
+                    // than requiring a second checkpoint or guessing elapsed
+                    // biology.
+                    guard let reboundWorldTick = session
+                        .physiologicalTimeSnapshot()
+                        .lastReconciledWorldTick else {
+                        throw AgentReplayError.currentStateMismatch
+                    }
+                    var reconstructed = try AgentSimulationSession.restoring(
+                        stored.checkpoint
+                    )
+                    var candidateRecorder = try AgentReplayRecorder(
+                        checkpoint: stored.checkpoint,
+                        session: reconstructed
+                    )
+                    try candidateRecorder.apply(
+                        .reconcilePhysiologicalTime(
+                            mode: .rebase,
+                            worldTick: reboundWorldTick
+                        ),
+                        to: &reconstructed
+                    )
+                    guard try reconstructed.durableStateDigest()
+                        == session.durableStateDigest() else {
+                        throw AgentReplayError.currentStateMismatch
+                    }
+                    recorder = candidateRecorder
+                }
                 replayRecorder = recorder
                 replayBaseCheckpointName = name
                 self.session = session
-                let message = "replay recording started base=\(name.rawValue) checkpoint=\(stored.checkpoint.checkpointID.rawValue) tick=\(session.tick) digest=\(stored.checkpoint.semanticDigest.rawValue) records=0"
+                let message = "replay recording started base=\(name.rawValue) checkpoint=\(stored.checkpoint.checkpointID.rawValue) tick=\(session.tick) digest=\(stored.checkpoint.semanticDigest.rawValue) records=\(recorder.records.count)"
                 trace(message)
                 return success(message)
             case "stop":
@@ -819,6 +860,25 @@ extension PebbleAgentController {
         let result = try activeRecorder.apply(operation, to: &session)
         recorder = activeRecorder
         return result
+    }
+
+    func reconcilePhysiologicalTimeIfRecording(
+        mode: AgentPhysiologicalTimeReplayMode,
+        worldTick: Int,
+        session: inout AgentSimulationSession,
+        recorder: inout AgentReplayRecorder?
+    ) throws {
+        let operation = AgentReplayOperation.reconcilePhysiologicalTime(
+            mode: mode,
+            worldTick: worldTick
+        )
+        if try applyRecordedOperationIfActive(
+            operation,
+            session: &session,
+            recorder: &recorder
+        ) == nil {
+            _ = try session.applyReplayOperation(operation)
+        }
     }
 
     func applyCommandMutationIfRecording(
@@ -2242,6 +2302,9 @@ extension PebbleAgentController {
                     )
             }
 
+            try candidate.rebasePhysiologicalTime(
+                toWorldTick: world.time
+            )
             session = candidate
             constructionExecutor = candidateConstructionExecutor
             interactionExecutor = candidateInteractionExecutor

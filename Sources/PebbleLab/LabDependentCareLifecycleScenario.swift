@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private struct CareScenarioCheck: Codable, Equatable {
     let name: String
@@ -127,6 +127,9 @@ private func careScenarioBase(seed: UInt32) -> AgentSimulationSession {
     try! session.setKinshipEnabled(true)
     try! session.setHouseholdsEnabled(true)
     try! session.setReproductionEnabled(true)
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.householdVersion
+    )
     return session
 }
 
@@ -238,7 +241,12 @@ func runDependentCareLifecycleSmoke(_ options: Options) -> Never {
             nourishmentHungerThreshold: 0.05
         )
     ), to: &direct)
-    add("activation promotes v9", try! direct.makeCheckpoint().schemaVersion == 9)
+    var historicalActivation = direct
+    try! historicalActivation.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.dependentCareVersion
+    )
+    add("activation promotes v9",
+        try! historicalActivation.makeCheckpoint().schemaVersion == 9)
 
     let patch = direct.localEcologySnapshot().patches.first!
     _ = try! recorder.apply(.applyForageOutcomes(
@@ -287,10 +295,14 @@ func runDependentCareLifecycleSmoke(_ options: Options) -> Never {
         }
     }
     let engagementProof = direct.dependentCareSnapshot().activeEngagements
-    let duringEngagement = try! direct.makeCheckpoint()
+    var historicalDuringEngagement = direct
+    try! historicalDuringEngagement.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.dependentCareVersion
+    )
+    let duringEngagement = try! historicalDuringEngagement.makeCheckpoint()
     add("restart during engagement exact", (try! AgentSimulationSession.restoring(
         duringEngagement
-    ).durableStateBytes()) == (try! direct.durableStateBytes()))
+    ).durableStateBytes()) == (try! historicalDuringEngagement.durableStateBytes()))
     let newbornAfterCareTick = try! direct.state(for: birth.newbornID)
     add("newborn passive", newbornAfterCareTick.goalSelectionCount
         == newbornBefore.goalSelectionCount
@@ -344,6 +356,9 @@ func runDependentCareLifecycleSmoke(_ options: Options) -> Never {
         && juvenile.permits(.selfConsumeCarriedFood) && !juvenile.permits(.harvest)
         && !juvenile.permits(.build) && !juvenile.permits(.reproduce))
 
+    try! direct.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.dependentCareVersion
+    )
     let checkpoint = try! direct.makeCheckpoint()
     let durableBytes = try! direct.durableStateBytes()
     let restored = try! AgentSimulationSession.restoring(checkpoint)
@@ -355,9 +370,13 @@ func runDependentCareLifecycleSmoke(_ options: Options) -> Never {
     let replayed = try! AgentSessionReplayer.replay(
         checkpoint: v8Checkpoint, journal: journal
     )
+    var replayedHistorical = replayed.session
+    try! replayedHistorical.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.dependentCareVersion
+    )
     add("replay v9 exact", journal.manifest.schemaVersion == 9
         && replayed.report.verified
-        && (try! replayed.session.durableStateBytes()) == durableBytes)
+        && (try! replayedHistorical.durableStateBytes()) == durableBytes)
     add("World boundary", true,
         "PebbleAgents has no World import; no block or World mutation event is emitted")
 

@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private let skillHome = AgentPosition(x: 0, y: 64, z: 0)
 private let skillLifecycle = try! AgentLifecycleConfiguration(
@@ -93,6 +93,9 @@ private func skillMortalitySession() -> AgentSimulationSession {
     )
     try! session.setLifecycleEnabled(true, configuration: skillLifecycle)
     try! session.setSkillsEnabled(true)
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.skillVersion
+    )
     return session
 }
 
@@ -131,6 +134,11 @@ private func skillBase(
     if activateSkills {
         try! session.setSkillsEnabled(true, configuration: skillConfiguration)
     }
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: activateSkills
+            ? AgentCheckpointSchema.skillVersion
+            : AgentCheckpointSchema.lifecycleVersion
+    )
     return session
 }
 

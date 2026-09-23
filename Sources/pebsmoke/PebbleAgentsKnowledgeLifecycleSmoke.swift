@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private func knowledgeLifecycleAgent(
     _ id: String,
@@ -117,6 +117,9 @@ private func knowledgeLifecycleSession(
     )
     try! session.setSocialEnabled(true)
     try! session.setKnowledgeGraphEnabled(true)
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.knowledgeVersion
+    )
     return session
 }
 
@@ -340,6 +343,9 @@ private func knowledgeLifecycleChurn(
     try! session.setReproductionEnabled(true)
     session.setSurvivalEnabled(true)
     try! session.setMortalityEnabled(true)
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.knowledgeVersion
+    )
 
     let churnCount = knowledge.maximumBeliefsPerAgent + 1
     for index in 0..<churnCount {

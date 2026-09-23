@@ -71,7 +71,7 @@ extension PebbleAgentController {
     /// Times one real controller tick after an ordinary founder start. This
     /// proof-only sampler creates no fixture and changes no scheduling policy;
     /// callers collect independent samples while the normal World is ready.
-    private func runIncrement04PerformanceSample(
+    func runIncrement04PerformanceSample(
         world: World,
         player: Player
     ) throws -> String {
@@ -100,6 +100,7 @@ extension PebbleAgentController {
         let ecologicalBefore = beforeSession.ecologicalObservationSnapshot()
         let wildBefore = beforeSession.wildSubsistenceSnapshot()
         let activityBefore = beforeSession.autonomousActivitySnapshot()
+        let physiologicalBefore = beforeSession.physiologicalTimeSnapshot()
         let consumedBefore = beforeSession.physicalFoodSurvivalSnapshot()?
             .totalConsumedQuantity ?? 0
         let observationSequencesBefore = Set(
@@ -127,6 +128,7 @@ extension PebbleAgentController {
         let ecologicalAfter = afterSession.ecologicalObservationSnapshot()
         let wildAfter = afterSession.wildSubsistenceSnapshot()
         let activityAfter = afterSession.autonomousActivitySnapshot()
+        let physiologicalAfter = afterSession.physiologicalTimeSnapshot()
         let consumedAfter = afterSession.physicalFoodSurvivalSnapshot()?
             .totalConsumedQuantity ?? 0
         let newObservations = ecologicalAfter.observations.filter {
@@ -176,6 +178,9 @@ extension PebbleAgentController {
             format: "%.3f",
             Double(elapsedNanoseconds) / 1_000_000
         )
+        let physiologicalBoundaries =
+            physiologicalAfter.appliedBoundaryCount
+                - physiologicalBefore.appliedBoundaryCount
         let line = "PS01_INCREMENT_04_PERFORMANCE_SAMPLE "
             + "founders=\(founderCount) tick=\(tickBefore)>\(afterSession.tick) "
             + "controllerMs=\(controllerMilliseconds) "
@@ -191,6 +196,7 @@ extension PebbleAgentController {
             + "successfulAcquisitions=\(successfulAcquisitions) "
             + "itemEntities=\(itemEntities) consumptions=\(consumptions) "
             + "coverage=ready runtimeErrors=\(runtimeErrorCount) "
+            + "physiologicalBoundaries=\(physiologicalBoundaries) "
             + "hardFailure=\(candidatePhysicalHardFailure == nil ? 0 : 1) "
             + "catchUpDropped=\(droppedCatchUpSteps - catchUpDroppedBefore) "
             + "catchUpDroppedTotal=\(droppedCatchUpSteps)"

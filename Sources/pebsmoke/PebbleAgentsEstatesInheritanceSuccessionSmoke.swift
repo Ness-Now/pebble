@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private let estateAgentIDs = (0..<3).map {
     AgentID(rawValue: "agent_\($0)")!
@@ -54,6 +54,18 @@ private let estateSecondAssetID =
     AgentMaterialAssetID(rawValue: "asset:civ33:iron_shovel:2")!
 private let estateSecondOwnerClaimID =
     AgentMaterialClaimID(rawValue: "claim:civ33:owner:agent_0:second")!
+
+private func estateEnable(
+    _ session: inout AgentSimulationSession,
+    configuration: AgentEstateConfiguration = .live
+) throws {
+    var candidate = session
+    try candidate.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.estateVersion
+    )
+    try candidate.setEstatesEnabled(true, configuration: configuration)
+    session = candidate
+}
 
 private func estateInteraction(
     _ session: AgentSimulationSession,
@@ -154,13 +166,18 @@ private func makeEstateSession(
             )
         )
         try! session.setReproductionEnabled(true)
-        while session.pendingBirthSitePlan() == nil {
+        for _ in 0..<64 where session.pendingBirthSitePlan() == nil {
             _ = try! session.advanceTick()
         }
+        precondition(
+            session.pendingBirthSitePlan() != nil,
+            "estate birth-plan bound exceeded"
+        )
         let plan = session.pendingBirthSitePlan()!
-        while session.tick < plan.dueTick {
+        for _ in 0..<64 where session.tick < plan.dueTick {
             _ = try! session.advanceTick()
         }
+        precondition(session.tick >= plan.dueTick, "estate birth due bound exceeded")
         birth = try! session.applyBirthSiteObservation(
             AgentBirthSiteObservation(
                 planID: plan.planID, observedTick: session.tick,
@@ -220,8 +237,10 @@ private func makeEstateSession(
         true, configuration: mortalityConfiguration
     )
     if enableEstates {
-        try! session.setEstatesEnabled(
-            true, configuration: estateConfiguration
+        try! estateEnable(&session, configuration: estateConfiguration)
+    } else {
+        try! session.useLegacyCognitivePhysiologyReplayFixture(
+            schemaVersion: AgentCheckpointSchema.durableHouseConsentVersion
         )
     }
     return (session, birth)
@@ -232,9 +251,13 @@ private func finalizeEstatePhysicalDeath(
     _ session: inout AgentSimulationSession,
     physicalAssets: [AgentMaterialStackSnapshot]
 ) -> AgentMortalityRecord {
-    while session.pendingMortalityTransitions().isEmpty {
+    for _ in 0..<64 where session.pendingMortalityTransitions().isEmpty {
         _ = try! session.advanceTick()
     }
+    precondition(
+        !session.pendingMortalityTransitions().isEmpty,
+        "estate mortality transition bound exceeded"
+    )
     let pending = session.pendingMortalityTransitions().first!
     let receipt = "\(session.simulationID.rawValue):mortality-exit:"
         + "\(pending.agentID.rawValue):t\(session.tick)"
@@ -293,9 +316,13 @@ private func finalizeEstateDeath(
 private func finalizeEmptyEstateDeathRefused(
     _ session: inout AgentSimulationSession
 ) -> Bool {
-    while session.pendingMortalityTransitions().isEmpty {
+    for _ in 0..<64 where session.pendingMortalityTransitions().isEmpty {
         _ = try! session.advanceTick()
     }
+    precondition(
+        !session.pendingMortalityTransitions().isEmpty,
+        "estate refused-mortality transition bound exceeded"
+    )
     let pending = session.pendingMortalityTransitions().first!
     let receipt = "\(session.simulationID.rawValue):retention:"
         + "\(pending.agentID.rawValue):t\(session.tick)"
@@ -362,13 +389,21 @@ private func registerEstateAsset(
 private func createEstateSiblingBirth(
     _ session: inout AgentSimulationSession
 ) -> AgentBirthRecord {
-    while session.pendingBirthSitePlan() == nil {
+    for _ in 0..<64 where session.pendingBirthSitePlan() == nil {
         _ = try! session.advanceTick()
     }
+    precondition(
+        session.pendingBirthSitePlan() != nil,
+        "estate sibling birth-plan bound exceeded"
+    )
     let plan = session.pendingBirthSitePlan()!
-    while session.tick < plan.dueTick {
+    for _ in 0..<64 where session.tick < plan.dueTick {
         _ = try! session.advanceTick()
     }
+    precondition(
+        session.tick >= plan.dueTick,
+        "estate sibling birth due bound exceeded"
+    )
     return try! session.applyBirthSiteObservation(
         AgentBirthSiteObservation(
             planID: plan.planID, observedTick: session.tick,
@@ -948,6 +983,12 @@ func runPebbleAgentsEstatesInheritanceSuccessionSmoke() {
         maximumTransitionsPerTick: 32
     )
 
+    @inline(never)
+    func runEstateActivationAndRetentionScenarios() -> (
+        AgentSessionCheckpoint, AgentEstateRecord
+    ) {
+    @inline(never)
+    func runEstateInitialActivationScenarios() {
     var missingRights = makeEstateSession(
         "civ33-needs-rights", includeUnionAndChild: false,
         registerAsset: false
@@ -985,7 +1026,7 @@ func runPebbleAgentsEstatesInheritanceSuccessionSmoke() {
     _ = finalizeEstatePhysicalDeath(
         &postActivationOnly, physicalAssets: []
     )
-    try! postActivationOnly.setEstatesEnabled(true)
+    try! estateEnable(&postActivationOnly)
     postActivationOnly = estateSessionPreparingLethalAgent(
         postActivationOnly, targetID: estateAgentIDs[1]
     )
@@ -997,7 +1038,13 @@ func runPebbleAgentsEstatesInheritanceSuccessionSmoke() {
             && postActivationOnly.estateSnapshot().totalEstateCount == 1
             && postActivationOnly.estateSnapshot().estates.map(\.decedentID)
                 == [estateAgentIDs[1]])
+    }
+    runEstateInitialActivationScenarios()
 
+    @inline(never)
+    func runEstateRetentionScenarios() -> (
+        AgentSessionCheckpoint, AgentEstateRecord
+    ) {
     var pinnedRetention = makeEstateSession(
         "civ33-retention-pinned",
         thirdPartyClaim: true,
@@ -1104,7 +1151,15 @@ func runPebbleAgentsEstatesInheritanceSuccessionSmoke() {
                 == coordinatedRetention.estateSnapshot()
             && coordinatedRestart.mortalitySnapshot()
                 == coordinatedRetention.mortalitySnapshot())
+    return (coordinatedCheckpoint, retainedB)
+    }
+    return runEstateRetentionScenarios()
+    }
+    let (coordinatedCheckpoint, retainedB) =
+        runEstateActivationAndRetentionScenarios()
 
+    @inline(never)
+    func runEstateHistoricalEvidenceScenarios() {
     let retainedParentHistory = estateParentHistoryFixture(
         "civ33-parent-retained-history", compactParentDeath: false
     )
@@ -1240,11 +1295,14 @@ func runPebbleAgentsEstatesInheritanceSuccessionSmoke() {
         deadChildFixture.0
     )
     let historicalChildID = deadChildFixture.1!.newbornID
-    while deadChildHistory.lifecycleSnapshot().members.first(where: {
+    for _ in 0..<64 where deadChildHistory.lifecycleSnapshot().members.first(where: {
         $0.agentID == historicalChildID
     })!.currentStage != .mature {
         _ = try! deadChildHistory.advanceTick()
     }
+    precondition(deadChildHistory.lifecycleSnapshot().members.first(where: {
+        $0.agentID == historicalChildID
+    })?.currentStage == .mature, "estate child maturity bound exceeded")
     for membership in try! deadChildHistory.currentHouseMemberships(
         of: historicalChildID
     ) {
@@ -1343,11 +1401,14 @@ func runPebbleAgentsEstatesInheritanceSuccessionSmoke() {
     let historicalSiblingID = createEstateSiblingBirth(
         &deadSiblingHistory
     ).newbornID
-    while deadSiblingHistory.lifecycleSnapshot().members.first(where: {
+    for _ in 0..<64 where deadSiblingHistory.lifecycleSnapshot().members.first(where: {
         $0.agentID == historicalSiblingID
     })!.currentStage != .mature {
         _ = try! deadSiblingHistory.advanceTick()
     }
+    precondition(deadSiblingHistory.lifecycleSnapshot().members.first(where: {
+        $0.agentID == historicalSiblingID
+    })?.currentStage == .mature, "estate sibling maturity bound exceeded")
     for membership in try! deadSiblingHistory.currentHouseMemberships(
         of: historicalSiblingID
     ) {
@@ -1580,6 +1641,19 @@ func runPebbleAgentsEstatesInheritanceSuccessionSmoke() {
             && (try! historicalReplayed.session.durableStateBytes())
                 == (try! historicalReplaySession.durableStateBytes()))
 
+    }
+    runEstateHistoricalEvidenceScenarios()
+
+    @inline(never)
+    func runEstatePrimaryAndFailureScenarios(
+        coordinatedCheckpoint: AgentSessionCheckpoint,
+        retainedB: AgentEstateRecord
+    ) {
+    @inline(never)
+    func runEstatePrimaryScenario() -> (
+        settled: AgentSessionCheckpoint,
+        open: AgentSessionCheckpoint
+    ) {
     let sessionAndBirth = makeEstateSession("civ33-main")
     var session = sessionAndBirth.0
     let childID = sessionAndBirth.1!.newbornID
@@ -2022,7 +2096,13 @@ func runPebbleAgentsEstatesInheritanceSuccessionSmoke() {
                 == beforeMismatchedReplay
         }
     }())
+    return (try! session.makeCheckpoint(), openCheckpoint)
+    }
+    let primaryCheckpoints = runEstatePrimaryScenario()
 
+    @inline(never)
+    func runEstateFallbackAndAdministratorScenarios()
+        -> AgentSessionCheckpoint {
     let formerPartnerFixture = makeEstateSession(
         "civ33-former-partner", registerAsset: false
     )
@@ -2255,7 +2335,16 @@ func runPebbleAgentsEstatesInheritanceSuccessionSmoke() {
             && afterIncapacity.administrations[1].status == .nominated
             && afterIncapacity.beneficiaries
                 == incapacityEstate.beneficiaries)
+    return try! replacementFixture.makeCheckpoint()
+    }
+    let replacementCheckpoint =
+        runEstateFallbackAndAdministratorScenarios()
 
+    @inline(never)
+    func runEstateAllocationAndPartialScenarios() -> (
+        completed: AgentSessionCheckpoint,
+        minorID: AgentID
+    ) {
     var orderedAssets = makeEstateSession(
         "civ33-ordered-assets", registerAsset: false
     ).0
@@ -2575,7 +2664,16 @@ func runPebbleAgentsEstatesInheritanceSuccessionSmoke() {
             }
             && partialLossRestart.estateSnapshot()
                 == partialAdministratorLoss.estateSnapshot())
+    let multipleMinorID = multipleEstate.beneficiaries.first {
+        $0.basis == .canonicalChild
+    }!.agentID
+    return (completedMultipleCheckpoint, multipleMinorID)
+    }
+    let allocationProof = runEstateAllocationAndPartialScenarios()
 
+    @inline(never)
+    func runEstateBlockedAndDormantScenarios()
+        -> AgentSessionCheckpoint {
     var unregisteredResidual = makeEstateSession(
         "civ33-unregistered-residual",
         registerAsset: false
@@ -2673,8 +2771,16 @@ func runPebbleAgentsEstatesInheritanceSuccessionSmoke() {
                 == .dormantNoSuccessor
             && dormantRestart.estateSnapshot()
                 == dormant.estateSnapshot())
+    return try! disputed.makeCheckpoint()
+    }
+    let disputedCheckpoint = runEstateBlockedAndDormantScenarios()
 
-    let settledCheckpoint = try! session.makeCheckpoint()
+    @inline(never)
+    func runEstateCheckpointAttackScenarios() {
+    let settledCheckpoint = primaryCheckpoints.settled
+    let openCheckpoint = primaryCheckpoints.open
+    let completedMultipleCheckpoint = allocationProof.completed
+    let multipleMinorID = allocationProof.minorID
     check("checkpoint refuses missing estate authority", estateRestoreRefused(
         settledCheckpoint
     ) { $0.removeValue(forKey: "estateState") })
@@ -2925,9 +3031,6 @@ func runPebbleAgentsEstatesInheritanceSuccessionSmoke() {
               state["estates"] = estates
               durable["estateState"] = state
           })
-    let multipleMinorID = multipleEstate.beneficiaries.first {
-        $0.basis == .canonicalChild
-    }!.agentID
     check("checkpoint refuses transforming a minor custodian into owner",
           estateRestoreRefused(completedMultipleCheckpoint) { durable in
               var rights = durable["materialRightsState"]
@@ -2945,7 +3048,6 @@ func runPebbleAgentsEstatesInheritanceSuccessionSmoke() {
               rights["records"] = records
               durable["materialRightsState"] = rights
           })
-    let disputedCheckpoint = try! disputed.makeCheckpoint()
     check("checkpoint refuses deletion of a retained third-party claim",
           estateRestoreRefused(disputedCheckpoint) { durable in
               var rights = durable["materialRightsState"]
@@ -2973,7 +3075,6 @@ func runPebbleAgentsEstatesInheritanceSuccessionSmoke() {
               state["estates"] = estates
               durable["estateState"] = state
           })
-    let replacementCheckpoint = try! replacementFixture.makeCheckpoint()
     check("checkpoint refuses retaining a dead administrator as active",
           estateRestoreRefused(replacementCheckpoint) { durable in
               var state = durable["estateState"] as! [String: Any]
@@ -2993,4 +3094,11 @@ func runPebbleAgentsEstatesInheritanceSuccessionSmoke() {
               state["estates"] = estates
               durable["estateState"] = state
           })
+    }
+    runEstateCheckpointAttackScenarios()
+    }
+    runEstatePrimaryAndFailureScenarios(
+        coordinatedCheckpoint: coordinatedCheckpoint,
+        retainedB: retainedB
+    )
 }

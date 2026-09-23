@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private let gateFB05Main = AgentPosition(x: 0, y: 64, z: 0)
 private let gateFB05East = AgentPosition(x: 0, y: 64, z: 4)
@@ -49,7 +49,11 @@ private func gateFB05ScaleConfiguration()
 private func gateFB05EnableScale(
     _ session: inout AgentSimulationSession
 ) throws {
-    try session.initializePopulationScaling(
+    var candidate = session
+    try candidate.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.populationScaleVersion
+    )
+    try candidate.initializePopulationScaling(
         additionalSettlements: [AgentPopulationSettlement(
             settlementID: gateFB05EastID,
             anchor: gateFB05East,
@@ -60,6 +64,7 @@ private func gateFB05EnableScale(
         )],
         configuration: gateFB05ScaleConfiguration()
     )
+    session = candidate
 }
 
 private func gateFB05Session(
@@ -97,6 +102,13 @@ private func gateFB05Session(
     if scaleEnabled {
         try! gateFB05EnableScale(&session)
     }
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: scaleEnabled
+            ? AgentCheckpointSchema.populationScaleVersion
+            : (familyEnabled
+                ? AgentCheckpointSchema.durableHouseConsentVersion
+                : AgentCheckpointSchema.verifiedSupervisionVersion)
+    )
     return session
 }
 
@@ -419,6 +431,9 @@ private func gateFB05GateECarrier(
     var session = gateFB05Session(
         simulationID, familyEnabled: true, scaleEnabled: false
     )
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: schemaVersion
+    )
     if schemaVersion == AgentCheckpointSchema.productionVersion {
         try! session.setProductionEnabled(true)
     } else {
@@ -546,18 +561,19 @@ func runPebbleAgentsGateFBlocker05Smoke() {
         AgentCheckpointSchema.archiveVersion,
         AgentCheckpointSchema.cultureVersion,
         AgentCheckpointSchema.lexicalDivergenceVersion,
+        AgentCheckpointSchema.temporalPhysiologyVersion,
     ]
     check("Family compatibility policy preserves schema 25 legacy semantics",
           AgentCheckpointSchema.familyValidationSemantics(for: 25)
             == .legacyCausalProofFallback)
-    check("Family compatibility policy explicitly covers strict schemas 26-43",
+    check("Family compatibility policy explicitly covers strict schemas 26-44",
           strictVersions.allSatisfy {
               AgentCheckpointSchema.familyValidationSemantics(for: $0)
                 == .strictDurableConsent
         })
     check("Family compatibility policy rejects unsupported schema integers",
           AgentCheckpointSchema.familyValidationSemantics(for: 24) == nil
-            && AgentCheckpointSchema.familyValidationSemantics(for: 44) == nil)
+            && AgentCheckpointSchema.familyValidationSemantics(for: 45) == nil)
 
     let cofounded = gateFB05CofoundedSession(
         "gate-f-b05-family-compatibility"
@@ -575,6 +591,9 @@ func runPebbleAgentsGateFBlocker05Smoke() {
         "gate-f-b05-estate-carrier",
         familyEnabled: true,
         scaleEnabled: false
+    )
+    try! estateCarrier.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.estateVersion
     )
     try! estateCarrier.setMaterialRightsEnabled(true)
     try! estateCarrier.setMortalityEnabled(
@@ -812,7 +831,7 @@ func runPebbleAgentsGateFBlocker05Smoke() {
 
     print("GATE_F_BLOCKER_05_PASS"
         + " checkpointSchema=35 observerSchema=13"
-        + " compatibility=25:legacy,26-39:strict"
+        + " compatibility=25:legacy,26-44:strict"
         + " minimizedDigest=\(minimizedCheckpointA.semanticDigest.rawValue)"
         + " migratedDigest=\(migratedCheckpoint.semanticDigest.rawValue)"
         + " duplicateAuthority=0 restartDuplicateEffects=0")

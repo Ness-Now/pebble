@@ -44,6 +44,7 @@ public enum AgentReplaySchema {
     public static let archiveVersion = 41
     public static let cultureVersion = 42
     public static let lexicalDivergenceVersion = 43
+    public static let temporalPhysiologyVersion = 44
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -74,6 +75,7 @@ public enum AgentReplaySchema {
             || version == writingVersion
             || version == archiveVersion || version == cultureVersion
             || version == lexicalDivergenceVersion
+            || version == temporalPhysiologyVersion
     }
 }
 
@@ -92,6 +94,7 @@ public struct AgentReplayRecordSequence: RawRepresentable, Codable, Hashable, Co
 
 public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case advanceTick
+    case physiologicalTime
     case externalUpdate
     case movementOutcomes
     case verifiedPhysicalMovements
@@ -244,10 +247,21 @@ public enum AgentReplayOperationKind: String, Codable, CaseIterable, Sendable {
     case longDistanceCommunicationDelivery
 }
 
+public enum AgentPhysiologicalTimeReplayMode: String, Codable, Sendable {
+    case advance
+    case advanceAndApplyEligibleBiology
+    case rebase
+}
+
 public enum AgentReplayOperation: Codable {
     case advanceTick(
+        physiologicalWorldTick: Int?,
         perceptions: [AgentPerceptionInput],
         physicalObservations: [AgentPhysicalSignalObservation]
+    )
+    case reconcilePhysiologicalTime(
+        mode: AgentPhysiologicalTimeReplayMode,
+        worldTick: Int
     )
     case externalUpdate(AgentExternalUpdate)
     case movementOutcomes([AgentMovementOutcome])
@@ -655,6 +669,7 @@ public enum AgentReplayOperation: Codable {
     public var kind: AgentReplayOperationKind {
         switch self {
         case .advanceTick: return .advanceTick
+        case .reconcilePhysiologicalTime: return .physiologicalTime
         case .externalUpdate: return .externalUpdate
         case .movementOutcomes: return .movementOutcomes
         case .verifiedPhysicalMovements: return .verifiedPhysicalMovements
@@ -1025,6 +1040,23 @@ public enum AgentReplayOperation: Codable {
     }
 }
 
+extension AgentReplayOperation {
+    /// Source-compatible constructor for historical/proof call sites. On a
+    /// legacy replay base, nil preserves the recorded cognitive-time
+    /// physiology contract. On a v44 base, nil means cognition without
+    /// additional authoritative World time (for example `/lab step`).
+    public static func advanceTick(
+        perceptions: [AgentPerceptionInput],
+        physicalObservations: [AgentPhysicalSignalObservation]
+    ) -> AgentReplayOperation {
+        .advanceTick(
+            physiologicalWorldTick: nil,
+            perceptions: perceptions,
+            physicalObservations: physicalObservations
+        )
+    }
+}
+
 public struct AgentReplayApplicationResult {
     public let tick: Int
     public let causalSequence: UInt64
@@ -1286,6 +1318,9 @@ public struct AgentReplayRecorder {
         simulationID = checkpoint.simulationID
         initialTick = checkpoint.tick.rawValue
         schemaVersion = checkpoint.schemaVersion
+            == AgentCheckpointSchema.temporalPhysiologyVersion
+            ? AgentReplaySchema.temporalPhysiologyVersion
+            : checkpoint.schemaVersion
             == AgentCheckpointSchema.lexicalDivergenceVersion
             ? AgentReplaySchema.lexicalDivergenceVersion
             : checkpoint.schemaVersion == AgentCheckpointSchema.cultureVersion
@@ -1352,6 +1387,27 @@ public struct AgentReplayRecorder {
         }
         guard records.count < AgentCheckpointLimits.maximumReplayRecords else {
             throw AgentReplayError.capacityReached(records.count)
+        }
+        let introducesTemporalPhysiology: Bool
+        switch operation {
+        case let .advanceTick(physiologicalWorldTick, _, _):
+            introducesTemporalPhysiology = physiologicalWorldTick != nil
+        case .reconcilePhysiologicalTime:
+            introducesTemporalPhysiology = true
+        default:
+            introducesTemporalPhysiology = false
+        }
+        let promotesTemporalPhysiology = introducesTemporalPhysiology
+            && schemaVersion < AgentReplaySchema.temporalPhysiologyVersion
+        if promotesTemporalPhysiology {
+            guard records.isEmpty,
+                  case .reconcilePhysiologicalTime(
+                    mode: .rebase, worldTick: _
+                  ) = operation else {
+                throw AgentReplayError.invalidJournal(
+                    "legacy temporal migration requires a first v44 rebase"
+                )
+            }
         }
         if case let .setSettlementMetricsEnabled(enabled, _) = operation,
            enabled,
@@ -1820,8 +1876,11 @@ public struct AgentReplayRecorder {
         } else {
             recordedOperation = operation
         }
+        let recordSchemaVersion = promotesTemporalPhysiology
+            ? AgentReplaySchema.temporalPhysiologyVersion
+            : schemaVersion
         let record = AgentReplayRecord(
-            schemaVersion: schemaVersion,
+            schemaVersion: recordSchemaVersion,
             simulationID: simulationID,
             recordSequence: AgentReplayRecordSequence(rawValue: UInt64(records.count + 1))!,
             operation: recordedOperation,
@@ -1836,6 +1895,7 @@ public struct AgentReplayRecorder {
         guard prospective.count <= AgentCheckpointLimits.maximumReplayBytes else {
             throw AgentReplayError.byteLimitReached(prospective.count)
         }
+        schemaVersion = recordSchemaVersion
         session = candidate
         records.append(record)
         return result
@@ -2002,6 +2062,18 @@ public enum AgentSessionReplayer {
                 )
             }
         }
+        if manifest.schemaVersion
+            == AgentReplaySchema.temporalPhysiologyVersion,
+           checkpoint.schemaVersion
+            < AgentCheckpointSchema.temporalPhysiologyVersion {
+            guard case .reconcilePhysiologicalTime(
+                mode: .rebase, worldTick: _
+            )? = journal.records.first?.operation else {
+                throw AgentReplayError.unsupportedSchema(
+                    manifest.schemaVersion
+                )
+            }
+        }
         if manifest.schemaVersion == AgentReplaySchema.archiveVersion,
            checkpoint.schemaVersion < AgentCheckpointSchema.archiveVersion {
             guard case .setArchiveEnabled(
@@ -2118,6 +2190,10 @@ public enum AgentSessionReplayer {
                 && checkpoint.schemaVersion
                     <= AgentCheckpointSchema.cultureVersion)
             || (manifest.schemaVersion
+                    == AgentReplaySchema.temporalPhysiologyVersion
+                && checkpoint.schemaVersion
+                    <= AgentCheckpointSchema.lexicalDivergenceVersion)
+            || (manifest.schemaVersion
                     == AgentReplaySchema.longDistanceCommunicationVersion
                 && checkpoint.schemaVersion
                     <= AgentCheckpointSchema.oralTransmissionVersion)
@@ -2194,11 +2270,36 @@ extension AgentSimulationSession {
         var languageLexicalInnovationResult:
             AgentLanguageLexicalInnovation?
         switch operation {
-        case let .advanceTick(perceptions, physicalObservations):
+        case let .advanceTick(
+            physiologicalWorldTick, perceptions, physicalObservations
+        ):
+            if let physiologicalWorldTick {
+                try candidate.advancePhysiologicalTime(
+                    toWorldTick: physiologicalWorldTick
+                )
+            }
             tickResult = try candidate.advanceTick(
                 perceptions: perceptions,
                 physicalObservations: physicalObservations
             )
+        case let .reconcilePhysiologicalTime(mode, worldTick):
+            switch mode {
+            case .advance:
+                try candidate.advancePhysiologicalTime(
+                    toWorldTick: worldTick
+                )
+            case .advanceAndApplyEligibleBiology:
+                try candidate.advancePhysiologicalTime(
+                    toWorldTick: worldTick
+                )
+                _ = try candidate.applyDuePhysiologicalBoundaries(
+                    at: candidate.tick
+                )
+            case .rebase:
+                try candidate.rebasePhysiologicalTime(
+                    toWorldTick: worldTick
+                )
+            }
         case let .externalUpdate(update):
             try candidate.applyExternalUpdate(update)
         case let .movementOutcomes(outcomes):
@@ -2222,6 +2323,14 @@ extension AgentSimulationSession {
         case let .setSocialEnabled(enabled):
             try candidate.setSocialEnabled(enabled)
         case let .setKnowledgeGraphEnabled(enabled, configuration):
+            if enabled,
+               let historicalSchema = candidate
+                .legacyTemporalSchemaVersionOverride,
+               historicalSchema < AgentCheckpointSchema.knowledgeVersion {
+                try candidate.useLegacyCognitivePhysiologyReplayFixture(
+                    schemaVersion: AgentCheckpointSchema.knowledgeVersion
+                )
+            }
             try candidate.setKnowledgeGraphEnabled(
                 enabled, configuration: configuration
             )
@@ -2245,6 +2354,15 @@ extension AgentSimulationSession {
         case let .innovateLanguageLexicalForm(
             agentID, senseID, acceptedEffect
         ):
+            if let historicalSchema = candidate
+                .legacyTemporalSchemaVersionOverride,
+               historicalSchema
+                < AgentCheckpointSchema.lexicalDivergenceVersion {
+                try candidate.useLegacyCognitivePhysiologyReplayFixture(
+                    schemaVersion: AgentCheckpointSchema
+                        .lexicalDivergenceVersion
+                )
+            }
             languageLexicalInnovationResult = try candidate
                 .innovateLanguageLexicalForm(
                     for: agentID,
@@ -2271,6 +2389,14 @@ extension AgentSimulationSession {
         case let .practiceWritingNotation(artifactID, teacherID, learnerID, teacherReceipt, learnerReceipt):
             try candidate.practiceWritingNotation(artifactID: artifactID, teacherID: teacherID, learnerID: learnerID, teacherReceipt: teacherReceipt, learnerReceipt: learnerReceipt)
         case let .setWritingEnabled(enabled, worldID, configuration):
+            if enabled,
+               let historicalSchema = candidate
+                .legacyTemporalSchemaVersionOverride,
+               historicalSchema < AgentCheckpointSchema.writingVersion {
+                try candidate.useLegacyCognitivePhysiologyReplayFixture(
+                    schemaVersion: AgentCheckpointSchema.writingVersion
+                )
+            }
             try candidate.setWritingEnabled(enabled, worldID: worldID, configuration: configuration)
         case let .acceptWriting(plan, receipt):
             _ = try candidate.acceptWriting(plan, receipt: receipt)
@@ -2317,6 +2443,14 @@ extension AgentSimulationSession {
                 receipt: receipt
             )
         case let .setDistributedCultureEnabled(enabled, configuration):
+            if enabled,
+               let historicalSchema = candidate
+                .legacyTemporalSchemaVersionOverride,
+               historicalSchema < AgentCheckpointSchema.cultureVersion {
+                try candidate.useLegacyCognitivePhysiologyReplayFixture(
+                    schemaVersion: AgentCheckpointSchema.cultureVersion
+                )
+            }
             try candidate.setDistributedCultureEnabled(
                 enabled, configuration: configuration
             )
@@ -2478,6 +2612,16 @@ extension AgentSimulationSession {
         case .clearPopulationDiagnostics:
             try candidate.clearPopulationDiagnostics()
         case let .setSettlementMetricsEnabled(enabled, configuration):
+            if enabled,
+               let historicalSchema = candidate
+                .legacyTemporalSchemaVersionOverride,
+               historicalSchema
+                < AgentCheckpointSchema.settlementMetricsVersion {
+                try candidate.useLegacyCognitivePhysiologyReplayFixture(
+                    schemaVersion: AgentCheckpointSchema
+                        .settlementMetricsVersion
+                )
+            }
             try candidate.setSettlementMetricsEnabled(enabled, configuration: configuration)
         case .clearSettlementMetrics:
             try candidate.clearSettlementMetrics()
@@ -2667,6 +2811,14 @@ extension AgentSimulationSession {
                 dependentID: dependentID, to: guardianID
             )
         case let .setFamilyV1Enabled(enabled, configuration):
+            if enabled,
+               let historicalSchema = candidate
+                .legacyTemporalSchemaVersionOverride,
+               historicalSchema < AgentCheckpointSchema.familyVersion {
+                try candidate.useLegacyCognitivePhysiologyReplayFixture(
+                    schemaVersion: AgentCheckpointSchema.familyVersion
+                )
+            }
             try candidate.setFamilyV1Enabled(enabled, configuration: configuration)
         case let .proposeUnion(receipt):
             _ = try candidate.proposeUnion(receipt)
@@ -2684,10 +2836,28 @@ extension AgentSimulationSession {
                 founderID: founderID, operationID: operationID
             )
         case let .coFoundHouse(founderIDs, receipts):
+            if let historicalSchema = candidate
+                .legacyTemporalSchemaVersionOverride,
+               historicalSchema
+                < AgentCheckpointSchema.durableHouseConsentVersion {
+                try candidate.useLegacyCognitivePhysiologyReplayFixture(
+                    schemaVersion: AgentCheckpointSchema
+                        .durableHouseConsentVersion
+                )
+            }
             _ = try candidate.coFoundHouse(
                 founderIDs: founderIDs, receipts: receipts
             )
         case let .joinHouse(houseID, request, acceptance):
+            if let historicalSchema = candidate
+                .legacyTemporalSchemaVersionOverride,
+               historicalSchema
+                < AgentCheckpointSchema.durableHouseConsentVersion {
+                try candidate.useLegacyCognitivePhysiologyReplayFixture(
+                    schemaVersion: AgentCheckpointSchema
+                        .durableHouseConsentVersion
+                )
+            }
             try candidate.joinHouse(
                 houseID, request: request, acceptance: acceptance
             )
@@ -2710,6 +2880,14 @@ extension AgentSimulationSession {
         case let .applyEstatePhysicalSettlement(outcome):
             _ = try candidate.applyEstatePhysicalSettlement(outcome)
         case let .setProductionEnabled(enabled, configuration):
+            if enabled,
+               let historicalSchema = candidate
+                .legacyTemporalSchemaVersionOverride,
+               historicalSchema < AgentCheckpointSchema.productionVersion {
+                try candidate.useLegacyCognitivePhysiologyReplayFixture(
+                    schemaVersion: AgentCheckpointSchema.productionVersion
+                )
+            }
             try candidate.setProductionEnabled(
                 enabled, configuration: configuration
             )
@@ -2782,6 +2960,14 @@ extension AgentSimulationSession {
         case .reviewContractParticipantContinuity:
             try candidate.reviewContractParticipantContinuity()
         case let .setMarketEnabled(enabled, configuration):
+            if enabled,
+               let historicalSchema = candidate
+                .legacyTemporalSchemaVersionOverride,
+               historicalSchema < AgentCheckpointSchema.marketVersion {
+                try candidate.useLegacyCognitivePhysiologyReplayFixture(
+                    schemaVersion: AgentCheckpointSchema.marketVersion
+                )
+            }
             try candidate.setMarketEnabled(enabled, configuration: configuration)
         case let .registerMarketPlace(
             operationID, marketID, position, containerLocationID,

@@ -7,6 +7,7 @@ public struct AgentSimulationSession {
     public var simulationID: AgentSimulationID { clock.simulationID }
     public var simulationInstant: AgentSimulationInstant { clock.instant }
     public var tick: Int { clock.tick.rawValue }
+    var physiologicalTimeState: AgentPhysiologicalTimeState
     var statesById: AgentStateStore
     var processedInteractionIds: Set<String>
     var creditedResourceKeys: Set<String>
@@ -91,13 +92,18 @@ public struct AgentSimulationSession {
     // remains byte-identical until the first schema 24 supervision-progress
     // mutation; it is never a second durable authority.
     var durableSchemaVersionOverride: Int?
-
+    // Runtime-only compatibility marker. Historical checkpoints and replay
+    // journals retain cognitive-step physiology until an explicit World-time
+    // rebase migrates continuation to schema 44 semantics.
+    var legacyTemporalSchemaVersionOverride: Int?
     public init(
         configuration: AgentSessionConfiguration,
         agents: [AgentSessionAgentState],
         initialTick: Int = 0,
         simulationID: AgentSimulationID? = nil,
-        causalLedgerPolicy: AgentCausalLedgerPolicy = .disabled
+        causalLedgerPolicy: AgentCausalLedgerPolicy = .disabled,
+        physiologicalTimeConfiguration:
+            AgentPhysiologicalTimeConfiguration? = nil
     ) throws {
         guard initialTick >= 0 else {
             throw AgentSessionError.invalidInitialTick(initialTick)
@@ -114,6 +120,10 @@ public struct AgentSimulationSession {
         clock = AgentSimulationClock(
             simulationID: simulationID ?? .legacy(seed: configuration.seed),
             initialTick: AgentSimulationTick(rawValue: initialTick)!
+        )
+        physiologicalTimeState = AgentPhysiologicalTimeState(
+            configuration: physiologicalTimeConfiguration
+                ?? .v1Compatible(with: configuration.survivalConfiguration)
         )
         statesById = states
         processedInteractionIds = []
@@ -194,6 +204,7 @@ public struct AgentSimulationSession {
         marketState = nil
         latestAutonomousTeachingReview = nil
         durableSchemaVersionOverride = nil
+        legacyTemporalSchemaVersionOverride = nil
         try recordCausalEvent(
             kind: .sessionLifecycle,
             origin: .lifecycle,
@@ -353,9 +364,26 @@ public struct AgentSimulationSession {
         return result
     }
 
+    @_spi(Testing)
+    public mutating func advanceTick(
+        perceptions: [AgentPerceptionInput] = [],
+        physicalObservations: [AgentPhysicalSignalObservation] = [],
+        failingCausalRetentionAt fault: AgentCausalRetentionFaultPoint
+    ) throws -> AgentSessionTickResult {
+        var candidate = self
+        let result = try candidate.advanceTickInPlace(
+            perceptions: perceptions,
+            physicalObservations: physicalObservations,
+            causalRetentionFault: fault
+        )
+        self = candidate
+        return result
+    }
+
     private mutating func advanceTickInPlace(
         perceptions: [AgentPerceptionInput],
-        physicalObservations: [AgentPhysicalSignalObservation]
+        physicalObservations: [AgentPhysicalSignalObservation],
+        causalRetentionFault: AgentCausalRetentionFaultPoint? = nil
     ) throws -> AgentSessionTickResult {
         if let pending = mortalityState?.pendingTransitions.first {
             throw AgentSessionError.mortality(
@@ -413,15 +441,40 @@ public struct AgentSimulationSession {
             perceptionsById[perception.agentId] = perception
         }
 
+        let usesLegacyCognitivePhysiology =
+            legacyTemporalSchemaVersionOverride != nil
         let mortalityWasEnabled = mortalityState != nil
         var mortalitySurvivalMemories: [String: AgentMemoryEntry] = [:]
         if mortalityWasEnabled {
             var candidate = self
             candidate.clock.advance(to: nextSimulationTick)
-            mortalitySurvivalMemories = try candidate.applyMortalitySurvivalBoundary(
-                at: nextTick
-            )
+            if usesLegacyCognitivePhysiology {
+                mortalitySurvivalMemories = try candidate
+                    .applyMortalitySurvivalBoundary(
+                        at: nextTick,
+                        boundary: nil,
+                        causalRetentionFault: causalRetentionFault
+                    )
+            } else {
+                for id in candidate.sortedIds {
+                    guard var state = candidate.statesById[id] else {
+                        continue
+                    }
+                    state.ticksAlive += 1
+                    candidate.statesById[id] = state
+                }
+                mortalitySurvivalMemories = try candidate
+                    .applyDuePhysiologicalBoundaries(
+                        at: nextTick,
+                        causalRetentionFault: causalRetentionFault
+                    )
+            }
             self = candidate
+        } else if !usesLegacyCognitivePhysiology {
+            mortalitySurvivalMemories = try applyDuePhysiologicalBoundaries(
+                at: nextTick,
+                causalRetentionFault: causalRetentionFault
+            )
         }
         if let pending = mortalityState?.pendingTransitions,
            !pending.isEmpty {
@@ -523,10 +576,13 @@ public struct AgentSimulationSession {
             return AgentSessionTickResult(tick: tick, agents: [])
         }
         try applyLifecycleStageBoundary(at: nextTick)
-        if dependentCareState != nil, !mortalityWasEnabled, survivalEnabled {
+        if usesLegacyCognitivePhysiology, dependentCareState != nil,
+           !mortalityWasEnabled, survivalEnabled {
             for id in sortedIds {
                 guard var state = statesById[id] else { continue }
-                if let memory = applySurvivalTick(to: &state, tick: nextTick) {
+                if let memory = applyLegacyCognitiveSurvivalTick(
+                    to: &state, tick: nextTick
+                ) {
                     appendMemory(memory, to: &state.memory)
                     mortalitySurvivalMemories[id] = memory
                 }
@@ -614,13 +670,22 @@ public struct AgentSimulationSession {
             var memoriesAdded = perception?.externalMemoryEntries ?? []
 
             let survivalMemory: AgentMemoryEntry?
-            if mortalityWasEnabled || dependentCareState != nil {
+            if usesLegacyCognitivePhysiology,
+               mortalityWasEnabled || dependentCareState != nil {
                 survivalMemory = mortalitySurvivalMemories[id]
+            } else if usesLegacyCognitivePhysiology, survivalEnabled {
+                survivalMemory = applyLegacyCognitiveSurvivalTick(
+                    to: &state, tick: nextTick
+                )
             } else if survivalEnabled {
-                survivalMemory = applySurvivalTick(to: &state, tick: nextTick)
+                survivalMemory = mortalitySurvivalMemories[id]
             } else {
                 let hungerBeforeConstructionTick = state.needs.hunger
-                let tickTransition = AgentCognitiveTransitions.advanceTick(needs: state.needs)
+                let tickTransition = AgentCognitiveTransitions.advanceTick(
+                    needs: state.needs,
+                    advancesLegacyPhysiology:
+                        usesLegacyCognitivePhysiology
+                )
                 state.needs = tickTransition.needs
                 if buildAutoEnabled,
                    constructionProject?.builderAgentId == state.id {
@@ -633,11 +698,16 @@ public struct AgentSimulationSession {
                 state.state = tickTransition.state
                 survivalMemory = nil
             }
-            if !mortalityWasEnabled && dependentCareState == nil { state.ticksAlive += 1 }
+            if !mortalityWasEnabled
+                && (!usesLegacyCognitivePhysiology
+                    || dependentCareState == nil) {
+                state.ticksAlive += 1
+            }
 
             appendMemories(memoriesAdded, to: &state.memory)
             if let survivalMemory {
-                if !mortalityWasEnabled && dependentCareState == nil {
+                if usesLegacyCognitivePhysiology,
+                   !mortalityWasEnabled, dependentCareState == nil {
                     appendMemory(survivalMemory, to: &state.memory)
                 }
                 memoriesAdded.append(survivalMemory)
@@ -949,7 +1019,9 @@ public struct AgentSimulationSession {
                 state: state.state,
                 tick: nextTick,
                 survivalEnabled: survivalEnabled,
-                restRecoveryPerTick: configuration.survivalConfiguration.restRecoveryPerTick
+                restRecoveryPerTick: usesLegacyCognitivePhysiology
+                    ? configuration.survivalConfiguration.restRecoveryPerTick
+                    : 0
             ))
             state.needs = effectResult.needs
             state.fear = effectResult.fear

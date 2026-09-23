@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private let agricultureSoils = [
     AgentPosition(x: 1, y: 63, z: 0),
@@ -56,7 +56,19 @@ private func agricultureBase(
     )
     try! session.setLifecycleEnabled(true, configuration: agricultureLifecycle)
     try! session.setSkillsEnabled(true)
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.skillVersion
+    )
     return session
+}
+
+private func agricultureEnableEcologicalObservation(
+    _ session: inout AgentSimulationSession
+) throws {
+    try session.setEcologicalObservationEnabled(true)
+    try session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.independentEcologicalReceiptVersion
+    )
 }
 
 private func agricultureRestoreRefused(
@@ -319,7 +331,7 @@ func runPebbleAgentsAgricultureSmoke() {
     }())
 
     var session = agricultureBase("agriculture-contract")
-    try! session.setEcologicalObservationEnabled(true)
+    try! agricultureEnableEcologicalObservation(&session)
     let observationRecord = try! session.recordEcologicalObservation(
         agricultureObservation(session)
     )
@@ -643,7 +655,7 @@ func runPebbleAgentsAgricultureSmoke() {
         causalMaximumEvents: 64,
         preRegistrationCausalEvents: 60
     )
-    try! causalRetention.setEcologicalObservationEnabled(true)
+    try! agricultureEnableEcologicalObservation(&causalRetention)
     let retentionObservation = try! causalRetention
         .recordEcologicalObservation(agricultureObservation(causalRetention))
     try! causalRetention.setAgricultureEnabled(true)
@@ -738,7 +750,7 @@ func runPebbleAgentsAgricultureSmoke() {
         causalMaximumEvents: 64,
         preRegistrationCausalEvents: 60
     )
-    try! foundationRetention.setEcologicalObservationEnabled(true)
+    try! agricultureEnableEcologicalObservation(&foundationRetention)
     let foundationObservation = try! foundationRetention
         .recordEcologicalObservation(agricultureObservation(foundationRetention))
     try! foundationRetention.setAgricultureEnabled(true)

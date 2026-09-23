@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private let populationReception = AgentPosition(x: 0, y: 64, z: 3)
 private let populationEntry = AgentPosition(x: 4, y: 64, z: 3)
@@ -66,6 +66,9 @@ private func populationSession(
         settlementAnchor: AgentPosition(x: 0, y: 64, z: 0),
         receptionPosition: populationReception,
         configuration: configuration
+    )
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.populationVersion
     )
     return session
 }
@@ -320,7 +323,7 @@ func runPebbleAgentsPopulationMigrationSmoke() {
         == session.durableStateBytes())
     check("population restore has four active IDs", restored.expectedActiveAgentIDs().count == 4)
 
-    let historical = try! AgentSimulationSession(
+    var historical = try! AgentSimulationSession(
         configuration: session.configuration,
         agents: [
             populationAgent("agent_0", x: 0),
@@ -329,6 +332,9 @@ func runPebbleAgentsPopulationMigrationSmoke() {
         ],
         simulationID: try! AgentSimulationID(validating: "population-v1-compatibility"),
         causalLedgerPolicy: .bounded(maxEvents: 8192)
+    )
+    try! historical.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.currentVersion
     )
     let historicalCheckpoint = try! historical.makeCheckpoint()
     let historicalBytes = try! AgentCheckpointCodec.encode(historicalCheckpoint)

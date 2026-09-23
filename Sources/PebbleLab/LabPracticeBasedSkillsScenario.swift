@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private struct SkillScenarioCheck: Codable, Equatable {
     let name: String
@@ -125,6 +125,9 @@ private func skillScenarioV9(seed: UInt32) -> AgentSimulationSession {
         configuration: try! AgentDependentCareConfiguration(
             nourishmentHungerThreshold: 0.05
         )
+    )
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.dependentCareVersion
     )
     return session
 }
@@ -288,7 +291,12 @@ func runPracticeBasedSkillsTaskMatchingSmoke(_ options: Options) -> Never {
     )!.contains("skillState"))
     var recorder = try! AgentReplayRecorder(checkpoint: baseCheckpoint, session: direct)
     _ = try! recorder.apply(.setSkillsEnabled(true, configuration: .live), to: &direct)
-    add("activation promotes v10", try! direct.makeCheckpoint().schemaVersion == 10)
+    var historicalActivation = direct
+    try! historicalActivation.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.skillVersion
+    )
+    add("activation promotes v10",
+        try! historicalActivation.makeCheckpoint().schemaVersion == 10)
     add("activation grants zero retroactive credit", direct.skillSnapshot().profiles.isEmpty)
 
     let patch = direct.localEcologySnapshot().patches.first!
@@ -443,6 +451,9 @@ func runPracticeBasedSkillsTaskMatchingSmoke(_ options: Options) -> Never {
     add("care material equation exact",
         provision.foodBefore == provision.foodAfter + provision.consumedByDependent)
 
+    try! direct.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.skillVersion
+    )
     let checkpoint = try! direct.makeCheckpoint()
     let durableBytes = try! direct.durableStateBytes()
     let restored = try! AgentSimulationSession.restoring(checkpoint)
@@ -454,8 +465,12 @@ func runPracticeBasedSkillsTaskMatchingSmoke(_ options: Options) -> Never {
     let replayed = try! AgentSessionReplayer.replay(
         checkpoint: baseCheckpoint, journal: journal
     )
+    var replayedHistorical = replayed.session
+    try! replayedHistorical.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.skillVersion
+    )
     add("replay v10 exact", replayed.report.verified
-        && (try! replayed.session.durableStateBytes()) == durableBytes)
+        && (try! replayedHistorical.durableStateBytes()) == durableBytes)
     add("replay contains causes not XP operations", !journal.records.contains {
         $0.operation.kind.rawValue.contains("practice")
     })

@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private let gateFB07Origin = AgentPosition(x: 0, y: 64, z: 0)
 private let gateFB07BirthPosition = AgentPosition(x: 0, y: 64, z: 4)
@@ -107,6 +107,9 @@ private func gateFB07Session(
     if reproductionEnabled {
         try! session.setReproductionEnabled(true)
     }
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.populationScaleVersion
+    )
     return session
 }
 

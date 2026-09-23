@@ -1,5 +1,11 @@
 @_spi(Testing)
 public enum AgentCausalRetentionFaultPoint: String, CaseIterable, Sendable {
+    case afterMortalityStateBeforeMembershipAuthorityRefresh
+    case afterMortalityMembershipValidationBeforePublication
+    case beforePopulationMembershipAuthorityPublication
+    case afterPopulationMembershipAuthorityCausalAppend
+    case afterPopulationMembershipAuthorityPublication
+    case afterMembershipEcologicalDependencyCalculation
     case afterFirstEcologicalRowEviction
     case afterEcologicalEvictionCounterUpdate
     case afterEcologicalValidation
@@ -21,6 +27,7 @@ extension AgentSimulationSession {
     ) throws {
         guard count > 0, causalLedger.isEnabled else { return }
         let originalLedger = causalLedger
+        let originalPopulation = populationRegistry
         let originalEcology = ecologicalObservationState
         let originalAgriculture = agricultureState
         let originalKnowledge = knowledgeGraphState
@@ -33,7 +40,7 @@ extension AgentSimulationSession {
             longDistanceCommunicationState
         do {
             var attempts = 0
-            let attemptLimit = causalLedger.events.count + count + 2
+            let attemptLimit = causalLedger.events.count + count + 4
             while true {
                 attempts += 1
                 guard attempts <= attemptLimit else {
@@ -44,6 +51,20 @@ extension AgentSimulationSession {
                 let leaving = try causalLedger.eventsEvictedByAppending(
                     count: count
                 )
+                // Remove rows that require evidence which is about to leave
+                // while that evidence is still exact. Membership refresh then
+                // precedes every other boundary append, so another boundary
+                // cannot compact the active-membership authority first.
+                try evictEcologicalRowsDependingOn(
+                    leaving,
+                    testFault: testFault
+                )
+                if try appendPopulationMembershipAuthorityBoundaryIfNeeded(
+                    beforeEvicting: leaving,
+                    testFault: testFault
+                ) {
+                    continue
+                }
                 if try appendKnowledgeHistoricalAuthorityBoundaryIfNeeded(
                     beforeEvicting: leaving
                 ) {
@@ -79,10 +100,6 @@ extension AgentSimulationSession {
                 ) {
                     continue
                 }
-                try evictEcologicalRowsDependingOn(
-                    leaving,
-                    testFault: testFault
-                )
                 guard let ecology = ecologicalObservationState,
                       leaving.contains(where: {
                           $0.eventID == ecology.initializedEventID
@@ -99,6 +116,7 @@ extension AgentSimulationSession {
             )
         } catch {
             causalLedger = originalLedger
+            populationRegistry = originalPopulation
             ecologicalObservationState = originalEcology
             agricultureState = originalAgriculture
             knowledgeGraphState = originalKnowledge
@@ -127,6 +145,7 @@ extension AgentSimulationSession {
         testFault: AgentCausalRetentionFaultPoint? = nil
     ) throws -> AgentCausalEvent? {
         let originalLedger = causalLedger
+        let originalPopulation = populationRegistry
         let originalEcology = ecologicalObservationState
         let originalAgriculture = agricultureState
         let originalKnowledge = knowledgeGraphState
@@ -167,6 +186,7 @@ extension AgentSimulationSession {
             )
         } catch {
             causalLedger = originalLedger
+            populationRegistry = originalPopulation
             ecologicalObservationState = originalEcology
             agricultureState = originalAgriculture
             knowledgeGraphState = originalKnowledge
@@ -177,6 +197,224 @@ extension AgentSimulationSession {
             oralTransmissionState = originalOral
             longDistanceCommunicationState =
                 originalLongDistanceCommunication
+            throw error
+        }
+    }
+
+    func populationMembershipAuthorityRows(
+        _ registry: AgentPopulationRegistry
+    ) -> [AgentPopulationMembershipAuthorityMember] {
+        Self.populationMembershipAuthorityRows(registry)
+    }
+
+    func populationMembershipAuthorityDigest(
+        _ members: [AgentPopulationMembershipAuthorityMember]
+    ) -> String {
+        Self.populationMembershipAuthorityDigest(
+            members, simulationID: simulationID
+        )
+    }
+
+    func populationMembershipAuthorityEventIsValid(
+        _ event: AgentCausalEvent,
+        expectedMembers: [AgentPopulationMembershipAuthorityMember]? = nil
+    ) -> Bool {
+        guard event.kind == .populationMembershipAuthorityRetained,
+              event.origin == .populationTransition,
+              event.actorID == nil,
+              event.subjectID == nil,
+              event.operationID == nil,
+              case let .populationMembershipAuthority(members, digest) =
+                event.payload,
+              !members.isEmpty,
+              members == members.sorted(by: { lhs, rhs in
+                  if lhs.ordinal != rhs.ordinal {
+                      return lhs.ordinal < rhs.ordinal
+                  }
+                  return lhs.agentID < rhs.agentID
+              }),
+              Set(members.map(\.agentID)).count == members.count,
+              Set(members.map(\.ordinal)).count == members.count,
+              members.allSatisfy({
+                  $0.registrationEventID.simulationID == simulationID
+                      && $0.registeredTick >= 0
+                      && $0.registeredTick <= event.simulationTick.rawValue
+              }),
+              digest == populationMembershipAuthorityDigest(members),
+              expectedMembers.map({ $0 == members }) ?? true else {
+            return false
+        }
+        return true
+    }
+
+    /// Refreshes one bounded projection event, never the immutable original
+    /// registration identities. This is schema-44-only; schemas 1...43 retain
+    /// their exact historical causal contract.
+    private mutating func appendPopulationMembershipAuthorityBoundaryIfNeeded(
+        beforeEvicting leaving: [AgentCausalEvent],
+        testFault: AgentCausalRetentionFaultPoint?
+    ) throws -> Bool {
+        guard legacyTemporalSchemaVersionOverride == nil,
+              let registry = populationRegistry,
+              !registry.members.isEmpty,
+              !leaving.isEmpty else { return false }
+        let leavingIDs = Set(leaving.map(\.eventID))
+        let needsInitialAuthority =
+            registry.currentMembershipAuthorityEventID == nil
+                && registry.members.contains {
+                    leavingIDs.contains($0.registrationEventID)
+                }
+        let currentAuthorityLeaves =
+            registry.currentMembershipAuthorityEventID.map {
+                leavingIDs.contains($0)
+            } ?? false
+        guard needsInitialAuthority || currentAuthorityLeaves else {
+            return false
+        }
+        try appendPopulationMembershipAuthorityBoundary(
+            membershipCauseEventID: registry.lastPopulationEventID,
+            testFault: testFault
+        )
+        return true
+    }
+
+    private mutating func appendPopulationMembershipAuthorityBoundary(
+        membershipCauseEventID: AgentCausalEventID?,
+        testFault: AgentCausalRetentionFaultPoint?
+    ) throws {
+        guard var registry = populationRegistry else {
+            throw AgentSessionError.population(.disabled)
+        }
+        let members = populationMembershipAuthorityRows(registry)
+        guard !members.isEmpty,
+              members.count <= registry.configuration.maximumActivePopulation
+        else {
+            throw AgentSessionError.population(
+                .invalidMembershipAuthority("projection")
+            )
+        }
+        let retainedIDs = Set(causalLedger.events.map(\.eventID))
+        let priorAuthority = registry.currentMembershipAuthorityEventID
+        let causes = Array(Set([
+            priorAuthority,
+            membershipCauseEventID,
+            priorAuthority == nil ? registry.initializedEventID : nil,
+        ].compactMap { $0 }).filter {
+            retainedIDs.contains($0)
+        }).sorted()
+        try injectCausalRetentionFault(
+            testFault,
+            at: .beforePopulationMembershipAuthorityPublication
+        )
+        let digest = populationMembershipAuthorityDigest(members)
+        guard let event = try causalLedger.append(
+            instant: simulationInstant,
+            kind: .populationMembershipAuthorityRetained,
+            origin: .populationTransition,
+            actorID: nil,
+            subjectID: nil,
+            operationID: nil,
+            causes: Array(causes.prefix(AgentCausalEvent.maximumCauseCount)),
+            payload: .populationMembershipAuthority(
+                members: members,
+                digest: digest
+            ),
+            summary: "active population membership retention boundary members=\(members.count)",
+            afterEventAppended: {
+                try Self.injectCausalRetentionFault(
+                    testFault,
+                    at: .afterPopulationMembershipAuthorityCausalAppend
+                )
+            },
+            afterCompaction: {
+                try Self.injectCausalRetentionFault(
+                    testFault,
+                    at: .afterCausalCompaction
+                )
+            }
+        ), populationMembershipAuthorityEventIsValid(
+            event,
+            expectedMembers: members
+        ) else {
+            throw AgentSessionError.population(
+                .invalidMembershipAuthority("event")
+            )
+        }
+        registry.currentMembershipAuthorityEventID = event.eventID
+        registry.lastPopulationEventID = event.eventID
+        populationRegistry = registry
+        try injectCausalRetentionFault(
+            testFault,
+            at: .afterPopulationMembershipAuthorityPublication
+        )
+    }
+
+    /// Membership additions/removals change the projection. If a retained
+    /// authority already exists because original registrations have compacted,
+    /// replace it immediately through the ordinary causal ledger.
+    mutating func refreshPopulationMembershipAuthorityAfterMembershipChange(
+        causedBy eventID: AgentCausalEventID,
+        testFault: AgentCausalRetentionFaultPoint? = nil
+    ) throws {
+        guard legacyTemporalSchemaVersionOverride == nil,
+              let currentID = populationRegistry?
+                .currentMembershipAuthorityEventID else { return }
+        let originalLedger = causalLedger
+        let originalPopulation = populationRegistry
+        let originalEcology = ecologicalObservationState
+        do {
+            if let current = causalLedger.events.first(where: {
+                $0.eventID == currentID
+            }) {
+                // Active survivors must move to the refreshed projection, so
+                // their older observations cannot continue to depend on this
+                // authority. Departed observers are different: mortality has
+                // captured this exact authority in their terminal record and
+                // it remains the causal proof for observations made before
+                // death. The ordinary retention coordinator will evict those
+                // rows before this authority itself later leaves the ledger.
+                let departedObserverIDs = Set(
+                    mortalityState?.records.map(\.agentID) ?? []
+                ).union(
+                    mortalityState?.compactedDeathSummaries?.map(\.agentID)
+                        ?? []
+                )
+                try evictEcologicalRowsDependingOn(
+                    [current],
+                    preservingObservers: departedObserverIDs,
+                    testFault: testFault
+                )
+            }
+            if let registry = populationRegistry,
+               populationMembershipAuthorityRows(registry).isEmpty {
+                // The registry remains the membership authority. With no
+                // active members there is no active projection to publish;
+                // mortality records retain the predecessor event needed by
+                // pre-death historical evidence.
+                populationRegistry?.currentMembershipAuthorityEventID = nil
+                return
+            }
+            try prepareDurableEvidenceForCausalAppend(count: 1)
+            if let refreshedID = populationRegistry?
+                .currentMembershipAuthorityEventID,
+               let refreshed = causalLedger.events.first(where: {
+                   $0.eventID == refreshedID
+               }),
+               let registry = populationRegistry,
+               populationMembershipAuthorityEventIsValid(
+                   refreshed,
+                   expectedMembers: populationMembershipAuthorityRows(registry)
+               ) {
+                return
+            }
+            try appendPopulationMembershipAuthorityBoundary(
+                membershipCauseEventID: eventID,
+                testFault: testFault
+            )
+        } catch {
+            causalLedger = originalLedger
+            populationRegistry = originalPopulation
+            ecologicalObservationState = originalEcology
             throw error
         }
     }
@@ -511,6 +749,7 @@ extension AgentSimulationSession {
 
     private mutating func evictEcologicalRowsDependingOn(
         _ leaving: [AgentCausalEvent],
+        preservingObservers: Set<AgentID> = [],
         testFault: AgentCausalRetentionFaultPoint? = nil
     ) throws {
         guard var state = ecologicalObservationState, !leaving.isEmpty else {
@@ -537,6 +776,10 @@ extension AgentSimulationSession {
         var retained: [AgentEcologicalObservationRecord] = []
         retained.reserveCapacity(state.observations.count)
         for record in state.observations {
+            if preservingObservers.contains(record.observation.observerID) {
+                retained.append(record)
+                continue
+            }
             var required = Set<AgentCausalEventID>()
             required.insert(record.causalEventID)
             guard let event = eventsByID[record.causalEventID] else {
@@ -548,11 +791,21 @@ extension AgentSimulationSession {
             if activeIDs.contains(observerID),
                let member = populationByID[observerID],
                deathsByID[observerID] == nil {
-                required.insert(member.registrationEventID)
+                let current = populationRegistry?
+                    .currentMembershipAuthorityEventID
+                required.insert(
+                    current.map {
+                        $0.sequence < record.causalEventID.sequence
+                            ? $0 : member.registrationEventID
+                    } ?? member.registrationEventID
+                )
             } else if let death = deathsByID[observerID],
                       !activeIDs.contains(observerID),
                       populationByID[observerID] == nil {
-                required.insert(death.registrationEventID)
+                required.insert(death.membershipAuthorityEventID.map {
+                    $0.sequence < record.causalEventID.sequence
+                        ? $0 : death.registrationEventID
+                } ?? death.registrationEventID)
                 required.insert(death.deathEventID)
             }
             if !required.isDisjoint(with: leavingIDs) {
@@ -566,6 +819,10 @@ extension AgentSimulationSession {
                 retained.append(record)
             }
         }
+        try injectCausalRetentionFault(
+            testFault,
+            at: .afterMembershipEcologicalDependencyCalculation
+        )
         guard removed <= Int.max - state.evictionCounts.observations else {
             throw AgentSessionError.ecologicalObservation(
                 .invalidState("causal retention eviction overflow")
@@ -586,6 +843,14 @@ extension AgentSimulationSession {
     ) throws {
         guard var state = ecologicalObservationState else { return }
         let leaving = try causalLedger.eventsEvictedByAppending(count: 1)
+        try evictEcologicalRowsDependingOn(leaving, testFault: testFault)
+        if try appendPopulationMembershipAuthorityBoundaryIfNeeded(
+            beforeEvicting: leaving,
+            testFault: testFault
+        ) {
+            try appendEcologicalRetentionBoundary(testFault: testFault)
+            return
+        }
         if try appendAgricultureRetentionBoundaryIfNeeded(
             beforeEvicting: leaving,
             testFault: testFault
@@ -593,7 +858,6 @@ extension AgentSimulationSession {
             try appendEcologicalRetentionBoundary(testFault: testFault)
             return
         }
-        try evictEcologicalRowsDependingOn(leaving, testFault: testFault)
         state = ecologicalObservationState ?? state
         let retained = state.observations.map {
             "\($0.sequence):\($0.causalEventID.rawValue):\($0.observation.digest)"
@@ -645,7 +909,7 @@ extension AgentSimulationSession {
         try validateRetainedEcologicalCausalEvidence()
     }
 
-    private static func injectCausalRetentionFault(
+    static func injectCausalRetentionFault(
         _ requested: AgentCausalRetentionFaultPoint?,
         at point: AgentCausalRetentionFaultPoint,
         when condition: Bool = true
@@ -656,7 +920,7 @@ extension AgentSimulationSession {
         )
     }
 
-    private func injectCausalRetentionFault(
+    func injectCausalRetentionFault(
         _ requested: AgentCausalRetentionFaultPoint?,
         at point: AgentCausalRetentionFaultPoint,
         when condition: Bool = true
@@ -730,12 +994,19 @@ extension AgentSimulationSession {
             if let member = populationRegistry?.members.first(where: {
                 $0.agentID == agentID
             }) {
-                return [member.registrationEventID]
+                return [
+                    populationRegistry?.currentMembershipAuthorityEventID
+                        ?? member.registrationEventID,
+                ]
             }
             if let death = mortalityState?.records.first(where: {
                 $0.agentID == agentID
             }) {
-                return [death.registrationEventID, death.deathEventID]
+                return [
+                    death.membershipAuthorityEventID
+                        ?? death.registrationEventID,
+                    death.deathEventID,
+                ]
             }
             return []
         }

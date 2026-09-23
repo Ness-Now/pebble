@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private let kinshipHabitat = AgentEcologyHabitatObservation(
     worldTick: 0,
@@ -98,7 +98,22 @@ private func kinshipBase(
     if enableLifecycle {
         try! session.setLifecycleEnabled(true, configuration: lifecycleConfiguration)
     }
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: enableLifecycle
+            ? AgentCheckpointSchema.lifecycleVersion
+            : AgentCheckpointSchema.localEcologyVersion
+    )
     return session
+}
+
+private func kinshipEnable(
+    _ session: inout AgentSimulationSession,
+    configuration: AgentKinshipConfiguration = .live
+) throws {
+    try session.setKinshipEnabled(true, configuration: configuration)
+    try session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.kinshipVersion
+    )
 }
 
 private func kinshipAdvance(_ session: inout AgentSimulationSession, to tick: Int) {
@@ -360,7 +375,7 @@ func runPebbleAgentsDurableKinshipSmoke() {
     try! historicalActivation.setMortalityEnabled(true)
     _ = try! historicalActivation.advanceTick()
     let historicalV6 = try! historicalActivation.makeCheckpoint()
-    try! historicalActivation.setKinshipEnabled(true)
+    try! kinshipEnable(&historicalActivation)
     check("kinship v6 activation reconstructs dead allocations", historicalV6.schemaVersion == 6
         && historicalActivation.kinshipSnapshot().historicalPersons.map(\.agentID.rawValue)
             == ["agent_0", "agent_1", "agent_2", "agent_3", "agent_4"]
@@ -374,7 +389,7 @@ func runPebbleAgentsDurableKinshipSmoke() {
     check("kinship gate off remains schema v6", v6Checkpoint.schemaVersion == 6)
     check("kinship gate off omits durable state", !String(data: v6Bytes, encoding: .utf8)!
         .contains("kinshipState"))
-    try! session.setKinshipEnabled(true)
+    try! kinshipEnable(&session)
     let initialized = session.kinshipSnapshot()
     check("kinship activation archives founders", initialized.historicalPersons.map(\.agentID.rawValue)
         == ["agent_0", "agent_1", "agent_2"])
@@ -607,7 +622,7 @@ func runPebbleAgentsDurableKinshipSmoke() {
     }())
 
     var personBound = kinshipBase("sim-kinship-person-bound")
-    try! personBound.setKinshipEnabled(true, configuration: try! AgentKinshipConfiguration(
+    try! kinshipEnable(&personBound, configuration: try! AgentKinshipConfiguration(
         maximumHistoricalPersons: 3,
         maximumParentageRecords: 3,
         maximumChildrenPerParent: 2,
@@ -631,7 +646,7 @@ func runPebbleAgentsDurableKinshipSmoke() {
     }())
 
     var parentageBound = kinshipBase("sim-kinship-parentage-bound")
-    try! parentageBound.setKinshipEnabled(true, configuration: try! AgentKinshipConfiguration(
+    try! kinshipEnable(&parentageBound, configuration: try! AgentKinshipConfiguration(
         maximumHistoricalPersons: 8,
         maximumParentageRecords: 1,
         maximumChildrenPerParent: 4,
@@ -661,7 +676,7 @@ func runPebbleAgentsDurableKinshipSmoke() {
     }())
 
     var childBound = kinshipBase("sim-kinship-child-bound")
-    try! childBound.setKinshipEnabled(true, configuration: try! AgentKinshipConfiguration(
+    try! kinshipEnable(&childBound, configuration: try! AgentKinshipConfiguration(
         maximumHistoricalPersons: 8,
         maximumParentageRecords: 5,
         maximumChildrenPerParent: 1,
@@ -941,7 +956,7 @@ func runPebbleAgentsDurableKinshipSmoke() {
     var retainedBoundary = kinshipBase(
         "sim-kinship-retained-boundary", maximumCausalEvents: 8
     )
-    try! retainedBoundary.setKinshipEnabled(true)
+    try! kinshipEnable(&retainedBoundary)
     try! retainedBoundary.setReproductionEnabled(true)
     let retainedBirth = kinshipBirth(
         &retainedBoundary, position: AgentPosition(x: 0, y: 64, z: 4)

@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private func marketAgent(_ id: String, x: Int) -> AgentSessionAgentState {
     let position = AgentPosition(x: x, y: 64, z: 0)
@@ -164,6 +164,13 @@ private func marketFixture(
             )!, position: AgentPosition(x: 1, y: 64, z: 0),
             containerLocationID: "1,64,0", containerBlockFingerprint: 54,
             interactionRadius: 8, physicalSlotCapacity: 9
+        )
+        try! session.useLegacyCognitivePhysiologyReplayFixture(
+            schemaVersion: AgentCheckpointSchema.marketVersion
+        )
+    } else {
+        try! session.useLegacyCognitivePhysiologyReplayFixture(
+            schemaVersion: AgentCheckpointSchema.productionVersion
         )
     }
     return MarketFixture(

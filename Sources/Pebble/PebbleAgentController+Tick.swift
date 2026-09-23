@@ -114,6 +114,13 @@ extension PebbleAgentController {
         lastDeliverySucceeded = false
         lastConsumptionSucceeded = false
         do {
+            if increment05IntegrityFailureProofPending {
+                increment05IntegrityFailureProofPending = false
+                increment05IntegrityFailureProofAttemptCount += 1
+                throw AgentSessionError.ecologicalObservation(
+                    .invalidState("injected Increment-05 integrity failure")
+                )
+            }
             if session.mortalityEnabled,
                !session.pendingMortalityTransitions().isEmpty {
                 let before = session.snapshot()
@@ -437,11 +444,13 @@ extension PebbleAgentController {
                 )
             }
             let result: AgentSessionTickResult
+            let tickOperation = AgentReplayOperation.advanceTick(
+                physiologicalWorldTick: isPaused ? nil : world.time,
+                perceptions: perceptions,
+                physicalObservations: physicalInputs
+            )
             if let recorded = try applyRecordedOperationIfActive(
-                .advanceTick(
-                    perceptions: perceptions,
-                    physicalObservations: physicalInputs
-                ),
+                tickOperation,
                 session: &session,
                 recorder: &recorder
             ) {
@@ -450,10 +459,13 @@ extension PebbleAgentController {
                 }
                 result = tickResult
             } else {
-                result = try session.advanceTick(
-                    perceptions: perceptions,
-                    physicalObservations: physicalInputs
-                )
+                let applied = try session.applyReplayOperation(tickOperation)
+                guard let tickResult = applied.tickResult else {
+                    throw ControllerError.feedbackBoundary(
+                        "temporal tick result missing"
+                    )
+                }
+                result = tickResult
             }
             if session.mortalityEnabled,
                !session.pendingMortalityTransitions().isEmpty {
@@ -1560,14 +1572,10 @@ extension PebbleAgentController {
                 )
                 candidatePhysicalHardFailure = hardFailure
                 replayRecorder = publishedRecorder
-                isPaused = true
-                lastError = "candidate physical hard failure: \(hardFailure)"
-                runtimeErrorCount += 1
-                trace(
-                    "CANDIDATE_PHYSICAL_HARD_FAILURE \(hardFailure) "
-                        + "publishedRecorder=unchanged "
-                        + "registrationFailures="
-                        + "\(registrationFailures.joined(separator: ","))"
+                latchFatalSessionIntegrityFailure(
+                    "candidate physical compensation failure: \(hardFailure)",
+                    traceContext: "registrationFailures="
+                        + registrationFailures.joined(separator: ",")
                 )
                 return false
             }
@@ -1592,6 +1600,15 @@ extension PebbleAgentController {
                     + "publishedRecorder=unchanged physicalWorldTick=\(world.time) "
                     + "probes=\(restoredProbeStates)"
             )
+            if let fatalReason = fatalSessionIntegrityReason(for: error) {
+                replayRecorder = publishedRecorder
+                latchFatalSessionIntegrityFailure(
+                    fatalReason,
+                    traceContext: "publishedSession=unchanged "
+                        + "publishedRecorder=unchanged temporalFallback=none"
+                )
+                return false
+            }
             let pathReadinessUnavailable:
                 (agentID: String, result: PhysicalPathSearchResult)?
             if case let PebbleAgentMovementExecutor.ExecutionError
@@ -1604,7 +1621,16 @@ extension PebbleAgentController {
                 // This is explicit technical unavailability, not a physical
                 // negative and not a runtime fault. The candidate Civilization
                 // tick and any earlier movement in its batch remain unpublished.
-                replayRecorder = publishedRecorder
+                // Eligible World-time biology is a separate durable fact: after
+                // the complete physical rollback above, publish it from the
+                // original session through its own replay operation.
+                guard publishEligiblePhysiologyAfterCompensatedFailure(
+                    world: world,
+                    publishedRecorder: publishedRecorder,
+                    failure: "pathReadinessUnavailable"
+                ) else {
+                    return false
+                }
                 credit = 0
                 lastError = nil
                 trace(
@@ -1742,6 +1768,251 @@ extension PebbleAgentController {
             } else {
                 trace("error \(error)")
             }
+            return false
+        }
+    }
+
+    /// Explicit allowlist for corruption/integrity failures which are neither
+    /// technical availability nor valid candidates for temporal fallback.
+    /// Physical rollback has already been verified before this is consulted.
+    private func fatalSessionIntegrityReason(for error: Error) -> String? {
+        if case let AgentSessionError.ecologicalObservation(
+            .invalidState(reason)
+        ) = error {
+            return "ecologicalObservation.invalidState(\(reason))"
+        }
+        if case let AgentSessionError.agriculture(.invalidState(reason)) =
+            error {
+            return "agriculture.invalidState(\(reason))"
+        }
+        if case let AgentSessionError.population(
+            .invalidMembershipAuthority(reason)
+        ) = error {
+            return "population.invalidMembershipAuthority(\(reason))"
+        }
+        if case let AgentSessionError.mortality(mortality) = error {
+            switch mortality {
+            case let .invalidLethalTransition(agentID):
+                return "mortality.invalidLethalTransition(\(agentID))"
+            case let .duplicateDeath(agentID):
+                return "mortality.duplicateDeath(\(agentID))"
+            case let .invalidState(reason):
+                return "mortality.invalidState(\(reason))"
+            case .terminalResourceOverflow:
+                return "mortality.terminalResourceOverflow"
+            case .invalidConfiguration, .causalLedgerRequired,
+                 .survivalRequired, .populationRequired, .invalidSettlement,
+                 .alreadyEnabled, .disabled, .unsafeDisable,
+                 .nonLivingAgent, .unknownAgent, .deathsPerTickExceeded,
+                 .pendingMaterialExit, .materialExitLimitExceeded:
+                return nil
+            }
+        }
+        if let receipt = error as?
+            PebbleWorldEcologicalObservationReceiptError {
+            switch receipt {
+            case .invalidWorldIdentity,
+                 .duplicateReceipt,
+                 .missingReceipt,
+                 .invalidReceipt:
+                return "ecologicalReceipt.\(receipt)"
+            case .databaseUnavailable, .capacityReached, .rollbackFailed:
+                return nil
+            }
+        }
+        return nil
+    }
+
+    /// Runtime execution latch, not durable civilization state. The failed
+    /// candidate has already been fully rolled back, so the last published
+    /// session remains a valid checkpoint; this controller instance may not
+    /// silently retry it. A newly constructed controller may explicitly bind
+    /// that last valid checkpoint as a new execution context.
+    private func latchFatalSessionIntegrityFailure(
+        _ reason: String,
+        traceContext: String
+    ) {
+        guard fatalSessionIntegrityFailure == nil else { return }
+        fatalSessionIntegrityFailure = reason
+        isPaused = true
+        credit = 0
+        lastError = "fatal civilization integrity failure: \(reason)"
+        runtimeErrorCount += 1
+        trace(
+            "FATAL_SESSION_INTEGRITY_FAILURE reason=\(reason) "
+                + traceContext
+        )
+    }
+
+    /// Publishes only World-time-derived physiology after a continuation-safe
+    /// cognitive/physical candidate has been fully compensated. The discarded
+    /// candidate is never an input, so no goal, plan, action, receipt or event
+    /// ordering state from that attempt can leak into the durable session.
+    @discardableResult
+    func publishEligiblePhysiologyAfterCompensatedFailure(
+        world: World,
+        publishedRecorder: AgentReplayRecorder?,
+        failure: String
+    ) -> Bool {
+        guard activeWorld === world, var temporalSession = self.session,
+              activeCandidatePhysicalTransaction == nil else {
+            latchFatalSessionIntegrityFailure(
+                "temporal fallback publication boundary unavailable",
+                traceContext: "temporalFallback=failed-before-candidate"
+            )
+            return false
+        }
+        let publishedSession = temporalSession
+        let previous = temporalSession.snapshot()
+        var temporalRecorder = publishedRecorder
+        let transaction = PebbleCandidatePhysicalTransaction(
+            transactionID: "temporal-fallback:"
+                + "\(temporalSession.simulationID.rawValue):"
+                + "\(temporalSession.tick):world:\(world.time)",
+            operation: "eligiblePhysiologyAfterCompensatedFailure",
+            physicalWorldTick: world.time
+        )
+        var receiptTransaction =
+            PebbleWorldEcologicalObservationReceiptTransaction()
+        let outerReceiptTransaction = activeCandidateReceiptTransaction
+        let outerPhysicalGatewayTransaction =
+            physicalActionGateway.candidatePhysicalTransaction
+        let outerMaterialGatewayTransaction =
+            materialCustodyGateway.candidatePhysicalTransaction
+        let outerProductionGatewayTransaction =
+            productionGateway.candidatePhysicalTransaction
+        activeCandidatePhysicalTransaction = transaction
+        activeCandidateReceiptTransaction = receiptTransaction
+        physicalActionGateway.candidatePhysicalTransaction = transaction
+        materialCustodyGateway.candidatePhysicalTransaction = transaction
+        productionGateway.candidatePhysicalTransaction = transaction
+        defer {
+            if activeCandidatePhysicalTransaction === transaction {
+                activeCandidatePhysicalTransaction = nil
+            }
+            if activeCandidateReceiptTransaction === receiptTransaction {
+                activeCandidateReceiptTransaction = outerReceiptTransaction
+            }
+            if physicalActionGateway.candidatePhysicalTransaction
+                === transaction {
+                physicalActionGateway.candidatePhysicalTransaction =
+                    outerPhysicalGatewayTransaction
+            }
+            if materialCustodyGateway.candidatePhysicalTransaction
+                === transaction {
+                materialCustodyGateway.candidatePhysicalTransaction =
+                    outerMaterialGatewayTransaction
+            }
+            if productionGateway.candidatePhysicalTransaction
+                === transaction {
+                productionGateway.candidatePhysicalTransaction =
+                    outerProductionGatewayTransaction
+            }
+        }
+        do {
+            let operation = AgentReplayOperation.reconcilePhysiologicalTime(
+                mode: .advanceAndApplyEligibleBiology,
+                worldTick: world.time
+            )
+            if try applyRecordedOperationIfActive(
+                operation,
+                session: &temporalSession,
+                recorder: &temporalRecorder
+            ) == nil {
+                _ = try temporalSession.applyReplayOperation(operation)
+            }
+            if temporalSession.mortalityEnabled {
+                try reconcileMortalityProbes(
+                    previous: previous,
+                    current: &temporalSession,
+                    recorder: &temporalRecorder,
+                    world: world
+                )
+            }
+            if temporalSession.ecologicalObservationEnabled {
+                try reconcileWorldEcologicalObservationReceiptRetention(
+                    for: temporalSession,
+                    transaction: &receiptTransaction
+                )
+                try reconcileWorldAgriculturalActionReceiptRetention(
+                    for: temporalSession,
+                    transaction: &receiptTransaction
+                )
+                try validateWorldEcologicalObservationReceipts(
+                    for: temporalSession,
+                    dimension: world.dim.rawValue
+                )
+            }
+            receiptTransaction.commit()
+            self.session = temporalSession
+            replayRecorder = temporalRecorder
+            transaction.commit()
+            let physiological = temporalSession.physiologicalTimeSnapshot()
+            trace(
+                "temporal fallback publication failure=\(failure) "
+                    + "worldTick=\(world.time) cognitiveTick="
+                    + "\(temporalSession.tick) boundaries="
+                    + "\(physiological.appliedBoundaryCount) remainder="
+                    + "\(physiological.remainderWorldTicks) "
+                    + "pending=\(physiological.pendingBoundaryCount) "
+                    + "cognitionPublication=none"
+            )
+            return true
+        } catch {
+            var receiptRollbackFailure: String?
+            if !receiptTransaction.committed {
+                do {
+                    try rollbackWorldEcologicalObservationReceipts(
+                        receiptTransaction
+                    )
+                } catch {
+                    receiptRollbackFailure = String(describing: error)
+                }
+            }
+            let rollback = transaction.rollback()
+            self.session = publishedSession
+            replayRecorder = publishedRecorder
+            var fatalReason = "temporal fallback integrity failure: \(error)"
+            if receiptRollbackFailure != nil || rollback.failure != nil {
+                let compensationError = [
+                    receiptRollbackFailure.map { "receipt=\($0)" },
+                    rollback.failure.map { "physical=\($0)" },
+                ].compactMap { $0 }.joined(separator: "; ")
+                let hardFailure = PebbleCandidatePhysicalHardFailure(
+                        operation: transaction.operation,
+                        transactionID: transaction.transactionID,
+                        mutation: rollback.failedMutation
+                            ?? "temporal fallback physical mutation",
+                        expectedPhysicalState:
+                            rollback.expectedPhysicalState
+                                ?? "published physical state",
+                        observedPhysicalState:
+                            rollback.observedPhysicalState ?? "unknown",
+                        compensationAttempt:
+                            rollback.failedCompensationID
+                                ?? "temporal fallback rollback",
+                        compensationError: compensationError,
+                        completedCompensations: rollback.completed,
+                        remainingCompensations: rollback.remaining,
+                        publishedSessionStatus: "unchanged",
+                        physicalWorldTick: world.time,
+                        candidateReceiptIDs:
+                            receiptTransaction.stagedReceiptIDs.sorted(),
+                        worldID: persistenceWorldID ?? "unknown",
+                        sessionID: publishedSession.simulationID.rawValue,
+                        checkpointID: nil,
+                        agentID: rollback.agentID,
+                        probeID: rollback.probeID
+                    )
+                candidatePhysicalHardFailure = hardFailure
+                fatalReason = "temporal fallback compensation failure: "
+                    + String(describing: hardFailure)
+            }
+            latchFatalSessionIntegrityFailure(
+                fatalReason,
+                traceContext: "publishedSession=unchanged "
+                    + "publishedRecorder=unchanged temporalFallback=failed"
+            )
             return false
         }
     }

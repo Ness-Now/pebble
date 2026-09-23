@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private let oralA = AgentID(rawValue: "agent_0")!
 private let oralB = AgentID(rawValue: "agent_1")!
@@ -170,6 +170,9 @@ private func oralSmokePrepared(
     )
     try! session.setOralTransmissionEnabled(
         true, configuration: oralConfiguration
+    )
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.oralTransmissionVersion
     )
     try! session.seedLanguagePrior(
         for: oralA, senseIDs: oralWoodSenseIDs
@@ -1179,6 +1182,9 @@ private func oralSmokeTerminalCompactionPrepared(
         inventoryDelta: AgentInventoryDelta(resource: .foodRaw, quantity: 1),
         reason: "bounded lifecycle fixture"
     ))
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.oralTransmissionVersion
+    )
     return (session, sourceID)
 }
 

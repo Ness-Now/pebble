@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private let lifecycleHabitat = AgentEcologyHabitatObservation(
     worldTick: 0,
@@ -56,7 +56,8 @@ private func lifecycleSmokeBase(
     hungerByID: [String: Double] = [:],
     healthByID: [String: Int] = [:],
     survivalConfiguration: AgentSurvivalConfiguration = .live,
-    ecologyConfiguration: AgentLocalEcologyConfiguration = .live
+    ecologyConfiguration: AgentLocalEcologyConfiguration = .live,
+    historicalSchemaVersion: Int = AgentCheckpointSchema.lifecycleVersion
 ) -> AgentSimulationSession {
     let configuration = try! AgentSessionConfiguration(
         seed: 46,
@@ -79,6 +80,12 @@ private func lifecycleSmokeBase(
         },
         simulationID: try! AgentSimulationID(validating: id),
         causalLedgerPolicy: .bounded(maxEvents: 8192)
+    )
+    // This is the exact schema-6 lifecycle publication fixture. Its age,
+    // maturity, and reproduction intervals remain cognitive-time historical
+    // evidence; v44 physiological age is covered independently.
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: historicalSchemaVersion
     )
     try! session.initializePopulationRegistry(
         settlementAnchor: AgentPosition(x: 0, y: 64, z: 0),
@@ -153,7 +160,10 @@ func runPebbleAgentsAgeMaturityReproductionSmoke() {
         AgentReproductionPlanReason.allCases.map(\.rawValue)
     ).isSuperset(of: requiredPlanReasons))
 
-    var disabled = lifecycleSmokeBase("sim-lifecycle-disabled")
+    var disabled = lifecycleSmokeBase(
+        "sim-lifecycle-disabled",
+        historicalSchemaVersion: AgentCheckpointSchema.localEcologyVersion
+    )
     let disabledBefore = try! disabled.durableStateBytes()
     _ = try! disabled.advanceTick()
     check("lifecycle off by default", !disabled.lifecycleEnabled && !disabled.reproductionEnabled)
@@ -594,7 +604,10 @@ func runPebbleAgentsAgeMaturityReproductionSmoke() {
     check("lineage creates no implicit social relation", lineage.socialSnapshot().facts.isEmpty
         && lineage.socialSnapshot().trustRelations.isEmpty)
 
-    var replayBase = lifecycleSmokeBase("sim-lifecycle-replay")
+    var replayBase = lifecycleSmokeBase(
+        "sim-lifecycle-replay",
+        historicalSchemaVersion: AgentCheckpointSchema.localEcologyVersion
+    )
     let v4Checkpoint = try! replayBase.makeCheckpoint()
     var recorder = try! AgentReplayRecorder(checkpoint: v4Checkpoint, session: replayBase)
     _ = try! recorder.apply(

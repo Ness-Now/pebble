@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private let communicationAuthor = AgentID(rawValue: "agent_0")!
 private let communicationCarrier = AgentID(rawValue: "agent_1")!
@@ -212,6 +212,11 @@ private func communicationPrepared(
             configuration: transportConfiguration
         )
     }
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: enableLongDistance
+            ? AgentCheckpointSchema.longDistanceCommunicationVersion
+            : AgentCheckpointSchema.oralTransmissionVersion
+    )
     return (session, propositionID)
 }
 
@@ -1476,6 +1481,9 @@ func runPebbleAgentsTerminalCohortCommunicationSmoke() {
         configuration: .embodiedPopulationBounded(
             maximumActivePopulation: 8
         )
+    )
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.longDistanceCommunicationVersion
     )
     let result = try! session.advanceTick()
     let pending = session.pendingMortalityTransitions()

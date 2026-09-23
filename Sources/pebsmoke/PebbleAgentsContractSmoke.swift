@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private func contractAgent(_ id: String, x: Int) -> AgentSessionAgentState {
     let position = AgentPosition(x: x, y: 64, z: 0)
@@ -135,6 +135,9 @@ private func contractFixture(
         receipt: "physical-creditor-pickaxe", session: &session
     )
     try! session.setContractsEnabled(true, configuration: configuration)
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.contractVersion
+    )
     let needs = session.productionSnapshot().needs
     return ContractSmokeFixture(
         session: session,
@@ -759,9 +762,17 @@ func runPebbleAgentsContractSmoke() {
         obligation: overdueObligation, fixture: overdueFixture,
         suffix: "overdue", session: &overdueSession
     )
-    while overdueSession.tick <= overdueObligation.dueTick {
+    let overdueStepBound = max(
+        0, overdueObligation.dueTick - overdueSession.tick + 1
+    )
+    for _ in 0..<overdueStepBound
+        where overdueSession.tick <= overdueObligation.dueTick {
         _ = try! overdueSession.advanceTick()
     }
+    precondition(
+        overdueSession.tick > overdueObligation.dueTick,
+        "contract overdue boundary bound exceeded"
+    )
     try! overdueSession.reviewContractDueBoundaries()
     check("due boundary marks overdue but retains debt without enforcement",
           overdueSession.contractSnapshot().obligations.first?.status == .overdue

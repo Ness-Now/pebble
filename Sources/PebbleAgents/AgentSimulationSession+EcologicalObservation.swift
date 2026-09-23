@@ -596,6 +596,49 @@ func validateEcologicalObservationState(
             return false
         }
     }
+    func membershipAuthorityBindingIsValid(
+        observerID: AgentID,
+        authorityEventID: AgentCausalEventID?,
+        registrationEventID: AgentCausalEventID,
+        registeredTick: Int?,
+        observationTick: Int,
+        observationEventID: AgentCausalEventID
+    ) -> Bool {
+        guard let authorityEventID,
+              authorityEventID.simulationID == clock.simulationID,
+              authorityEventID.sequence.rawValue
+                < observationEventID.sequence.rawValue,
+              let event = eventsByID[authorityEventID],
+              event.simulationTick.rawValue <= observationTick,
+              event.kind == .populationMembershipAuthorityRetained,
+              event.origin == .populationTransition,
+              event.actorID == nil,
+              event.subjectID == nil,
+              event.operationID == nil,
+              case let .populationMembershipAuthority(members, digest) =
+                event.payload,
+              !members.isEmpty,
+              members == members.sorted(by: { lhs, rhs in
+                  if lhs.ordinal != rhs.ordinal {
+                      return lhs.ordinal < rhs.ordinal
+                  }
+                  return lhs.agentID < rhs.agentID
+              }),
+              Set(members.map(\.agentID)).count == members.count,
+              Set(members.map(\.ordinal)).count == members.count,
+              digest == AgentPopulationDigest.make(
+                  "active-membership|simulation=\(clock.simulationID.rawValue)|"
+                      + members.map(\.canonicalText).joined(separator: ";")
+              ),
+              let member = members.first(where: {
+                  $0.agentID == observerID
+              }) else {
+            return false
+        }
+        return member.registrationEventID == registrationEventID
+            && (registeredTick == nil
+                || member.registeredTick == registeredTick)
+    }
     func deathBindingIsValid(
         _ death: AgentMortalityRecord,
         observationEventID: AgentCausalEventID
@@ -839,6 +882,15 @@ func validateEcologicalObservationState(
                       observationTick:
                         observation.observedAtSimulationTick,
                       observationEventID: record.causalEventID
+                  ) || membershipAuthorityBindingIsValid(
+                      observerID: observerID,
+                      authorityEventID:
+                        population.currentMembershipAuthorityEventID,
+                      registrationEventID: member.registrationEventID,
+                      registeredTick: member.registeredTick,
+                      observationTick:
+                        observation.observedAtSimulationTick,
+                      observationEventID: record.causalEventID
                   ) else {
                 throw invalid(
                     "\(HistoricalEcologicalObserverFailure.registeredAfterObservation.rawValue) "
@@ -856,6 +908,14 @@ func validateEcologicalObservationState(
             guard !summaryIDs.contains(observerID),
                   registrationBindingIsValid(
                       observerID: observerID,
+                      registrationEventID: death.registrationEventID,
+                      registeredTick: nil,
+                      observationTick:
+                        observation.observedAtSimulationTick,
+                      observationEventID: record.causalEventID
+                  ) || membershipAuthorityBindingIsValid(
+                      observerID: observerID,
+                      authorityEventID: death.membershipAuthorityEventID,
                       registrationEventID: death.registrationEventID,
                       registeredTick: nil,
                       observationTick:

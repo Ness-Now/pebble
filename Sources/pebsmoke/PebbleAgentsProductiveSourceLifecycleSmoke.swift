@@ -1,4 +1,4 @@
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private func productiveSourceAgent() -> AgentSessionAgentState {
     let position = AgentPosition(x: 0, y: 64, z: 0)
@@ -34,6 +34,9 @@ private func productiveSourceSession(
     try! session.setAutonomousActivityEnabled(true)
     try! session.setProductiveSourceLifecycleEnabled(
         true, configuration: configuration
+    )
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.autonomousActivityVersion
     )
     return session
 }

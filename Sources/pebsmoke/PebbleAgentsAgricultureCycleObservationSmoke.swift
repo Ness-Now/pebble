@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private let b03Positions = [
     AgentPosition(x: 9, y: 63, z: 9),
@@ -74,6 +74,9 @@ private func b03Session(
         )
     )
     try! session.setAgricultureEnabled(true)
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.independentEcologicalReceiptVersion
+    )
     return session
 }
 

@@ -271,7 +271,9 @@ extension AgentSimulationSession {
     }
 
     mutating func applyMortalitySurvivalBoundary(
-        at mortalityTick: Int
+        at mortalityTick: Int,
+        boundary: AgentPhysiologicalBoundaryDelta?,
+        causalRetentionFault: AgentCausalRetentionFaultPoint? = nil
     ) throws -> [String: AgentMemoryEntry] {
         guard let mortality = mortalityState else { return [:] }
         var candidate = self
@@ -280,12 +282,27 @@ extension AgentSimulationSession {
         for id in candidate.sortedIds {
             guard var state = candidate.statesById[id] else { continue }
             healthBeforeByID[state.agentID] = state.health
-            let memory = candidate.applySurvivalTick(
-                to: &state,
-                tick: mortalityTick,
-                appliesLegacyStarvationDamage: candidate.homeostasisState == nil
-            )
-            state.ticksAlive += 1
+            let memory: AgentMemoryEntry?
+            if let boundary {
+                memory = candidate.applySurvivalTick(
+                    to: &state,
+                    tick: mortalityTick,
+                    boundary: boundary,
+                    restingAtHome: state.position == state.homePosition
+                        && state.currentGoal.kind == .rest
+                        && state.lastAction?.name == "rest",
+                    appliesLegacyStarvationDamage:
+                        candidate.homeostasisState == nil
+                )
+            } else {
+                memory = candidate.applyLegacyCognitiveSurvivalTick(
+                    to: &state,
+                    tick: mortalityTick,
+                    appliesLegacyStarvationDamage:
+                        candidate.homeostasisState == nil
+                )
+                state.ticksAlive += 1
+            }
             if let memory {
                 candidate.appendMemory(memory, to: &state.memory)
                 survivalMemories[id] = memory
@@ -321,12 +338,20 @@ extension AgentSimulationSession {
             let immediateIDs = Set(staged.map(\.agentID))
             let immediate = lethal.filter { !immediateIDs.contains($0.agentID) }
             if !immediate.isEmpty {
-                try candidate.finalizeMortalityTransitions(immediate, at: mortalityTick)
+                try candidate.finalizeMortalityTransitions(
+                    immediate,
+                    at: mortalityTick,
+                    causalRetentionFault: causalRetentionFault
+                )
             }
             for entry in lethal {
                 survivalMemories.removeValue(forKey: entry.agentID.rawValue)
             }
         }
+        try Self.injectCausalRetentionFault(
+            causalRetentionFault,
+            at: .afterMortalityMembershipValidationBeforePublication
+        )
         self = candidate
         return survivalMemories
     }
@@ -559,7 +584,8 @@ extension AgentSimulationSession {
     private mutating func finalizeMortalityTransitions(
         _ lethal: [AgentLethalMortalityCandidate],
         at mortalityTick: Int,
-        terminalCohortIDs: Set<AgentID>? = nil
+        terminalCohortIDs: Set<AgentID>? = nil,
+        causalRetentionFault: AgentCausalRetentionFaultPoint? = nil
     ) throws {
         guard var mortality = mortalityState, var registry = populationRegistry else {
             throw AgentSessionError.mortality(.disabled)
@@ -799,9 +825,7 @@ extension AgentSimulationSession {
                 )
             }
             let terminalHomeostasis = homeostasisProfile(for: item.agentID)
-            let terminalAge = try? lifecycleState?.members.first {
-                $0.agentID == item.agentID
-            }?.age(at: mortalityTick)
+            let terminalAge = try? physiologicalAge(for: item.agentID)
             let terminalStage = lifecycleState?.members.first {
                 $0.agentID == item.agentID
             }?.currentStage
@@ -1073,6 +1097,8 @@ extension AgentSimulationSession {
                 finalMemory: finalMemory,
                 finalStateDigest: finalDigest,
                 registrationEventID: member.registrationEventID,
+                membershipAuthorityEventID:
+                    registry.currentMembershipAuthorityEventID,
                 arrivalEventID: member.arrivalEventID,
                 terminalPhysiologyEventID: item.terminalPhysiologyEventID,
                 pendingMaterialExitEventID: item.pendingMaterialExitEventID,
@@ -1246,6 +1272,16 @@ extension AgentSimulationSession {
         )
         populationRegistry = registry
         mortalityState = mortality
+        try Self.injectCausalRetentionFault(
+            causalRetentionFault,
+            at: .afterMortalityStateBeforeMembershipAuthorityRefresh
+        )
+        if let cause = registry.lastPopulationEventID as AgentCausalEventID? {
+            try refreshPopulationMembershipAuthorityAfterMembershipChange(
+                causedBy: cause,
+                testFault: causalRetentionFault
+            )
+        }
         try validateHouseholdCrossDomainIfEnabled()
         try validateDependentCareCrossDomainIfEnabled()
         try validateEstateCrossDomainIfEnabled()

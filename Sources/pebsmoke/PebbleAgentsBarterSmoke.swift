@@ -1,4 +1,4 @@
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private func barterAgent(_ id: String, x: Int) -> AgentSessionAgentState {
     let position = AgentPosition(x: x, y: 64, z: 0)
@@ -233,6 +233,9 @@ private func barterFixture(
         session: &session
     )
     try! session.setBarterEnabled(true, configuration: configuration)
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.barterVersion
+    )
     let needs = session.productionSnapshot().needs
     let opportunity = AgentBarterOpportunityObservation(
         opportunityID: "local:a:b:primary", offerorID: a, counterpartyID: b,

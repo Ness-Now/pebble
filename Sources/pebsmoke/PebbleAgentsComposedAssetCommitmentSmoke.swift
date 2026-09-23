@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 func b04Agent(_ id: String, x: Int) -> AgentSessionAgentState {
     let position = AgentPosition(x: x, y: 64, z: 0)
@@ -191,6 +191,9 @@ func b04Fixture(_ simulationID: String) -> B04Fixture {
         containerLocationID: marketLocation,
         containerBlockFingerprint: 54, interactionRadius: 8,
         physicalSlotCapacity: 9
+    )
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.marketVersion
     )
     let snapshot = session.productionSnapshot()
     func reason(_ id: String) -> AgentBarterValueReason {

@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private struct KinshipScenarioCheck: Codable, Equatable {
     let name: String
@@ -144,6 +144,9 @@ private func durableKinshipBase(seed: UInt32) -> AgentSimulationSession {
         true,
         configuration: durableKinshipLifecycleConfiguration
     )
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.lifecycleVersion
+    )
     return session
 }
 
@@ -239,7 +242,11 @@ func runDurableKinshipGraphSmoke(_ options: Options) -> Never {
         .setKinshipEnabled(true, configuration: .live),
         to: &direct
     )
-    let preBirthCheckpoint = try! direct.makeCheckpoint()
+    var preBirthHistorical = direct
+    try! preBirthHistorical.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.kinshipVersion
+    )
+    let preBirthCheckpoint = try! preBirthHistorical.makeCheckpoint()
     let preBirthRestored = try! AgentSimulationSession.restoring(preBirthCheckpoint)
     add("activation archives founders", direct.kinshipSnapshot().historicalPersons
         .map(\.agentID.rawValue) == ["agent_0", "agent_1", "agent_2"])
@@ -247,7 +254,8 @@ func runDurableKinshipGraphSmoke(_ options: Options) -> Never {
         of: AgentID(rawValue: "agent_0")!
     ) == nil)
     add("restart before birth exact", preBirthCheckpoint.schemaVersion == 7
-        && (try! preBirthRestored.durableStateBytes()) == (try! direct.durableStateBytes()))
+        && (try! preBirthRestored.durableStateBytes())
+            == (try! preBirthHistorical.durableStateBytes()))
 
     _ = try! recorder.apply(.setReproductionEnabled(true), to: &direct)
     let births = (0..<4).map {
@@ -313,6 +321,9 @@ func runDurableKinshipGraphSmoke(_ options: Options) -> Never {
         == afterMortalityKinship.historicalPersons
         && beforeMortalityKinship.parentageRecords == afterMortalityKinship.parentageRecords)
 
+    try! direct.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.kinshipVersion
+    )
     let checkpoint = try! direct.makeCheckpoint()
     let durableBytes = try! direct.durableStateBytes()
     let restored = try! AgentSimulationSession.restoring(checkpoint)
@@ -327,10 +338,14 @@ func runDurableKinshipGraphSmoke(_ options: Options) -> Never {
         checkpoint: v6Checkpoint,
         journal: journal
     )
+    var replayedHistorical = replayed.session
+    try! replayedHistorical.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.kinshipVersion
+    )
     add("replay v7 exact", journal.manifest.schemaVersion == 7
         && replayed.report.verified
-        && (try! replayed.session.durableStateBytes()) == durableBytes
-        && replayed.session.kinshipSnapshot() == direct.kinshipSnapshot())
+        && (try! replayedHistorical.durableStateBytes()) == durableBytes
+        && replayedHistorical.kinshipSnapshot() == direct.kinshipSnapshot())
     add("no world mutation", true, "pure AgentSimulationSession APIs only")
 
     let people = direct.kinshipSnapshot().historicalPersons

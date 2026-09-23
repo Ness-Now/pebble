@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private let teachingHome = AgentPosition(x: 0, y: 64, z: 0)
 
@@ -72,7 +72,22 @@ private func teachingBase(
     if activateTeaching {
         try! session.setTeachingEnabled(true, configuration: teachingConfiguration)
     }
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: activateTeaching
+            ? AgentCheckpointSchema.teachingVersion
+            : AgentCheckpointSchema.skillVersion
+    )
     return session
+}
+
+private func teachingEnable(
+    _ session: inout AgentSimulationSession,
+    configuration: AgentTeachingConfiguration = .live
+) throws {
+    try session.setTeachingEnabled(true, configuration: configuration)
+    try session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.teachingVersion
+    )
 }
 
 @discardableResult
@@ -298,6 +313,9 @@ private func teachingJuvenileSession() -> (AgentSimulationSession, AgentID) {
         recorder: &recorder
     )
     try! session.setTeachingEnabled(true)
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.childhoodVersion
+    )
     try! session.setReproductionEnabled(true)
     for _ in 0..<32 where session.pendingBirthSitePlan() == nil {
         _ = try! session.advanceTick()
@@ -638,7 +656,7 @@ func runPebbleAgentsTeachingSmoke() {
         } catch AgentSessionError.teaching(.disabled) { return true }
         catch { return false }
     }())
-    try! trustSession.setTeachingEnabled(true)
+    try! teachingEnable(&trustSession)
     let selected = try! trustSession.selectMentorAndStartApprenticeship(teachingRequest(
         trustSession, studentID: student,
         candidates: [
@@ -660,7 +678,7 @@ func runPebbleAgentsTeachingSmoke() {
         &stableTie, agentID: alternate, count: 3, baseIndex: 130,
         recorder: &noRecorder
     )
-    try! stableTie.setTeachingEnabled(true)
+    try! teachingEnable(&stableTie)
     let stableSelected = try! stableTie.selectMentorAndStartApprenticeship(
         teachingRequest(
             stableTie, studentID: student,
@@ -811,7 +829,7 @@ func runPebbleAgentsTeachingSmoke() {
         &critical, agentID: teacher, count: 3, baseIndex: 550,
         recorder: &noRecorder
     )
-    try! critical.setTeachingEnabled(true)
+    try! teachingEnable(&critical)
     let criticalEngagement = try! critical.selectMentorAndStartApprenticeship(
         teachingRequest(
             critical, studentID: student,
@@ -930,7 +948,7 @@ func runPebbleAgentsTeachingSmoke() {
         &mortality, agentID: teacher, count: 3, baseIndex: 600,
         recorder: &noRecorder
     )
-    try! mortality.setTeachingEnabled(true)
+    try! teachingEnable(&mortality)
     let mortalEngagement = try! mortality.selectMentorAndStartApprenticeship(
         teachingRequest(
             mortality, studentID: student,

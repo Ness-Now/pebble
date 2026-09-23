@@ -445,6 +445,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
               let value = Int(raw), value > 0 else { return nil }
         return value
     }()
+    private let increment05CharacterizationWorldTicks: Int? = {
+        let environment = ProcessInfo.processInfo.environment
+        guard environment[
+            "PEBBLELAB_PS01_INCREMENT05_CHARACTERIZATION"
+        ] == "1", let raw = environment[
+            "PEBBLELAB_PS01_INCREMENT05_CHARACTERIZATION_WORLD_TICKS"
+        ], let value = Int(raw), (1_200...24_000).contains(value) else {
+            return nil
+        }
+        return value
+    }()
+    private var increment05CharacterizationStartWorldTick: Int?
+    private var increment05CharacterizationCompleted = false
     private let gateB3AcceptanceShock: String? = {
         guard let value = ProcessInfo.processInfo.environment["PEBBLELAB_GATE_B3_SHOCK"],
               !value.isEmpty else { return nil }
@@ -1337,6 +1350,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
                 dimension: game.dim.rawValue,
                 maximumSimulationTick: gateB3AcceptanceHorizon
             )
+            driveIncrement05NaturalCharacterization()
             if let evidence = increment03CoverageLiveProof?.afterFrame(
                 game: game,
                 controller: agentController,
@@ -1569,6 +1583,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         NSApp.terminate(nil)
     }
 
+    private func driveIncrement05NaturalCharacterization() {
+        guard !increment05CharacterizationCompleted,
+              let duration = increment05CharacterizationWorldTicks,
+              agentController.session != nil else { return }
+        guard let start = increment05CharacterizationStartWorldTick else {
+            increment05CharacterizationStartWorldTick = game.world.time
+            print(
+                "[lab-live] PS01_INCREMENT_05_NATURAL_START "
+                    + "seed=\(game.world.seed) worldTick=\(game.world.time) "
+                    + "targetWorldTicks=\(duration) cognitionHz="
+                    + "\(agentController.cognitiveHz)"
+            )
+            return
+        }
+        guard game.world.time - start >= duration else { return }
+        increment05CharacterizationCompleted = true
+        let traced = agentController.traceIncrement05NaturalCharacterization(
+            world: game.world,
+            startWorldTick: start
+        )
+        print(
+            "[lab-live] PS01_INCREMENT_05_NATURAL_COMPLETE "
+                + "seed=\(game.world.seed) traced=\(traced ? 1 : 0)"
+        )
+        fflush(stdout)
+        NSApp.terminate(nil)
+    }
+
     private func captureWorkDemandRefreshMilestone(
         _ proof: PebblePassiveProductProofSnapshot
     ) {
@@ -1725,6 +1767,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
             fflush(stdout)
         }
     }
+}
+
+if let headlessStatus = PebbleIncrement05NaturalCharacterization
+    .runIfRequested() {
+    exit(headlessStatus)
 }
 
 let app = NSApplication.shared

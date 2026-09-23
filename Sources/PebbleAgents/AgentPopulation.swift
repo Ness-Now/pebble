@@ -93,6 +93,7 @@ public enum AgentMigrationFailure: String, Codable, CaseIterable, Error, Sendabl
 
 public enum AgentPopulationError: Error, Equatable, CustomStringConvertible {
     case invalidConfiguration(String)
+    case invalidMembershipAuthority(String)
     case causalLedgerRequired
     case alreadyEnabled
     case disabled
@@ -106,6 +107,8 @@ public enum AgentPopulationError: Error, Equatable, CustomStringConvertible {
     public var description: String {
         switch self {
         case let .invalidConfiguration(reason): return "invalid population configuration: \(reason)"
+        case let .invalidMembershipAuthority(reason):
+            return "invalid population membership authority: \(reason)"
         case .causalLedgerRequired: return "population requires the causal ledger"
         case .alreadyEnabled: return "population registry already enabled"
         case .disabled: return "population registry disabled"
@@ -339,6 +342,39 @@ public struct AgentPopulationMemberRecord: Codable, Equatable, Sendable {
     }
 }
 
+/// One immutable registration row committed by a bounded current-membership
+/// authority event. The original registration event remains the historical
+/// identity; this row only lets durable consumers prove that the member was
+/// still active when the retained authority was published.
+public struct AgentPopulationMembershipAuthorityMember:
+    Codable, Equatable, Sendable
+{
+    public let agentID: AgentID
+    public let ordinal: AgentPopulationOrdinal
+    public let founder: Bool
+    public let registeredTick: Int
+    public let registrationEventID: AgentCausalEventID
+
+    public init(
+        agentID: AgentID,
+        ordinal: AgentPopulationOrdinal,
+        founder: Bool,
+        registeredTick: Int,
+        registrationEventID: AgentCausalEventID
+    ) {
+        self.agentID = agentID
+        self.ordinal = ordinal
+        self.founder = founder
+        self.registeredTick = registeredTick
+        self.registrationEventID = registrationEventID
+    }
+
+    var canonicalText: String {
+        "\(agentID.rawValue)|\(ordinal.rawValue)|\(founder ? 1 : 0)|"
+            + "\(registeredTick)|\(registrationEventID.rawValue)"
+    }
+}
+
 public struct AgentMigrationAdmissionIntent: Codable, Equatable, Sendable {
     public let origin: AgentMigrationOrigin
     public let destinationSettlementID: AgentSettlementID
@@ -489,6 +525,10 @@ public struct AgentPopulationRegistry: Codable, Equatable, Sendable {
     public internal(set) var evictionCounts: AgentPopulationEvictionCounts
     public let initializedEventID: AgentCausalEventID
     public internal(set) var lastPopulationEventID: AgentCausalEventID
+    /// Schema-44's bounded retained proof of the current active membership
+    /// projection. Original per-member registration identities never change.
+    public internal(set) var currentMembershipAuthorityEventID:
+        AgentCausalEventID?
 
     public init(
         configuration: AgentPopulationConfiguration,
@@ -500,7 +540,8 @@ public struct AgentPopulationRegistry: Codable, Equatable, Sendable {
         nextPopulationOrdinal: AgentPopulationOrdinal,
         evictionCounts: AgentPopulationEvictionCounts,
         initializedEventID: AgentCausalEventID,
-        lastPopulationEventID: AgentCausalEventID
+        lastPopulationEventID: AgentCausalEventID,
+        currentMembershipAuthorityEventID: AgentCausalEventID? = nil
     ) {
         self.configuration = configuration
         self.settlement = settlement
@@ -514,6 +555,8 @@ public struct AgentPopulationRegistry: Codable, Equatable, Sendable {
         self.evictionCounts = evictionCounts
         self.initializedEventID = initializedEventID
         self.lastPopulationEventID = lastPopulationEventID
+        self.currentMembershipAuthorityEventID =
+            currentMembershipAuthorityEventID
     }
 }
 

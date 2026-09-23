@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 import PebbleCore
 
 private func physicalFoodAgent(
@@ -31,12 +31,16 @@ private func physicalFoodSession(
         seed: 46, memoryPolicy: .bounded(maxEntries: 128),
         survivalConfiguration: survival
     )
-    return try! AgentSimulationSession(
+    var session = try! AgentSimulationSession(
         configuration: configuration,
         agents: [physicalFoodAgent(hunger: hunger, inventory: inventory)],
         simulationID: try! AgentSimulationID(validating: id),
         causalLedgerPolicy: .bounded(maxEvents: 4096)
     )
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.currentVersion
+    )
+    return session
 }
 
 private func physicalOutcome(
@@ -282,6 +286,9 @@ func runPebbleAgentsPhysicalFoodSurvivalSmoke() {
     )
     rescued.setSurvivalEnabled(true)
     try! rescued.setPhysicalFoodSurvivalEnabled(true)
+    try! rescued.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.physicalFoodSurvivalVersion
+    )
     try! rescued.applyValidatedPhysicalFoodConsumption(physicalOutcome(
         rescued, material: "sweet_berries",
         hungerPoints: 2, saturation: 0.4
@@ -335,6 +342,9 @@ func runPebbleAgentsPhysicalFoodSurvivalSmoke() {
     )
     longRunning.setSurvivalEnabled(true)
     try! longRunning.setPhysicalFoodSurvivalEnabled(true)
+    try! longRunning.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.physicalFoodSurvivalVersion
+    )
     let longRunTarget = 5_001
     var ancientOutcome: AgentValidatedPhysicalFoodConsumptionOutcome?
     var boundaryTotals: [UInt64] = []

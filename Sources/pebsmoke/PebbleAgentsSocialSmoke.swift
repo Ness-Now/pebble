@@ -374,8 +374,15 @@ func runPebbleAgentsSocialSmoke() {
     )
     _ = socialSmokeDirectMessage(session: &urgent, fingerprint: 1_520, targetX: 5)
     urgent.setSurvivalEnabled(true)
+    try! urgent.rebasePhysiologicalTime(toWorldTick: 0)
     var urgentResult: AgentSessionTickResult?
-    for _ in 0..<9 { urgentResult = try! urgent.advanceTick() }
+    for boundary in 1...9 {
+        try! urgent.advancePhysiologicalTime(
+            toWorldTick: boundary
+                * AgentPhysiologicalTimeConfiguration.live.boundaryWorldTicks
+        )
+        urgentResult = try! urgent.advanceTick()
+    }
     let urgentAgent = urgentResult?.agents.first { $0.agentId == "agent_2" }
     check("survival urgency preempts active social verification", urgentAgent?.snapshot.currentGoal.kind == .satisfyHunger && urgentAgent?.action.name != "verify_information")
     check("preempted social belief remains unverified", urgent.socialSnapshot().beliefs[0].status == .unverified)

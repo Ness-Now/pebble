@@ -148,8 +148,10 @@ do {
 
     let tickNeeds = needs(hunger: 0.2, fatigue: 0.01, curiosity: 0.7, safety: 0.6)
     let tickResult = AgentCognitiveTransitions.advanceTick(needs: tickNeeds)
-    check("cognitive tick hunger +0.01", abs(tickResult.needs.hunger - 0.21) <= 1e-12)
-    check("cognitive tick fatigue +0.005", tickResult.needs.fatigue == 0.015)
+    check("cognitive tick preserves hunger without physical time",
+          tickResult.needs.hunger == tickNeeds.hunger)
+    check("cognitive tick preserves fatigue without physical time",
+          tickResult.needs.fatigue == tickNeeds.fatigue)
     check("cognitive tick curiosity unchanged", tickResult.needs.curiosity == 0.7)
     check("cognitive tick safety unchanged", tickResult.needs.safety == 0.6)
     check("cognitive tick state idle", tickResult.state == "idle")
@@ -562,8 +564,9 @@ do {
     ])
     let tickAfter = tickSession.snapshot()
     check("session tick increments once", tickResult.tick == 1 && tickAfter.tick == 1)
-    check("session tick evolves needs",
-          tickAfter.agents[0].needs.hunger == tickBefore.agents[0].needs.hunger + 0.01)
+    check("session tick does not invent biological elapsed time",
+          tickAfter.agents[0].needs.hunger == tickBefore.agents[0].needs.hunger
+              && tickAfter.agents[0].needs.fatigue == tickBefore.agents[0].needs.fatigue)
     check("session tick nearby from start snapshot",
           tickAfter.agents.allSatisfy { $0.nearbyAgents.count == 1 })
     check("session tick nearby excludes same id",

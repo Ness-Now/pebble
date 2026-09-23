@@ -1,4 +1,4 @@
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private func lifecycleAgent() -> AgentSessionAgentState {
     let position = AgentPosition(x: 0, y: 64, z: 0)
@@ -36,6 +36,9 @@ private func lifecycleSession(_ id: String) -> AgentSimulationSession {
             maximumCooldowns: 8,
             blockedCooldownTicks: 2
         )
+    )
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.autonomousActivityVersion
     )
     return session
 }

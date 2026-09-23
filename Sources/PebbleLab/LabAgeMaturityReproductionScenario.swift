@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private struct LifecycleScenarioCheck: Codable, Equatable {
     let name: String
@@ -164,6 +164,9 @@ private func lifecycleScenarioBase(seed: UInt32) -> AgentSimulationSession {
         settlementAnchor: AgentPosition(x: 0, y: 64, z: 0),
         receptionPosition: lifecycleScenarioReception
     )
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.populationVersion
+    )
     _ = try! session.admitMigration(
         intent: AgentMigrationAdmissionIntent(),
         observation: AgentMigrationWorldObservation(
@@ -186,7 +189,13 @@ private func lifecycleScenarioBase(seed: UInt32) -> AgentSimulationSession {
             AgentMovementCoordinator.resolve(snapshot: session.snapshot())
         )
     }
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.settlementMetricsVersion
+    )
     try! session.initializeLocalEcology(observations: [lifecycleScenarioHabitat])
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.localEcologyVersion
+    )
     _ = try! session.applyLocalEcologyEndOfTick(
         habitatValidations: [lifecycleScenarioHabitat]
     )
@@ -224,6 +233,9 @@ func runAgeMaturityReproductionSmoke(_ options: Options) -> Never {
     let historicalTicksAlive = direct.snapshot().agents.map { ($0.id, $0.ticksAlive) }
     let lifecycleActivationTick = direct.tick
     try! direct.setLifecycleEnabled(true)
+    try! direct.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.lifecycleVersion
+    )
     try! direct.setReproductionEnabled(true)
     add("four bootstrap residents", direct.populationSummary().residentCount == 4)
     add("bootstrap ages mature", direct.lifecycleSnapshot().members.allSatisfy {
@@ -361,19 +373,26 @@ func runAgeMaturityReproductionSmoke(_ options: Options) -> Never {
         named: AgentCheckpointName(rawValue: "lifecycle-reproduction")!
     )
     let replayed = try! AgentSessionReplayer.replay(checkpoint: v4Checkpoint, journal: journal)
+    try! replayDirect.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.lifecycleVersion
+    )
+    var replayedSession = replayed.session
+    try! replayedSession.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.lifecycleVersion
+    )
     add("replay schema v6", journal.manifest.schemaVersion == 6)
     add("replay verified", replayed.report.verified)
     add("replay bytes exact", try! replayDirect.durableStateBytes()
-        == replayed.session.durableStateBytes())
-    let replayStageEvents = replayed.session.causalLedgerSnapshot().events.filter {
+        == replayedSession.durableStateBytes())
+    let replayStageEvents = replayedSession.causalLedgerSnapshot().events.filter {
         $0.kind == .lifeStageChanged && $0.subjectID?.rawValue == "agent_4"
     }
     add("replay stage ticks exact", replayStageEvents.map {
         $0.simulationTick.rawValue
     } == [6, 12] && replayStageEvents == directStageEvents)
-    add("replay lifecycle digest exact", replayed.session.lifecycleSummary().digest
+    add("replay lifecycle digest exact", replayedSession.lifecycleSummary().digest
         == direct.lifecycleSummary().digest)
-    add("replay final direct bytes exact", try! replayed.session.durableStateBytes()
+    add("replay final direct bytes exact", try! replayedSession.durableStateBytes()
         == direct.durableStateBytes())
     add("v4 base unchanged", v4Checkpoint.schemaVersion == 4
         && !String(data: try! AgentCheckpointCodec.encode(v4Checkpoint.durableState), encoding: .utf8)!

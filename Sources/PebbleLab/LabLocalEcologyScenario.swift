@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private struct EcologyScenarioCheck: Codable, Equatable {
     let name: String
@@ -108,6 +108,9 @@ private func ecologyScenarioSession(seed: UInt32) -> AgentSimulationSession {
     try! session.initializePopulationRegistry(
         settlementAnchor: ecologyAnchor,
         receptionPosition: ecologyReception
+    )
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.populationVersion
     )
     _ = try! session.admitMigration(
         intent: AgentMigrationAdmissionIntent(),
@@ -319,9 +322,15 @@ func runLocalEcologySubsistenceSmoke(_ options: Options) -> Never {
         maximumPressureFrames: 32,
         maximumHabitatReadsPerScan: 256
     )
+    try! direct.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.settlementMetricsVersion
+    )
     try! direct.initializeLocalEcology(
         observations: habitatObservations,
         configuration: ecologyConfiguration
+    )
+    try! direct.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.localEcologyVersion
     )
     let initialEcology = direct.localEcologySnapshot()
     let patchA = initialEcology.patches.first { $0.foragePosition == ecologyForageA }!

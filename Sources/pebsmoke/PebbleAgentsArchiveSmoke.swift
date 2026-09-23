@@ -329,6 +329,9 @@ func runPebbleAgentsArchiveSmoke() {
                 maximumSearchResults: 2
             )
         )
+        try session.useLegacyCognitivePhysiologyReplayFixture(
+            schemaVersion: AgentCheckpointSchema.archiveVersion
+        )
         let anchorReceipt = try archiveReceipt(
             anchor.plan,
             actorID: archiveAuthor,

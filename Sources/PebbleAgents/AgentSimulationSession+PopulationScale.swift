@@ -541,6 +541,9 @@ extension AgentSimulationSession {
         )
         registry.lastPopulationEventID = lastEventID
         populationRegistry = registry
+        try refreshPopulationMembershipAuthorityAfterMembershipChange(
+            causedBy: lastEventID
+        )
         try validateHouseholdCrossDomainIfEnabled()
         try validateDependentCareCrossDomainIfEnabled()
         try validateFamilyCrossDomainIfEnabled()

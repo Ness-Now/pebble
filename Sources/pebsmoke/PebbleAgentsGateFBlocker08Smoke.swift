@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private let gateFB08AgentIDs = (0..<3).map {
     AgentID(rawValue: "agent_\($0)")!
@@ -64,7 +64,11 @@ private func gateFB08ScaleConfiguration()
 private func gateFB08EnableScale(
     _ session: inout AgentSimulationSession
 ) throws {
-    try session.initializePopulationScaling(
+    var candidate = session
+    try candidate.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.populationScaleVersion
+    )
+    try candidate.initializePopulationScaling(
         additionalSettlements: [AgentPopulationSettlement(
             settlementID: gateFB08EastID,
             anchor: gateFB08East,
@@ -75,6 +79,7 @@ private func gateFB08EnableScale(
         )],
         configuration: gateFB08ScaleConfiguration()
     )
+    session = candidate
 }
 
 private func gateFB08BaseSession(
@@ -116,6 +121,9 @@ private func gateFB08BaseSession(
     try! session.setMaterialRightsEnabled(true)
     try! session.setMortalityEnabled(
         true, configuration: .embodiedLive
+    )
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.estateVersion
     )
     return session
 }
@@ -190,9 +198,18 @@ private func gateFB08AddUnionAndAsset(
 private func gateFB08FinalizeDeath(
     _ session: inout AgentSimulationSession
 ) -> (AgentMortalityRecord, AgentEstateRecord) {
-    while session.pendingMortalityTransitions().isEmpty {
+    let maximumHistoricalSteps = 16
+    var historicalSteps = 0
+    while session.pendingMortalityTransitions().isEmpty,
+          historicalSteps < maximumHistoricalSteps {
         _ = try! session.advanceTick()
+        historicalSteps += 1
     }
+    precondition(
+        !session.pendingMortalityTransitions().isEmpty,
+        "Gate F Blocker 08 historical mortality exceeded "
+            + "\(maximumHistoricalSteps) cognitive steps"
+    )
     let pending = session.pendingMortalityTransitions().first!
     let receipt = "\(session.simulationID.rawValue)-exit-"
         + "\(pending.agentID.rawValue)-t\(session.tick)"
@@ -597,14 +614,14 @@ func runPebbleAgentsGateFBlocker08Smoke() {
     check("Estate schema 27 preserves legacy validation semantics",
           AgentCheckpointSchema.estateValidationSemantics(for: 27)
             == .legacySuccessorPlanRevalidation)
-    check("Estate schemas 28 through 43 use strict validation semantics",
-          (28...43).allSatisfy {
+    check("Estate schemas 28 through 44 use strict validation semantics",
+          (28...44).allSatisfy {
               AgentCheckpointSchema.estateValidationSemantics(for: $0)
                 == .strictDurableSuccessorPlan
           })
     check("unsupported future Estate schema remains rejected",
-          AgentCheckpointSchema.estateValidationSemantics(for: 44) == nil
-            && !AgentCheckpointSchema.supports(44))
+          AgentCheckpointSchema.estateValidationSemantics(for: 45) == nil
+            && !AgentCheckpointSchema.supports(45))
 
     var estateOnly = gateFB08BaseSession("gate-f-b08-estate-only")
     try! estateOnly.setEstatesEnabled(true)
@@ -688,6 +705,7 @@ func runPebbleAgentsGateFBlocker08Smoke() {
           nonEmptyRestored?.estateSnapshot() == nonEmpty.estateSnapshot()
             && nonEmptyRestored?.mortalitySnapshot()
                 == nonEmpty.mortalitySnapshot())
+    print("  GATE_F_B08_MORTALITY_BOUND max=16 deathTick=\(death.deathTick)")
     if var continued = nonEmptyRestored {
         _ = try! continued.advanceTick()
         check("post-restore continuation does not replay death or Estate effects",
@@ -779,7 +797,7 @@ func runPebbleAgentsGateFBlocker08Smoke() {
     let unsupportedFuture = gateFB08MutatedCheckpoint(
         nonEmptyCheckpoint
     ) { durable in
-        durable["schemaVersion"] = 39
+        durable["schemaVersion"] = 45
     }
     check("full checkpoint restore rejects unsupported future schema",
           gateFB08RestoreError(unsupportedFuture) != nil)

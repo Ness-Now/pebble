@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private let observerWorld = try! AgentObserverWorldBinding(
     worldID: "world-civ28",
@@ -190,6 +190,9 @@ private func observerSession() -> AgentSimulationSession {
         ),
     ])
     try! session.setPersistenceReconciliationEnabled(true)
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.persistenceReconciliationVersion
+    )
     return session
 }
 

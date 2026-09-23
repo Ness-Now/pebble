@@ -162,7 +162,9 @@ extension AgentSimulationSession {
         projectedToNextTick: Bool = false
     ) -> Bool {
         guard survivalEnabled else { return false }
-        let added = projectedToNextTick ? configuration.survivalConfiguration.hungerPerTick : 0
+        let added = projectedToNextTick
+            && legacyTemporalSchemaVersionOverride != nil
+            ? configuration.survivalConfiguration.hungerPerTick : 0
         let hunger = min(1, max(0, state.needs.hunger + added))
         if state.currentGoal.kind == .satisfyHunger {
             return hunger > configuration.survivalConfiguration.hungerRecoveryThreshold
@@ -175,7 +177,9 @@ extension AgentSimulationSession {
         projectedToNextTick: Bool = false
     ) -> Bool {
         guard survivalEnabled else { return false }
-        let added = projectedToNextTick ? configuration.survivalConfiguration.fatiguePerTick : 0
+        let added = projectedToNextTick
+            && legacyTemporalSchemaVersionOverride != nil
+            ? configuration.survivalConfiguration.fatiguePerTick : 0
         let fatigue = min(1, max(0, state.needs.fatigue + added))
         if state.currentGoal.kind == .rest {
             return fatigue > configuration.survivalConfiguration.fatigueRecoveryThreshold
@@ -186,16 +190,40 @@ extension AgentSimulationSession {
     func applySurvivalTick(
         to state: inout AgentSessionAgentState,
         tick survivalTick: Int,
+        boundary: AgentPhysiologicalBoundaryDelta,
+        restingAtHome: Bool,
         appliesLegacyStarvationDamage: Bool = true
     ) -> AgentMemoryEntry? {
         let survival = configuration.survivalConfiguration
-        state.needs.hunger = min(1, max(0, state.needs.hunger + survival.hungerPerTick))
-        state.needs.fatigue = min(1, max(0, state.needs.fatigue + survival.fatiguePerTick))
+        let scale = AgentPhysiologicalTimeConfiguration.normalizedNeedScale
+        let hungerBefore = Int64((
+            min(1, max(0, state.needs.hunger)) * Double(scale)
+        ).rounded())
+        let fatigueBefore = Int64((
+            min(1, max(0, state.needs.fatigue)) * Double(scale)
+        ).rounded())
+        let hungerAfter = min(scale, max(0,
+            hungerBefore + boundary.hungerMillionths
+        ))
+        let fatigueWithBurn = min(scale, max(0,
+            fatigueBefore + boundary.fatigueMillionths
+        ))
+        let fatigueAfter = restingAtHome
+            ? max(0, fatigueWithBurn - boundary.restRecoveryMillionths)
+            : fatigueWithBurn
+        state.needs.hunger = Double(hungerAfter) / Double(scale)
+        state.needs.fatigue = Double(fatigueAfter) / Double(scale)
         state.needs.curiosity = min(1, max(0, state.needs.curiosity))
         state.needs.safety = min(1, max(0, state.needs.safety))
         state.health = min(100, max(0, state.health))
         state.state = "idle"
         var progress = state.survivalProgress ?? AgentSurvivalProgress()
+        if restingAtHome {
+            progress.restTicks = min(
+                AgentSurvivalProgress.maximumEventCount,
+                progress.restTicks + 1
+            )
+        }
         var memory: AgentMemoryEntry?
         if state.needs.hunger >= survival.criticalHungerThreshold {
             progress.consecutiveCriticalHungerTicks = min(
@@ -233,6 +261,65 @@ extension AgentSimulationSession {
         return memory
     }
 
+    /// Exact pre-v44 cognitive-tick physiology used only while replaying an
+    /// unmigrated historical checkpoint/journal. A temporal rebase clears the
+    /// legacy schema override before any new World-time operation is accepted.
+    func applyLegacyCognitiveSurvivalTick(
+        to state: inout AgentSessionAgentState,
+        tick survivalTick: Int,
+        appliesLegacyStarvationDamage: Bool = true
+    ) -> AgentMemoryEntry? {
+        let survival = configuration.survivalConfiguration
+        state.needs.hunger = min(
+            1, max(0, state.needs.hunger + survival.hungerPerTick)
+        )
+        state.needs.fatigue = min(
+            1, max(0, state.needs.fatigue + survival.fatiguePerTick)
+        )
+        state.needs.curiosity = min(1, max(0, state.needs.curiosity))
+        state.needs.safety = min(1, max(0, state.needs.safety))
+        state.health = min(100, max(0, state.health))
+        state.state = "idle"
+        var progress = state.survivalProgress ?? AgentSurvivalProgress()
+        var memory: AgentMemoryEntry?
+        if state.needs.hunger >= survival.criticalHungerThreshold {
+            progress.consecutiveCriticalHungerTicks = min(
+                survival.starvationGraceTicks + 1,
+                progress.consecutiveCriticalHungerTicks + 1
+            )
+            if appliesLegacyStarvationDamage,
+               progress.consecutiveCriticalHungerTicks
+                > survival.starvationGraceTicks,
+               state.health > 0 {
+                let damage = min(
+                    state.health, survival.starvationDamagePerTick
+                )
+                state.health -= damage
+                progress.starvationDamageTaken = min(
+                    100, progress.starvationDamageTaken + damage
+                )
+                memory = AgentMemoryEntry(
+                    tick: survivalTick,
+                    type: "starvation_damage",
+                    summary: "\(state.id) took \(damage) starvation damage",
+                    importance: 0.70
+                )
+                progress.lastMemoryType = .starvationDamage
+            }
+        } else {
+            progress.consecutiveCriticalHungerTicks = 0
+        }
+        progress.status = state.needs.hunger
+            >= survival.criticalHungerThreshold
+            ? .starving
+            : state.needs.hunger >= survival.hungryThreshold
+                ? .hungry
+                : state.needs.fatigue >= survival.fatigueThreshold
+                    ? .exhausted : .stable
+        state.survivalProgress = progress
+        return memory
+    }
+
     func updateSurvivalProgress(
         for state: inout AgentSessionAgentState,
         action: AgentAction
@@ -240,10 +327,12 @@ extension AgentSimulationSession {
         guard var progress = state.survivalProgress else { return }
         let survival = configuration.survivalConfiguration
         if action.name == "rest", state.position == state.homePosition {
-            progress.restTicks = min(
-                AgentSurvivalProgress.maximumEventCount,
-                progress.restTicks + 1
-            )
+            if legacyTemporalSchemaVersionOverride != nil {
+                progress.restTicks = min(
+                    AgentSurvivalProgress.maximumEventCount,
+                    progress.restTicks + 1
+                )
+            }
             progress.status = state.needs.fatigue <= survival.fatigueRecoveryThreshold
                 ? .stable
                 : .recovering

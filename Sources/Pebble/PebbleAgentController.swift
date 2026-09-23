@@ -7,6 +7,21 @@ struct PebbleAgentCommandResult {
     let message: String
 }
 
+enum PebbleAgentCivilizationSchedulingStatus: Equatable {
+    case running
+    case intentionallyPaused
+    case fatalIntegrityHalted(String)
+
+    var statusText: String {
+        switch self {
+        case .running: return "running"
+        case .intentionallyPaused: return "paused"
+        case let .fatalIntegrityHalted(reason):
+            return "fatal-integrity-halted(\(reason))"
+        }
+    }
+}
+
 struct PebbleKinshipLateFailureBoundarySnapshot {
     let durableSessionBytes: Data
     let tick: Int
@@ -35,6 +50,21 @@ final class PebbleAgentController {
     var probesByAgentId: [String: LabCoreAgentEntity] = [:]
     var lastTickResult: AgentSessionTickResult?
     var lastError: String?
+    /// A normal-session integrity violation is not transient unavailability.
+    /// Once latched, this exact civilization session remains halted until it
+    /// is explicitly stopped/replaced; scheduler updates never retry it.
+    var fatalSessionIntegrityFailure: String?
+    var schedulingStatus: PebbleAgentCivilizationSchedulingStatus {
+        if let fatalSessionIntegrityFailure {
+            return .fatalIntegrityHalted(fatalSessionIntegrityFailure)
+        }
+        if let candidatePhysicalHardFailure {
+            return .fatalIntegrityHalted(
+                "candidate physical hard failure: \(candidatePhysicalHardFailure)"
+            )
+        }
+        return isPaused ? .intentionallyPaused : .running
+    }
     var movementEnabled = false
     var lastMovementOutcomes: [AgentMovementOutcome] = []
     var observedGoalKinds = Set<String>()
@@ -128,6 +158,8 @@ final class PebbleAgentController {
     var marketRemoteBuyerRestoreState: LabCoreAgentPhysicalState?
     var marketDisposableWorldFixture: PebbleAgentMarketDisposableWorldFixture?
     var candidateAgricultureNavigationFailureProofInjected = false
+    var increment05IntegrityFailureProofPending = false
+    var increment05IntegrityFailureProofAttemptCount = 0
     var ecologicalObservationProofFixture: PebbleAgentEcologicalObservationProofFixture?
     var agricultureProofFixture: PebbleAgentAgricultureProofFixture?
     var wildSubsistenceProofFixture: PebbleAgentWildSubsistenceProofFixture?
@@ -288,6 +320,11 @@ final class PebbleAgentController {
             return
         }
         guard session != nil else { return }
+        guard fatalSessionIntegrityFailure == nil,
+              candidatePhysicalHardFailure == nil else {
+            credit = 0
+            return
+        }
         guard let player else {
             stop(reason: "player unavailable")
             return
@@ -295,6 +332,26 @@ final class PebbleAgentController {
         applyFollow(player: player)
 
         let worldTick = world.time
+        guard let previousWorldTick = lastWorldTick else {
+            do {
+                try session?.rebasePhysiologicalTime(toWorldTick: worldTick)
+            } catch {
+                runtimeErrorCount += 1
+                lastError = "physiological World-time bind refused: \(error)"
+                isPaused = true
+                credit = 0
+            }
+            lastWorldTick = worldTick
+            return
+        }
+        guard worldTick >= previousWorldTick else {
+            runtimeErrorCount += 1
+            lastError = "physiological World time moved backward "
+                + "\(previousWorldTick)>\(worldTick)"
+            isPaused = true
+            credit = 0
+            return
+        }
         let expectedCoverage = physicalSimulationCoverageRequest(for: world)
         let coverage = world.physicalSimulationCoverage
         let coverageMismatchReason: String?
@@ -364,20 +421,12 @@ final class PebbleAgentController {
             )
             lastPhysicalSimulationCoverageTraceKey = readyKey
         }
-        guard let previousTick = lastWorldTick else {
-            lastWorldTick = worldTick
-            return
-        }
         lastWorldTick = worldTick
         if isPaused {
             credit = 0
             return
         }
-        guard worldTick >= previousTick else {
-            credit = 0
-            return
-        }
-        let elapsedWorldTicks = worldTick - previousTick
+        let elapsedWorldTicks = worldTick - previousWorldTick
         credit += elapsedWorldTicks * cognitiveHz
         let availableSteps = credit / 20
         let horizonRemaining = maximumSimulationTick.map {

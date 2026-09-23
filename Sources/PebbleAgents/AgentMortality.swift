@@ -326,6 +326,10 @@ public struct AgentMortalityRecord: Codable, Equatable, Sendable {
     public let finalMemory: [AgentMemoryEntry]
     public let finalStateDigest: String
     public let registrationEventID: AgentCausalEventID
+    /// The retained active-membership projection that covered this member
+    /// immediately before population exit. `nil` is historical schema 1...43
+    /// and schema-44 deaths whose original registration remains sufficient.
+    public let membershipAuthorityEventID: AgentCausalEventID?
     public let arrivalEventID: AgentCausalEventID?
     public let terminalPhysiologyEventID: AgentCausalEventID?
     public let pendingMaterialExitEventID: AgentCausalEventID?

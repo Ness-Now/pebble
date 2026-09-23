@@ -1,8 +1,19 @@
 public enum AgentCognitiveTransitions {
-    public static func advanceTick(needs: AgentNeeds) -> AgentTickTransitionResult {
+    public static func advanceTick(
+        needs: AgentNeeds
+    ) -> AgentTickTransitionResult {
+        advanceTick(needs: needs, advancesLegacyPhysiology: false)
+    }
+
+    static func advanceTick(
+        needs: AgentNeeds,
+        advancesLegacyPhysiology: Bool
+    ) -> AgentTickTransitionResult {
         var nextNeeds = needs
-        nextNeeds.hunger += 0.01
-        nextNeeds.fatigue += 0.005
+        if advancesLegacyPhysiology {
+            nextNeeds.hunger += 0.01
+            nextNeeds.fatigue += 0.005
+        }
         return AgentTickTransitionResult(needs: nextNeeds, state: "idle")
     }
 
@@ -227,7 +238,8 @@ public enum AgentCognitiveTransitions {
         switch input.action.name {
         case "rest":
             let recovery = input.survivalEnabled
-                ? (input.distanceFromHome == 0 ? input.restRecoveryPerTick : 0)
+                ? (input.distanceFromHome == 0
+                    ? input.restRecoveryPerTick : 0)
                 : 0.02
             needs.fatigue = max(0, needs.fatigue - recovery)
             fear = max(0, fear - 1)

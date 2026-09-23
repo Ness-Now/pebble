@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private let refreshSoils = [
     AgentPosition(x: 1, y: 63, z: 0),
@@ -98,6 +98,9 @@ private func refreshSession(
     )
     try! session.setWorkCommitmentsEnabled(true)
     _ = try! session.applyWorkCommitmentOperation(.refreshDemands)
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.independentEcologicalReceiptVersion
+    )
     return (session, plotID)
 }
 

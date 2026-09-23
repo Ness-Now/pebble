@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 import PebbleCore
 
 private let careHabitat = AgentEcologyHabitatObservation(
@@ -83,6 +83,9 @@ private func careMortalityBase(_ simulationID: String) -> AgentSimulationSession
         nourishmentHungerThreshold: 0.40
     ))
     try! session.setReproductionEnabled(true)
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.dependentCareVersion
+    )
     return session
 }
 
@@ -125,13 +128,41 @@ func careBase(
     )
     try! session.initializeLocalEcology(observations: [careHabitat])
     _ = try! session.applyLocalEcologyEndOfTick(habitatValidations: [careHabitat])
-    guard lifecycle else { return session }
+    guard lifecycle else {
+        try! session.useLegacyCognitivePhysiologyReplayFixture(
+            schemaVersion: AgentCheckpointSchema.localEcologyVersion
+        )
+        return session
+    }
     try! session.setLifecycleEnabled(true, configuration: careLifecycleConfiguration)
-    guard kinship else { return session }
+    guard kinship else {
+        try! session.useLegacyCognitivePhysiologyReplayFixture(
+            schemaVersion: AgentCheckpointSchema.lifecycleVersion
+        )
+        return session
+    }
     try! session.setKinshipEnabled(true)
-    guard households else { return session }
+    guard households else {
+        try! session.useLegacyCognitivePhysiologyReplayFixture(
+            schemaVersion: AgentCheckpointSchema.kinshipVersion
+        )
+        return session
+    }
     try! session.setHouseholdsEnabled(true)
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.householdVersion
+    )
     return session
+}
+
+private func careEnable(
+    _ session: inout AgentSimulationSession,
+    configuration: AgentDependentCareConfiguration = .live
+) throws {
+    try session.setDependentCareEnabled(true, configuration: configuration)
+    try session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.dependentCareVersion
+    )
 }
 
 private func careAdvance(
@@ -410,8 +441,12 @@ func runPebbleAgentsDependentCareSmoke() {
         .setDependentCareEnabled(true, configuration: smokeCareConfiguration),
         to: &session
     )
-    check("care explicit activation promotes schema v9", try! session.makeCheckpoint()
-        .schemaVersion == 9)
+    var historicalActivationSession = session
+    try! historicalActivationSession.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.dependentCareVersion
+    )
+    check("care explicit activation promotes schema v9",
+          try! historicalActivationSession.makeCheckpoint().schemaVersion == 9)
     check("care activation with mature founders has no invented assignment",
           session.dependentCareSnapshot().assignments.isEmpty)
 
@@ -521,6 +556,9 @@ func runPebbleAgentsDependentCareSmoke() {
     var physicalCare = session
     try! physicalCare.setPhysicalFoodSurvivalEnabled(true)
     try! physicalCare.setAutonomousActivityEnabled(true)
+    try! physicalCare.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.autonomousActivityVersion
+    )
     let physicalEngagement = physicalCare.careEngagement(for: firstCaregiverID)!
     let physicalIntent = try! physicalCare.nextPhysicalDependentFoodIntent(
         caregiverID: firstCaregiverID,
@@ -618,6 +656,9 @@ func runPebbleAgentsDependentCareSmoke() {
 
     check("care missing food remains unmet without material creation", {
         var noFood = session
+        try! noFood.useLegacyCognitivePhysiologyReplayFixture(
+            schemaVersion: AgentCheckpointSchema.dependentCareVersion
+        )
         var noFoodRecorder = try! AgentReplayRecorder(
             checkpoint: try! noFood.makeCheckpoint(), session: noFood
         )
@@ -745,11 +786,15 @@ func runPebbleAgentsDependentCareSmoke() {
         return (try! attempted.durableStateBytes()) == juvenileBoundaryBytes
     }())
 
-    let v9Checkpoint = try! session.makeCheckpoint()
+    var historicalV9Session = session
+    try! historicalV9Session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.dependentCareVersion
+    )
+    let v9Checkpoint = try! historicalV9Session.makeCheckpoint()
     let v9Bytes = try! AgentCheckpointCodec.encode(v9Checkpoint)
     let restored = try! AgentSimulationSession.restoring(v9Checkpoint)
     check("care v9 restart exact", try! restored.durableStateBytes()
-        == session.durableStateBytes())
+        == historicalV9Session.durableStateBytes())
     let journal = try! recorder.journal(
         named: AgentCheckpointName(rawValue: "dependent-care-smoke")!
     )
@@ -759,7 +804,7 @@ func runPebbleAgentsDependentCareSmoke() {
     check("care v9 replay exact", try! replayed.durableStateBytes()
         == session.durableStateBytes())
     check("care v9 checkpoint stable bytes", v9Bytes == (try! AgentCheckpointCodec.encode(
-        try! session.makeCheckpoint()
+        try! historicalV9Session.makeCheckpoint()
     )))
     check("care restore rejects retained event with wrong semantic role", careRestoreRefused(
         v9Checkpoint
@@ -860,7 +905,7 @@ func runPebbleAgentsDependentCareSmoke() {
         durable["dependentCareState"] = care
     })
     var evictedCare = careBase("sim-care-legitimate-eviction", causalMaximum: 8)
-    try! evictedCare.setDependentCareEnabled(true)
+    try! careEnable(&evictedCare)
     _ = try! evictedCare.advanceTick()
     _ = try! evictedCare.advanceTick()
     let evictedCheckpoint = try! evictedCare.makeCheckpoint()
@@ -1025,6 +1070,9 @@ func runPebbleAgentsTerminalCohortDependentAuthoritySmoke() {
     try! session.setChildhoodV2Enabled(true)
     try! session.setFamilyV1Enabled(true)
     try! session.setReproductionEnabled(true)
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.durableHouseConsentVersion
+    )
     var recorder = try! AgentReplayRecorder(
         checkpoint: session.makeCheckpoint(),
         session: session

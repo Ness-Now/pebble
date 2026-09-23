@@ -55,6 +55,7 @@ public enum AgentCheckpointSchema {
     public static let archiveVersion = 41
     public static let cultureVersion = 42
     public static let lexicalDivergenceVersion = 43
+    public static let temporalPhysiologyVersion = 44
 
     public static func familyValidationSemantics(
         for version: Int
@@ -78,7 +79,8 @@ public enum AgentCheckpointSchema {
             || version == longDistanceCommunicationVersion
             || version == writingVersion
             || version == archiveVersion || version == cultureVersion
-            || version == lexicalDivergenceVersion {
+            || version == lexicalDivergenceVersion
+            || version == temporalPhysiologyVersion {
             return .strictDurableConsent
         }
         return nil
@@ -104,7 +106,8 @@ public enum AgentCheckpointSchema {
             || version == longDistanceCommunicationVersion
             || version == writingVersion
             || version == archiveVersion || version == cultureVersion
-            || version == lexicalDivergenceVersion {
+            || version == lexicalDivergenceVersion
+            || version == temporalPhysiologyVersion {
             return .strictDurableSuccessorPlan
         }
         return nil
@@ -139,6 +142,7 @@ public enum AgentCheckpointSchema {
             || version == writingVersion
             || version == archiveVersion || version == cultureVersion
             || version == lexicalDivergenceVersion
+            || version == temporalPhysiologyVersion
     }
 }
 
@@ -270,6 +274,7 @@ public struct AgentSessionDurableState: Codable {
     public let schemaVersion: Int
     public let configuration: AgentSessionConfiguration
     public let clock: AgentSimulationClock
+    public let physiologicalTimeState: AgentPhysiologicalTimeState?
     public let agents: [AgentSessionAgentState]
     public let processedInteractionIDs: [String]
     public let creditedResourceKeys: [String]
@@ -350,104 +355,15 @@ public struct AgentSessionDurableState: Codable {
     public let marketState: AgentMarketState?
 
     init(session: AgentSimulationSession) {
-        if session.languageState?.lexicalEvolution != nil {
-            schemaVersion = AgentCheckpointSchema.lexicalDivergenceVersion
-        } else if session.distributedCultureState != nil {
-            schemaVersion = AgentCheckpointSchema.cultureVersion
-        } else if session.archiveState != nil {
-            schemaVersion = AgentCheckpointSchema.archiveVersion
-        } else if session.writingState != nil {
-            schemaVersion = AgentCheckpointSchema.writingVersion
-        } else if session.longDistanceCommunicationState != nil {
-            schemaVersion =
-                AgentCheckpointSchema.longDistanceCommunicationVersion
-        } else if session.oralTransmissionState != nil {
-            schemaVersion = AgentCheckpointSchema.oralTransmissionVersion
-        } else if session.languageState != nil {
-            schemaVersion = AgentCheckpointSchema.languageVersion
-        } else if session.knowledgeGraphState != nil {
-            schemaVersion = AgentCheckpointSchema.knowledgeVersion
-        } else if session.populationRegistry?.scaleState != nil {
-            schemaVersion = AgentCheckpointSchema.populationScaleVersion
-        } else if session.marketState != nil {
-            schemaVersion = AgentCheckpointSchema.marketVersion
-        } else if session.contractState != nil {
-            schemaVersion = AgentCheckpointSchema.contractVersion
-        } else if session.barterState != nil {
-            schemaVersion = AgentCheckpointSchema.barterVersion
-        } else if session.productionState != nil {
-            schemaVersion = AgentCheckpointSchema.productionVersion
-        } else if session.ecologicalObservationState?.observations.isEmpty == false
-            || session.agricultureState?.plots.isEmpty == false {
-            schemaVersion = AgentCheckpointSchema
-                .independentEcologicalReceiptVersion
-        } else if session.agricultureState?.plots.contains(where: {
-            $0.cycleOrdinal > 1 && $0.renewalEvidence != nil
-        }) == true {
-            schemaVersion = AgentCheckpointSchema.renewableSubsistenceVersion
-        } else if let estate = session.estateState {
-            schemaVersion = estate.estates.allSatisfy({
-                $0.successorPlanProof != nil
-            }) ? AgentCheckpointSchema.estateVersion
-                : AgentCheckpointSchema.legacyEstateVersion
-        } else if session.familyState != nil,
-           session.durableSchemaVersionOverride
-            == AgentCheckpointSchema.familyVersion {
-            schemaVersion = AgentCheckpointSchema.familyVersion
-        } else if session.familyState != nil {
-            schemaVersion = AgentCheckpointSchema.durableHouseConsentVersion
-        } else if let override = session.durableSchemaVersionOverride,
-           session.dependentCareState?.childhoodV2 != nil {
-            schemaVersion = override
-        } else if session.dependentCareState?.childhoodV2 != nil {
-            schemaVersion = AgentCheckpointSchema.verifiedSupervisionVersion
-        } else if session.geneticsState != nil {
-            schemaVersion = AgentCheckpointSchema.geneticsVersion
-        } else if session.homeostasisState != nil {
-            schemaVersion = AgentCheckpointSchema.homeostasisVersion
-        } else if session.persistenceReconciliationState != nil {
-            schemaVersion = AgentCheckpointSchema.persistenceReconciliationVersion
-        } else if session.materialRightsState != nil {
-            schemaVersion = AgentCheckpointSchema.materialRightsVersion
-        } else if session.autonomousActivityState != nil {
-            schemaVersion = AgentCheckpointSchema.autonomousActivityVersion
-        } else if session.physicalFoodSurvivalState != nil {
-            schemaVersion = AgentCheckpointSchema.physicalFoodSurvivalVersion
-        } else if session.workCommitmentState != nil {
-            schemaVersion = AgentCheckpointSchema.workCommitmentVersion
-        } else if session.livestockState != nil {
-            schemaVersion = AgentCheckpointSchema.livestockVersion
-        } else if session.wildSubsistenceState != nil {
-            schemaVersion = AgentCheckpointSchema.wildSubsistenceVersion
-        } else if session.agricultureState != nil {
-            schemaVersion = AgentCheckpointSchema.agricultureVersion
-        } else if session.ecologicalObservationState != nil {
-            schemaVersion = AgentCheckpointSchema.ecologicalObservationVersion
-        } else if session.teachingState != nil {
-            schemaVersion = AgentCheckpointSchema.teachingVersion
-        } else if session.skillState != nil {
-            schemaVersion = AgentCheckpointSchema.skillVersion
-        } else if session.dependentCareState != nil {
-            schemaVersion = AgentCheckpointSchema.dependentCareVersion
-        } else if session.householdState != nil {
-            schemaVersion = AgentCheckpointSchema.householdVersion
-        } else if session.kinshipState != nil {
-            schemaVersion = AgentCheckpointSchema.kinshipVersion
-        } else if session.lifecycleState != nil {
-            schemaVersion = AgentCheckpointSchema.lifecycleVersion
-        } else if session.mortalityState != nil {
-            schemaVersion = AgentCheckpointSchema.mortalityVersion
-        } else if session.localEcologyState != nil {
-            schemaVersion = AgentCheckpointSchema.localEcologyVersion
-        } else if session.settlementMetricsState != nil {
-            schemaVersion = AgentCheckpointSchema.settlementMetricsVersion
-        } else if session.populationRegistry != nil {
-            schemaVersion = AgentCheckpointSchema.populationVersion
+        if let legacy = session.legacyTemporalSchemaVersionOverride {
+            schemaVersion = legacy
         } else {
-            schemaVersion = AgentCheckpointSchema.currentVersion
+            schemaVersion = AgentCheckpointSchema.temporalPhysiologyVersion
         }
         configuration = session.configuration
         clock = session.clock
+        physiologicalTimeState = session.legacyTemporalSchemaVersionOverride
+            == nil ? session.physiologicalTimeState : nil
         agents = session.statesById.values.sorted { $0.agentID < $1.agentID }
         processedInteractionIDs = session.processedInteractionIds.sorted()
         creditedResourceKeys = session.creditedResourceKeys.sorted()
@@ -1265,6 +1181,12 @@ extension AgentSimulationSession {
         try Self.validateDurableState(state)
         configuration = state.configuration
         clock = state.clock
+        physiologicalTimeState = state.physiologicalTimeState
+            ?? AgentPhysiologicalTimeState(
+                configuration: .v1Compatible(
+                    with: state.configuration.survivalConfiguration
+                )
+            )
         var store = AgentStateStore()
         for agent in state.agents { store[agent.id] = agent }
         statesById = store
@@ -1372,6 +1294,8 @@ extension AgentSimulationSession {
             state.schemaVersion == AgentCheckpointSchema.childhoodVersion
                 || state.schemaVersion == AgentCheckpointSchema.familyVersion
                 ? state.schemaVersion : nil
+        legacyTemporalSchemaVersionOverride = state.physiologicalTimeState == nil
+            ? state.schemaVersion : nil
         try validateEcologicalObservationStateIfEnabled()
         try validateAgricultureStateIfEnabled()
         try validateWildSubsistenceStateIfEnabled()
@@ -1409,39 +1333,61 @@ extension AgentSimulationSession {
         guard AgentCheckpointSchema.supports(state.schemaVersion) else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
+        let temporalSchema = state.schemaVersion
+            == AgentCheckpointSchema.temporalPhysiologyVersion
         let independentReceiptSchema = state.schemaVersion
             == AgentCheckpointSchema.independentEcologicalReceiptVersion
+            || (temporalSchema
+                && state.ecologicalObservationState?.observations.isEmpty == false)
         let renewableSchema = state.schemaVersion
             == AgentCheckpointSchema.renewableSubsistenceVersion
+            || (temporalSchema && state.agricultureState?.plots.contains(where: {
+                $0.cycleOrdinal > 1 && $0.renewalEvidence != nil
+            }) == true)
         let productionSchema = state.schemaVersion
             == AgentCheckpointSchema.productionVersion
+            || (temporalSchema && state.productionState != nil)
         let barterSchema = state.schemaVersion
             == AgentCheckpointSchema.barterVersion
+            || (temporalSchema && state.barterState != nil)
         let contractSchema = state.schemaVersion
             == AgentCheckpointSchema.contractVersion
+            || (temporalSchema && state.contractState != nil)
         let marketSchema = state.schemaVersion
             == AgentCheckpointSchema.marketVersion
+            || (temporalSchema && state.marketState != nil)
         let populationScaleSchema = state.schemaVersion
             == AgentCheckpointSchema.populationScaleVersion
+            || (temporalSchema && state.populationRegistry?.scaleState != nil)
         let knowledgeSchema = state.schemaVersion
             == AgentCheckpointSchema.knowledgeVersion
+            || (temporalSchema && state.knowledgeGraphState != nil)
         let languageSchema = state.schemaVersion
             == AgentCheckpointSchema.languageVersion
+            || (temporalSchema && state.languageState != nil)
         let oralSchema = state.schemaVersion
             == AgentCheckpointSchema.oralTransmissionVersion
+            || (temporalSchema && state.oralTransmissionState != nil)
         let longDistanceCommunicationSchema = state.schemaVersion
             == AgentCheckpointSchema.longDistanceCommunicationVersion
+            || (temporalSchema
+                && state.longDistanceCommunicationState != nil)
         let writingSchema = state.schemaVersion == AgentCheckpointSchema.writingVersion
+            || (temporalSchema && state.writingState != nil)
         let archiveSchema = state.schemaVersion == AgentCheckpointSchema.archiveVersion
+            || (temporalSchema && state.archiveState != nil)
         let cultureSchema = state.schemaVersion == AgentCheckpointSchema.cultureVersion
+            || (temporalSchema && state.distributedCultureState != nil)
         let lexicalDivergenceSchema = state.schemaVersion
             == AgentCheckpointSchema.lexicalDivergenceVersion
+            || (temporalSchema
+                && state.languageState?.lexicalEvolution != nil)
         let latestSchema = lexicalDivergenceSchema || cultureSchema
             || archiveSchema || writingSchema || renewableSchema
             || independentReceiptSchema
             || productionSchema || barterSchema || contractSchema || marketSchema
             || populationScaleSchema || knowledgeSchema || languageSchema
-            || oralSchema || longDistanceCommunicationSchema
+            || oralSchema || longDistanceCommunicationSchema || temporalSchema
         let estateSchema =
             state.schemaVersion == AgentCheckpointSchema.legacyEstateVersion
             || state.schemaVersion == AgentCheckpointSchema.estateVersion
@@ -1606,7 +1552,8 @@ extension AgentSimulationSession {
                 || state.geneticsState == nil else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
-        guard (state.schemaVersion == AgentCheckpointSchema.currentVersion
+        guard (temporalSchema && state.physiologicalTimeState != nil)
+                || (state.schemaVersion == AgentCheckpointSchema.currentVersion
                 && state.populationRegistry == nil && state.settlementMetricsState == nil
                 && state.mortalityState == nil && state.lifecycleState == nil
                 && state.kinshipState == nil && state.householdState == nil
@@ -1822,6 +1769,18 @@ extension AgentSimulationSession {
               AgentSimulationID(rawValue: state.clock.simulationID.rawValue) != nil else {
             throw AgentCheckpointError.invalidClock
         }
+        if temporalSchema {
+            guard let physiological = state.physiologicalTimeState else {
+                throw AgentCheckpointError.invalidClock
+            }
+            do {
+                _ = try physiological.validated()
+            } catch {
+                throw AgentCheckpointError.invalidClock
+            }
+        } else if state.physiologicalTimeState != nil {
+            throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
+        }
         do {
             _ = try AgentSessionConfiguration(
                 seed: state.configuration.seed,
@@ -1864,7 +1823,7 @@ extension AgentSimulationSession {
                         || state.schemaVersion == AgentCheckpointSchema.familyVersion
                         || state.schemaVersion
                             == AgentCheckpointSchema.durableHouseConsentVersion
-                        || estateSchema)
+                        || estateSchema || temporalSchema)
                     && (state.mortalityState?.totalDeathCount ?? 0) > 0) else {
             throw AgentCheckpointError.invalidAgent("empty")
         }
@@ -2045,6 +2004,14 @@ extension AgentSimulationSession {
                 pendingMortalityAgentIDs: Set(
                     state.mortalityState?.pendingTransitions.map(\.agentID) ?? []
                 ),
+                physiologicalTime: state.physiologicalTimeState
+                    ?? AgentPhysiologicalTimeState(
+                        configuration: .v1Compatible(
+                            with: state.configuration.survivalConfiguration
+                        )
+                    ),
+                usesWorldDerivedPhysiology:
+                    state.physiologicalTimeState != nil,
                 clock: state.clock,
                 causalLatestSequence: state.causalLedger.latestSequence
             )
@@ -2055,6 +2022,14 @@ extension AgentSimulationSession {
                 agents: state.agents,
                 lifecycle: state.lifecycleState,
                 mortality: state.mortalityState,
+                physiologicalTime: state.physiologicalTimeState
+                    ?? AgentPhysiologicalTimeState(
+                        configuration: .v1Compatible(
+                            with: state.configuration.survivalConfiguration
+                        )
+                    ),
+                usesWorldDerivedPhysiology:
+                    state.physiologicalTimeState != nil,
                 clock: state.clock,
                 causalLatestSequence: state.causalLedger.latestSequence,
                 causalDroppedEventCount:
@@ -2234,6 +2209,12 @@ extension AgentSimulationSession {
                 agents: state.agents,
                 clock: state.clock,
                 departedAgentIDs: departedIDs
+            )
+            try validateCurrentPopulationMembershipAuthority(
+                populationRegistry,
+                causalEvents: state.causalLedger.events,
+                simulationID: state.clock.simulationID,
+                schemaVersion: state.schemaVersion
             )
         }
         if let metrics = state.settlementMetricsState {
@@ -3120,6 +3101,14 @@ extension AgentSimulationSession {
                 lifecycle,
                 population: population,
                 agents: state.agents,
+                physiologicalTime: state.physiologicalTimeState
+                    ?? AgentPhysiologicalTimeState(
+                        configuration: .v1Compatible(
+                            with: state.configuration.survivalConfiguration
+                        )
+                    ),
+                usesWorldDerivedPhysiology:
+                    state.physiologicalTimeState != nil,
                 clock: state.clock,
                 causalLatestSequence: state.causalLedger.latestSequence
             )

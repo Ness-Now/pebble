@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private let b02Producer = AgentID(rawValue: "agent_0")!
 private let b02Holder = AgentID(rawValue: "agent_1")!
@@ -915,6 +915,9 @@ func runPebbleAgentsEvolvedProductionIdentitySmoke() {
         quantity: 1, priority: 99
     )
     try! settled.session.setMarketEnabled(true)
+    try! settled.session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.marketVersion
+    )
     let marketID = AgentMarketID(rawValue: "blocker-02:market")!
     try! settled.session.registerMarketPlace(
         operationID: "blocker-02:market:register", marketID: marketID,

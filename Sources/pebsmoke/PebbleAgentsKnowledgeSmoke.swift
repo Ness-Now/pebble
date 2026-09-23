@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private func knowledgeSmokeAgent(_ id: String, x: Int) -> AgentSessionAgentState {
     let position = AgentPosition(x: x, y: 64, z: 0)
@@ -68,6 +68,13 @@ private func knowledgeSmokeSession(
     if enableKnowledge {
         try! session.setKnowledgeGraphEnabled(
             true, configuration: knowledgeConfiguration
+        )
+        try! session.useLegacyCognitivePhysiologyReplayFixture(
+            schemaVersion: AgentCheckpointSchema.knowledgeVersion
+        )
+    } else {
+        try! session.useLegacyCognitivePhysiologyReplayFixture(
+            schemaVersion: AgentCheckpointSchema.currentVersion
         )
     }
     return session

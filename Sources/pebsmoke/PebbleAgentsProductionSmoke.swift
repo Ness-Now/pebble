@@ -1,4 +1,4 @@
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private func productionSmokeAgent() -> AgentSessionAgentState {
     let position = AgentPosition(x: 0, y: 64, z: 0)
@@ -42,7 +42,7 @@ private func productionStack(
 private func productionSmokeSession(
     _ id: String = "civ34-production"
 ) -> AgentSimulationSession {
-    try! AgentSimulationSession(
+    var session = try! AgentSimulationSession(
         configuration: try! AgentSessionConfiguration(
             seed: 134, memoryPolicy: .bounded(maxEntries: 64)
         ),
@@ -50,6 +50,10 @@ private func productionSmokeSession(
         simulationID: try! AgentSimulationID(validating: id),
         causalLedgerPolicy: .bounded(maxEvents: 2048)
     )
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.currentVersion
+    )
+    return session
 }
 
 func runPebbleAgentsProductionSmoke() {

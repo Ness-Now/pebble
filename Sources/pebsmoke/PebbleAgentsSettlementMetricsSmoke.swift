@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private let settlementAnchor = AgentPosition(x: 0, y: 64, z: 0)
 private let settlementReception = AgentPosition(x: 20, y: 64, z: 0)
@@ -89,7 +89,20 @@ private func settlementSession(
         settlementAnchor: settlementAnchor,
         receptionPosition: settlementReception
     )
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.populationVersion
+    )
     return session
+}
+
+private func settlementEnableMetrics(
+    _ session: inout AgentSimulationSession,
+    configuration: AgentSettlementMetricsConfiguration = .live
+) {
+    try! session.setSettlementMetricsEnabled(true, configuration: configuration)
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.settlementMetricsVersion
+    )
 }
 
 private func settlementMigrationObservation() -> AgentMigrationWorldObservation {
@@ -335,7 +348,7 @@ func runPebbleAgentsSettlementMetricsSmoke() {
     }())
 
     var session = settlementSession(id: "settlement-metrics-smoke")
-    try! session.setSettlementMetricsEnabled(true)
+    settlementEnableMetrics(&session)
     check("settlement enabled at tick zero", session.settlementMetricsEnabled)
     check("settlement no retroactive frame", session.settlementMetricsSnapshot().frames.isEmpty)
     check("settlement macro sequence starts zero",
@@ -437,7 +450,7 @@ func runPebbleAgentsSettlementMetricsSmoke() {
         id: "settlement-active",
         firstAgentCuriosity: 0.8
     )
-    try! active.setSettlementMetricsEnabled(true)
+    settlementEnableMetrics(&active)
     for _ in 0..<4 {
         let agent = active.snapshot().agents.first { $0.id == "agent_0" }!
         _ = try! active.advanceTick(perceptions: [
@@ -473,7 +486,7 @@ func runPebbleAgentsSettlementMetricsSmoke() {
         id: "settlement-strained",
         firstAgentHealth: 25
     )
-    try! strained.setSettlementMetricsEnabled(true)
+    settlementEnableMetrics(&strained)
     for _ in 0..<4 {
         _ = try! advanceSettlementTick(&strained, recorder: &noRecorder)
     }
@@ -531,7 +544,7 @@ func runPebbleAgentsSettlementMetricsSmoke() {
 
     var off = settlementSession(id: "settlement-behavior-ab")
     var on = settlementSession(id: "settlement-behavior-ab")
-    try! on.setSettlementMetricsEnabled(true)
+    settlementEnableMetrics(&on)
     _ = try! off.admitMigration(
         intent: AgentMigrationAdmissionIntent(),
         observation: settlementMigrationObservation()
@@ -559,11 +572,14 @@ func runPebbleAgentsSettlementMetricsSmoke() {
         seed: 46,
         memoryPolicy: .bounded(maxEntries: 16)
     )
-    let v1 = try! AgentSimulationSession(
+    var v1 = try! AgentSimulationSession(
         configuration: v1Configuration,
         agents: [settlementAgent("agent_0", x: 0)],
         simulationID: try! AgentSimulationID(validating: "settlement-v1"),
         causalLedgerPolicy: .bounded(maxEvents: 64)
+    )
+    try! v1.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.currentVersion
     )
     let v1Checkpoint = try! v1.makeCheckpoint()
     check("settlement off population off remains v1", v1Checkpoint.schemaVersion == 1)
@@ -584,7 +600,7 @@ func runPebbleAgentsSettlementMetricsSmoke() {
         macroIntervalTicks: 2,
         maximumMetricFrames: 1
     )
-    try! bounded.setSettlementMetricsEnabled(true, configuration: boundedConfiguration)
+    settlementEnableMetrics(&bounded, configuration: boundedConfiguration)
     for _ in 0..<4 {
         _ = try! advanceSettlementTick(&bounded, recorder: &noRecorder)
     }
@@ -600,11 +616,14 @@ func runPebbleAgentsSettlementMetricsSmoke() {
     check("settlement clear preserves sequence",
           bounded.settlementMetricsSummary().macroSequence == 2)
     try! bounded.setSettlementMetricsEnabled(false)
+    try! bounded.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.populationVersion
+    )
     check("settlement disable removes active state", !bounded.settlementMetricsEnabled)
     check("settlement disable returns checkpoint v2", try! bounded.makeCheckpoint().schemaVersion == 2)
 
     var incomplete = settlementSession(id: "settlement-incomplete", ledgerEvents: 10)
-    try! incomplete.setSettlementMetricsEnabled(true)
+    settlementEnableMetrics(&incomplete)
     for _ in 0..<4 {
         _ = try! advanceSettlementTick(&incomplete, recorder: &noRecorder)
     }

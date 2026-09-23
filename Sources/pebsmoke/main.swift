@@ -27,6 +27,23 @@ func checkD(_ name: String, _ got: Double, _ want: Double, tol: Double = 1e-12) 
 func section(_ name: String) { print("\n— \(name)") }
 
 if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
+    == "ps01-increment-05-temporal" {
+    registerAllBlocks()
+    registerAllItems()
+    runPebbleIncrement05TemporalPhysiologySmoke()
+    runPebbleIncrement05TemporalRollbackSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
+    == "agents-runtime" {
+    runPebbleAgentsRuntimeSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
     == "ps01-increment-04-focused" {
     registerAllBlocks()
     registerAllItems()

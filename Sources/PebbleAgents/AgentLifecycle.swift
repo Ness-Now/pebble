@@ -177,6 +177,8 @@ public struct AgentLifecycleMember: Codable, Equatable, Sendable {
     public let origin: AgentLifecycleOrigin
     public let lifecycleRegisteredTick: Int
     public let initialAgeTicks: Int
+    public internal(set) var physiologicalRegisteredBoundary: Int?
+    public internal(set) var physiologicalInitialAge: Int?
     public internal(set) var currentStage: AgentLifeStage
     public internal(set) var lastStageTransitionTick: Int?
     public let progenitorIDs: [AgentID]
@@ -191,6 +193,21 @@ public struct AgentLifecycleMember: Codable, Equatable, Sendable {
         guard elapsed >= 0 else { throw AgentLifecycleError.invalidMember(agentID.rawValue) }
         let (age, overflow) = initialAgeTicks.addingReportingOverflow(elapsed)
         guard !overflow else { throw AgentLifecycleError.ageOverflow(agentID.rawValue) }
+        return age
+    }
+
+    public func physiologicalAge(atBoundary boundary: Int) throws -> Int {
+        guard let registered = physiologicalRegisteredBoundary,
+              let initial = physiologicalInitialAge,
+              boundary >= registered else {
+            throw AgentLifecycleError.invalidMember(agentID.rawValue)
+        }
+        let (age, overflow) = initial.addingReportingOverflow(
+            boundary - registered
+        )
+        guard !overflow else {
+            throw AgentLifecycleError.ageOverflow(agentID.rawValue)
+        }
         return age
     }
 }

@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private let civ39EastID = AgentSettlementID(rawValue: "settlement-east")!
 private let civ39MainReception = AgentPosition(x: 0, y: 64, z: -2)
@@ -190,9 +190,12 @@ private func civ39Session(
 }
 
 func civ39PublishedSchema35CompatibilityCheckpoint() -> AgentSessionCheckpoint {
-    let session = civ39Session(
+    var session = civ39Session(
         id: "civ41-schema35-compatibility",
         population: 24
+    )
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.populationScaleVersion
     )
     let checkpoint = try! session.makeCheckpoint()
     precondition(checkpoint.schemaVersion == AgentCheckpointSchema.populationScaleVersion)
@@ -204,6 +207,9 @@ private func civ39FinalizeLethalTick(
 ) throws {
     session.setSurvivalEnabled(true)
     try session.setMortalityEnabled(true)
+    try session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.populationScaleVersion
+    )
     _ = try session.advanceTick()
 }
 
@@ -429,6 +435,9 @@ func runPebbleAgentsPopulationScaleSmoke() {
                 .settlementID == .main
             && mid.settlements.first { $0.settlementID == .main }?
                 .inTransitIDs == [AgentID(rawValue: "agent_0")!])
+    try! migration.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.populationScaleVersion
+    )
     let midCheckpoint = try! migration.makeCheckpoint()
     let midBytes = try! AgentCheckpointCodec.encode(midCheckpoint)
     check("CIV-39 schema 35 checkpoint selected",
@@ -713,6 +722,9 @@ func runPebbleAgentsPopulationScaleSmoke() {
     try! arrivedDeath.setLifecycleEnabled(true)
     arrivedDeath.setSurvivalEnabled(true)
     try! arrivedDeath.setMortalityEnabled(true)
+    try! arrivedDeath.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.populationScaleVersion
+    )
     var arrivedDeathError: Error?
     for _ in 0..<48 where arrivedDeath.expectedActiveAgentIDs().contains(
         arrivedDeathID
@@ -888,6 +900,9 @@ func runPebbleAgentsPopulationScaleSmoke() {
     try! materialDeath.setLifecycleEnabled(true)
     materialDeath.setSurvivalEnabled(true)
     try! materialDeath.setMortalityEnabled(true)
+    try! materialDeath.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.populationScaleVersion
+    )
     _ = try! materialDeath.advanceTick()
     let materialPending = materialDeath.pendingMortalityTransitions().first!
     let materialRecord = materialDeath.materialRightsSnapshot().records.first!
@@ -957,13 +972,16 @@ func runPebbleAgentsPopulationScaleSmoke() {
             && restored.mortalitySnapshot().totalDeathCount == 1
     }())
 
-    let oldSchema = try! AgentSimulationSession(
+    var oldSchema = try! AgentSimulationSession(
         configuration: try! AgentSessionConfiguration(
             seed: 139, memoryPolicy: .bounded(maxEntries: 64)
         ),
         agents: [civ39Agent("legacy", ordinal: 0)],
         simulationID: try! AgentSimulationID(validating: "civ39-schema-off"),
         causalLedgerPolicy: .bounded(maxEvents: 128)
+    )
+    try! oldSchema.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.currentVersion
     )
     let oldBytes = try! oldSchema.durableStateBytes()
     check("CIV-39 feature-off checkpoint remains schema 1",
@@ -991,6 +1009,9 @@ func runPebbleAgentsTerminalCohortMigrationSmoke() {
         configuration: .embodiedPopulationBounded(
             maximumActivePopulation: 24
         )
+    )
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.populationScaleVersion
     )
     let result = try! session.advanceTick()
     let pending = session.pendingMortalityTransitions()

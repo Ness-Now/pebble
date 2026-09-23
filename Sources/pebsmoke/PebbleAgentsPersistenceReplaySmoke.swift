@@ -61,6 +61,11 @@ private func persistenceReplayJournal(
     let bytes = try! AgentReplayCodec.encodeRecords(records)
     return AgentReplayJournal(
         manifest: AgentReplayJournalManifest(
+            schemaVersion: records.first?.schemaVersion
+                ?? (checkpoint.schemaVersion
+                    == AgentCheckpointSchema.temporalPhysiologyVersion
+                    ? AgentReplaySchema.temporalPhysiologyVersion
+                    : checkpoint.schemaVersion),
             name: AgentCheckpointName(rawValue: name)!,
             baseCheckpointID: checkpoint.checkpointID,
             baseCheckpointDigest: checkpoint.semanticDigest,
@@ -85,6 +90,7 @@ private func persistenceReplayRecord(
     postDigest: AgentCheckpointDigest? = nil
 ) -> AgentReplayRecord {
     AgentReplayRecord(
+        schemaVersion: record.schemaVersion,
         simulationID: simulationID ?? record.simulationID,
         recordSequence: AgentReplayRecordSequence(rawValue: sequence ?? record.recordSequence.rawValue)!,
         operation: record.operation,

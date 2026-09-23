@@ -1,5 +1,5 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
 
 private let geneticsHabitat = AgentEcologyHabitatObservation(
     worldTick: 0,
@@ -112,6 +112,14 @@ private func geneticsSession(
         causalLedgerPolicy: .bounded(maxEvents: causalMaximumEvents)
     )
     session.setSurvivalEnabled(true)
+    // This owner publishes the exact schema-22 genetics contract. Keep its
+    // historical cognitive-time development and mortality behavior isolated
+    // from current v44 World-time physiology.
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: enableGenetics
+            ? AgentCheckpointSchema.geneticsVersion
+            : AgentCheckpointSchema.homeostasisVersion
+    )
     try! session.initializePopulationRegistry(
         settlementAnchor: AgentPosition(x: 0, y: 64, z: 0),
         receptionPosition: AgentPosition(x: 0, y: 64, z: 3)
@@ -680,6 +688,9 @@ func runPebbleAgentsGeneticsDevelopmentSmoke() {
     try! socialBirth.setKinshipEnabled(true)
     try! socialBirth.setHouseholdsEnabled(true)
     try! socialBirth.setGeneticsEnabled(true)
+    try! socialBirth.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.geneticsVersion
+    )
     let socialBirthRecord = geneticsBirth(&socialBirth)
     let socialChild = socialBirthRecord.newbornID
     check("genetic birth remains atomic with kinship and households",

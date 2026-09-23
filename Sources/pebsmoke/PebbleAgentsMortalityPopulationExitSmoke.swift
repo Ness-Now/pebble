@@ -1,5 +1,13 @@
 import Foundation
-import PebbleAgents
+@_spi(Testing) import PebbleAgents
+
+private func useMortalityHistoricalTime(
+    _ session: inout AgentSimulationSession
+) {
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.mortalityVersion
+    )
+}
 
 private func mortalityAgent(
     _ id: String,
@@ -59,6 +67,7 @@ private func mortalitySession(_ simulation: String) -> AgentSimulationSession {
         causalLedgerPolicy: .bounded(maxEvents: 4096)
     )
     session.setSurvivalEnabled(true)
+    useMortalityHistoricalTime(&session)
     try! session.initializePopulationRegistry(
         settlementAnchor: AgentPosition(x: 0, y: 64, z: 0),
         receptionPosition: AgentPosition(x: 0, y: 64, z: 0)
@@ -106,6 +115,7 @@ private func mortalityPreparedSession(
         simulationID: try! AgentSimulationID(validating: simulation),
         causalLedgerPolicy: .bounded(maxEvents: 8192)
     )
+    useMortalityHistoricalTime(&session)
     try! session.initializePopulationRegistry(
         settlementAnchor: AgentPosition(x: 0, y: 64, z: 0),
         receptionPosition: AgentPosition(x: 0, y: 64, z: 0)
@@ -797,6 +807,7 @@ func runPebbleAgentsMortalityPopulationExitSmoke() {
             causalLedgerPolicy: .bounded(maxEvents: 4096)
         )
         value.setSurvivalEnabled(true)
+        useMortalityHistoricalTime(&value)
         try! value.initializePopulationRegistry(
             settlementAnchor: AgentPosition(x: 0, y: 64, z: 0),
             receptionPosition: AgentPosition(x: 0, y: 64, z: 0)
@@ -839,6 +850,7 @@ func runPebbleAgentsMortalityPopulationExitSmoke() {
             causalLedgerPolicy: .bounded(maxEvents: 4096)
         )
         value.setSurvivalEnabled(true)
+        useMortalityHistoricalTime(&value)
         try! value.initializePopulationRegistry(
             settlementAnchor: AgentPosition(x: 0, y: 64, z: 0),
             receptionPosition: AgentPosition(x: 0, y: 64, z: 0)
@@ -924,6 +936,7 @@ func runPebbleAgentsMortalityPopulationExitSmoke() {
         causalLedgerPolicy: .bounded(maxEvents: 8192)
     )
     migration.setSurvivalEnabled(true)
+    useMortalityHistoricalTime(&migration)
     try! migration.initializePopulationRegistry(
         settlementAnchor: AgentPosition(x: 0, y: 64, z: 0),
         receptionPosition: AgentPosition(x: 0, y: 64, z: 3)
