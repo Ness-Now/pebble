@@ -72,11 +72,24 @@ Increment 04, Need-Driven Physical Subsistence, is **COMPLETE AND PUBLISHED —
 PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical HEAD
 `b478fcfd75126fb5ab742916930eb8eb08c5f4f2`, tree
 `2d4ef2716412a4c121fc06e6d292418218cfb009`, from parent
-`9d4642b03e398999528fd0fdef4adbbd7707bd28`. The next authorized action is the
-separate read-only `REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-05` mission,
-which authorizes review and selection only. CIV-48 remains not started,
-implementation unauthorized and deferred behind that milestone and the
-resulting evidence-driven roadmap recalibration.
+`9d4642b03e398999528fd0fdef4adbbd7707bd28`.
+Increment 05, Temporal Physiology Coherence, is **COMPLETE AND PUBLISHED —
+PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical HEAD
+`1614d181668b495d5321f2dfb5627c147b1e64d1`, tree
+`09b5ed6f186e7956883267a9f5d549da4d1e5c76`, from parent
+`1d2c4a92df4e570d56443c4920aae7072637e8f1`, with accepted review archive
+SHA-256 `6cf9ad035b0a35bc436a4e9915a0135fd1180c572b547f17a47d8ab4f11e4a5a`.
+Schema 44 makes World time authoritative for passive biology, decouples
+physiology from cognition Hz, bounds temporal reconciliation, permits only
+eligible temporal publication after readiness rollback, bounds membership
+causal authority, latches fatal integrity failures and preserves schemas 1–43
+historically. Its canonical gate passed 35/35 and its optimized smoke passed
+4,866/4,866. The next authorized action is the separate read-only
+`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-06` mission. It must compare at
+minimum `PATH-READINESS LIVENESS` and `RENEWABLE PHYSICAL SUBSISTENCE`,
+preselects neither, and authorizes no implementation. CIV-48 remains not
+started, implementation unauthorized and deferred behind that milestone and
+the resulting evidence-driven roadmap recalibration.
 See
 [`CIV_46_PHASE_SUMMARY.md`](CIV_46_PHASE_SUMMARY.md) and
 [`CIV_47_PHASE_SUMMARY.md`](CIV_47_PHASE_SUMMARY.md), plus
@@ -222,7 +235,10 @@ PLAYABLE SLICE 01 Increment 03 published tree: 33a3675301a6fe088fde62b373f7e7350
 PLAYABLE SLICE 01 Increment 04: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 PLAYABLE SLICE 01 Increment 04 published HEAD: b478fcfd75126fb5ab742916930eb8eb08c5f4f2
 PLAYABLE SLICE 01 Increment 04 published tree: 2d4ef2716412a4c121fc06e6d292418218cfb009
-next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-05
+PLAYABLE SLICE 01 Increment 05: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+PLAYABLE SLICE 01 Increment 05 published HEAD: 1614d181668b495d5321f2dfb5627c147b1e64d1
+PLAYABLE SLICE 01 Increment 05 published tree: 09b5ed6f186e7956883267a9f5d549da4d1e5c76
+next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-06
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
@@ -1623,7 +1639,10 @@ Gate E acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f767
 PLAYABLE SLICE 01 Increment 04: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 PLAYABLE SLICE 01 Increment 04 published HEAD: b478fcfd75126fb5ab742916930eb8eb08c5f4f2
 PLAYABLE SLICE 01 Increment 04 published tree: 2d4ef2716412a4c121fc06e6d292418218cfb009
-next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-05
+PLAYABLE SLICE 01 Increment 05: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+PLAYABLE SLICE 01 Increment 05 published HEAD: 1614d181668b495d5321f2dfb5627c147b1e64d1
+PLAYABLE SLICE 01 Increment 05 published tree: 09b5ed6f186e7956883267a9f5d549da4d1e5c76
+next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-06
 CIV-39 status: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 Gate F status: ACQUIRED AND PUBLISHED — REMOTE VERIFIED
@@ -2351,6 +2370,25 @@ performance P1. At 4 Hz, final release medians/p95s were 107.183/131.911 ms for
 isolated 30-founder maximum was 268.070 ms with zero catch-up drops. No support
 above 30 founders is claimed.
 
+Increment 05, Temporal Physiology Coherence, is **COMPLETE AND PUBLISHED —
+PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical HEAD
+`1614d181668b495d5321f2dfb5627c147b1e64d1`, tree
+`09b5ed6f186e7956883267a9f5d549da4d1e5c76`, from parent
+`1d2c4a92df4e570d56443c4920aae7072637e8f1`, with accepted review archive
+SHA-256 `6cf9ad035b0a35bc436a4e9915a0135fd1180c572b547f17a47d8ab4f11e4a5a`.
+Current schema 44 makes World time the sole passive-biological authority;
+cognition Hz no longer controls hunger, fatigue or biological age. Temporal
+reconciliation is bounded, and only eligible biology may publish after a
+path-readiness rollback. Membership causal authority is bounded, fatal
+integrity failures latch, and schemas 1–43 retain exact historical semantics.
+The canonical gate passed 35/35 and its optimized smoke passed 4,866/4,866.
+Increment 05 did not solve path-readiness liveness: seed 14 recorded 1,200
+eligible World ticks, civilization tick 22, 218 readiness failures and 218
+legitimate temporal fallbacks while physiology remained coherent. It also did
+not implement renewable physical subsistence; it corrected the time basis and
+recalculated food economics while Increment 04's finite mature sweet-berry path
+remains the normal-product subsistence path.
+
 Explicit non-claims: this milestone does not implement CIV-48 Generic
 Organization Kernel, CIV-49 guilds, CIV-50 heraldry, CIV-51 territory or land
 law, CIV-52 governance or law, religion, diplomacy, war, polity, deep genetics,
@@ -2367,11 +2405,11 @@ recalibration before Wave 6 begins. CIV-48 remains **NOT STARTED —
 IMPLEMENTATION NOT AUTHORIZED**. Gate H remains planned and continues to
 require CIV-48 through CIV-52 unless a future separately authorized roadmap
 review changes that contract. The next authorized action is
-the separate read-only `REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-05`
-mission. It authorizes inspection of the newly published Increment 04 boundary
-and selection of the smallest next coherent causal/playability blocker; it
-does not preselect or authorize Increment 05 implementation or authorize
-CIV-48.
+the separate read-only `REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-06`
+mission. It must compare at minimum `PATH-READINESS LIVENESS` and `RENEWABLE
+PHYSICAL SUBSISTENCE` and select the smallest next coherent causal/playability
+blocker. It preselects neither candidate, assumes no Increment-06 architecture
+and authorizes neither implementation nor CIV-48.
 
 ## Wave 6 — Organizations, land and law
 

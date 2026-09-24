@@ -1,6 +1,7 @@
 # PS01 Increment 05 — Temporal Physiology Coherence
 
-Status: **LOCAL REVIEW CANDIDATE — NOT PUBLISHED**.
+Status: **COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE
+VERIFIED**.
 
 Technical senior review: **PASS — P0 0 / P1 0 / P2 blocking 0**.
 
@@ -16,20 +17,22 @@ does not select or authorize Increment 06.
   `1d2c4a92df4e570d56443c4920aae7072637e8f1`.
 - Canonical baseline tree:
   `94ec5cc041437fbf821d9d4ccc92ba29f9ce40b1`.
-- Frozen product-source review commit:
-  `a72cb87a5c96aeec3bcc7ee7873f29da1228914e`.
-- Frozen product-source tree:
-  `442bcf7b284cb8f6e848db875a3b31335cf340a3`.
+- Published commit: `1614d181668b495d5321f2dfb5627c147b1e64d1`.
+- Published tree: `09b5ed6f186e7956883267a9f5d549da4d1e5c76`.
+- Published parent: `1d2c4a92df4e570d56443c4920aae7072637e8f1`.
+- Published message: `feat(ps01): decouple physiology from cognition time`.
+- Accepted senior-review ZIP SHA-256:
+  `6cf9ad035b0a35bc436a4e9915a0135fd1180c572b547f17a47d8ab4f11e4a5a`.
 - Frozen `Sources` subtree:
   `41f9e7887e466198513cf46ab9c69d1b75e0b75c`.
 - Implementation branch:
   `codex/ps01-increment-05-autonomous-renewable-subsistence`.
-- Commit subject: `feat(ps01): decouple physiology from cognition time`.
-- Publication: not attempted; the user owns push and remote reconciliation.
+- Publication: manual user push completed; canonical remote independently
+  verified.
 
-This document is part of the Increment-05 candidate history. The reviewed
-product source is frozen. Adding this report changes no path under `Sources/`,
-no package manifest, script, test, golden, or product behavior.
+This document records the published Increment-05 product and its accepted
+evidence. Post-publication reconciliation changes no path under `Sources/`, no
+package manifest, script, test, golden, or product behavior.
 
 ## Actual increment chronology
 
@@ -352,8 +355,9 @@ frozen `Sources` subtree remains identical.
 - P1: **0**.
 - P2 blocking: **0**.
 - Program surveillance: **PATH-READINESS LIVENESS**.
-- Product source freeze: **ACTIVE**.
+- Product publication: **REMOTE VERIFIED**.
 - Push attempted: **NO**.
-- Published: **NO**.
+- Published: **YES — MANUAL USER PUSH COMPLETED**.
 
-The correct disposition is **LOCAL REVIEW CANDIDATE — NOT PUBLISHED**.
+The correct disposition is **COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW
+APPROVED — REMOTE VERIFIED**.

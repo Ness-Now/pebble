@@ -128,6 +128,31 @@ At the measured 4 Hz baseline, release medians/p95s were 107.183/131.911 ms at
 isolated 30-founder maximum was 268.070 ms with zero catch-up drops. No support
 above 30 founders is claimed.
 
+Increment 05, Temporal Physiology Coherence, is **COMPLETE AND PUBLISHED —
+PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical HEAD
+`1614d181668b495d5321f2dfb5627c147b1e64d1`, tree
+`09b5ed6f186e7956883267a9f5d549da4d1e5c76`, from parent
+`1d2c4a92df4e570d56443c4920aae7072637e8f1`. Its accepted review ZIP SHA-256 is
+`6cf9ad035b0a35bc436a4e9915a0135fd1180c572b547f17a47d8ab4f11e4a5a`.
+Current schema 44 makes World time the sole passive-biological authority:
+cognition Hz no longer controls hunger, fatigue or biological age, and the
+live physiological boundary is 1,200 World ticks. Replay and persistence are
+transactional; eligible biology can publish alone after a path-readiness
+rollback without publishing false physical/cognitive results. Bounded active
+population membership authority hands off to deceased evidence, while a typed
+fatal-integrity latch and centralized mutation gate stop corrupt sessions.
+Schemas 1–43 retain exact historical semantics through the bounded Testing
+SPI. The 35/35 canonical gate and 4,866/4,866 smoke passed; normal seeds 14, 46
+and 887 and release performance across 20–30 founders were accepted.
+
+Increment 05 solved temporal coherence while cognition/path readiness fails;
+it did not solve path-readiness liveness. Seed 14 recorded 1,200 eligible World
+ticks, civilization tick 22, 218 readiness failures and 218 legitimate temporal
+fallbacks while biology advanced coherently. `PATH-READINESS LIVENESS` remains
+program surveillance. The originally selected renewable physical subsistence
+work was deferred: the normal product still uses Increment 04's finite mature
+sweet-berry path, and carrots/crops are not activated for normal founders.
+
 The milestone must establish a normal bounded persistent sandbox path, first
 measured with approximately 24 full-cognition founders and designed for roughly
 20–30 without redesign. It must support safe Pause / Play / 1x, read-only free
@@ -150,10 +175,11 @@ bounded covered physical opportunity, but not every remaining integration
 risk. Other known risks are recorded in the roadmap milestone contract.
 
 The next authorized action is the separate read-only
-`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-05` mission. It must inspect the
-newly published Increment-04 boundary and select the smallest next coherent
-causal/playability blocker; it does not authorize Increment 05 implementation
-or preselect its technical solution. CIV-48 remains **NOT
+`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-06` mission. It must compare at
+minimum `PATH-READINESS LIVENESS` and `RENEWABLE PHYSICAL SUBSISTENCE`, then
+select the smallest next coherent causal/playability blocker. It preselects
+neither candidate, assumes no Increment-06 architecture and authorizes no
+implementation. CIV-48 remains **NOT
 STARTED — IMPLEMENTATION NOT AUTHORIZED** and is deferred until PLAYABLE SLICE
 01 and the resulting evidence-driven roadmap recalibration are complete. Gate H
 remains planned and continues to require CIV-48 through CIV-52.
@@ -1006,7 +1032,10 @@ PLAYABLE SLICE 01 Increment 03 published tree: 33a3675301a6fe088fde62b373f7e7350
 PLAYABLE SLICE 01 Increment 04: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 PLAYABLE SLICE 01 Increment 04 published HEAD: b478fcfd75126fb5ab742916930eb8eb08c5f4f2
 PLAYABLE SLICE 01 Increment 04 published tree: 2d4ef2716412a4c121fc06e6d292418218cfb009
-next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-05
+PLAYABLE SLICE 01 Increment 05: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+PLAYABLE SLICE 01 Increment 05 published HEAD: 1614d181668b495d5321f2dfb5627c147b1e64d1
+PLAYABLE SLICE 01 Increment 05 published tree: 09b5ed6f186e7956883267a9f5d549da4d1e5c76
+next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-06
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -1427,9 +1456,11 @@ golden regeneration: NOT ATTEMPTED
 ## Next authorized action
 
 The next authorized action is the separate read-only
-`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-05` mission. It is a review and
-selection step from the published Increment 04 boundary, not authorization to
-implement Increment 05 or CIV-48 and not a preselection of its scope. Gate G
+`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-06` mission. It is a review,
+audit and selection step from the published Increment-05 boundary. It must
+compare at minimum `PATH-READINESS LIVENESS` and
+`RENEWABLE PHYSICAL SUBSISTENCE`, preselects neither, assumes no architecture
+and authorizes neither Increment-06 implementation nor CIV-48. Gate G
 Evaluation
 01 remains frozen historical FAIL evidence. Blocker 01 is senior-review
 approved, published and independently remote verified. Evaluation 02 is

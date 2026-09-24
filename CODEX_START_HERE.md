@@ -252,9 +252,16 @@ for the compact status. In particular:
   Core acquisition, exact physical custody and consumption without activation
   or provisioning commands. The supported measured founder range remains
   20–30; this is not a claim above 30. Long-run demographic admission/birth
-  headroom remains unresolved. The next authorized action is the separate
-  read-only `REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-05` mission; it does
-  not authorize implementation or preselect scope.
+  headroom remains unresolved. Increment 05, Temporal Physiology Coherence, is
+  **COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at
+  canonical HEAD `1614d181668b495d5321f2dfb5627c147b1e64d1`. Current schema
+  44 derives passive biology from World time while schemas 1–43 preserve exact
+  historical semantics. It keeps biology coherent across readiness rollback;
+  path-readiness liveness itself remains unresolved. The next authorized
+  action is the separate read-only
+  `REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-06` mission. It must compare at
+  minimum `PATH-READINESS LIVENESS` and `RENEWABLE PHYSICAL SUBSISTENCE`, does
+  not preselect either candidate, and authorizes no implementation.
 - CIV-48 remains **NOT STARTED**, implementation is not authorized, and it is
   deferred until PLAYABLE SLICE 01 and the resulting evidence-driven roadmap
   recalibration are complete. Gate H remains planned. See

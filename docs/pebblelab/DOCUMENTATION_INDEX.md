@@ -58,6 +58,7 @@ These documents form the minimal permanent memory of the project:
 | [`PS01_INCREMENT_02_TERMINAL_POPULATION_CONTINUITY.md`](PS01_INCREMENT_02_TERMINAL_POPULATION_CONTINUITY.md) | Published, senior-review-approved and remote-verified PS01 Increment 02 contract, terminal-cohort architecture, physical/custody proof, natural extinction evidence, publication identity and bounded non-claims. |
 | [`PS01_INCREMENT_03_OBSERVER_INDEPENDENT_PHYSICAL_COVERAGE.md`](PS01_INCREMENT_03_OBSERVER_INDEPENDENT_PHYSICAL_COVERAGE.md) | Published, senior-review-approved and remote-verified PS01 Increment 03 contract: one derived PebbleCore schedule, 30-root/3×3/270-chunk bounds, explicit readiness, bounded path truthfulness, camera-equivalent covered work and bounded non-claims. |
 | [`PS01_INCREMENT_04_NEED_DRIVEN_PHYSICAL_SUBSISTENCE.md`](PS01_INCREMENT_04_NEED_DRIVEN_PHYSICAL_SUBSISTENCE.md) | Published, senior-review-approved and remote-verified PS01 Increment 04 contract: need-driven mature sweet-berry evidence, autonomous physical acquisition/custody/consumption, direct-action RNG, bounded receipt lifetime, natural/scarcity evidence and 20–30-founder performance. |
+| [`PS01_INCREMENT_05_TEMPORAL_PHYSIOLOGY_COHERENCE.md`](PS01_INCREMENT_05_TEMPORAL_PHYSIOLOGY_COHERENCE.md) | Published, senior-review-approved and remote-verified PS01 Increment 05 contract: schema-44 World-time physiology, transactional persistence/replay, temporal-only readiness compensation, bounded membership authority, fatal-integrity gating, exact historical compatibility and accepted natural/performance evidence. |
 | [`GATE_F_BLOCKER_01_SETTLEMENT_ADMISSION_CAPACITY.md`](GATE_F_BLOCKER_01_SETTLEMENT_ADMISSION_CAPACITY.md) | Published, independently remote-verified Blocker 01 correction record; preserves Gate F Evaluation 01 historical FAIL and documents shared publication/restore per-settlement admission capacity, atomic refusal and two-process schema-35 proof. |
 | [`GATE_F_BLOCKER_02_MIGRATION_DESTINATION_CAPACITY.md`](GATE_F_BLOCKER_02_MIGRATION_DESTINATION_CAPACITY.md) | Published, independently remote-verified Blocker 02 correction record; preserves Evaluation 02 historical FAIL and documents derived durable destination-slot authority, atomic full-destination refusal, exact arrival/death/failure release, schema-35 restart and two-process proof. |
 | [`GATE_F_BLOCKER_03_DYNAMIC_FIDELITY_AUTHORITY.md`](GATE_F_BLOCKER_03_DYNAMIC_FIDELITY_AUTHORITY.md) | Published, independently remote-verified Blocker 03 correction record; preserves Evaluation 03 historical FAIL and documents shared dynamic-member fidelity composition, exact birth refusal/retry, legacy migration, mortality, rotation and two-process schema-35 proof. |
@@ -132,6 +133,10 @@ PLAYABLE SLICE 01 Increment 03 published tree: 33a3675301a6fe088fde62b373f7e7350
 PLAYABLE SLICE 01 Increment 04: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 PLAYABLE SLICE 01 Increment 04 published HEAD: b478fcfd75126fb5ab742916930eb8eb08c5f4f2
 PLAYABLE SLICE 01 Increment 04 published tree: 2d4ef2716412a4c121fc06e6d292418218cfb009
+PLAYABLE SLICE 01 Increment 05: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+PLAYABLE SLICE 01 Increment 05 published HEAD: 1614d181668b495d5321f2dfb5627c147b1e64d1
+PLAYABLE SLICE 01 Increment 05 published tree: 09b5ed6f186e7956883267a9f5d549da4d1e5c76
+next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-06
 next eligible CIV phase: CIV-48 — DEFERRED / NOT STARTED / IMPLEMENTATION NOT AUTHORIZED
 Gate E Evaluation 01: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 01: FIXED + PUBLISHED + REMOTE VERIFIED
@@ -142,7 +147,7 @@ V4-GATE-E-v1 Blocker 03: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 04: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 04: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 05: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
-next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-05
+next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-06
 CIV-39: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 V4-GATE-F-v1: ACQUIRED AND PUBLISHED — REMOTE VERIFIED
@@ -224,6 +229,11 @@ PLAYABLE SLICE 01 Increment 02: COMPLETE AND PUBLISHED — PASS — SENIOR REVIE
 PLAYABLE SLICE 01 Increment 02 published HEAD: 056c6b625d7482581028cf149329bc292948d53d
 PLAYABLE SLICE 01 Increment 03: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 PLAYABLE SLICE 01 Increment 03 published HEAD: 0e7f36202debd088e4f1c84de96078be78b6b6fd
+PLAYABLE SLICE 01 Increment 04: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+PLAYABLE SLICE 01 Increment 04 published HEAD: b478fcfd75126fb5ab742916930eb8eb08c5f4f2
+PLAYABLE SLICE 01 Increment 05: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+PLAYABLE SLICE 01 Increment 05 published HEAD: 1614d181668b495d5321f2dfb5627c147b1e64d1
+next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-06
 CIV-48: NOT STARTED — IMPLEMENTATION NOT AUTHORIZED
 V4-GATE-H-v1: PLANNED
 ```
@@ -557,9 +567,17 @@ mature sweet-berry hunger→physical-acquisition→custody→consumption loop wi
 activating unrelated subsistence or economy domains. Seed 14 is the natural
 positive case; seeds 46 and 887 are canonical natural scarcity cases. Measured
 4 Hz cognition remains supported through 30 founders; no scale above 30 is
-claimed. The next authorized action is the separate read-only
-`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-05` mission; it authorizes review
-and selection only and preselects no solution. CIV-48 remains not started,
+claimed. Increment 05, Temporal Physiology Coherence, is complete and
+published, senior-review approved and remote verified at canonical HEAD
+`1614d181668b495d5321f2dfb5627c147b1e64d1`, tree
+`09b5ed6f186e7956883267a9f5d549da4d1e5c76`, from parent
+`1d2c4a92df4e570d56443c4920aae7072637e8f1`. Schema 44 makes World time the
+current passive-biological authority while schemas 1–43 retain exact
+historical semantics. Path-readiness liveness and renewable physical
+subsistence remain unselected candidates. The next authorized action is the
+separate read-only `REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-06` mission;
+it must compare at minimum those two candidates, authorizes review/selection
+only and preselects no solution. CIV-48 remains not started,
 implementation is not authorized and it is deferred behind the slice and
 evidence-driven roadmap recalibration; Gate H remains planned. See
 [`CIV_45_PHASE_SUMMARY.md`](CIV_45_PHASE_SUMMARY.md) and
@@ -573,7 +591,9 @@ and
 and
 [`PS01_INCREMENT_03_OBSERVER_INDEPENDENT_PHYSICAL_COVERAGE.md`](PS01_INCREMENT_03_OBSERVER_INDEPENDENT_PHYSICAL_COVERAGE.md)
 and
-[`PS01_INCREMENT_04_NEED_DRIVEN_PHYSICAL_SUBSISTENCE.md`](PS01_INCREMENT_04_NEED_DRIVEN_PHYSICAL_SUBSISTENCE.md).
+[`PS01_INCREMENT_04_NEED_DRIVEN_PHYSICAL_SUBSISTENCE.md`](PS01_INCREMENT_04_NEED_DRIVEN_PHYSICAL_SUBSISTENCE.md)
+and
+[`PS01_INCREMENT_05_TEMPORAL_PHYSIOLOGY_COHERENCE.md`](PS01_INCREMENT_05_TEMPORAL_PHYSIOLOGY_COHERENCE.md).
 `CIV-38` remains
 optional and not started; `CIV-40` remains optional tooling and not started.
 Currency is not a Gate E or CIV-39 prerequisite.
