@@ -1,29 +1,30 @@
 # PS01 Increment 06 — Cohort-Safe Bounded Path-Readiness Liveness
 
-Status: **LOCAL CANDIDATE — AWAITING SENIOR REVIEW**.
+Status: **COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE
+VERIFIED**.
 
-Local engineering disposition: **P0 0 / P1 0 / blocking P2 0**. This is not a
-senior-review verdict, publication record or remote-verification claim.
+Senior-review disposition: **P0 0 / P1 0 / blocking P2 0**.
 
 PLAYABLE SLICE 01 remains **REQUIRED — IN PROGRESS / NOT COMPLETE**.
 CIV-48 remains **NOT STARTED — IMPLEMENTATION NOT AUTHORIZED**. Gate H remains
 **PLANNED**. Increment 07 is **UNSELECTED**. Renewable Physical Subsistence is
 **UNRESOLVED**.
 
-## Review position
+## Publication identity
 
 - Repository: `Ness-Now/pebble`.
 - Canonical branch: `lab/pebblelab-v1`.
-- Exact canonical baseline and merge-base:
+- Exact original canonical baseline:
   `f075cb58e8b34b3035a2a367f1dbae7032bb8591`.
-- Local branch: `codex/ps01-increment-06-path-readiness-liveness`.
-- Publication: **NO**.
-- Push attempted: **NO**.
-- Senior review: **PENDING**.
-
-The exact candidate commit, tree, parents, complete patch, raw evidence and
-checksums are carried by the external senior-review archive generated from the
-clean committed candidate.
+- Product/test commit: `53c3ff8815ee6298ecf2c970d525efaf486a20ac`.
+- Published canonical HEAD: `3e9d8e285dd81f6c015f046d2f2469489b4667d8`.
+- Published tree: `7ee2a64b55ef12ec1193d068dd1145b1038b04ff`.
+- Published parent: `53c3ff8815ee6298ecf2c970d525efaf486a20ac`.
+- Accepted senior-review archive SHA-256:
+  `806988f10607a27e0ee3b15ba8beefa4aac59907817f63a1d8ac3886ecc8fd2b`.
+- Publication: **MANUAL USER PUSH COMPLETED**.
+- Remote verification: **PASS**.
+- Codex push attempted: **NO**.
 
 ## Problem and selected architecture
 
@@ -130,18 +131,24 @@ byte exact.
 
 ## Schema 44/45 boundary
 
-Current checkpoint and replay schema is **45**. It durably carries the typed
-readiness reason, semantic request identity, physical-readiness context,
-navigation failure/invalidation/replan state, and feedback decision factor.
+Current durable session/checkpoint schema is **45**. Schema-45 durable state
+carries the typed readiness reason, semantic request identity,
+physical-readiness context, navigation failure/invalidation/replan state, and
+feedback decision factor.
 
-A clean historical schema-44 checkpoint restores and checkpoints again as 44;
-loading it does not migrate it. Schema 44 rejects schema-45-only readiness or
-navigation vocabulary. Its first successfully validated and published
-`.readinessUnavailable` result clears the runtime compatibility marker and
-promotes subsequent durable state and replay to 45. Native schema-45
-checkpoint/replay round trips exactly. Fresh-process evidence proves that
-direct deferral and consumed routed budget survive and that continuous and
-restarted continuation are byte identical.
+A clean historical schema-44 session/checkpoint restores and checkpoints again
+as 44; loading it does not migrate it. Schema 44 rejects schema-45-only durable
+readiness or navigation vocabulary. Its first successfully validated and
+published `.readinessUnavailable` result clears the runtime compatibility
+marker and promotes subsequent durable session/checkpoint state to 45.
+
+Replay-manifest capability is distinct from base-checkpoint promotion. A
+replay recorder may use current schema-45 vocabulary while its base checkpoint
+remains a clean schema-44 checkpoint; that recorder capability does not relabel
+or migrate the durable base. Native schema-45 checkpoint/replay round trips
+exactly. Fresh-process evidence proves that direct deferral and consumed routed
+budget survive and that continuous and restarted continuation are byte
+identical.
 
 Schema 45 inherits all strict Family and Estate validation used by schemas 26+
 and 28+ respectively. Schema 46 is now the first unsupported future schema;
@@ -277,12 +284,14 @@ regenerated.
   center/four-cardinal local observation used for a direct step. It is not a
   global World revision or arbitrary distant-route oracle.
 - No claim is made above 30 normal founders.
+- The active-population maximum remains 30: a 30-founder start leaves zero
+  admission/birth headroom and a 24-founder start leaves six slots.
 - This increment does not implement renewable food production, demographic
   headroom, a new observer, scheduler, path authority or any Wave-6 CIV.
 - Renewable Physical Subsistence remains **UNRESOLVED**.
 - Increment 07 remains **UNSELECTED**.
 
-## Local-candidate disposition
+## Published disposition
 
 - P0: **0**.
 - P1: **0**.
@@ -292,7 +301,13 @@ regenerated.
 - Gate H: **PLANNED**.
 - Increment 07: **UNSELECTED**.
 - Renewable Physical Subsistence: **UNRESOLVED**.
-- Push attempted: **NO**.
+- Publication: **MANUAL USER PUSH COMPLETED**.
+- Remote verification: **PASS**.
+- Codex push attempted: **NO**.
 
-The candidate is ready for independent senior review; it is not published or
-approved by this document.
+Increment 06 is complete and published, but PS01 remains incomplete. After
+this publication reconciliation is published and remotely verified, the next
+authorized technical action is the read-only
+`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-07` mission. It must reconsider
+at minimum Renewable Physical Subsistence and population capacity/demographic
+headroom without preselecting either or authorizing Increment-07 implementation.

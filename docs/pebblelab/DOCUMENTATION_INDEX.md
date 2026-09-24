@@ -59,7 +59,7 @@ These documents form the minimal permanent memory of the project:
 | [`PS01_INCREMENT_03_OBSERVER_INDEPENDENT_PHYSICAL_COVERAGE.md`](PS01_INCREMENT_03_OBSERVER_INDEPENDENT_PHYSICAL_COVERAGE.md) | Published, senior-review-approved and remote-verified PS01 Increment 03 contract: one derived PebbleCore schedule, 30-root/3×3/270-chunk bounds, explicit readiness, bounded path truthfulness, camera-equivalent covered work and bounded non-claims. |
 | [`PS01_INCREMENT_04_NEED_DRIVEN_PHYSICAL_SUBSISTENCE.md`](PS01_INCREMENT_04_NEED_DRIVEN_PHYSICAL_SUBSISTENCE.md) | Published, senior-review-approved and remote-verified PS01 Increment 04 contract: need-driven mature sweet-berry evidence, autonomous physical acquisition/custody/consumption, direct-action RNG, bounded receipt lifetime, natural/scarcity evidence and 20–30-founder performance. |
 | [`PS01_INCREMENT_05_TEMPORAL_PHYSIOLOGY_COHERENCE.md`](PS01_INCREMENT_05_TEMPORAL_PHYSIOLOGY_COHERENCE.md) | Published, senior-review-approved and remote-verified PS01 Increment 05 contract: schema-44 World-time physiology, transactional persistence/replay, temporal-only readiness compensation, bounded membership authority, fatal-integrity gating, exact historical compatibility and accepted natural/performance evidence. |
-| [`PS01_INCREMENT_06_PATH_READINESS_LIVENESS.md`](PS01_INCREMENT_06_PATH_READINESS_LIVENESS.md) | Local candidate awaiting senior review: schema-45 typed stationary path uncertainty, cohort-safe publication, finite direct/routed liveness, exact restart/replay, optimized multi-seed/performance and real-client visual evidence. Not published or approved. |
+| [`PS01_INCREMENT_06_PATH_READINESS_LIVENESS.md`](PS01_INCREMENT_06_PATH_READINESS_LIVENESS.md) | Published, senior-review-approved and remote-verified PS01 Increment 06 contract: schema-45 typed stationary path uncertainty, cohort-safe publication, finite direct/routed liveness, exact restart/replay, optimized multi-seed/performance and real-client visual evidence. |
 | [`GATE_F_BLOCKER_01_SETTLEMENT_ADMISSION_CAPACITY.md`](GATE_F_BLOCKER_01_SETTLEMENT_ADMISSION_CAPACITY.md) | Published, independently remote-verified Blocker 01 correction record; preserves Gate F Evaluation 01 historical FAIL and documents shared publication/restore per-settlement admission capacity, atomic refusal and two-process schema-35 proof. |
 | [`GATE_F_BLOCKER_02_MIGRATION_DESTINATION_CAPACITY.md`](GATE_F_BLOCKER_02_MIGRATION_DESTINATION_CAPACITY.md) | Published, independently remote-verified Blocker 02 correction record; preserves Evaluation 02 historical FAIL and documents derived durable destination-slot authority, atomic full-destination refusal, exact arrival/death/failure release, schema-35 restart and two-process proof. |
 | [`GATE_F_BLOCKER_03_DYNAMIC_FIDELITY_AUTHORITY.md`](GATE_F_BLOCKER_03_DYNAMIC_FIDELITY_AUTHORITY.md) | Published, independently remote-verified Blocker 03 correction record; preserves Evaluation 03 historical FAIL and documents shared dynamic-member fidelity composition, exact birth refusal/retry, legacy migration, mortality, rotation and two-process schema-35 proof. |
@@ -137,9 +137,10 @@ PLAYABLE SLICE 01 Increment 04 published tree: 2d4ef2716412a4c121fc06e6d29241821
 PLAYABLE SLICE 01 Increment 05: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 PLAYABLE SLICE 01 Increment 05 published HEAD: 1614d181668b495d5321f2dfb5627c147b1e64d1
 PLAYABLE SLICE 01 Increment 05 published tree: 09b5ed6f186e7956883267a9f5d549da4d1e5c76
-PLAYABLE SLICE 01 Increment 06: LOCAL CANDIDATE — AWAITING SENIOR REVIEW
-PLAYABLE SLICE 01 Increment 06 baseline: f075cb58e8b34b3035a2a367f1dbae7032bb8591
-next authorized action: SENIOR REVIEW — PLAYABLE SLICE 01 INCREMENT 06 LOCAL CANDIDATE
+PLAYABLE SLICE 01 Increment 06: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+PLAYABLE SLICE 01 Increment 06 published HEAD: 3e9d8e285dd81f6c015f046d2f2469489b4667d8
+PLAYABLE SLICE 01 Increment 06 published tree: 7ee2a64b55ef12ec1193d068dd1145b1038b04ff
+next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-07
 next eligible CIV phase: CIV-48 — DEFERRED / NOT STARTED / IMPLEMENTATION NOT AUTHORIZED
 Gate E Evaluation 01: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 01: FIXED + PUBLISHED + REMOTE VERIFIED
@@ -150,7 +151,7 @@ V4-GATE-E-v1 Blocker 03: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 04: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 04: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 05: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
-next authorized action: SENIOR REVIEW — PLAYABLE SLICE 01 INCREMENT 06 LOCAL CANDIDATE
+next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-07
 CIV-39: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 V4-GATE-F-v1: ACQUIRED AND PUBLISHED — REMOTE VERIFIED
@@ -236,7 +237,9 @@ PLAYABLE SLICE 01 Increment 04: COMPLETE AND PUBLISHED — PASS — SENIOR REVIE
 PLAYABLE SLICE 01 Increment 04 published HEAD: b478fcfd75126fb5ab742916930eb8eb08c5f4f2
 PLAYABLE SLICE 01 Increment 05: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 PLAYABLE SLICE 01 Increment 05 published HEAD: 1614d181668b495d5321f2dfb5627c147b1e64d1
-next authorized action: SENIOR REVIEW — PLAYABLE SLICE 01 INCREMENT 06 LOCAL CANDIDATE
+PLAYABLE SLICE 01 Increment 06: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+PLAYABLE SLICE 01 Increment 06 published HEAD: 3e9d8e285dd81f6c015f046d2f2469489b4667d8
+next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-07
 CIV-48: NOT STARTED — IMPLEMENTATION NOT AUTHORIZED
 V4-GATE-H-v1: PLANNED
 ```
@@ -577,15 +580,21 @@ published, senior-review approved and remote verified at canonical HEAD
 `1d2c4a92df4e570d56443c4920aae7072637e8f1`. Schema 44 makes World time the
 current passive-biological authority while schemas 1–43 retain exact
 historical semantics. Increment 06, Cohort-Safe Bounded Path-Readiness
-Liveness, is a local candidate awaiting senior review; it is neither published
-nor approved. Its schema-45 typed stationary uncertainty, direct/routed finite
-bounds, restart, multi-seed, performance and real-client evidence are recorded
-in
+Liveness, is complete and published, senior-review approved and remote verified
+at canonical HEAD `3e9d8e285dd81f6c015f046d2f2469489b4667d8`, tree
+`7ee2a64b55ef12ec1193d068dd1145b1038b04ff`, from parent
+`53c3ff8815ee6298ecf2c970d525efaf486a20ac`, with accepted review archive
+SHA-256 `806988f10607a27e0ee3b15ba8beefa4aac59907817f63a1d8ac3886ecc8fd2b`.
+Its schema-45 typed stationary uncertainty, direct/routed finite bounds,
+restart, multi-seed, performance and real-client evidence are recorded in
 [`PS01_INCREMENT_06_PATH_READINESS_LIVENESS.md`](PS01_INCREMENT_06_PATH_READINESS_LIVENESS.md).
-The next authorized action is independent senior review. Increment 07 remains
-unselected and renewable physical subsistence remains unresolved. CIV-48 remains not started,
-implementation is not authorized and it is deferred behind the slice and
-evidence-driven roadmap recalibration; Gate H remains planned. See
+The next authorized technical action after publication reconciliation is the
+read-only `REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-07` mission. Increment
+07 remains unselected; renewable physical subsistence and population
+capacity/demographic headroom remain unresolved and neither is preselected.
+CIV-48 remains not started, implementation is not authorized and it is
+deferred behind the slice and evidence-driven roadmap recalibration; Gate H
+remains planned. See
 [`CIV_45_PHASE_SUMMARY.md`](CIV_45_PHASE_SUMMARY.md) and
 [`CIV_46_PHASE_SUMMARY.md`](CIV_46_PHASE_SUMMARY.md) and
 [`CIV_47_PHASE_SUMMARY.md`](CIV_47_PHASE_SUMMARY.md), plus

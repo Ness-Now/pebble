@@ -145,26 +145,36 @@ Schemas 1–43 retain exact historical semantics through the bounded Testing
 SPI. The 35/35 canonical gate and 4,866/4,866 smoke passed; normal seeds 14, 46
 and 887 and release performance across 20–30 founders were accepted.
 
-Increment 06, Cohort-Safe Bounded Path-Readiness Liveness, is a **LOCAL
-CANDIDATE — AWAITING SENIOR REVIEW** on branch
-`codex/ps01-increment-06-path-readiness-liveness`, directly descended from
-canonical baseline `f075cb58e8b34b3035a2a367f1dbae7032bb8591`. It is not
-published, remote verified or senior-review approved. Schema 45 preserves
+Increment 06, Cohort-Safe Bounded Path-Readiness Liveness, is **COMPLETE AND
+PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at canonical
+HEAD `3e9d8e285dd81f6c015f046d2f2469489b4667d8`, tree
+`7ee2a64b55ef12ec1193d068dd1145b1038b04ff`, from parent and product/test
+commit `53c3ff8815ee6298ecf2c970d525efaf486a20ac`, based on exact original
+canonical baseline `f075cb58e8b34b3035a2a367f1dbae7032bb8591`. Its accepted
+review archive SHA-256 is
+`806988f10607a27e0ee3b15ba8beefa4aac59907817f63a1d8ac3886ecc8fd2b`, and
+senior review found P0 0 / P1 0 / blocking P2 0. The user completed the manual
+push and independent remote verification passed; Codex did not push. Schema 45
+preserves
 `.noPath` as the only proven negative and publishes `.nodeBudgetExhausted`,
 `.coverageLimited` and `.coverageUnavailable` as typed stationary per-agent
 uncertainty. Direct identical work gets one bounded search until semantic
 request, origin or bounded physical/readiness context changes; routed work
-uses the existing initial-attempt-plus-three-replans authority. Historical
-schema 44 remains 44 until a genuine Increment-06 outcome is published.
+uses the existing initial-attempt-plus-three-replans authority. A clean
+historical schema-44 session/checkpoint remains 44 merely by loading or
+restoring and rejects schema-45-only durable vocabulary; it promotes only when
+a genuine Increment-06 durable outcome publishes. A replay recorder may expose
+current schema-45 vocabulary while its base checkpoint remains schema 44, so
+replay-manifest capability is not durable checkpoint promotion.
 
-Final local evidence is 906/906 focused and 35/35 canonical with 4,901/4,901
+Accepted evidence is 906/906 focused and 35/35 canonical with 4,901/4,901
 smoke assertions. Normal seed 14 reached civilization tick 240 after 1,200
 World ticks with 2,617 searches, 2,379 verified movements, 205 typed node-budget
 uncertainties, 163 mixed cohorts, maximum five World ticks without progress,
 maximum identical direct retry one and zero temporal fallbacks/errors/drops.
 The deterministic repeat matched causal and semantic state. Seeds 46 and 887,
 20/24/30-founder release characterization, fresh-process restart and real-client
-visual evidence also passed locally. See
+visual evidence were also accepted. See
 [`PS01_INCREMENT_06_PATH_READINESS_LIVENESS.md`](PS01_INCREMENT_06_PATH_READINESS_LIVENESS.md).
 
 Renewable Physical Subsistence remains unresolved: the normal product still
@@ -192,12 +202,15 @@ integration issue. Increment 03 retires player location as authority for the
 bounded covered physical opportunity, but not every remaining integration
 risk. Other known risks are recorded in the roadmap milestone contract.
 
-The next authorized action is independent senior review of the local
-Increment-06 candidate. Increment 07 remains **UNSELECTED** and no later
-implementation is authorized by this candidate. CIV-48 remains **NOT STARTED
-— IMPLEMENTATION NOT AUTHORIZED** and is deferred until PLAYABLE SLICE 01 and
-the resulting evidence-driven roadmap recalibration are complete. Gate H
-remains **PLANNED** and continues to require CIV-48 through CIV-52.
+Once this publication reconciliation is published and remotely verified, the
+next authorized technical action is the read-only
+`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-07` mission. It must reconsider
+at minimum Renewable Physical Subsistence and population capacity/demographic
+headroom without preselecting either. Increment 07 remains **UNSELECTED**, and
+no implementation is authorized. CIV-48 remains **NOT STARTED — IMPLEMENTATION
+NOT AUTHORIZED** and is deferred until PLAYABLE SLICE 01 and the resulting
+evidence-driven roadmap recalibration are complete. Gate H remains **PLANNED**
+and continues to require CIV-48 through CIV-52.
 
 ## Published CIV-47 closure
 
@@ -1050,9 +1063,10 @@ PLAYABLE SLICE 01 Increment 04 published tree: 2d4ef2716412a4c121fc06e6d29241821
 PLAYABLE SLICE 01 Increment 05: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 PLAYABLE SLICE 01 Increment 05 published HEAD: 1614d181668b495d5321f2dfb5627c147b1e64d1
 PLAYABLE SLICE 01 Increment 05 published tree: 09b5ed6f186e7956883267a9f5d549da4d1e5c76
-PLAYABLE SLICE 01 Increment 06: LOCAL CANDIDATE — AWAITING SENIOR REVIEW
-PLAYABLE SLICE 01 Increment 06 baseline: f075cb58e8b34b3035a2a367f1dbae7032bb8591
-next authorized action: SENIOR REVIEW — PLAYABLE SLICE 01 INCREMENT 06 LOCAL CANDIDATE
+PLAYABLE SLICE 01 Increment 06: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+PLAYABLE SLICE 01 Increment 06 published HEAD: 3e9d8e285dd81f6c015f046d2f2469489b4667d8
+PLAYABLE SLICE 01 Increment 06 published tree: 7ee2a64b55ef12ec1193d068dd1145b1038b04ff
+next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-07
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -1472,12 +1486,14 @@ golden regeneration: NOT ATTEMPTED
 
 ## Next authorized action
 
-The next authorized action is independent senior review of the local
-Increment-06 Cohort-Safe Bounded Path-Readiness Liveness candidate. It is not
-published, remote verified or senior-review approved. Increment 07 remains
-unselected, Renewable Physical Subsistence remains unresolved, and neither
-later implementation nor CIV-48 is authorized. Gate G
-Evaluation
+Increment 06, Cohort-Safe Bounded Path-Readiness Liveness, is complete and
+published, senior-review approved and independently remote verified at
+canonical HEAD `3e9d8e285dd81f6c015f046d2f2469489b4667d8`. Increment 07 remains
+unselected. Renewable Physical Subsistence and population capacity/demographic
+headroom remain unresolved, and neither later implementation nor CIV-48 is
+authorized. The next authorized technical action after publication
+reconciliation is the read-only
+`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-07` mission. Gate G Evaluation
 01 remains frozen historical FAIL evidence. Blocker 01 is senior-review
 approved, published and independently remote verified. Evaluation 02 is
 senior-review-approved published PASS evidence and its exact published HEAD is
