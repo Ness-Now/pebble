@@ -113,6 +113,11 @@ extension AgentSimulationSession {
             let dz = outcome.toPosition.z - outcome.fromPosition.z
             switch outcome.status {
             case .moved:
+                guard outcome.pathReadinessReason == nil,
+                      outcome.pathReadinessRequestIdentity == nil,
+                      outcome.pathReadinessContextDigest == nil else {
+                    throw AgentSessionError.invalidStationaryMovement(id)
+                }
                 try requireStageCapability(.autonomousMovement, for: state.agentID)
                 guard dx == outcome.appliedDX, dy == outcome.appliedDY, dz == outcome.appliedDZ else {
                     throw AgentSessionError.inconsistentMovementDelta(id)
@@ -168,11 +173,38 @@ extension AgentSimulationSession {
                 }) {
                     throw AgentSessionError.occupiedMovementDestination(id)
                 }
+            case .readinessUnavailable:
+                try requireStageCapability(.autonomousMovement, for: state.agentID)
+                let expectedRequestIdentity = state.lastAction.map {
+                    AgentMovementRequestIdentity(
+                        action: $0, goal: state.currentGoal
+                    )
+                }
+                guard let pathReadinessReason = outcome.pathReadinessReason,
+                      let requestIdentity = outcome.pathReadinessRequestIdentity,
+                      let contextDigest = outcome.pathReadinessContextDigest,
+                      verifiedKind == .navigationStep,
+                      outcome.resolutionReason
+                        == "PebbleCore bounded path readiness \(pathReadinessReason.rawValue)",
+                      outcome.toPosition == outcome.fromPosition,
+                      outcome.appliedDX == 0,
+                      outcome.appliedDY == 0,
+                      outcome.appliedDZ == 0,
+                      movementIntentMatches(outcome: outcome, state: state),
+                      requestIdentity == expectedRequestIdentity,
+                      contextDigest
+                        == state.lastWorldObservation?
+                            .physicalReadinessContextDigest else {
+                    throw AgentSessionError.invalidStationaryMovement(id)
+                }
             case .blocked, .notRequested:
                 guard outcome.toPosition == outcome.fromPosition,
                       outcome.appliedDX == 0,
                       outcome.appliedDY == 0,
-                      outcome.appliedDZ == 0 else {
+                      outcome.appliedDZ == 0,
+                      outcome.pathReadinessReason == nil,
+                      outcome.pathReadinessRequestIdentity == nil,
+                      outcome.pathReadinessContextDigest == nil else {
                     throw AgentSessionError.invalidStationaryMovement(id)
                 }
             }
@@ -189,6 +221,7 @@ extension AgentSimulationSession {
         for id in ids {
             guard var state = updated[id], let outcome = byId[id] else { continue }
             let verifiedKind = verifiedKinds?[id]
+            let priorMovementOutcome = state.lastMovementOutcome
             state.lastMovementOutcome = outcome
             switch outcome.status {
             case .moved:
@@ -311,10 +344,46 @@ extension AgentSimulationSession {
                         state.feedbackMemoryWriteCount += 1
                     }
                 }
+            case .readinessUnavailable:
+                // Reuse the existing bounded navigation retry trigger rather
+                // than adding a scheduler. The distinct failure preserves the
+                // truth that no physical blockage was established. A routed
+                // request can be retried only through navigationMaxReplans.
+                if state.navigationProgress.route != nil {
+                    state.navigationProgress = AgentNavigationProgress(
+                        status: state.navigationProgress.status,
+                        route: state.navigationProgress.route,
+                        routeIndex: state.navigationProgress.routeIndex,
+                        replanCount: state.navigationProgress.replanCount,
+                        consecutiveBlockedMoves:
+                            state.navigationProgress.consecutiveBlockedMoves + 1,
+                        lastPlanTick: state.navigationProgress.lastPlanTick,
+                        lastInvalidation:
+                            .physicalPathReadinessUnavailable,
+                        lastFailure: .physicalPathReadinessUnavailable
+                    )
+                }
             case .notRequested:
+                // A direct request that exhausted bounded physical readiness
+                // has already consumed its one attempt. Preserve that typed
+                // result across the passive deferral so cognition cannot
+                // alternate wait/search forever. Changed semantic intent,
+                // physical origin, or route-relevant physical/readiness facts
+                // make a later request genuinely new.
+                if state.lastAction?.name == "wait",
+                   state.lastAction?.reason
+                    == "bounded direct physical path readiness deferred until intent changes",
+                   priorMovementOutcome?.status == .readinessUnavailable {
+                    state.lastMovementOutcome = priorMovementOutcome
+                }
                 break
             }
             updated[id] = state
+        }
+        if outcomes.contains(where: {
+            $0.status == .readinessUnavailable
+        }) {
+            legacyPathReadinessSchemaVersionOverride = nil
         }
         statesById = updated
         for outcome in outcomes.sorted(by: { $0.agentId < $1.agentId }) {
@@ -341,6 +410,31 @@ extension AgentSimulationSession {
             outcomes: outcomes
         )
         _ = try applySettlementMetricsPulseIfDue()
+    }
+
+    private func movementIntentMatches(
+        outcome: AgentMovementOutcome,
+        state: AgentSessionAgentState
+    ) -> Bool {
+        guard let action = state.lastAction,
+              let direction = outcome.requestedDirection,
+              action.name == "move_abstract"
+                || action.name == "approach_resource"
+                || action.name == "return_home"
+                || action.name == "approach_construction"
+                || action.name == "approach_information"
+                || action.name == "approach_settlement"
+                || action.name == "approach_dependent"
+                || action.name == "approach_activity" else {
+            return false
+        }
+        return outcome.requestedDX == (action.dx ?? 0)
+            && outcome.requestedDY == (action.dy ?? 0)
+            && outcome.requestedDZ == (action.dz ?? 0)
+            && direction.dx == outcome.requestedDX
+            && direction.dz == outcome.requestedDZ
+            && outcome.requestedDY == 0
+            && outcome.actionReason == action.reason
     }
 
     mutating func reconcileReservations(at reservationTick: Int) {
@@ -816,7 +910,10 @@ extension AgentSimulationSession {
                 invalidation = .targetChanged
             } else if state.navigationProgress.consecutiveBlockedMoves > 0 {
                 shouldPlan = true
-                invalidation = .movementBlocked
+                invalidation = state.navigationProgress.lastFailure
+                    == .physicalPathReadinessUnavailable
+                    ? .physicalPathReadinessUnavailable
+                    : .movementBlocked
             } else if let next = state.navigationProgress.nextStep,
                       !observation.cells.contains(where: {
                           $0.position == next && $0.status == .traversable

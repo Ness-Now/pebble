@@ -171,9 +171,19 @@ struct PebbleAgentMovementExecutor {
                     continue
                 case .coverageLimited, .coverageUnavailable,
                      .nodeBudgetExhausted:
-                    throw ExecutionError.pathReadinessUnavailable(
-                        id, pathResult
-                    )
+                    // Bounded-search uncertainty is local to this actor. It
+                    // proves neither a physical obstruction nor a movement,
+                    // so keep the route intact and publish an explicit
+                    // stationary outcome while the remaining cohort is still
+                    // evaluated in deterministic agent-ID order.
+                    verified.append(readinessUnavailable(
+                        intent: intent,
+                        agent: agent,
+                        at: embodiment.position,
+                        result: pathResult,
+                        worldTick: world.time
+                    ))
+                    continue
                 }
                 guard let node = path.first else {
                     verified.append(blocked(
@@ -505,6 +515,51 @@ struct PebbleAgentMovementExecutor {
         )
     }
 
+    private func readinessUnavailable(
+        intent: AgentMovementOutcome,
+        agent: AgentSnapshot,
+        at position: AgentPosition,
+        result: PhysicalPathSearchResult,
+        worldTick: Int
+    ) -> AgentVerifiedPhysicalMovement {
+        let readinessReason: AgentPathReadinessReason
+        switch result {
+        case .coverageLimited:
+            readinessReason = .coverageLimited
+        case .coverageUnavailable:
+            readinessReason = .coverageUnavailable
+        case .nodeBudgetExhausted:
+            readinessReason = .nodeBudgetExhausted
+        case .path, .noPath:
+            preconditionFailure("resolved path result is not a readiness outcome")
+        }
+        return AgentVerifiedPhysicalMovement(
+            kind: .navigationStep,
+            outcome: makeOutcome(
+                intent: intent,
+                agent: agent,
+                status: .readinessUnavailable,
+                from: position,
+                to: position,
+                requestedDirection: intent.requestedDirection,
+                requestedDX: intent.requestedDX,
+                requestedDY: intent.requestedDY,
+                requestedDZ: intent.requestedDZ,
+                resolution: "PebbleCore bounded path readiness \(readinessReason.rawValue)",
+                pathReadinessReason: readinessReason,
+                pathReadinessRequestIdentity: agent.lastAction.map {
+                    AgentMovementRequestIdentity(
+                        action: $0, goal: agent.currentGoal
+                    )
+                },
+                pathReadinessContextDigest:
+                    agent.lastWorldObservation?
+                        .physicalReadinessContextDigest,
+                worldTick: worldTick
+            )
+        )
+    }
+
     private func makeOutcome(
         intent: AgentMovementOutcome,
         agent: AgentSnapshot,
@@ -516,6 +571,9 @@ struct PebbleAgentMovementExecutor {
         requestedDY: Int,
         requestedDZ: Int,
         resolution: String,
+        pathReadinessReason: AgentPathReadinessReason? = nil,
+        pathReadinessRequestIdentity: AgentMovementRequestIdentity? = nil,
+        pathReadinessContextDigest: String? = nil,
         worldTick: Int
     ) -> AgentMovementOutcome {
         let before = distance(from, agent.homePosition)
@@ -536,6 +594,9 @@ struct PebbleAgentMovementExecutor {
             goalKind: intent.goalKind,
             actionReason: intent.actionReason,
             resolutionReason: resolution,
+            pathReadinessReason: pathReadinessReason,
+            pathReadinessRequestIdentity: pathReadinessRequestIdentity,
+            pathReadinessContextDigest: pathReadinessContextDigest,
             worldTickObserved: worldTick,
             distanceFromHomeBefore: before,
             distanceFromHomeAfter: after,

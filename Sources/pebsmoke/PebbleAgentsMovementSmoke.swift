@@ -40,7 +40,8 @@ do {
         step: Int? = 0,
         traversable: Bool = true,
         drop: Bool = false,
-        worldTick: Int = 7
+        worldTick: Int = 7,
+        physicalCoverageDigest: String = "coverage-A"
     ) -> AgentWorldObservation {
         let neighbors = AgentCardinalDirection.allCases.map { direction in
             let neighborPosition = AgentPosition(
@@ -75,7 +76,8 @@ do {
             blockLight: 0,
             dayTime: 0,
             raining: false,
-            thundering: false
+            thundering: false,
+            physicalCoverageDigest: physicalCoverageDigest
         )
     }
 
@@ -84,17 +86,22 @@ do {
         position: AgentPosition = origin,
         home: AgentPosition = origin,
         goal: AgentGoalKind = .explore,
+        needs: AgentNeeds = AgentNeeds(
+            hunger: 0.2, fatigue: 0.1, curiosity: 0.8, safety: 0.9
+        ),
+        health: Int = 90,
         action: AgentAction? = AgentAction(
             name: "move_abstract", reason: "goal explore", tick: 0, dx: 1, dy: 0, dz: 0
         ),
-        observation: AgentWorldObservation? = movementObservation()
+        observation: AgentWorldObservation? = movementObservation(),
+        navigationProgress: AgentNavigationProgress = AgentNavigationProgress()
     ) -> AgentSessionAgentState {
         AgentSessionAgentState(
             id: id,
             state: "moving",
             position: position,
-            needs: AgentNeeds(hunger: 0.2, fatigue: 0.1, curiosity: 0.8, safety: 0.9),
-            health: 90,
+            needs: needs,
+            health: health,
             fear: 12,
             homePosition: home,
             nearbyAgents: [],
@@ -114,7 +121,8 @@ do {
             totalManhattanDistanceMoved: 0,
             returnHomeMoveCount: 0,
             totalDistanceReducedTowardHome: 0,
-            lastWorldObservation: observation
+            lastWorldObservation: observation,
+            navigationProgress: navigationProgress
         )
     }
 
@@ -132,6 +140,232 @@ do {
 
     func resolved(_ state: AgentSessionAgentState) -> AgentMovementOutcome {
         AgentMovementCoordinator.resolve(snapshot: movementSession([state]).snapshot())[0]
+    }
+
+    func runIncrement06FreshProcessRestartPhase(_ phase: String) {
+        guard let root = ProcessInfo.processInfo.environment[
+            "PEBBLELAB_INCREMENT06_RESTART_ROOT"
+        ], root.hasPrefix("/tmp/"), root != "/tmp/" else {
+            check("increment 06 fresh restart root is isolated", false)
+            return
+        }
+        let checkpointURL = URL(fileURLWithPath: root)
+            .appendingPathComponent("checkpoint.json")
+        let expectedURL = URL(fileURLWithPath: root)
+            .appendingPathComponent("expected-continuation.json")
+        let directObservationA = movementObservation(
+            physicalCoverageDigest: "restart-coverage-A"
+        )
+        let directObservationB = movementObservation(
+            worldTick: 12,
+            physicalCoverageDigest: "restart-coverage-B"
+        )
+        let directState = movementState(
+            id: "agent_direct_restart",
+            home: AgentPosition(x: 1, y: 64, z: 0),
+            goal: .seekSafety,
+            needs: AgentNeeds(
+                hunger: 0, fatigue: 0, curiosity: 0, safety: 0.9
+            ),
+            health: 20,
+            action: AgentAction(
+                name: "move_abstract", reason: "goal seekSafety", tick: 0,
+                dx: 1, dy: 0, dz: 0
+            ),
+            observation: directObservationA
+        )
+        let routedOrigin = AgentPosition(x: 4, y: 64, z: 0)
+        let routedObservation = movementObservation(
+            position: routedOrigin,
+            physicalCoverageDigest: "restart-route-coverage"
+        )
+        let routedTarget = AgentPosition(x: 5, y: 64, z: 0)
+        let routedState = movementState(
+            id: "agent_routed_restart",
+            position: routedOrigin,
+            home: routedOrigin,
+            action: AgentAction(
+                name: "approach_activity", reason: "bounded routed work",
+                tick: 0, dx: 1, dy: 0, dz: 0, target: routedTarget
+            ),
+            observation: routedObservation,
+            navigationProgress: AgentNavigationProgress(
+                status: .active,
+                route: AgentNavigationRoute(
+                    purpose: .civilizationActivity,
+                    target: routedTarget,
+                    positions: [routedOrigin, routedTarget],
+                    plannedAtTick: 0,
+                    visitedNodeCount: 2
+                ),
+                routeIndex: 0,
+                replanCount: 2,
+                consecutiveBlockedMoves: 0,
+                lastPlanTick: 0
+            )
+        )
+
+        func readiness(
+            state: AgentSessionAgentState,
+            reason: AgentPathReadinessReason
+        ) -> AgentMovementOutcome {
+            let intent = resolved(state)
+            return AgentMovementOutcome(
+                agentId: intent.agentId,
+                tick: intent.tick,
+                status: .readinessUnavailable,
+                fromPosition: intent.fromPosition,
+                toPosition: intent.fromPosition,
+                requestedDirection: intent.requestedDirection,
+                requestedDX: intent.requestedDX,
+                requestedDY: intent.requestedDY,
+                requestedDZ: intent.requestedDZ,
+                appliedDX: 0,
+                appliedDY: 0,
+                appliedDZ: 0,
+                goalKind: intent.goalKind,
+                actionReason: intent.actionReason,
+                resolutionReason:
+                    "PebbleCore bounded path readiness \(reason.rawValue)",
+                pathReadinessReason: reason,
+                pathReadinessRequestIdentity: AgentMovementRequestIdentity(
+                    action: state.lastAction!, goal: state.currentGoal
+                ),
+                pathReadinessContextDigest:
+                    state.lastWorldObservation!.physicalReadinessContextDigest,
+                worldTickObserved: intent.worldTickObserved,
+                distanceFromHomeBefore: intent.distanceFromHomeBefore,
+                distanceFromHomeAfter: intent.distanceFromHomeBefore,
+                distanceReducedTowardHome: 0
+            )
+        }
+
+        func continueAcrossBoundary(
+            _ session: inout AgentSimulationSession
+        ) throws -> (
+            unchangedAction: String?, changedAction: String?,
+            changedDominantFactor: AgentDecisionFactorKind?
+        ) {
+            _ = try session.advanceTick(perceptions: [
+                AgentPerceptionInput(
+                    agentId: directState.id,
+                    worldObservation: directObservationA
+                ),
+                AgentPerceptionInput(
+                    agentId: routedState.id,
+                    worldObservation: routedObservation
+                ),
+            ])
+            let unchangedAction = session.snapshot().agents.first {
+                $0.id == directState.id
+            }?.lastAction?.name
+            try session.applyMovementOutcomes(
+                AgentMovementCoordinator.resolve(snapshot: session.snapshot())
+            )
+            _ = try session.advanceTick(perceptions: [
+                AgentPerceptionInput(
+                    agentId: directState.id,
+                    worldObservation: directObservationB
+                ),
+                AgentPerceptionInput(
+                    agentId: routedState.id,
+                    worldObservation: routedObservation
+                ),
+            ])
+            let changed = session.snapshot().agents.first {
+                $0.id == directState.id
+            }
+            return (
+                unchangedAction,
+                changed?.lastAction?.name,
+                changed?.lastFeedbackDecisionTrace?.dominantFactor.kind
+            )
+        }
+
+        switch phase {
+        case "write":
+            do {
+                var session = movementSession([directState, routedState])
+                try session.applyVerifiedPhysicalMovements([
+                    AgentVerifiedPhysicalMovement(
+                        kind: .navigationStep,
+                        outcome: readiness(
+                            state: directState, reason: .nodeBudgetExhausted
+                        )
+                    ),
+                    AgentVerifiedPhysicalMovement(
+                        kind: .navigationStep,
+                        outcome: readiness(
+                            state: routedState, reason: .coverageLimited
+                        )
+                    ),
+                ])
+                let checkpoint = try session.makeCheckpoint()
+                let checkpointBytes = try AgentCheckpointCodec.encode(checkpoint)
+                try checkpointBytes.write(to: checkpointURL, options: .atomic)
+                var continuous = session
+                _ = try continueAcrossBoundary(&continuous)
+                try continuous.durableStateBytes().write(
+                    to: expectedURL, options: .atomic
+                )
+                let snapshot = session.snapshot()
+                check("increment 06 fresh restart writer schema 45",
+                      checkpoint.schemaVersion == 45)
+                check("increment 06 fresh restart writer direct deferred",
+                      snapshot.agents.first {
+                          $0.id == directState.id
+                      }?.lastMovementOutcome?.status == .readinessUnavailable)
+                check("increment 06 fresh restart writer routed budget consumed",
+                      snapshot.agents.first {
+                          $0.id == routedState.id
+                      }?.navigationProgress.replanCount == 2)
+            } catch {
+                check("increment 06 fresh restart writer completed", false,
+                      "\(error)")
+            }
+        case "read":
+            do {
+                let checkpointBytes = try Data(contentsOf: checkpointURL)
+                let checkpoint = try AgentCheckpointCodec.decode(
+                    AgentSessionCheckpoint.self, from: checkpointBytes
+                )
+                var restarted = try AgentSimulationSession.restoring(checkpoint)
+                let restored = restarted.snapshot()
+                check("increment 06 fresh restart reader schema 45",
+                      checkpoint.schemaVersion == 45)
+                check("increment 06 fresh restart retains direct deferral",
+                      restored.agents.first {
+                          $0.id == directState.id
+                      }?.lastMovementOutcome?.pathReadinessReason
+                          == .nodeBudgetExhausted)
+                check("increment 06 fresh restart retains routed budget",
+                      restored.agents.first {
+                          $0.id == routedState.id
+                      }?.navigationProgress.replanCount == 2)
+                let continuation = try continueAcrossBoundary(&restarted)
+                check("increment 06 unchanged direct request stays deferred",
+                      continuation.unchangedAction == "wait")
+                check("increment 06 changed context re-enables one request",
+                      continuation.changedAction == "move_abstract"
+                          && continuation.changedDominantFactor
+                          != .pathReadinessDeferral)
+                check("increment 06 fresh restart continuation is byte exact",
+                      try restarted.durableStateBytes()
+                          == Data(contentsOf: expectedURL))
+            } catch {
+                check("increment 06 fresh restart reader completed", false,
+                      "\(error)")
+            }
+        default:
+            check("increment 06 fresh restart phase recognized", false, phase)
+        }
+    }
+
+    if let phase = ProcessInfo.processInfo.environment[
+        "PEBBLELAB_INCREMENT06_RESTART_PHASE"
+    ] {
+        runIncrement06FreshProcessRestartPhase(phase)
+        return
     }
 
     let noAction = resolved(movementState(action: nil))
@@ -286,6 +520,525 @@ do {
     var idleSession = movementSession([movementState(action: nil)])
     try! idleSession.applyMovementOutcomes([noAction])
     check("movement not requested no memory", idleSession.snapshot().agents[0].memoryCount == 0)
+
+    section("PS01 Increment 06 readiness-local cohort publication")
+    let readinessState = movementState()
+    let readinessIntent = resolved(readinessState)
+    let readinessOutcome = AgentMovementOutcome(
+        agentId: readinessIntent.agentId,
+        tick: readinessIntent.tick,
+        status: .readinessUnavailable,
+        fromPosition: readinessIntent.fromPosition,
+        toPosition: readinessIntent.fromPosition,
+        requestedDirection: readinessIntent.requestedDirection,
+        requestedDX: readinessIntent.requestedDX,
+        requestedDY: readinessIntent.requestedDY,
+        requestedDZ: readinessIntent.requestedDZ,
+        appliedDX: 0,
+        appliedDY: 0,
+        appliedDZ: 0,
+        goalKind: readinessIntent.goalKind,
+        actionReason: readinessIntent.actionReason,
+        resolutionReason: "PebbleCore bounded path readiness nodeBudgetExhausted",
+        pathReadinessReason: .nodeBudgetExhausted,
+        pathReadinessRequestIdentity: AgentMovementRequestIdentity(
+            action: readinessState.lastAction!, goal: readinessState.currentGoal
+        ),
+        pathReadinessContextDigest:
+            readinessState.lastWorldObservation!
+                .physicalReadinessContextDigest,
+        worldTickObserved: readinessIntent.worldTickObserved,
+        distanceFromHomeBefore: readinessIntent.distanceFromHomeBefore,
+        distanceFromHomeAfter: readinessIntent.distanceFromHomeBefore,
+        distanceReducedTowardHome: 0
+    )
+    var readinessSession = movementSession([readinessState])
+    let readinessBefore = readinessSession.snapshot().agents[0]
+    try! readinessSession.applyVerifiedPhysicalMovements([
+        AgentVerifiedPhysicalMovement(
+            kind: .navigationStep,
+            outcome: readinessOutcome
+        )
+    ])
+    let readinessAfter = readinessSession.snapshot().agents[0]
+    check("increment 06 readiness outcome is durable and explicit",
+          readinessAfter.lastMovementOutcome?.status == .readinessUnavailable
+              && readinessAfter.lastMovementOutcome?.pathReadinessReason
+                  == .nodeBudgetExhausted)
+    check("increment 06 readiness outcome stays physically stationary",
+          readinessAfter.position == readinessBefore.position
+              && readinessAfter.movementCount == readinessBefore.movementCount)
+    check("increment 06 readiness does not claim a physical block",
+          readinessAfter.memoryCount == readinessBefore.memoryCount
+              && readinessAfter.feedbackMemoryWriteCount
+                  == readinessBefore.feedbackMemoryWriteCount)
+    check("increment 06 checkpoint vocabulary is schema 45",
+          (try! readinessSession.makeCheckpoint()).schemaVersion
+              == AgentCheckpointSchema.pathReadinessLivenessVersion)
+
+    let directDeferralOutcome = AgentMovementOutcome(
+        agentId: "agent_3",
+        tick: readinessOutcome.tick,
+        status: readinessOutcome.status,
+        fromPosition: readinessOutcome.fromPosition,
+        toPosition: readinessOutcome.toPosition,
+        requestedDirection: readinessOutcome.requestedDirection,
+        requestedDX: readinessOutcome.requestedDX,
+        requestedDY: readinessOutcome.requestedDY,
+        requestedDZ: readinessOutcome.requestedDZ,
+        appliedDX: readinessOutcome.appliedDX,
+        appliedDY: readinessOutcome.appliedDY,
+        appliedDZ: readinessOutcome.appliedDZ,
+        goalKind: readinessOutcome.goalKind,
+        actionReason: readinessOutcome.actionReason,
+        resolutionReason: readinessOutcome.resolutionReason,
+        pathReadinessReason: readinessOutcome.pathReadinessReason,
+        pathReadinessRequestIdentity:
+            readinessOutcome.pathReadinessRequestIdentity,
+        pathReadinessContextDigest:
+            readinessOutcome.pathReadinessContextDigest,
+        worldTickObserved: readinessOutcome.worldTickObserved,
+        distanceFromHomeBefore: readinessOutcome.distanceFromHomeBefore,
+        distanceFromHomeAfter: readinessOutcome.distanceFromHomeAfter,
+        distanceReducedTowardHome: readinessOutcome.distanceReducedTowardHome
+    )
+    var directDeferralSession = movementSession([movementState(
+        id: "agent_3",
+        needs: AgentNeeds(
+            hunger: 0, fatigue: 0, curiosity: 0.8, safety: 0.9
+        )
+    )])
+    try! directDeferralSession.applyVerifiedPhysicalMovements([
+        AgentVerifiedPhysicalMovement(
+            kind: .navigationStep,
+            outcome: directDeferralOutcome
+        )
+    ])
+    _ = try! directDeferralSession.advanceTick()
+    let firstDirectDeferral = directDeferralSession.snapshot().agents[0]
+    check("increment 06 direct uncertainty enters durable passive deferral",
+          firstDirectDeferral.lastAction?.name == "wait"
+              && firstDirectDeferral.lastFeedbackDecisionTrace?.dominantFactor.kind
+                  == .pathReadinessDeferral)
+    let firstDeferredOutcomes = AgentMovementCoordinator.resolve(
+        snapshot: directDeferralSession.snapshot()
+    )
+    try! directDeferralSession.applyMovementOutcomes(firstDeferredOutcomes)
+    check("increment 06 passive deferral preserves typed uncertainty authority",
+          directDeferralSession.snapshot().agents[0].lastMovementOutcome
+              == directDeferralOutcome)
+    _ = try! directDeferralSession.advanceTick()
+    check("increment 06 exact direct request cannot retry after an intervening wait",
+          directDeferralSession.snapshot().agents[0].lastAction?.name
+              == "move_abstract"
+              && directDeferralSession.snapshot().agents[0]
+                  .lastFeedbackDecisionTrace?.baseDirection == .south
+              && directDeferralSession.snapshot().agents[0]
+                  .lastFeedbackDecisionTrace?.finalDirection == .south)
+
+    let safetyObservationA = movementObservation(
+        physicalCoverageDigest: "coverage-A"
+    )
+    let safetyObservationB = movementObservation(
+        worldTick: 12, physicalCoverageDigest: "coverage-B"
+    )
+    let safetyState = movementState(
+        id: "agent_safety",
+        home: AgentPosition(x: 1, y: 64, z: 0),
+        goal: .seekSafety,
+        needs: AgentNeeds(
+            hunger: 0, fatigue: 0, curiosity: 0, safety: 0.9
+        ),
+        health: 20,
+        action: AgentAction(
+            name: "move_abstract", reason: "goal seekSafety", tick: 0,
+            dx: 1, dy: 0, dz: 0
+        ),
+        observation: safetyObservationA
+    )
+    let safetyIntent = resolved(safetyState)
+    let safetyReadiness = AgentMovementOutcome(
+        agentId: safetyIntent.agentId,
+        tick: safetyIntent.tick,
+        status: .readinessUnavailable,
+        fromPosition: safetyIntent.fromPosition,
+        toPosition: safetyIntent.fromPosition,
+        requestedDirection: safetyIntent.requestedDirection,
+        requestedDX: safetyIntent.requestedDX,
+        requestedDY: safetyIntent.requestedDY,
+        requestedDZ: safetyIntent.requestedDZ,
+        appliedDX: 0,
+        appliedDY: 0,
+        appliedDZ: 0,
+        goalKind: safetyIntent.goalKind,
+        actionReason: safetyIntent.actionReason,
+        resolutionReason:
+            "PebbleCore bounded path readiness nodeBudgetExhausted",
+        pathReadinessReason: .nodeBudgetExhausted,
+        pathReadinessRequestIdentity: AgentMovementRequestIdentity(
+            action: safetyState.lastAction!, goal: safetyState.currentGoal
+        ),
+        pathReadinessContextDigest:
+            safetyObservationA.physicalReadinessContextDigest,
+        worldTickObserved: safetyIntent.worldTickObserved,
+        distanceFromHomeBefore: safetyIntent.distanceFromHomeBefore,
+        distanceFromHomeAfter: safetyIntent.distanceFromHomeBefore,
+        distanceReducedTowardHome: 0
+    )
+    var safetyDeferral = movementSession([safetyState])
+    try! safetyDeferral.applyVerifiedPhysicalMovements([
+        AgentVerifiedPhysicalMovement(
+            kind: .navigationStep, outcome: safetyReadiness
+        )
+    ])
+    _ = try! safetyDeferral.advanceTick(perceptions: [
+        AgentPerceptionInput(
+            agentId: "agent_safety", worldObservation: safetyObservationA
+        ),
+    ])
+    try! safetyDeferral.applyMovementOutcomes(
+        AgentMovementCoordinator.resolve(snapshot: safetyDeferral.snapshot())
+    )
+    let safetyDeferredCheckpoint = try! safetyDeferral.makeCheckpoint()
+    var safetyContinuous = safetyDeferral
+    var safetyRestarted = try! AgentSimulationSession.restoring(
+        safetyDeferredCheckpoint
+    )
+    for index in 0..<2 {
+        _ = try! safetyContinuous.advanceTick(perceptions: [
+            AgentPerceptionInput(
+                agentId: "agent_safety", worldObservation: safetyObservationA
+            ),
+        ])
+        _ = try! safetyRestarted.advanceTick(perceptions: [
+            AgentPerceptionInput(
+                agentId: "agent_safety", worldObservation: safetyObservationA
+            ),
+        ])
+        check("increment 06 unchanged direct context remains deferred \(index)",
+              safetyContinuous.snapshot().agents[0].lastAction?.name == "wait"
+                  && safetyRestarted.snapshot().agents[0].lastAction?.name
+                      == "wait")
+        let continuousStationary = AgentMovementCoordinator.resolve(
+            snapshot: safetyContinuous.snapshot()
+        )
+        let restartedStationary = AgentMovementCoordinator.resolve(
+            snapshot: safetyRestarted.snapshot()
+        )
+        try! safetyContinuous.applyMovementOutcomes(continuousStationary)
+        try! safetyRestarted.applyMovementOutcomes(restartedStationary)
+    }
+    check("increment 06 restart grants no unchanged direct retry",
+          (try! safetyContinuous.durableStateBytes())
+              == (try! safetyRestarted.durableStateBytes())
+              && safetyContinuous.snapshot().agents[0]
+                  .lastMovementOutcome == safetyReadiness)
+    _ = try! safetyContinuous.advanceTick(perceptions: [
+        AgentPerceptionInput(
+            agentId: "agent_safety", worldObservation: safetyObservationB
+        ),
+    ])
+    _ = try! safetyRestarted.advanceTick(perceptions: [
+        AgentPerceptionInput(
+            agentId: "agent_safety", worldObservation: safetyObservationB
+        ),
+    ])
+    let safetyContinuousAfterChange = safetyContinuous.snapshot().agents[0]
+    let safetyRestartedAfterChange = safetyRestarted.snapshot().agents[0]
+    check("increment 06 changed Core coverage context invalidates direct deferral",
+          safetyContinuousAfterChange.lastAction?.name == "move_abstract"
+              && safetyContinuousAfterChange.lastFeedbackDecisionTrace?
+                  .dominantFactor.kind != .pathReadinessDeferral)
+    check("increment 06 context invalidation is restart equivalent",
+          safetyContinuousAfterChange.lastAction
+              == safetyRestartedAfterChange.lastAction
+              && (try! safetyContinuous.durableStateBytes())
+                  == (try! safetyRestarted.durableStateBytes()))
+    check("increment 06 invalidation only re-enables bounded Core request",
+          AgentMovementCoordinator.resolve(
+              snapshot: safetyContinuous.snapshot()
+          )[0].status == .moved
+              && safetyContinuousAfterChange.position
+                  == safetyReadiness.fromPosition)
+
+    func temporalV44Checkpoint(
+        from checkpoint: AgentSessionCheckpoint
+    ) -> AgentSessionCheckpoint {
+        var root = try! JSONSerialization.jsonObject(
+            with: AgentCheckpointCodec.encode(checkpoint)
+        ) as! [String: Any]
+        var durable = root["durableState"] as! [String: Any]
+        durable["schemaVersion"] = AgentCheckpointSchema.temporalPhysiologyVersion
+        let durableData = try! JSONSerialization.data(
+            withJSONObject: durable,
+            options: [.sortedKeys, .withoutEscapingSlashes]
+        )
+        let durableState = try! AgentCheckpointCodec.decode(
+            AgentSessionDurableState.self,
+            from: durableData
+        )
+        let canonicalDurable = try! AgentCheckpointCodec.encode(durableState)
+        let digest = AgentCheckpointDigest.sha256(canonicalDurable)
+        let simulationDigest = AgentCheckpointDigest.sha256(
+            Data(checkpoint.simulationID.rawValue.utf8)
+        )
+        root["schemaVersion"] = AgentCheckpointSchema.temporalPhysiologyVersion
+        root["durableState"] = try! JSONSerialization.jsonObject(
+            with: canonicalDurable
+        )
+        root["semanticDigest"] = digest.rawValue
+        root["checkpointID"] = "checkpoint-\(simulationDigest.rawValue.prefix(12))-t\(checkpoint.tick.rawValue)-\(digest.rawValue.prefix(16))"
+        return try! AgentCheckpointCodec.decode(
+            AgentSessionCheckpoint.self,
+            from: JSONSerialization.data(
+                withJSONObject: root,
+                options: [.sortedKeys, .withoutEscapingSlashes]
+            )
+        )
+    }
+
+    let illicitReadinessV44 = temporalV44Checkpoint(
+        from: try! directDeferralSession.makeCheckpoint()
+    )
+    do {
+        _ = try AgentSimulationSession.restoring(illicitReadinessV44)
+        check("increment 06 schema 44 rejects readiness-only vocabulary", false)
+    } catch AgentCheckpointError.invalidAgent("agent_3") {
+        check("increment 06 schema 44 rejects readiness-only vocabulary", true)
+    } catch {
+        check("increment 06 schema 44 rejects readiness-only vocabulary", false,
+              "unexpected \(error)")
+    }
+
+    let preReadinessV45Session = movementSession([movementState()])
+    let temporalV44 = temporalV44Checkpoint(
+        from: try! preReadinessV45Session.makeCheckpoint()
+    )
+    var restoredTemporalV44 = try! AgentSimulationSession.restoring(temporalV44)
+    check("increment 06 clean schema 44 checkpoint restores without relabeling",
+          (try! restoredTemporalV44.makeCheckpoint()).schemaVersion
+              == AgentCheckpointSchema.temporalPhysiologyVersion)
+    var temporalV44Recorder = try! AgentReplayRecorder(
+        checkpoint: temporalV44,
+        session: restoredTemporalV44
+    )
+    try! temporalV44Recorder.apply(
+        .verifiedPhysicalMovements([
+            AgentVerifiedPhysicalMovement(
+                kind: .navigationStep,
+                outcome: readinessOutcome
+            )
+        ]),
+        to: &restoredTemporalV44
+    )
+    let promotedJournal = try! temporalV44Recorder.journal(
+        named: AgentCheckpointName(rawValue: "ps01-i06-v44-promotion")!
+    )
+    let promotedReplay = try! AgentSessionReplayer.replay(
+        checkpoint: temporalV44,
+        journal: promotedJournal
+    )
+    check("increment 06 first readiness publication promotes v44 to v45",
+          (try! restoredTemporalV44.makeCheckpoint()).schemaVersion
+              == AgentCheckpointSchema.pathReadinessLivenessVersion
+              && promotedJournal.manifest.schemaVersion
+                  == AgentReplaySchema.pathReadinessLivenessVersion)
+    check("increment 06 v44 boundary promotion replay is byte exact",
+          promotedReplay.report.verified
+              && (try! promotedReplay.session.durableStateBytes())
+                  == (try! restoredTemporalV44.durableStateBytes()))
+
+    var unverifiedReadinessSession = movementSession([movementState()])
+    let unverifiedReadinessBefore = unverifiedReadinessSession.snapshot()
+    do {
+        try unverifiedReadinessSession.applyMovementOutcomes([readinessOutcome])
+        check("increment 06 unverified readiness publication refused", false)
+    } catch AgentSessionError.invalidStationaryMovement("agent_a") {
+        check("increment 06 unverified readiness publication refused", true)
+    } catch {
+        check("increment 06 unverified readiness publication refused", false,
+              "unexpected \(error)")
+    }
+    check("increment 06 unverified readiness rejection is atomic",
+          unverifiedReadinessSession.snapshot() == unverifiedReadinessBefore)
+
+    let readinessRoute = AgentNavigationRoute(
+        purpose: .resource,
+        target: AgentPosition(x: 1, y: 64, z: 0),
+        positions: [origin, AgentPosition(x: 1, y: 64, z: 0)],
+        plannedAtTick: 0,
+        visitedNodeCount: 2
+    )
+    var routedReadinessSession = movementSession([movementState(
+        navigationProgress: AgentNavigationProgress(
+            status: .active,
+            route: readinessRoute,
+            routeIndex: 0,
+            lastPlanTick: 0
+        )
+    )])
+    try! routedReadinessSession.applyVerifiedPhysicalMovements([
+        AgentVerifiedPhysicalMovement(kind: .navigationStep, outcome: readinessOutcome)
+    ])
+    let routedReadiness = routedReadinessSession.snapshot().agents[0]
+        .navigationProgress
+    check("increment 06 routed uncertainty preserves route and truth",
+          routedReadiness.route == readinessRoute
+              && routedReadiness.consecutiveBlockedMoves == 1
+              && routedReadiness.lastInvalidation
+                  == .physicalPathReadinessUnavailable
+              && routedReadiness.lastFailure
+                  == .physicalPathReadinessUnavailable)
+    check("increment 06 routed retry authority remains finitely bounded",
+          routedReadinessSession.configuration.navigationMaxReplans == 3)
+    let routedReadinessCheckpoint = try! routedReadinessSession.makeCheckpoint()
+    let routedReadinessRestored = try! AgentSimulationSession.restoring(
+        AgentCheckpointCodec.decode(
+            AgentSessionCheckpoint.self,
+            from: AgentCheckpointCodec.encode(routedReadinessCheckpoint)
+        )
+    )
+    check("increment 06 native v45 restart preserves routed retry state",
+          routedReadinessRestored.snapshot().agents[0].navigationProgress
+              == routedReadiness
+              && routedReadinessRestored.snapshot().agents[0]
+                  .lastMovementOutcome == readinessOutcome
+              && routedReadinessRestored.configuration.navigationMaxReplans == 3)
+
+    let readinessB = AgentMovementOutcome(
+        agentId: conflict[1].agentId,
+        tick: conflict[1].tick,
+        status: .readinessUnavailable,
+        fromPosition: conflict[1].fromPosition,
+        toPosition: conflict[1].fromPosition,
+        requestedDirection: conflict[1].requestedDirection,
+        requestedDX: conflict[1].requestedDX,
+        requestedDY: conflict[1].requestedDY,
+        requestedDZ: conflict[1].requestedDZ,
+        appliedDX: 0,
+        appliedDY: 0,
+        appliedDZ: 0,
+        goalKind: conflict[1].goalKind,
+        actionReason: conflict[1].actionReason,
+        resolutionReason: "PebbleCore bounded path readiness coverageLimited",
+        pathReadinessReason: .coverageLimited,
+        pathReadinessRequestIdentity: AgentMovementRequestIdentity(
+            action: conflictStates[0].lastAction!,
+            goal: conflictStates[0].currentGoal
+        ),
+        pathReadinessContextDigest: conflictStates[0]
+            .lastWorldObservation!.physicalReadinessContextDigest,
+        worldTickObserved: conflict[1].worldTickObserved,
+        distanceFromHomeBefore: conflict[1].distanceFromHomeBefore,
+        distanceFromHomeAfter: conflict[1].distanceFromHomeBefore,
+        distanceReducedTowardHome: 0
+    )
+    var mixedCohort = movementSession(conflictStates)
+    let mixedCheckpoint = try! mixedCohort.makeCheckpoint()
+    var mixedRecorder = try! AgentReplayRecorder(
+        checkpoint: mixedCheckpoint,
+        session: mixedCohort
+    )
+    let mixedOperation = AgentReplayOperation.verifiedPhysicalMovements([
+        AgentVerifiedPhysicalMovement(
+            kind: .navigationStep,
+            outcome: conflict[0]
+        ),
+        AgentVerifiedPhysicalMovement(
+            kind: .navigationStep,
+            outcome: readinessB
+        ),
+    ])
+    _ = try! mixedRecorder.apply(mixedOperation, to: &mixedCohort)
+    let mixedSnapshot = mixedCohort.snapshot()
+    check("increment 06 ready peer moves in the same cohort",
+          mixedSnapshot.agents.first { $0.id == "agent_a" }?.movementCount == 1)
+    check("increment 06 indeterminate peer stays in the same cohort",
+          mixedSnapshot.agents.first { $0.id == "agent_b" }?
+              .lastMovementOutcome?.status == .readinessUnavailable)
+    let mixedJournal = try! mixedRecorder.journal(
+        named: AgentCheckpointName(rawValue: "ps01-i06-mixed-cohort")!
+    )
+    let mixedReplay = try! AgentSessionReplayer.replay(
+        checkpoint: mixedCheckpoint,
+        journal: mixedJournal
+    )
+    check("increment 06 mixed cohort replay is byte exact",
+          mixedReplay.report.verified
+              && (try! mixedReplay.session.durableStateBytes())
+                  == (try! mixedCohort.durableStateBytes()))
+    let mixedEncoded = try! AgentCheckpointCodec.encode(
+        mixedCohort.makeCheckpoint()
+    )
+    let mixedDecoded = try! AgentCheckpointCodec.decode(
+        AgentSessionCheckpoint.self,
+        from: mixedEncoded
+    )
+    let mixedRestored = try! AgentSimulationSession.restoring(mixedDecoded)
+    check("increment 06 mixed cohort checkpoint is byte exact",
+          (try! mixedRestored.durableStateBytes())
+              == (try! mixedCohort.durableStateBytes()))
+
+    let forgedReadinessB = AgentMovementOutcome(
+        agentId: readinessB.agentId,
+        tick: readinessB.tick,
+        status: readinessB.status,
+        fromPosition: readinessB.fromPosition,
+        toPosition: readinessB.toPosition,
+        requestedDirection: readinessB.requestedDirection,
+        requestedDX: readinessB.requestedDX,
+        requestedDY: readinessB.requestedDY,
+        requestedDZ: readinessB.requestedDZ,
+        appliedDX: readinessB.appliedDX,
+        appliedDY: readinessB.appliedDY,
+        appliedDZ: readinessB.appliedDZ,
+        goalKind: readinessB.goalKind,
+        actionReason: "forged request",
+        resolutionReason: readinessB.resolutionReason,
+        pathReadinessReason: readinessB.pathReadinessReason,
+        pathReadinessRequestIdentity:
+            readinessB.pathReadinessRequestIdentity,
+        pathReadinessContextDigest:
+            readinessB.pathReadinessContextDigest,
+        worldTickObserved: readinessB.worldTickObserved,
+        distanceFromHomeBefore: readinessB.distanceFromHomeBefore,
+        distanceFromHomeAfter: readinessB.distanceFromHomeAfter,
+        distanceReducedTowardHome: readinessB.distanceReducedTowardHome
+    )
+    var forgedMixedCohort = movementSession(conflictStates)
+    let forgedMixedBefore = forgedMixedCohort.snapshot()
+    do {
+        try forgedMixedCohort.applyVerifiedPhysicalMovements([
+            AgentVerifiedPhysicalMovement(
+                kind: .navigationStep,
+                outcome: conflict[0]
+            ),
+            AgentVerifiedPhysicalMovement(
+                kind: .navigationStep,
+                outcome: forgedReadinessB
+            ),
+        ])
+        check("increment 06 forged readiness request refused", false)
+    } catch AgentSessionError.invalidStationaryMovement("agent_b") {
+        check("increment 06 forged readiness request refused", true)
+    } catch {
+        check("increment 06 forged readiness request refused", false,
+              "unexpected \(error)")
+    }
+    check("increment 06 invalid mixed cohort is wholly unpublished",
+          forgedMixedCohort.snapshot() == forgedMixedBefore)
+
+    var deterministicReadinessA = movementSession([movementState()])
+    var deterministicReadinessB = movementSession([movementState()])
+    try! deterministicReadinessA.applyVerifiedPhysicalMovements([
+        AgentVerifiedPhysicalMovement(kind: .navigationStep, outcome: readinessOutcome)
+    ])
+    try! deterministicReadinessB.applyVerifiedPhysicalMovements([
+        AgentVerifiedPhysicalMovement(kind: .navigationStep, outcome: readinessOutcome)
+    ])
+    check("increment 06 readiness publication is deterministic",
+          (try! deterministicReadinessA.durableStateBytes())
+              == (try! deterministicReadinessB.durableStateBytes()))
 
     var boundedMovement = movementSession([movementState()], policy: .bounded(maxEntries: 1))
     try! boundedMovement.applyMovementOutcomes([flat])
@@ -572,7 +1325,8 @@ do {
     func feedbackObservation(
         position: AgentPosition = feedbackOrigin,
         rules: [AgentCardinalDirection: FeedbackNeighborRule] = [:],
-        tick: Int = 1
+        tick: Int = 1,
+        physicalCoverageDigest: String = "coverage-A"
     ) -> AgentWorldObservation {
         let neighbors = AgentCardinalDirection.allCases.map { direction in
             let rule = rules[direction] ?? .safe
@@ -607,7 +1361,8 @@ do {
             blockLight: 0,
             dayTime: tick,
             raining: false,
-            thundering: false
+            thundering: false,
+            physicalCoverageDigest: physicalCoverageDigest
         )
     }
 
@@ -619,7 +1374,8 @@ do {
         to: AgentPosition? = nil,
         direction: AgentCardinalDirection? = .east,
         reason: String = "target body space blocked",
-        goal: AgentGoalKind = .explore
+        goal: AgentGoalKind = .explore,
+        pathReadinessReason: AgentPathReadinessReason? = nil
     ) -> AgentMovementOutcome {
         let destination: AgentPosition
         if let to {
@@ -635,6 +1391,17 @@ do {
         }
         let before = abs(from.x) + abs(from.y - 64) + abs(from.z)
         let after = abs(destination.x) + abs(destination.y - 64) + abs(destination.z)
+        let goalIdentity = AgentGoal(
+            kind: goal, reason: "test", startedAtTick: 1, urgency: 1
+        )
+        let action = AgentAction(
+            name: "move_abstract",
+            reason: goal == .explore ? "goal explore" : "goal seekSafety",
+            tick: 5,
+            dx: direction?.dx,
+            dy: direction == nil ? nil : 0,
+            dz: direction?.dz
+        )
         return AgentMovementOutcome(
             agentId: id,
             tick: tick,
@@ -651,6 +1418,14 @@ do {
             goalKind: goal,
             actionReason: goal == .explore ? "goal explore" : "goal seekSafety",
             resolutionReason: reason,
+            pathReadinessReason: pathReadinessReason,
+            pathReadinessRequestIdentity: status == .readinessUnavailable
+                ? AgentMovementRequestIdentity(
+                    action: action, goal: goalIdentity
+                ) : nil,
+            pathReadinessContextDigest: status == .readinessUnavailable
+                ? feedbackObservation(position: from)
+                    .physicalReadinessContextDigest : nil,
             worldTickObserved: tick,
             distanceFromHomeBefore: before,
             distanceFromHomeAfter: after,
@@ -661,6 +1436,11 @@ do {
     let notRequestedFeedback = feedbackOutcome(status: .notRequested, direction: nil)
     let movedFeedback = feedbackOutcome(status: .moved)
     let blockedFeedback = feedbackOutcome(status: .blocked)
+    let readinessFeedback = feedbackOutcome(
+        status: .readinessUnavailable,
+        reason: "PebbleCore bounded path readiness nodeBudgetExhausted",
+        pathReadinessReason: .nodeBudgetExhausted
+    )
     let movedMemory = AgentFeedbackLoop.movementMemoryEntry(outcome: movedFeedback)
     let blockedMemory = AgentFeedbackLoop.movementMemoryEntry(outcome: blockedFeedback)
     check("feedback writer not requested nil",
@@ -856,6 +1636,47 @@ do {
     check("feedback adjust base dominant", baseTrace.dominantFactor.kind == .basePolicy)
     let outcomeOnlyTrace = feedbackTrace(outcome: blockedFeedback)
     check("feedback adjust outcome without memory retained", !outcomeOnlyTrace.actionChanged)
+
+    let readinessRetrieved = AgentFeedbackLoop.retrieveMovementMemories(
+        memory: retrievalSource,
+        currentTick: 10,
+        lastMovementOutcome: readinessFeedback,
+        configuration: feedbackConfig
+    )
+    check("increment 06 readiness matches no blocked or moved memory",
+          readinessRetrieved.allSatisfy { !$0.matchedCurrentFeedback })
+    let readinessTrace = feedbackTrace(
+        outcome: readinessFeedback,
+        memories: readinessRetrieved
+    )
+    check("increment 06 identical uncertain request deterministically defers",
+          readinessTrace.actionChanged
+              && readinessTrace.finalAction.name == "wait"
+              && readinessTrace.finalDirection == nil
+              && readinessTrace.finalAction.reason
+                  == "bounded direct physical path readiness deferred until intent changes")
+    check("increment 06 deferral is technical rather than blocked feedback",
+          readinessTrace.decisionFactors.contains {
+              $0.kind == .pathReadinessDeferral && $0.weight == 110
+          }
+              && !readinessTrace.decisionFactors.contains {
+                  $0.kind == .movementFeedback
+              }
+              && readinessTrace.memoryRecordsUsed.isEmpty)
+    check("increment 06 deferral is deterministic",
+          readinessTrace == feedbackTrace(
+            outcome: readinessFeedback,
+            memories: readinessRetrieved
+          ))
+    let changedReadinessIntent = feedbackTrace(
+        baseDirection: .south,
+        outcome: readinessFeedback
+    )
+    check("increment 06 reconsidered different intent remains eligible",
+          !changedReadinessIntent.actionChanged
+              && changedReadinessIntent.finalDirection == .south)
+    check("increment 06 readiness classifications remain exhaustive and distinct",
+          Set(AgentPathReadinessReason.allCases.map(\.rawValue)).count == 3)
 
     let exactBlockedRecord = AgentRetrievedMemory(
         tick: 4, type: "movement_blocked", summary: blockedMemory!.summary,

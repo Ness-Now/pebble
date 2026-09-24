@@ -105,7 +105,9 @@ struct PebbleAgentWorldSensor {
             blockLight: blockLight,
             dayTime: world.dayTime,
             raining: world.raining,
-            thundering: world.thundering
+            thundering: world.thundering,
+            physicalCoverageDigest:
+                world.physicalSimulationCoverage.stableDigest
         )
     }
 

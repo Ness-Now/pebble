@@ -614,14 +614,14 @@ func runPebbleAgentsGateFBlocker08Smoke() {
     check("Estate schema 27 preserves legacy validation semantics",
           AgentCheckpointSchema.estateValidationSemantics(for: 27)
             == .legacySuccessorPlanRevalidation)
-    check("Estate schemas 28 through 44 use strict validation semantics",
-          (28...44).allSatisfy {
+    check("Estate schemas 28 through 45 use strict validation semantics",
+          (28...45).allSatisfy {
               AgentCheckpointSchema.estateValidationSemantics(for: $0)
                 == .strictDurableSuccessorPlan
           })
     check("unsupported future Estate schema remains rejected",
-          AgentCheckpointSchema.estateValidationSemantics(for: 45) == nil
-            && !AgentCheckpointSchema.supports(45))
+          AgentCheckpointSchema.estateValidationSemantics(for: 46) == nil
+            && !AgentCheckpointSchema.supports(46))
 
     var estateOnly = gateFB08BaseSession("gate-f-b08-estate-only")
     try! estateOnly.setEstatesEnabled(true)

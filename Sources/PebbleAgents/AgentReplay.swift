@@ -45,6 +45,7 @@ public enum AgentReplaySchema {
     public static let cultureVersion = 42
     public static let lexicalDivergenceVersion = 43
     public static let temporalPhysiologyVersion = 44
+    public static let pathReadinessLivenessVersion = 45
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -76,6 +77,7 @@ public enum AgentReplaySchema {
             || version == archiveVersion || version == cultureVersion
             || version == lexicalDivergenceVersion
             || version == temporalPhysiologyVersion
+            || version == pathReadinessLivenessVersion
     }
 }
 
@@ -1318,8 +1320,11 @@ public struct AgentReplayRecorder {
         simulationID = checkpoint.simulationID
         initialTick = checkpoint.tick.rawValue
         schemaVersion = checkpoint.schemaVersion
+            == AgentCheckpointSchema.pathReadinessLivenessVersion
+            ? AgentReplaySchema.pathReadinessLivenessVersion
+            : checkpoint.schemaVersion
             == AgentCheckpointSchema.temporalPhysiologyVersion
-            ? AgentReplaySchema.temporalPhysiologyVersion
+            ? AgentReplaySchema.pathReadinessLivenessVersion
             : checkpoint.schemaVersion
             == AgentCheckpointSchema.lexicalDivergenceVersion
             ? AgentReplaySchema.lexicalDivergenceVersion
@@ -2074,6 +2079,17 @@ public enum AgentSessionReplayer {
                 )
             }
         }
+        if manifest.schemaVersion
+            == AgentReplaySchema.pathReadinessLivenessVersion,
+           checkpoint.schemaVersion
+            < AgentCheckpointSchema.pathReadinessLivenessVersion {
+            guard checkpoint.schemaVersion
+                    == AgentCheckpointSchema.temporalPhysiologyVersion else {
+                throw AgentReplayError.unsupportedSchema(
+                    manifest.schemaVersion
+                )
+            }
+        }
         if manifest.schemaVersion == AgentReplaySchema.archiveVersion,
            checkpoint.schemaVersion < AgentCheckpointSchema.archiveVersion {
             guard case .setArchiveEnabled(
@@ -2193,6 +2209,10 @@ public enum AgentSessionReplayer {
                     == AgentReplaySchema.temporalPhysiologyVersion
                 && checkpoint.schemaVersion
                     <= AgentCheckpointSchema.lexicalDivergenceVersion)
+            || (manifest.schemaVersion
+                    == AgentReplaySchema.pathReadinessLivenessVersion
+                && checkpoint.schemaVersion
+                    == AgentCheckpointSchema.temporalPhysiologyVersion)
             || (manifest.schemaVersion
                     == AgentReplaySchema.longDistanceCommunicationVersion
                 && checkpoint.schemaVersion

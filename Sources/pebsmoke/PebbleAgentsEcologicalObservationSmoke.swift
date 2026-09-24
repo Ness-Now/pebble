@@ -922,9 +922,9 @@ private func runCurrentMembershipAuthorityActiveAndCheckpointSmoke() {
     check(
         "membership authority checkpoint continuation is byte exact",
         beforeEvictionCheckpoint.schemaVersion
-            == AgentCheckpointSchema.temporalPhysiologyVersion
+            == AgentCheckpointSchema.pathReadinessLivenessVersion
             && authorityCheckpoint.schemaVersion
-                == AgentCheckpointSchema.temporalPhysiologyVersion
+                == AgentCheckpointSchema.pathReadinessLivenessVersion
             && (try! session.durableStateBytes())
                 == (try! restored.durableStateBytes())
     )

@@ -67,6 +67,7 @@ public enum AgentDecisionFactorKind: String, Codable, Equatable {
     case basePolicy
     case movementFeedback
     case explorationBoundary
+    case pathReadinessDeferral
 }
 
 public struct AgentDecisionFactor: Codable, Equatable {
@@ -153,7 +154,7 @@ public enum AgentFeedbackLoop {
 
     public static func movementMemoryEntry(outcome: AgentMovementOutcome) -> AgentMemoryEntry? {
         switch outcome.status {
-        case .notRequested:
+        case .notRequested, .readinessUnavailable:
             return nil
         case .moved:
             let direction = appliedDirection(outcome)?.rawValue ?? "unknown"
@@ -199,7 +200,7 @@ public enum AgentFeedbackLoop {
         switch lastMovementOutcome?.status {
         case .moved?: expectedType = "moved_live"
         case .blocked?: expectedType = "movement_blocked"
-        case .notRequested?, nil: expectedType = nil
+        case .notRequested?, .readinessUnavailable?, nil: expectedType = nil
         }
         return memory.compactMap { entry -> AgentRetrievedMemory? in
             guard entry.type == "movement_blocked" || entry.type == "moved_live" else { return nil }
@@ -271,7 +272,36 @@ public enum AgentFeedbackLoop {
                 $0.direction == baseExplorationCandidate?.direction
             }
 
-        if goal.kind == .explore,
+        if let outcome = lastMovementOutcome,
+           outcome.status == .readinessUnavailable,
+           outcome.fromPosition == position,
+           isMovementAction(baseAction.name),
+           outcome.pathReadinessRequestIdentity
+            == AgentMovementRequestIdentity(action: baseAction, goal: goal),
+           outcome.pathReadinessContextDigest
+            == worldObservation?.physicalReadinessContextDigest {
+            // Technical readiness uncertainty is neither remembered nor used
+            // as evidence that a route is blocked. A direct request enters a
+            // durable passive deferral after its first unresolved search; it
+            // becomes eligible again only after semantic intent, physical
+            // origin, or the route-relevant physical/readiness context
+            // changes. Routed work instead consumes the existing bounded
+            // navigation replan budget.
+            let isDirectRequest = baseAction.name == "move_abstract"
+            finalAction = AgentAction(
+                name: "wait",
+                reason: isDirectRequest
+                    ? "bounded direct physical path readiness deferred until intent changes"
+                    : "bounded routed physical path readiness deferred for replan",
+                tick: tick
+            )
+            reason = finalAction.reason
+            factors.append(AgentDecisionFactor(
+                kind: .pathReadinessDeferral,
+                weight: 110,
+                summary: reason
+            ))
+        } else if goal.kind == .explore,
            baseAction.name == "move_abstract",
            (
                distanceHome >= configuration.maxExploreDistanceFromHome
@@ -399,6 +429,17 @@ public enum AgentFeedbackLoop {
             actionChanged: changed,
             reason: reason
         )
+    }
+
+    private static func isMovementAction(_ name: String) -> Bool {
+        name == "move_abstract"
+            || name == "approach_resource"
+            || name == "return_home"
+            || name == "approach_construction"
+            || name == "approach_information"
+            || name == "approach_settlement"
+            || name == "approach_dependent"
+            || name == "approach_activity"
     }
 
     private struct Candidate {

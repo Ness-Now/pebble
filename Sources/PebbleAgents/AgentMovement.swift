@@ -2,6 +2,42 @@ public enum AgentMovementStatus: String, Codable, Equatable, Sendable {
     case notRequested
     case moved
     case blocked
+    /// The requested move remains undecided because PebbleCore's bounded
+    /// physical search could not prove either a path or its absence.
+    case readinessUnavailable
+}
+
+/// Exact technical reason that a bounded physical path search remained
+/// indeterminate. None of these values proves that a route is absent or that
+/// a physical obstacle exists.
+public enum AgentPathReadinessReason:
+    String, Codable, Equatable, CaseIterable, Sendable {
+    case coverageLimited
+    case coverageUnavailable
+    case nodeBudgetExhausted
+}
+
+/// Semantic identity of one bounded movement request. Action tick is excluded:
+/// regenerating the same policy action on a later cognition tick does not make
+/// it a new request. Goal content, destination/resource and requested delta do.
+public struct AgentMovementRequestIdentity: Codable, Equatable {
+    public let actionName: String
+    public let requestedDX: Int
+    public let requestedDY: Int
+    public let requestedDZ: Int
+    public let target: AgentPosition?
+    public let resource: AgentResourceKind?
+    public let goal: AgentGoal
+
+    public init(action: AgentAction, goal: AgentGoal) {
+        actionName = action.name
+        requestedDX = action.dx ?? 0
+        requestedDY = action.dy ?? 0
+        requestedDZ = action.dz ?? 0
+        target = action.target
+        resource = action.resource
+        self.goal = goal
+    }
 }
 
 public struct AgentMovementOutcome: Codable, Equatable {
@@ -20,6 +56,9 @@ public struct AgentMovementOutcome: Codable, Equatable {
     public let goalKind: AgentGoalKind
     public let actionReason: String
     public let resolutionReason: String
+    public let pathReadinessReason: AgentPathReadinessReason?
+    public let pathReadinessRequestIdentity: AgentMovementRequestIdentity?
+    public let pathReadinessContextDigest: String?
     public let worldTickObserved: Int?
     public let distanceFromHomeBefore: Int
     public let distanceFromHomeAfter: Int
@@ -41,6 +80,9 @@ public struct AgentMovementOutcome: Codable, Equatable {
         goalKind: AgentGoalKind,
         actionReason: String,
         resolutionReason: String,
+        pathReadinessReason: AgentPathReadinessReason? = nil,
+        pathReadinessRequestIdentity: AgentMovementRequestIdentity? = nil,
+        pathReadinessContextDigest: String? = nil,
         worldTickObserved: Int?,
         distanceFromHomeBefore: Int,
         distanceFromHomeAfter: Int,
@@ -61,6 +103,9 @@ public struct AgentMovementOutcome: Codable, Equatable {
         self.goalKind = goalKind
         self.actionReason = actionReason
         self.resolutionReason = resolutionReason
+        self.pathReadinessReason = pathReadinessReason
+        self.pathReadinessRequestIdentity = pathReadinessRequestIdentity
+        self.pathReadinessContextDigest = pathReadinessContextDigest
         self.worldTickObserved = worldTickObserved
         self.distanceFromHomeBefore = distanceFromHomeBefore
         self.distanceFromHomeAfter = distanceFromHomeAfter

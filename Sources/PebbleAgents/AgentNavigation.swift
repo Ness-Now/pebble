@@ -70,6 +70,7 @@ public enum AgentNavigationFailure: String, Codable, Equatable {
     case perceptionStale
     case nextStepInvalid
     case movementBlocked
+    case physicalPathReadinessUnavailable
     case replanLimitReached
     case harvested
     case delivered

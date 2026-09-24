@@ -704,9 +704,9 @@ private func runTemporalFailedCandidateReplayProof() {
     _ = try! checkpointLive.applyReplayOperation(directOperation)
     _ = try! restored.applyReplayOperation(directOperation)
     check(
-        "checkpoint during failed-cognition stall preserves temporal remainder",
+        "schema 45 checkpoint during failed-cognition stall preserves temporal remainder",
         stalledCheckpoint.schemaVersion
-            == AgentCheckpointSchema.temporalPhysiologyVersion
+            == AgentCheckpointSchema.pathReadinessLivenessVersion
             && (try! checkpointLive.durableStateBytes())
                 == (try! restored.durableStateBytes())
             && checkpointLive.tick == 0
@@ -901,9 +901,9 @@ func runPebbleIncrement05TemporalPhysiologySmoke() {
     let checkpoint = try! direct.makeCheckpoint()
     var restored = try! AgentSimulationSession.restoring(checkpoint)
     check(
-        "temporal checkpoint uses schema 44 and retains nonzero remainder",
+        "schema 45 checkpoint retains Increment 05 nonzero temporal remainder",
         checkpoint.schemaVersion
-            == AgentCheckpointSchema.temporalPhysiologyVersion
+            == AgentCheckpointSchema.pathReadinessLivenessVersion
             && restored.physiologicalTimeSnapshot().remainderWorldTicks == 1_199
     )
     try! direct.advancePhysiologicalTime(toWorldTick: 1_200)

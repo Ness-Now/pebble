@@ -878,7 +878,7 @@ extension AgentSimulationSession {
         simulationID: AgentSimulationID,
         schemaVersion: Int
     ) throws {
-        guard schemaVersion == AgentCheckpointSchema.temporalPhysiologyVersion
+        guard AgentCheckpointSchema.usesWorldTimePhysiology(schemaVersion)
         else { return }
 
         let expectedMembers = populationMembershipAuthorityRows(registry)

@@ -562,18 +562,19 @@ func runPebbleAgentsGateFBlocker05Smoke() {
         AgentCheckpointSchema.cultureVersion,
         AgentCheckpointSchema.lexicalDivergenceVersion,
         AgentCheckpointSchema.temporalPhysiologyVersion,
+        AgentCheckpointSchema.pathReadinessLivenessVersion,
     ]
     check("Family compatibility policy preserves schema 25 legacy semantics",
           AgentCheckpointSchema.familyValidationSemantics(for: 25)
             == .legacyCausalProofFallback)
-    check("Family compatibility policy explicitly covers strict schemas 26-44",
+    check("Family compatibility policy explicitly covers strict schemas 26-45",
           strictVersions.allSatisfy {
               AgentCheckpointSchema.familyValidationSemantics(for: $0)
                 == .strictDurableConsent
         })
     check("Family compatibility policy rejects unsupported schema integers",
           AgentCheckpointSchema.familyValidationSemantics(for: 24) == nil
-            && AgentCheckpointSchema.familyValidationSemantics(for: 45) == nil)
+            && AgentCheckpointSchema.familyValidationSemantics(for: 46) == nil)
 
     let cofounded = gateFB05CofoundedSession(
         "gate-f-b05-family-compatibility"
@@ -831,7 +832,7 @@ func runPebbleAgentsGateFBlocker05Smoke() {
 
     print("GATE_F_BLOCKER_05_PASS"
         + " checkpointSchema=35 observerSchema=13"
-        + " compatibility=25:legacy,26-44:strict"
+        + " compatibility=25:legacy,26-45:strict"
         + " minimizedDigest=\(minimizedCheckpointA.semanticDigest.rawValue)"
         + " migratedDigest=\(migratedCheckpoint.semanticDigest.rawValue)"
         + " duplicateAuthority=0 restartDuplicateEffects=0")

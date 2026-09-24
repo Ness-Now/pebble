@@ -1,3 +1,5 @@
+import Foundation
+
 public enum AgentCardinalDirection: String, Codable, Equatable, CaseIterable {
     case north
     case east
@@ -101,6 +103,10 @@ public struct AgentWorldObservation: Codable, Equatable {
     public let dayTime: Int
     public let raining: Bool
     public let thundering: Bool
+    /// Stable PebbleCore coverage authority observed at this sensor boundary.
+    /// Historical/synthetic observations may omit it; live Pebble observations
+    /// always supply the Core snapshot digest.
+    public let physicalCoverageDigest: String?
     public let traversableNeighborCount: Int
     public let blockedNeighborCount: Int
     public let dangerousDropCount: Int
@@ -117,7 +123,8 @@ public struct AgentWorldObservation: Codable, Equatable {
         blockLight: Int?,
         dayTime: Int,
         raining: Bool,
-        thundering: Bool
+        thundering: Bool,
+        physicalCoverageDigest: String? = nil
     ) throws {
         guard center.position == position else {
             throw AgentWorldObservationError.invalidCenterPosition
@@ -157,9 +164,49 @@ public struct AgentWorldObservation: Codable, Equatable {
         self.dayTime = dayTime
         self.raining = raining
         self.thundering = thundering
+        self.physicalCoverageDigest = physicalCoverageDigest
         traversableNeighborCount = ordered.filter(\.traversable).count
         blockedNeighborCount = ordered.filter { !$0.traversable }.count
         dangerousDropCount = ordered.filter(\.dangerousDrop).count
+    }
+
+    /// Identifies the physical/readiness facts relevant to a direct bounded
+    /// movement request. Time, light and weather are deliberately excluded so
+    /// their ordinary progression cannot create a retry storm. Coverage state
+    /// and local route-relevant block/readiness facts are included so technical
+    /// uncertainty is invalidated when the physical search context changes.
+    public var physicalReadinessContextDigest: String {
+        var hash: UInt64 = 1469598103934665603
+        func mix(_ value: String) {
+            for byte in value.utf8 {
+                hash ^= UInt64(byte)
+                hash &*= 1099511628211
+            }
+            hash ^= 0xff
+            hash &*= 1099511628211
+        }
+        func mix(_ column: AgentWorldColumnObservation) {
+            mix("\(column.position.x):\(column.position.y):\(column.position.z)")
+            mix(column.chunkReady ? "ready" : "unavailable")
+            mix("\(column.surfaceY.map(String.init) ?? "nil")")
+            mix("\(column.height.map(String.init) ?? "nil")")
+            mix("\(column.blockBelow.map(String.init) ?? "nil")")
+            mix("\(column.blockAtFeet.map(String.init) ?? "nil")")
+            mix("\(column.blockAtHead.map(String.init) ?? "nil")")
+            mix(column.groundPresent ? "ground" : "no-ground")
+            mix(column.feetClear ? "feet-clear" : "feet-blocked")
+            mix(column.headClear ? "head-clear" : "head-blocked")
+        }
+        mix(physicalCoverageDigest ?? "coverage-unspecified")
+        mix(center)
+        for neighbor in neighbors {
+            mix(neighbor.direction.rawValue)
+            mix(neighbor.column)
+            mix(neighbor.stepDelta.map(String.init) ?? "step-nil")
+            mix(neighbor.traversable ? "traversable" : "not-traversable")
+            mix(neighbor.dangerousDrop ? "drop" : "no-drop")
+        }
+        return String(format: "%016llx", hash)
     }
 }
 

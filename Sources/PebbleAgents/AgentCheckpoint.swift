@@ -56,6 +56,12 @@ public enum AgentCheckpointSchema {
     public static let cultureVersion = 42
     public static let lexicalDivergenceVersion = 43
     public static let temporalPhysiologyVersion = 44
+    public static let pathReadinessLivenessVersion = 45
+
+    public static func usesWorldTimePhysiology(_ version: Int) -> Bool {
+        version == temporalPhysiologyVersion
+            || version == pathReadinessLivenessVersion
+    }
 
     public static func familyValidationSemantics(
         for version: Int
@@ -80,7 +86,8 @@ public enum AgentCheckpointSchema {
             || version == writingVersion
             || version == archiveVersion || version == cultureVersion
             || version == lexicalDivergenceVersion
-            || version == temporalPhysiologyVersion {
+            || version == temporalPhysiologyVersion
+            || version == pathReadinessLivenessVersion {
             return .strictDurableConsent
         }
         return nil
@@ -107,7 +114,8 @@ public enum AgentCheckpointSchema {
             || version == writingVersion
             || version == archiveVersion || version == cultureVersion
             || version == lexicalDivergenceVersion
-            || version == temporalPhysiologyVersion {
+            || version == temporalPhysiologyVersion
+            || version == pathReadinessLivenessVersion {
             return .strictDurableSuccessorPlan
         }
         return nil
@@ -143,6 +151,7 @@ public enum AgentCheckpointSchema {
             || version == archiveVersion || version == cultureVersion
             || version == lexicalDivergenceVersion
             || version == temporalPhysiologyVersion
+            || version == pathReadinessLivenessVersion
     }
 }
 
@@ -357,8 +366,11 @@ public struct AgentSessionDurableState: Codable {
     init(session: AgentSimulationSession) {
         if let legacy = session.legacyTemporalSchemaVersionOverride {
             schemaVersion = legacy
+        } else if let legacy = session
+            .legacyPathReadinessSchemaVersionOverride {
+            schemaVersion = legacy
         } else {
-            schemaVersion = AgentCheckpointSchema.temporalPhysiologyVersion
+            schemaVersion = AgentCheckpointSchema.pathReadinessLivenessVersion
         }
         configuration = session.configuration
         clock = session.clock
@@ -1296,6 +1308,9 @@ extension AgentSimulationSession {
                 ? state.schemaVersion : nil
         legacyTemporalSchemaVersionOverride = state.physiologicalTimeState == nil
             ? state.schemaVersion : nil
+        legacyPathReadinessSchemaVersionOverride =
+            state.schemaVersion == AgentCheckpointSchema.temporalPhysiologyVersion
+                ? state.schemaVersion : nil
         try validateEcologicalObservationStateIfEnabled()
         try validateAgricultureStateIfEnabled()
         try validateWildSubsistenceStateIfEnabled()
@@ -1333,8 +1348,9 @@ extension AgentSimulationSession {
         guard AgentCheckpointSchema.supports(state.schemaVersion) else {
             throw AgentCheckpointError.unsupportedSchema(state.schemaVersion)
         }
-        let temporalSchema = state.schemaVersion
-            == AgentCheckpointSchema.temporalPhysiologyVersion
+        let temporalSchema = AgentCheckpointSchema.usesWorldTimePhysiology(
+            state.schemaVersion
+        )
         let independentReceiptSchema = state.schemaVersion
             == AgentCheckpointSchema.independentEcologicalReceiptVersion
             || (temporalSchema
@@ -1846,6 +1862,29 @@ extension AgentSimulationSession {
                   agent.needs.hunger.isFinite, agent.needs.fatigue.isFinite,
                   agent.needs.curiosity.isFinite, agent.needs.safety.isFinite,
                   validInventory(agent.resourceInventory) else {
+                throw AgentCheckpointError.invalidAgent(agent.id)
+            }
+            let usesPathReadinessLiveness = state.schemaVersion
+                == AgentCheckpointSchema.pathReadinessLivenessVersion
+            let movementUsesPathReadiness = agent.lastMovementOutcome.map {
+                $0.status == .readinessUnavailable
+                    || $0.pathReadinessReason != nil
+                    || $0.pathReadinessRequestIdentity != nil
+                    || $0.pathReadinessContextDigest != nil
+            } ?? false
+            let navigationUsesPathReadiness =
+                agent.navigationProgress.lastInvalidation
+                    == .physicalPathReadinessUnavailable
+                || agent.navigationProgress.lastFailure
+                    == .physicalPathReadinessUnavailable
+            let decisionUsesPathReadiness = agent.lastFeedbackDecisionTrace?
+                .decisionFactors.contains {
+                    $0.kind == .pathReadinessDeferral
+                } == true
+            guard usesPathReadinessLiveness
+                    || (!movementUsesPathReadiness
+                        && !navigationUsesPathReadiness
+                        && !decisionUsesPathReadiness) else {
                 throw AgentCheckpointError.invalidAgent(agent.id)
             }
             let pendingTerminalAgentIDs = Set(

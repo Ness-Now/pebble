@@ -94,8 +94,12 @@ public struct AgentSimulationSession {
     var durableSchemaVersionOverride: Int?
     // Runtime-only compatibility marker. Historical checkpoints and replay
     // journals retain cognitive-step physiology until an explicit World-time
-    // rebase migrates continuation to schema 44 semantics.
+    // rebase migrates continuation to World-time physiology (schema 44+)
+    // without granting Increment-06 path semantics to historical state.
     var legacyTemporalSchemaVersionOverride: Int?
+    // A restored schema-44 session remains schema 44 until an Increment-06
+    // readiness outcome is actually published. New sessions start at 45.
+    var legacyPathReadinessSchemaVersionOverride: Int?
     public init(
         configuration: AgentSessionConfiguration,
         agents: [AgentSessionAgentState],
@@ -205,6 +209,7 @@ public struct AgentSimulationSession {
         latestAutonomousTeachingReview = nil
         durableSchemaVersionOverride = nil
         legacyTemporalSchemaVersionOverride = nil
+        legacyPathReadinessSchemaVersionOverride = nil
         try recordCausalEvent(
             kind: .sessionLifecycle,
             origin: .lifecycle,
