@@ -256,12 +256,13 @@ for the compact status. In particular:
   **COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at
   canonical HEAD `1614d181668b495d5321f2dfb5627c147b1e64d1`. Current schema
   44 derives passive biology from World time while schemas 1–43 preserve exact
-  historical semantics. It keeps biology coherent across readiness rollback;
-  path-readiness liveness itself remains unresolved. The next authorized
-  action is the separate read-only
-  `REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-06` mission. It must compare at
-  minimum `PATH-READINESS LIVENESS` and `RENEWABLE PHYSICAL SUBSISTENCE`, does
-  not preselect either candidate, and authorizes no implementation.
+  historical semantics. It keeps biology coherent across readiness rollback.
+  Increment 06, Cohort-Safe Bounded Path-Readiness Liveness, is a **LOCAL
+  CANDIDATE — AWAITING SENIOR REVIEW** directly descended from canonical
+  baseline `f075cb58e8b34b3035a2a367f1dbae7032bb8591`. It is not published,
+  remote verified or senior-review approved. The next authorized action is
+  independent senior review of that local candidate. Increment 07 remains
+  unselected, and Renewable Physical Subsistence remains unresolved.
 - CIV-48 remains **NOT STARTED**, implementation is not authorized, and it is
   deferred until PLAYABLE SLICE 01 and the resulting evidence-driven roadmap
   recalibration are complete. Gate H remains planned. See

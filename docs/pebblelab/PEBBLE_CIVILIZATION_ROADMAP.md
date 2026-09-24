@@ -84,12 +84,22 @@ physiology from cognition Hz, bounds temporal reconciliation, permits only
 eligible temporal publication after readiness rollback, bounds membership
 causal authority, latches fatal integrity failures and preserves schemas 1–43
 historically. Its canonical gate passed 35/35 and its optimized smoke passed
-4,866/4,866. The next authorized action is the separate read-only
-`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-06` mission. It must compare at
-minimum `PATH-READINESS LIVENESS` and `RENEWABLE PHYSICAL SUBSISTENCE`,
-preselects neither, and authorizes no implementation. CIV-48 remains not
-started, implementation unauthorized and deferred behind that milestone and
-the resulting evidence-driven roadmap recalibration.
+4,866/4,866.
+
+Increment 06, Cohort-Safe Bounded Path-Readiness Liveness, is a **LOCAL
+CANDIDATE — AWAITING SENIOR REVIEW** directly descended from canonical
+baseline `f075cb58e8b34b3035a2a367f1dbae7032bb8591`. It is not complete,
+published, remote verified or senior-review approved. Current schema 45 makes
+bounded path uncertainty a typed stationary per-agent outcome, preserves
+proven `.noPath`, keeps unrelated verified cohort work publishable, gives an
+unchanged direct request one bounded search and retains the existing
+initial-plus-three-replans routed bound. Final local evidence is 906/906
+focused, 35/35 canonical and 4,901/4,901 smoke assertions, with optimized
+multi-seed, 20–30-founder, restart and real-client visual evidence. The next
+authorized action is independent senior review of this local candidate.
+Increment 07 remains unselected and Renewable Physical Subsistence remains
+unresolved. CIV-48 remains not started, implementation unauthorized and
+deferred behind the slice and evidence-driven roadmap recalibration.
 See
 [`CIV_46_PHASE_SUMMARY.md`](CIV_46_PHASE_SUMMARY.md) and
 [`CIV_47_PHASE_SUMMARY.md`](CIV_47_PHASE_SUMMARY.md), plus
@@ -238,7 +248,9 @@ PLAYABLE SLICE 01 Increment 04 published tree: 2d4ef2716412a4c121fc06e6d29241821
 PLAYABLE SLICE 01 Increment 05: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 PLAYABLE SLICE 01 Increment 05 published HEAD: 1614d181668b495d5321f2dfb5627c147b1e64d1
 PLAYABLE SLICE 01 Increment 05 published tree: 09b5ed6f186e7956883267a9f5d549da4d1e5c76
-next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-06
+PLAYABLE SLICE 01 Increment 06: LOCAL CANDIDATE — AWAITING SENIOR REVIEW
+PLAYABLE SLICE 01 Increment 06 baseline: f075cb58e8b34b3035a2a367f1dbae7032bb8591
+next authorized action: SENIOR REVIEW — PLAYABLE SLICE 01 INCREMENT 06 LOCAL CANDIDATE
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
@@ -1642,7 +1654,9 @@ PLAYABLE SLICE 01 Increment 04 published tree: 2d4ef2716412a4c121fc06e6d29241821
 PLAYABLE SLICE 01 Increment 05: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 PLAYABLE SLICE 01 Increment 05 published HEAD: 1614d181668b495d5321f2dfb5627c147b1e64d1
 PLAYABLE SLICE 01 Increment 05 published tree: 09b5ed6f186e7956883267a9f5d549da4d1e5c76
-next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-06
+PLAYABLE SLICE 01 Increment 06: LOCAL CANDIDATE — AWAITING SENIOR REVIEW
+PLAYABLE SLICE 01 Increment 06 baseline: f075cb58e8b34b3035a2a367f1dbae7032bb8591
+next authorized action: SENIOR REVIEW — PLAYABLE SLICE 01 INCREMENT 06 LOCAL CANDIDATE
 CIV-39 status: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 Gate F status: ACQUIRED AND PUBLISHED — REMOTE VERIFIED
@@ -2384,10 +2398,17 @@ integrity failures latch, and schemas 1–43 retain exact historical semantics.
 The canonical gate passed 35/35 and its optimized smoke passed 4,866/4,866.
 Increment 05 did not solve path-readiness liveness: seed 14 recorded 1,200
 eligible World ticks, civilization tick 22, 218 readiness failures and 218
-legitimate temporal fallbacks while physiology remained coherent. It also did
-not implement renewable physical subsistence; it corrected the time basis and
-recalculated food economics while Increment 04's finite mature sweet-berry path
-remains the normal-product subsistence path.
+legitimate temporal fallbacks while physiology remained coherent. Increment
+06 now has a **LOCAL CANDIDATE — AWAITING SENIOR REVIEW** that preserves path
+truth while publishing technical uncertainty per actor. Its final local seed
+14 reached civilization tick 240 with 2,617 searches, 2,379 verified
+movements, 205 node-budget uncertainties, 163 mixed cohorts, maximum five
+World ticks without progress and zero temporal fallbacks/errors/drops. It is
+not yet a published milestone result.
+
+Renewable physical subsistence remains unresolved. Increment 05 corrected the
+time basis and recalculated food economics while Increment 04's finite mature
+sweet-berry path remains the normal-product subsistence path.
 
 Explicit non-claims: this milestone does not implement CIV-48 Generic
 Organization Kernel, CIV-49 guilds, CIV-50 heraldry, CIV-51 territory or land
@@ -2404,12 +2425,10 @@ As the milestone is characterized, its evidence drives a roadmap
 recalibration before Wave 6 begins. CIV-48 remains **NOT STARTED —
 IMPLEMENTATION NOT AUTHORIZED**. Gate H remains planned and continues to
 require CIV-48 through CIV-52 unless a future separately authorized roadmap
-review changes that contract. The next authorized action is
-the separate read-only `REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-06`
-mission. It must compare at minimum `PATH-READINESS LIVENESS` and `RENEWABLE
-PHYSICAL SUBSISTENCE` and select the smallest next coherent causal/playability
-blocker. It preselects neither candidate, assumes no Increment-06 architecture
-and authorizes neither implementation nor CIV-48.
+review changes that contract. The next authorized action is independent senior
+review of the local Increment-06 candidate. Increment 07 remains
+**UNSELECTED**. This candidate authorizes neither later implementation nor
+CIV-48.
 
 ## Wave 6 — Organizations, land and law
 
