@@ -263,11 +263,15 @@ for the compact status. In particular:
   `7ee2a64b55ef12ec1193d068dd1145b1038b04ff`, from parent
   `53c3ff8815ee6298ecf2c970d525efaf486a20ac`. Its accepted review archive
   SHA-256 is `806988f10607a27e0ee3b15ba8beefa4aac59907817f63a1d8ac3886ecc8fd2b`.
-  Increment 07 remains unselected. Renewable Physical Subsistence and
-  population capacity/demographic headroom remain unresolved. The next
-  authorized technical action after publication reconciliation is the
-  read-only `REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-07` mission; it
-  authorizes no Increment-07 implementation.
+  Increment 07, Normal Autonomous Renewable Food Continuity, is **COMPLETE AND
+  PUBLISHED — PASS — REMOTE VERIFIED** at published product/qualification HEAD
+  `373b5e3688d25e1e139dd735a76d48e38743c1f8`, tree
+  `56e50d1f910f8825ae344aab50e4a65553ae06ef`. Its final qualification archive
+  SHA-256 is `742f12009735032c0ea0a0e43b01bf2db8d1549b9a066afc552f664505eb348a`;
+  final Risk-C is P0 0 / P1 0 / blocking P2 0. Natural Core random ticks now
+  renew the same preserving-harvest sweet-berry source for a second normal
+  acquisition with exact physical custody and conservation. The Core streaming
+  determinism blocker fix is published. Increment 08 remains unselected.
 - CIV-48 remains **NOT STARTED**, implementation is not authorized, and it is
   deferred until PLAYABLE SLICE 01 and the resulting evidence-driven roadmap
   recalibration are complete. Gate H remains planned. See

@@ -98,12 +98,21 @@ publishable, gives an unchanged direct request one bounded search and retains
 the existing initial-plus-three-replans routed bound. Accepted evidence is
 906/906 focused, 35/35 canonical and 4,901/4,901 smoke assertions, with
 optimized multi-seed, 20–30-founder, restart and real-client visual evidence.
-Increment 07 remains unselected. Renewable Physical Subsistence and population
-capacity/demographic headroom remain unresolved. The next authorized technical
-action after publication reconciliation is the read-only
-`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-07` mission; it authorizes no
-implementation. CIV-48 remains not started, implementation unauthorized and
-deferred behind the slice and evidence-driven roadmap recalibration.
+Increment 07, Normal Autonomous Renewable Food Continuity, is **COMPLETE AND
+PUBLISHED — PASS — REMOTE VERIFIED** at product/qualification HEAD
+`373b5e3688d25e1e139dd735a76d48e38743c1f8`, tree
+`56e50d1f910f8825ae344aab50e4a65553ae06ef`, from parent
+`e05f2f67e6d7b3b738f00ced4f3368e58a4e92ce`. Its final qualification archive
+SHA-256 is `742f12009735032c0ea0a0e43b01bf2db8d1549b9a066afc552f664505eb348a`;
+final Risk-C is P0 0 / P1 0 / blocking P2 0. The bounded normal renewable
+sweet-berry continuity contract and its Core streaming determinism blocker are
+resolved and published. Population capacity/demographic headroom remains
+unresolved. The next authorized technical action after publication
+reconciliation is the read-only
+`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-08` mission; Increment 08 remains
+unselected and no implementation is authorized. CIV-48 remains not started,
+implementation unauthorized and deferred behind the slice and evidence-driven
+roadmap recalibration.
 See
 [`CIV_46_PHASE_SUMMARY.md`](CIV_46_PHASE_SUMMARY.md) and
 [`CIV_47_PHASE_SUMMARY.md`](CIV_47_PHASE_SUMMARY.md), plus
@@ -255,7 +264,10 @@ PLAYABLE SLICE 01 Increment 05 published tree: 09b5ed6f186e7956883267a9f5d549da4
 PLAYABLE SLICE 01 Increment 06: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 PLAYABLE SLICE 01 Increment 06 published HEAD: 3e9d8e285dd81f6c015f046d2f2469489b4667d8
 PLAYABLE SLICE 01 Increment 06 published tree: 7ee2a64b55ef12ec1193d068dd1145b1038b04ff
-next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-07
+PLAYABLE SLICE 01 Increment 07: COMPLETE AND PUBLISHED — PASS — REMOTE VERIFIED
+PLAYABLE SLICE 01 Increment 07 published HEAD: 373b5e3688d25e1e139dd735a76d48e38743c1f8
+PLAYABLE SLICE 01 Increment 07 published tree: 56e50d1f910f8825ae344aab50e4a65553ae06ef
+next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-08
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
@@ -1662,7 +1674,10 @@ PLAYABLE SLICE 01 Increment 05 published tree: 09b5ed6f186e7956883267a9f5d549da4
 PLAYABLE SLICE 01 Increment 06: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 PLAYABLE SLICE 01 Increment 06 published HEAD: 3e9d8e285dd81f6c015f046d2f2469489b4667d8
 PLAYABLE SLICE 01 Increment 06 published tree: 7ee2a64b55ef12ec1193d068dd1145b1038b04ff
-next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-07
+PLAYABLE SLICE 01 Increment 07: COMPLETE AND PUBLISHED — PASS — REMOTE VERIFIED
+PLAYABLE SLICE 01 Increment 07 published HEAD: 373b5e3688d25e1e139dd735a76d48e38743c1f8
+PLAYABLE SLICE 01 Increment 07 published tree: 56e50d1f910f8825ae344aab50e4a65553ae06ef
+next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-08
 CIV-39 status: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 Gate F status: ACQUIRED AND PUBLISHED — REMOTE VERIFIED
@@ -2412,9 +2427,28 @@ actor. Its accepted seed 14 reached civilization tick 240 with 2,617 searches,
 maximum five World ticks without progress and zero temporal
 fallbacks/errors/drops.
 
-Renewable physical subsistence remains unresolved. Increment 05 corrected the
-time basis and recalculated food economics while Increment 04's finite mature
-sweet-berry path remains the normal-product subsistence path.
+Increment 07, Normal Autonomous Renewable Food Continuity, is **COMPLETE AND
+PUBLISHED — PASS — REMOTE VERIFIED** at product/qualification HEAD
+`373b5e3688d25e1e139dd735a76d48e38743c1f8`. Normal hunger-qualified founders
+use naturally generated sweet berry bushes; preserving Core harvest changes a
+mature stage-2/3 source to living stage 1, produces physical ItemEntity berries
+and leaves natural Core random ticks as the sole renewal authority. Fresh
+evidence leads through ordinary cognition/navigation to a second preserving
+acquisition from that same source, with exact custody and conservation. There
+is no proof-only productive setup, accelerated growth, expected-result
+injection or second ecology/growth authority.
+
+`CORE_STREAMING_DETERMINISM_BLOCKER_FIX = PUBLISHED`. The accepted correction
+keeps generation concurrent while deterministic admission/request order and a
+complete admitted-wave barrier make worker completion timing non-authoritative.
+World-tick lighting, stale/player/epoch handling and physical entity allocation
+are deterministic. POST-V2 full natural determinism matched exact terminal
+durable state and physical IDs. Scarcity 46/887, the fault matrix,
+fresh-process restart and corrected Visual Game Smoke passed. Historical failed
+evidence remains preserved. Full smoke was 4,906/4,909 with exactly three known
+pre-existing failures not attributed to Increment 07. Final Risk-C is P0 0 /
+P1 0 / blocking P2 0. See
+[`PS01_INCREMENT_07_RENEWABLE_FOOD_CONTINUITY.md`](PS01_INCREMENT_07_RENEWABLE_FOOD_CONTINUITY.md).
 
 Explicit non-claims: this milestone does not implement CIV-48 Generic
 Organization Kernel, CIV-49 guilds, CIV-50 heraldry, CIV-51 territory or land
@@ -2433,10 +2467,9 @@ IMPLEMENTATION NOT AUTHORIZED**. Gate H remains planned and continues to
 require CIV-48 through CIV-52 unless a future separately authorized roadmap
 review changes that contract. The next authorized technical action after
 publication reconciliation is the read-only
-`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-07` mission. It must reconsider
-at minimum Renewable Physical Subsistence and population capacity/demographic
-headroom without preselecting either. Increment 07 remains **UNSELECTED** and
-neither later implementation nor CIV-48 is authorized.
+`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-08` mission. Increment 08 remains
+**UNSELECTED**; population capacity/demographic headroom remains unresolved,
+and neither Increment-08 implementation nor CIV-48 is authorized.
 
 ## Wave 6 — Organizations, land and law
 

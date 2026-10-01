@@ -60,6 +60,7 @@ These documents form the minimal permanent memory of the project:
 | [`PS01_INCREMENT_04_NEED_DRIVEN_PHYSICAL_SUBSISTENCE.md`](PS01_INCREMENT_04_NEED_DRIVEN_PHYSICAL_SUBSISTENCE.md) | Published, senior-review-approved and remote-verified PS01 Increment 04 contract: need-driven mature sweet-berry evidence, autonomous physical acquisition/custody/consumption, direct-action RNG, bounded receipt lifetime, natural/scarcity evidence and 20–30-founder performance. |
 | [`PS01_INCREMENT_05_TEMPORAL_PHYSIOLOGY_COHERENCE.md`](PS01_INCREMENT_05_TEMPORAL_PHYSIOLOGY_COHERENCE.md) | Published, senior-review-approved and remote-verified PS01 Increment 05 contract: schema-44 World-time physiology, transactional persistence/replay, temporal-only readiness compensation, bounded membership authority, fatal-integrity gating, exact historical compatibility and accepted natural/performance evidence. |
 | [`PS01_INCREMENT_06_PATH_READINESS_LIVENESS.md`](PS01_INCREMENT_06_PATH_READINESS_LIVENESS.md) | Published, senior-review-approved and remote-verified PS01 Increment 06 contract: schema-45 typed stationary path uncertainty, cohort-safe publication, finite direct/routed liveness, exact restart/replay, optimized multi-seed/performance and real-client visual evidence. |
+| [`PS01_INCREMENT_07_RENEWABLE_FOOD_CONTINUITY.md`](PS01_INCREMENT_07_RENEWABLE_FOOD_CONTINUITY.md) | Published and remote-verified PS01 Increment 07 contract: normal preserving sweet-berry harvest, exact physical custody/conservation, natural same-source renewal, published Core streaming determinism correction, qualification/VGS chronology, focused/full-smoke evidence and bounded non-claims. |
 | [`GATE_F_BLOCKER_01_SETTLEMENT_ADMISSION_CAPACITY.md`](GATE_F_BLOCKER_01_SETTLEMENT_ADMISSION_CAPACITY.md) | Published, independently remote-verified Blocker 01 correction record; preserves Gate F Evaluation 01 historical FAIL and documents shared publication/restore per-settlement admission capacity, atomic refusal and two-process schema-35 proof. |
 | [`GATE_F_BLOCKER_02_MIGRATION_DESTINATION_CAPACITY.md`](GATE_F_BLOCKER_02_MIGRATION_DESTINATION_CAPACITY.md) | Published, independently remote-verified Blocker 02 correction record; preserves Evaluation 02 historical FAIL and documents derived durable destination-slot authority, atomic full-destination refusal, exact arrival/death/failure release, schema-35 restart and two-process proof. |
 | [`GATE_F_BLOCKER_03_DYNAMIC_FIDELITY_AUTHORITY.md`](GATE_F_BLOCKER_03_DYNAMIC_FIDELITY_AUTHORITY.md) | Published, independently remote-verified Blocker 03 correction record; preserves Evaluation 03 historical FAIL and documents shared dynamic-member fidelity composition, exact birth refusal/retry, legacy migration, mortality, rotation and two-process schema-35 proof. |
@@ -140,7 +141,10 @@ PLAYABLE SLICE 01 Increment 05 published tree: 09b5ed6f186e7956883267a9f5d549da4
 PLAYABLE SLICE 01 Increment 06: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 PLAYABLE SLICE 01 Increment 06 published HEAD: 3e9d8e285dd81f6c015f046d2f2469489b4667d8
 PLAYABLE SLICE 01 Increment 06 published tree: 7ee2a64b55ef12ec1193d068dd1145b1038b04ff
-next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-07
+PLAYABLE SLICE 01 Increment 07: COMPLETE AND PUBLISHED — PASS — REMOTE VERIFIED
+PLAYABLE SLICE 01 Increment 07 published HEAD: 373b5e3688d25e1e139dd735a76d48e38743c1f8
+PLAYABLE SLICE 01 Increment 07 published tree: 56e50d1f910f8825ae344aab50e4a65553ae06ef
+next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-08
 next eligible CIV phase: CIV-48 — DEFERRED / NOT STARTED / IMPLEMENTATION NOT AUTHORIZED
 Gate E Evaluation 01: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 01: FIXED + PUBLISHED + REMOTE VERIFIED
@@ -151,7 +155,7 @@ V4-GATE-E-v1 Blocker 03: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 04: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 04: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 05: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
-next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-07
+next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-08
 CIV-39: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 V4-GATE-F-v1: ACQUIRED AND PUBLISHED — REMOTE VERIFIED
@@ -239,7 +243,9 @@ PLAYABLE SLICE 01 Increment 05: COMPLETE AND PUBLISHED — PASS — SENIOR REVIE
 PLAYABLE SLICE 01 Increment 05 published HEAD: 1614d181668b495d5321f2dfb5627c147b1e64d1
 PLAYABLE SLICE 01 Increment 06: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 PLAYABLE SLICE 01 Increment 06 published HEAD: 3e9d8e285dd81f6c015f046d2f2469489b4667d8
-next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-07
+PLAYABLE SLICE 01 Increment 07: COMPLETE AND PUBLISHED — PASS — REMOTE VERIFIED
+PLAYABLE SLICE 01 Increment 07 published HEAD: 373b5e3688d25e1e139dd735a76d48e38743c1f8
+next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-08
 CIV-48: NOT STARTED — IMPLEMENTATION NOT AUTHORIZED
 V4-GATE-H-v1: PLANNED
 ```
@@ -588,13 +594,22 @@ SHA-256 `806988f10607a27e0ee3b15ba8beefa4aac59907817f63a1d8ac3886ecc8fd2b`.
 Its schema-45 typed stationary uncertainty, direct/routed finite bounds,
 restart, multi-seed, performance and real-client evidence are recorded in
 [`PS01_INCREMENT_06_PATH_READINESS_LIVENESS.md`](PS01_INCREMENT_06_PATH_READINESS_LIVENESS.md).
+Increment 07, Normal Autonomous Renewable Food Continuity, is complete and
+published, qualification-passed and remote verified at product/qualification
+HEAD `373b5e3688d25e1e139dd735a76d48e38743c1f8`, tree
+`56e50d1f910f8825ae344aab50e4a65553ae06ef`, from parent
+`e05f2f67e6d7b3b738f00ced4f3368e58a4e92ce`. Its final qualification archive
+SHA-256 is `742f12009735032c0ea0a0e43b01bf2db8d1549b9a066afc552f664505eb348a`.
+The bounded normal renewable sweet-berry continuity path and its Core
+streaming determinism blocker are resolved and published; historical failed
+evidence remains preserved. See
+[`PS01_INCREMENT_07_RENEWABLE_FOOD_CONTINUITY.md`](PS01_INCREMENT_07_RENEWABLE_FOOD_CONTINUITY.md).
 The next authorized technical action after publication reconciliation is the
-read-only `REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-07` mission. Increment
-07 remains unselected; renewable physical subsistence and population
-capacity/demographic headroom remain unresolved and neither is preselected.
-CIV-48 remains not started, implementation is not authorized and it is
-deferred behind the slice and evidence-driven roadmap recalibration; Gate H
-remains planned. See
+read-only `REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-08` mission. Increment
+08 remains unselected; population capacity/demographic headroom remains
+unresolved. CIV-48 remains not started, implementation is not authorized and
+it is deferred behind the slice and evidence-driven roadmap recalibration;
+Gate H remains planned. See
 [`CIV_45_PHASE_SUMMARY.md`](CIV_45_PHASE_SUMMARY.md) and
 [`CIV_46_PHASE_SUMMARY.md`](CIV_46_PHASE_SUMMARY.md) and
 [`CIV_47_PHASE_SUMMARY.md`](CIV_47_PHASE_SUMMARY.md), plus
@@ -610,7 +625,9 @@ and
 and
 [`PS01_INCREMENT_05_TEMPORAL_PHYSIOLOGY_COHERENCE.md`](PS01_INCREMENT_05_TEMPORAL_PHYSIOLOGY_COHERENCE.md)
 and
-[`PS01_INCREMENT_06_PATH_READINESS_LIVENESS.md`](PS01_INCREMENT_06_PATH_READINESS_LIVENESS.md).
+[`PS01_INCREMENT_06_PATH_READINESS_LIVENESS.md`](PS01_INCREMENT_06_PATH_READINESS_LIVENESS.md)
+and
+[`PS01_INCREMENT_07_RENEWABLE_FOOD_CONTINUITY.md`](PS01_INCREMENT_07_RENEWABLE_FOOD_CONTINUITY.md).
 `CIV-38` remains
 optional and not started; `CIV-40` remains optional tooling and not started.
 Currency is not a Gate E or CIV-39 prerequisite.

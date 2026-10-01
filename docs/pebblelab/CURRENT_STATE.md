@@ -177,9 +177,37 @@ The deterministic repeat matched causal and semantic state. Seeds 46 and 887,
 visual evidence were also accepted. See
 [`PS01_INCREMENT_06_PATH_READINESS_LIVENESS.md`](PS01_INCREMENT_06_PATH_READINESS_LIVENESS.md).
 
-Renewable Physical Subsistence remains unresolved: the normal product still
-uses Increment 04's finite mature-sweet-berry path, and carrots/crops are not
-activated for normal founders.
+Increment 07, Normal Autonomous Renewable Food Continuity, is **COMPLETE AND
+PUBLISHED — PASS — REMOTE VERIFIED** at published product/qualification commit
+`373b5e3688d25e1e139dd735a76d48e38743c1f8`, tree
+`56e50d1f910f8825ae344aab50e4a65553ae06ef`, from parent
+`e05f2f67e6d7b3b738f00ced4f3368e58a4e92ce`. Its final qualification archive
+SHA-256 is `742f12009735032c0ea0a0e43b01bf2db8d1549b9a066afc552f664505eb348a`;
+the accepted Tranche-1 post-Core-fix archive SHA-256 is
+`3488ca99ce60d6cd561aeb413605e06055fa0595d220f9bc5f4c2b4ed0e1dd80`.
+Final Risk-C is P0 0 / P1 0 / blocking P2 0.
+
+Normal hunger-qualified founders now use naturally generated mature sweet
+berry bushes. PebbleCore's actor-neutral preserving harvest changes stage 2/3
+to living stage 1 and creates physical ItemEntity berries; Pebble verifies
+source mutation, exact custody and conservation before ordinary consumption.
+Natural Core random ticks renew the same source, and fresh evidence leads
+through ordinary cognition and navigation to a second preserving acquisition
+from that source. There is no proof-only productive setup, accelerated growth,
+expected-result injection or second ecology/growth authority.
+
+`CORE_STREAMING_DETERMINISM_BLOCKER_FIX = PUBLISHED`. Qualification discovered
+that asynchronous generation-completion order could influence authoritative
+chunk adoption and entity allocation. The accepted correction retains
+concurrent generation, deterministic admission/request order and complete-wave
+publication; worker timing is non-authoritative. World-tick lighting order,
+stale/player/epoch result handling and physical identity allocation are
+deterministic. Historical failed evidence remains preserved. POST-V2 full
+natural determinism, exact terminal durable-state/physical-ID equality,
+scarcity seeds 46/887, the fault matrix, fresh-process restart and corrected
+Visual Game Smoke passed. Full smoke was 4,906/4,909 with exactly three known
+pre-existing failures, not attributed to Increment 07. See
+[`PS01_INCREMENT_07_RENEWABLE_FOOD_CONTINUITY.md`](PS01_INCREMENT_07_RENEWABLE_FOOD_CONTINUITY.md).
 
 The milestone must establish a normal bounded persistent sandbox path, first
 measured with approximately 24 full-cognition founders and designed for roughly
@@ -204,13 +232,12 @@ risk. Other known risks are recorded in the roadmap milestone contract.
 
 Once this publication reconciliation is published and remotely verified, the
 next authorized technical action is the read-only
-`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-07` mission. It must reconsider
-at minimum Renewable Physical Subsistence and population capacity/demographic
-headroom without preselecting either. Increment 07 remains **UNSELECTED**, and
-no implementation is authorized. CIV-48 remains **NOT STARTED — IMPLEMENTATION
-NOT AUTHORIZED** and is deferred until PLAYABLE SLICE 01 and the resulting
-evidence-driven roadmap recalibration are complete. Gate H remains **PLANNED**
-and continues to require CIV-48 through CIV-52.
+`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-08` mission. Increment 08
+remains **UNSELECTED**, and no Increment-08 implementation is authorized.
+Population capacity/demographic headroom remains unresolved. CIV-48 remains
+**NOT STARTED — IMPLEMENTATION NOT AUTHORIZED** and is deferred until PLAYABLE
+SLICE 01 and the resulting evidence-driven roadmap recalibration are complete.
+Gate H remains **PLANNED** and continues to require CIV-48 through CIV-52.
 
 ## Published CIV-47 closure
 
@@ -1066,7 +1093,10 @@ PLAYABLE SLICE 01 Increment 05 published tree: 09b5ed6f186e7956883267a9f5d549da4
 PLAYABLE SLICE 01 Increment 06: COMPLETE AND PUBLISHED — PASS — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 PLAYABLE SLICE 01 Increment 06 published HEAD: 3e9d8e285dd81f6c015f046d2f2469489b4667d8
 PLAYABLE SLICE 01 Increment 06 published tree: 7ee2a64b55ef12ec1193d068dd1145b1038b04ff
-next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-07
+PLAYABLE SLICE 01 Increment 07: COMPLETE AND PUBLISHED — PASS — REMOTE VERIFIED
+PLAYABLE SLICE 01 Increment 07 published HEAD: 373b5e3688d25e1e139dd735a76d48e38743c1f8
+PLAYABLE SLICE 01 Increment 07 published tree: 56e50d1f910f8825ae344aab50e4a65553ae06ef
+next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-08
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -1486,14 +1516,15 @@ golden regeneration: NOT ATTEMPTED
 
 ## Next authorized action
 
-Increment 06, Cohort-Safe Bounded Path-Readiness Liveness, is complete and
-published, senior-review approved and independently remote verified at
-canonical HEAD `3e9d8e285dd81f6c015f046d2f2469489b4667d8`. Increment 07 remains
-unselected. Renewable Physical Subsistence and population capacity/demographic
-headroom remain unresolved, and neither later implementation nor CIV-48 is
-authorized. The next authorized technical action after publication
+Increment 07, Normal Autonomous Renewable Food Continuity, is complete and
+published, qualification-passed and independently remote verified at
+published product/qualification HEAD
+`373b5e3688d25e1e139dd735a76d48e38743c1f8`. The bounded normal renewable
+sweet-berry continuity contract is resolved; population capacity/demographic
+headroom remains unresolved. Neither Increment-08 implementation nor CIV-48
+is authorized. The next authorized technical action after publication
 reconciliation is the read-only
-`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-07` mission. Gate G Evaluation
+`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-08` mission. Gate G Evaluation
 01 remains frozen historical FAIL evidence. Blocker 01 is senior-review
 approved, published and independently remote verified. Evaluation 02 is
 senior-review-approved published PASS evidence and its exact published HEAD is
