@@ -2960,11 +2960,30 @@ extension AgentSimulationSession {
                     directCommunicationFailureIDs
                         + validCommunicationBoundaryIDs
                 )).sorted()
-                let careExit = exit.causes.compactMap { causeID in
+                let retainedCareExit = exit.causes.compactMap { causeID in
                     event(causeID)
                 }.filter {
                     $0.origin == .dependentCareTransition
                 }.map(\.eventID).max()
+                // Death processing returns the care authority's last boundary
+                // even when this death creates no new care event. That exact
+                // durable reference can legitimately precede the retained
+                // ledger suffix while the whole primary death chain remains.
+                // The care owner below validates the boundary and contiguous
+                // discarded prefix; no arbitrary missing cause is admitted.
+                let discardedCareExit = state.dependentCareState.flatMap {
+                    care -> AgentCausalEventID? in
+                    let boundary = care.lastCareEventID
+                    guard exit.causes.contains(boundary),
+                          event(boundary) == nil,
+                          boundary.simulationID == state.clock.simulationID,
+                          boundary.sequence.rawValue
+                            <= state.causalLedger.droppedEventCount else {
+                        return nil
+                    }
+                    return boundary
+                }
+                let careExit = retainedCareExit ?? discardedCareExit
                 let householdPeriod = state.householdState?.membershipPeriods.first {
                     $0.agentID == record.agentID
                         && $0.leftTick == record.deathTick

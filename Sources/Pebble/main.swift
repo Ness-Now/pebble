@@ -2032,6 +2032,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
     }
 }
 
+if let blockerStatus = PebbleMortalityCheckpointBlockerHarness.runIfRequested() {
+    exit(blockerStatus)
+}
+
 if let faultStatus = PebbleIncrement07FaultHarness.runIfRequested() {
     exit(faultStatus)
 }

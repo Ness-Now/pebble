@@ -881,3 +881,7 @@ Do not copy a superseded document into a new prompt as current authority.
 Prefer updating the owning canonical file over creating another overlapping
 document. Never maintain two documents that both claim to be the current
 roadmap, manifest or status.
+
+## Local correction candidates
+
+- [PS01 I08 Blocker 01 — Natural extinction/checkpoint causal compatibility](PS01_I08_BLOCKER_01_MORTALITY_CHECKPOINT_CAUSAL_COMPATIBILITY.md): focused, separate local correction; qualification and review status are recorded without changing published canonical state or resuming I08.

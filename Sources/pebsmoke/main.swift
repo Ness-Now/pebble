@@ -675,6 +675,12 @@ if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
     exit(failed > 0 ? 1 : 0)
 }
 
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "mortality-checkpoint-compaction" {
+    runPebbleAgentsMortalityCheckpointCompactionSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
 if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "mortality" {
     runPebbleAgentsMortalityPopulationExitSmoke()
     print("\n\(passed) passed, \(failed) failed")
@@ -2992,6 +2998,7 @@ runPebbleAgentsGateFBlocker09Smoke()
 runPebbleAgentsSettlementMetricsSmoke()
 runPebbleAgentsLocalEcologySmoke()
 runPebbleAgentsMortalityPopulationExitSmoke()
+runPebbleAgentsMortalityCheckpointCompactionSmoke()
 runPebbleAgentsAgeMaturityReproductionSmoke()
 runPebbleAgentsDurableKinshipSmoke()
 runPebbleAgentsHouseholdMembershipSmoke()

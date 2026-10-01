@@ -958,7 +958,8 @@ public struct AgentCausalEvent: Codable, Equatable, Sendable {
     public let summary: String
     public let digest: String
 
-    init(
+    /// Corruption tests rebuild checksummed envelopes through the owning codec.
+    @_spi(Testing) public init(
         id: AgentCausalEventID,
         instant: AgentSimulationInstant,
         kind: AgentCausalEventKind,
