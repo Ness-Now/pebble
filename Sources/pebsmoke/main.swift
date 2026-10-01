@@ -49,6 +49,24 @@ if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
 }
 
 if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
+    == "ps01-increment-07-focused" {
+    registerAllBlocks()
+    registerAllItems()
+    registerAllBiomes()
+    registerAllRecipes()
+    registerAllLootTables()
+    registerAllEntities()
+    registerAllSystems()
+    runPebbleCoreWildSubsistenceSmoke()
+    runPebbleIncrement04FocusedSmoke()
+    runPebbleCorePhysicalSimulationCoverageFullSmoke()
+    runPebbleIncrement05TemporalPhysiologySmoke()
+    runPebbleIncrement05TemporalRollbackSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
     == "ps01-increment-05-temporal" {
     registerAllBlocks()
     registerAllItems()

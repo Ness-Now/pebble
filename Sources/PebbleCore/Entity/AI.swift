@@ -187,10 +187,13 @@ private func executePathSearch(
                         touchedDomainBoundary = true
                         continue
                     }
-                    // both cardinals must be passable
+                    // A diagonal edge sweeps past both cardinal cells. If
+                    // either side is blocked, Entity.move cannot carry a
+                    // full-width body through the corner even when the
+                    // diagonal destination itself is occupiable.
                     if !walkable(
                         world, cardinalX.x, cur.y, cardinalX.z, avoidWater
-                    ) && !walkable(
+                    ) || !walkable(
                         world, cardinalZ.x, cur.y, cardinalZ.z, avoidWater
                     ) {
                         continue

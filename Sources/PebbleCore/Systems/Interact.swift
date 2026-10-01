@@ -234,6 +234,70 @@ public struct BlockBreakRuleResult: Equatable {
     }
 }
 
+public struct SweetBerryHarvestRuleContext {
+    public let world: World
+    public let vibrationSource: EntityRef?
+    public let itemEntityBobOffsetRandom: (() -> Double)?
+
+    public init(
+        world: World,
+        vibrationSource: EntityRef? = nil,
+        itemEntityBobOffsetRandom: (() -> Double)? = nil
+    ) {
+        self.world = world
+        self.vibrationSource = vibrationSource
+        self.itemEntityBobOffsetRandom = itemEntityBobOffsetRandom
+    }
+}
+
+public enum SweetBerryHarvestRuleStatus: String, Equatable {
+    case succeeded
+    case refused
+}
+
+/// Exact result of picking a mature sweet-berry bush without uprooting it.
+///
+/// PebbleCore owns the source transition, yield, ItemEntity identities and RNG.
+/// Live adapters may verify and compensate this result but must not recreate its
+/// physical semantics.
+public struct SweetBerryHarvestRuleResult: Equatable {
+    public let status: SweetBerryHarvestRuleStatus
+    public let target: PhysicalBlockPosition
+    public let originalCell: Int
+    public let finalCell: Int
+    public let mutations: [PhysicalBlockMutation]
+    public let spawnedItemEntityIDs: [Int]
+    public let harvestedQuantity: Int
+
+    public init(
+        status: SweetBerryHarvestRuleStatus,
+        target: PhysicalBlockPosition,
+        originalCell: Int,
+        finalCell: Int,
+        mutations: [PhysicalBlockMutation],
+        spawnedItemEntityIDs: [Int] = [],
+        harvestedQuantity: Int = 0
+    ) {
+        self.status = status
+        self.target = target
+        self.originalCell = originalCell
+        self.finalCell = finalCell
+        self.mutations = mutations
+        self.spawnedItemEntityIDs = spawnedItemEntityIDs
+        self.harvestedQuantity = harvestedQuantity
+    }
+
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.status == rhs.status
+            && lhs.target == rhs.target
+            && lhs.originalCell == rhs.originalCell
+            && lhs.finalCell == rhs.finalCell
+            && lhs.mutations == rhs.mutations
+            && lhs.spawnedItemEntityIDs.count == rhs.spawnedItemEntityIDs.count
+            && lhs.harvestedQuantity == rhs.harvestedQuantity
+    }
+}
+
 @discardableResult
 private func setBlockRecording(
     _ world: World,
@@ -289,6 +353,19 @@ public func useBlock(_ ctx: InteractCtx, _ hit: RaycastHit) -> Bool {
     let def = blockDefs[id]
     let shape = shapeOf(id)
     let name = def.name
+
+    if id == Int(B.sweet_berry_bush), meta >= 2 {
+        let harvest = executeSweetBerryHarvest(
+            SweetBerryHarvestRuleContext(
+                world: world,
+                vibrationSource: player
+            ),
+            x,
+            y,
+            z
+        )
+        return harvest.status == .succeeded
+    }
 
     // doors / trapdoors / gates
     if shape == .door && id != Int(B.iron_door) {
@@ -1902,6 +1979,106 @@ public func executeBlockBreak(
     damageToolForBreak(ctx, c)
     ctx.addExhaustion(0.005)
     return result(.succeeded)
+}
+
+/// Canonical renewable sweet-berry acquisition. A mature stage-2/3 source
+/// yields real `sweet_berries` ItemEntities and remains physically present at
+/// stage 1. Any later edible opportunity must therefore be produced by the
+/// existing PebbleCore random-tick growth authority.
+@discardableResult
+public func executeSweetBerryHarvest(
+    _ ctx: SweetBerryHarvestRuleContext,
+    _ x: Int,
+    _ y: Int,
+    _ z: Int
+) -> SweetBerryHarvestRuleResult {
+    let world = ctx.world
+    let target = PhysicalBlockPosition(x: x, y: y, z: z)
+    let original = world.getBlock(x, y, z)
+    let stage = original & 3
+    var mutations: [PhysicalBlockMutation] = []
+
+    func result(
+        _ status: SweetBerryHarvestRuleStatus,
+        itemEntityIDs: [Int] = [],
+        quantity: Int = 0
+    ) -> SweetBerryHarvestRuleResult {
+        SweetBerryHarvestRuleResult(
+            status: status,
+            target: target,
+            originalCell: original,
+            finalCell: world.getBlock(x, y, z),
+            mutations: mutations,
+            spawnedItemEntityIDs: itemEntityIDs,
+            harvestedQuantity: quantity
+        )
+    }
+
+    guard original >> 4 == Int(B.sweet_berry_bush), stage >= 2 else {
+        return result(.refused)
+    }
+
+    // Stage 2 yields 1...2; stage 3 yields 2...3. One stack represents the
+    // complete physical output, and the living source always returns to stage 1.
+    let quantity = (stage == 3 ? 2 : 1) + gameRng.nextInt(2)
+    setBlockRecording(
+        world,
+        x,
+        y,
+        z,
+        Int(cell(B.sweet_berry_bush, 1)),
+        &mutations
+    )
+    let item = spawnItem(
+        world,
+        Double(x) + 0.5,
+        Double(y) + 0.5,
+        Double(z) + 0.5,
+        ItemStack(iid("sweet_berries"), quantity),
+        bobOffsetRandom: ctx.itemEntityBobOffsetRandom
+    )
+    world.hooks.playSound(
+        "block.sweet_berry_bush.pick_berries",
+        Double(x) + 0.5,
+        Double(y) + 0.5,
+        Double(z) + 0.5,
+        1,
+        0.9
+    )
+    world.hooks.addParticles(
+        "block",
+        Double(x) + 0.5,
+        Double(y) + 0.5,
+        Double(z) + 0.5,
+        6,
+        0.25,
+        original
+    )
+    world.emitVibration(
+        Double(x), Double(y), Double(z), 6, ctx.vibrationSource
+    )
+    return result(.succeeded, itemEntityIDs: [item.id], quantity: quantity)
+}
+
+/// Read-only qualification for the preserving harvest above. It intentionally
+/// exposes neither numeric registry identities nor a predicted yield.
+public func edibleSweetBerryHarvestQualification(
+    for sourceCell: Int
+) -> EdibleBlockBreakDropQualification? {
+    let blockID = sourceCell >> 4
+    guard blockID == Int(B.sweet_berry_bush), (sourceCell & 3) >= 2,
+          let itemID = iidOpt("sweet_berries"),
+          let descriptor = foodConsumptionDescriptor(
+              for: ItemStack(itemID, 1)
+          ), descriptor.food.hunger > 0,
+          !descriptor.food.alwaysEat,
+          descriptor.food.effects.isEmpty,
+          descriptor.hasSimpleDebit else { return nil }
+    return EdibleBlockBreakDropQualification(
+        sourceCell: sourceCell,
+        blockName: "sweet_berry_bush",
+        canonicalMaterialName: descriptor.canonicalMaterialName
+    )
 }
 
 /// Read-only, actor-neutral evidence derived from the same block-drop and item

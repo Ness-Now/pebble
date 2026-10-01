@@ -17,7 +17,7 @@ let SAVE_INTERVAL_TICKS = 1200          // 60 s autosave
 let GEN_RADIUS_PAD = 1                  // generate one ring beyond render distance
 let MAX_GEN_INFLIGHT = 24
 let MAX_MESH_INFLIGHT = 26
-let LIGHT_BUDGET_MS = 4.0               // seam-stitch time budget per frame
+let MAX_LIGHT_CHUNKS_PER_TICK = 4       // deterministic physical lighting work bound
 
 /// item-billboard projectiles (the app renders these as sprites)
 public let SPRITE_TYPES: Set<String> = [
@@ -210,6 +210,64 @@ private struct SaveSubmissionResult {
     var succeeded: Bool { requiredWritesSucceeded && chunkBatchSucceeded }
 }
 
+/// Read-only identity for one asynchronous chunk calculation. Production
+/// workers may complete in any order; the request sequence is the sole
+/// authority for publishing their results.
+public struct ChunkGenerationTestingEvent: Equatable {
+    public let epoch: UInt64
+    public let requestSequence: UInt64
+    public let worldID: String
+    public let dimension: Int
+    public let chunkX: Int
+    public let chunkZ: Int
+}
+
+public enum ChunkGenerationResolutionDisposition: String {
+    case adopted
+    case discardedWorldEpoch
+    case discardedWorldState
+    case discardedAlreadyResident
+    case discardedNoLongerRequested
+    case requeuedForSaveFreshness
+}
+
+public struct ChunkGenerationResolutionEvent {
+    public let request: ChunkGenerationTestingEvent
+    public let disposition: ChunkGenerationResolutionDisposition
+}
+
+public struct ChunkGenerationRuntimeDiagnostics {
+    public let epoch: UInt64
+    public let nextRequestSequence: UInt64
+    public let nextCommitSequence: UInt64
+    public let outstandingRequestCount: Int
+    public let completedAwaitingCommitCount: Int
+    public let activeCalculationCount: Int
+    public let maximumConcurrentCalculationCount: Int
+    public let maximumGenerationCapacity: Int
+}
+
+private struct CompletedChunkGeneration {
+    let request: ChunkGenerationTestingEvent
+    let world: World
+    let flight: DimChunk
+    let key: Int64
+    let databaseKey: String
+    let selectedSaveSequence: UInt64
+    let physicalCoverage: Bool
+    let playerStreaming: Bool
+    let chunk: Chunk
+    let blockEntitySpecs: [BESpec]?
+    let entitySpecs: [EntitySpec]?
+    let savedRecord: ChunkRecord?
+    let loadedFullRecord: Bool
+}
+
+private struct ChunkGenerationCompletionKey: Hashable {
+    let epoch: UInt64
+    let requestSequence: UInt64
+}
+
 public enum ChunkSaveFreshnessPhase: String {
     case captured
     case recoveryRequeued
@@ -271,6 +329,24 @@ public final class GameCore {
     /// Queue provenance only, not coverage authority. It enforces bounded
     /// fairness inside the existing generation queue and is discarded with it.
     private var physicalCoverageGenInFlight = Set<DimChunk>()
+    /// Calculation is concurrent, but completed results publish only through
+    /// this process-local, request-ordered commit horizon. Completed results
+    /// remain in `genInFlight`, so worker timing cannot open different future
+    /// request slots.
+    private var chunkGenerationEpoch: UInt64 = 0
+    private var nextChunkGenerationRequestSequence: UInt64 = 0
+    private var nextChunkGenerationCommitSequence: UInt64 = 0
+    private var completedChunkGenerations: [UInt64: CompletedChunkGeneration] = [:]
+    /// Workers publish immutable calculated results under this lock before
+    /// leaving the current epoch's dispatch group. The main thread may then
+    /// import a whole wave synchronously at the next simulation boundary.
+    private let calculatedChunkGenerationLock = NSLock()
+    private var calculatedChunkGenerations:
+        [ChunkGenerationCompletionKey: CompletedChunkGeneration] = [:]
+    private var chunkGenerationCalculationGroup = DispatchGroup()
+    private let chunkGenerationCalculationLock = NSLock()
+    private var activeChunkGenerationCalculations = 0
+    private var maximumConcurrentChunkGenerationCalculations = 0
     /// keys of chunks that exist on disk — fresh chunks skip the read entirely
     private var savedChunkKeys = Set<String>()
     /// keys whose DB record holds full block data — an unload rewrite of these
@@ -320,6 +396,16 @@ public final class GameCore {
     public var testingSignInscriptionSaveRecoveryHook: (([ChunkRecord]) -> Void)?
     /// Default-nil deterministic trace seam for freshness regression proofs.
     public var testingChunkSaveFreshnessHook: ((ChunkSaveFreshnessEvent) -> Void)?
+    /// Default-nil deterministic seams for Core streaming regression proofs.
+    /// The calculation hook runs on a generation worker. The completion gate
+    /// runs on the main queue and may delay, but must eventually invoke, the
+    /// supplied delivery closure.
+    public var testingChunkGenerationCalculationHook:
+        ((ChunkGenerationTestingEvent) -> Void)?
+    public var testingChunkGenerationCompletionGate:
+        ((ChunkGenerationTestingEvent, @escaping () -> Void) -> Void)?
+    public var testingChunkGenerationResolutionHook:
+        ((ChunkGenerationResolutionEvent) -> Void)?
     public private(set) var testingLastSubmittedChunkRecordCount = 0
 
     /// Read-only deterministic seam for persistence regression proofs.
@@ -391,12 +477,82 @@ public final class GameCore {
     }
 
     /// Deterministic proof seam that invokes the production streaming loader.
+    @discardableResult
     public func testingRequestChunkForPersistenceFreshness(
         _ world: World,
         cx: Int,
         cz: Int
-    ) {
+    ) -> Bool {
         requestChunk(world, cx, cz, ignoringGenerationLimit: true)
+    }
+
+    /// Deterministic proof seam for a request owned by the ordinary player
+    /// streaming ring rather than an explicit Core system.
+    @discardableResult
+    public func testingRequestPlayerStreamingChunkForDeterminism(
+        _ world: World,
+        cx: Int,
+        cz: Int
+    ) -> Bool {
+        requestChunk(
+            world,
+            cx,
+            cz,
+            ignoringGenerationLimit: true,
+            playerStreaming: true
+        )
+    }
+
+    /// Advances only the production save-freshness generation for a chunk.
+    /// This creates no World state and exists solely to prove that an ordered
+    /// generation ticket rejected by the real freshness guard cannot block
+    /// later tickets.
+    @discardableResult
+    public func testingSupersedeChunkGenerationSaveSequence(
+        _ world: World,
+        cx: Int,
+        cz: Int
+    ) -> UInt64? {
+        guard worlds[world.dim] === world, let worldID = worldRec?.id else {
+            return nil
+        }
+        let key = db.chunkKey(worldID, world.dim.rawValue, cx, cz)
+        saveCaptureLock.lock()
+        defer { saveCaptureLock.unlock() }
+        guard nextChunkSaveCaptureSequence < UInt64.max else { return nil }
+        nextChunkSaveCaptureSequence += 1
+        latestChunkSaveCaptureSequence[key] = nextChunkSaveCaptureSequence
+        return nextChunkSaveCaptureSequence
+    }
+
+    public func testingChunkGenerationRuntimeDiagnostics()
+        -> ChunkGenerationRuntimeDiagnostics {
+        calculatedChunkGenerationLock.lock()
+        let calculated = calculatedChunkGenerations.keys.filter {
+            $0.epoch == chunkGenerationEpoch
+        }.count
+        calculatedChunkGenerationLock.unlock()
+        chunkGenerationCalculationLock.lock()
+        let active = activeChunkGenerationCalculations
+        let maximum = maximumConcurrentChunkGenerationCalculations
+        chunkGenerationCalculationLock.unlock()
+        return ChunkGenerationRuntimeDiagnostics(
+            epoch: chunkGenerationEpoch,
+            nextRequestSequence: nextChunkGenerationRequestSequence,
+            nextCommitSequence: nextChunkGenerationCommitSequence,
+            outstandingRequestCount: genInFlight.count,
+            completedAwaitingCommitCount:
+                completedChunkGenerations.count + calculated,
+            activeCalculationCount: active,
+            maximumConcurrentCalculationCount: maximum,
+            maximumGenerationCapacity: MAX_GEN_INFLIGHT
+        )
+    }
+
+    /// Read-only queue identity, canonically ordered for regression snapshots.
+    /// Service priority is established by processLightQueue at the tick boundary.
+    public func testingPendingLightChunkKeys() -> [Int64] {
+        (lightQueue[dim] ?? []).sorted()
     }
 
     /// Deterministic application-proof seam for the synchronous production
@@ -445,6 +601,8 @@ public final class GameCore {
     private var traveling = false
     /// player is frozen because the chunk under them hasn't streamed in yet
     private var heldForChunks = false
+    /// Lighting is physical readiness work, so render-frame frequency cannot
+    /// decide how many seam-stitch batches occur at one World tick.
     public private(set) var musicMood = "menu"
 
     public init() {
@@ -575,8 +733,7 @@ public final class GameCore {
         stalledSections.removeAll()
         for d in lightQueue.keys { lightQueue[d]!.removeAll() }
         meshJobs.removeAll()
-        genInFlight.removeAll()
-        physicalCoverageGenInFlight.removeAll()
+        resetChunkGenerationRuntime()
         savedChunkKeys.removeAll()
         savedFullKeys.removeAll()
         if let exitingWorldID { clearChunkSaveTracking(worldID: exitingWorldID) }
@@ -668,6 +825,7 @@ public final class GameCore {
     // ===========================================================================
     private func enterWorld(_ rec: WorldRecord, _ playerData: [String: Any]?, _ adv: [String]?) {
         clearLabCoreAgentProbes()
+        resetChunkGenerationRuntime()
         worldRec = rec
         advancements = AdvancementTracker()
         if let adv { advancements.load(adv) }
@@ -1105,13 +1263,236 @@ public final class GameCore {
     // ===========================================================================
     // Chunk streaming
     // ===========================================================================
+    private func resetChunkGenerationRuntime() {
+        guard chunkGenerationEpoch < UInt64.max else {
+            fatalError("chunk generation epoch exhausted")
+        }
+        for result in completedChunkGenerations.values.sorted(by: {
+            $0.request.requestSequence < $1.request.requestSequence
+        }) {
+            testingChunkGenerationResolutionHook?(ChunkGenerationResolutionEvent(
+                request: result.request,
+                disposition: .discardedWorldEpoch
+            ))
+        }
+        chunkGenerationEpoch += 1
+        nextChunkGenerationRequestSequence = 0
+        nextChunkGenerationCommitSequence = 0
+        completedChunkGenerations.removeAll(keepingCapacity: true)
+        calculatedChunkGenerationLock.lock()
+        calculatedChunkGenerations.removeAll(keepingCapacity: true)
+        calculatedChunkGenerationLock.unlock()
+        chunkGenerationCalculationGroup = DispatchGroup()
+        genInFlight.removeAll(keepingCapacity: true)
+        physicalCoverageGenInFlight.removeAll(keepingCapacity: true)
+    }
+
+    private func chunkGenerationCalculationStarted() {
+        chunkGenerationCalculationLock.lock()
+        activeChunkGenerationCalculations += 1
+        maximumConcurrentChunkGenerationCalculations = max(
+            maximumConcurrentChunkGenerationCalculations,
+            activeChunkGenerationCalculations
+        )
+        chunkGenerationCalculationLock.unlock()
+    }
+
+    private func chunkGenerationCalculationFinished() {
+        chunkGenerationCalculationLock.lock()
+        activeChunkGenerationCalculations -= 1
+        chunkGenerationCalculationLock.unlock()
+    }
+
+    private func receiveChunkGenerationCompletion(
+        _ completion: CompletedChunkGeneration
+    ) {
+        guard completion.request.epoch == chunkGenerationEpoch else {
+            testingChunkGenerationResolutionHook?(ChunkGenerationResolutionEvent(
+                request: completion.request,
+                disposition: .discardedWorldEpoch
+            ))
+            return
+        }
+        guard completedChunkGenerations[completion.request.requestSequence] == nil else {
+            return
+        }
+        completedChunkGenerations[completion.request.requestSequence] = completion
+        // One admitted wave becomes authoritative atomically. This prevents
+        // the fastest prefix from gaining extra World ticks while slower
+        // workers from the same deterministic request horizon are unfinished.
+        guard completedChunkGenerations.count == genInFlight.count else {
+            return
+        }
+        commitCompletedChunkGenerations()
+    }
+
+    private func storeCalculatedChunkGeneration(
+        _ completion: CompletedChunkGeneration
+    ) {
+        let key = ChunkGenerationCompletionKey(
+            epoch: completion.request.epoch,
+            requestSequence: completion.request.requestSequence
+        )
+        calculatedChunkGenerationLock.lock()
+        calculatedChunkGenerations[key] = completion
+        calculatedChunkGenerationLock.unlock()
+    }
+
+    private func takeCalculatedChunkGeneration(
+        for request: ChunkGenerationTestingEvent
+    ) -> CompletedChunkGeneration? {
+        let key = ChunkGenerationCompletionKey(
+            epoch: request.epoch,
+            requestSequence: request.requestSequence
+        )
+        calculatedChunkGenerationLock.lock()
+        let completion = calculatedChunkGenerations.removeValue(forKey: key)
+        calculatedChunkGenerationLock.unlock()
+        return completion
+    }
+
+    private func deliverCalculatedChunkGeneration(
+        for request: ChunkGenerationTestingEvent
+    ) {
+        guard let completion = takeCalculatedChunkGeneration(for: request) else {
+            return
+        }
+        let deliver: () -> Void = { [weak self] in
+            self?.receiveChunkGenerationCompletion(completion)
+        }
+        if let gate = testingChunkGenerationCompletionGate {
+            gate(request, deliver)
+        } else {
+            deliver()
+        }
+    }
+
+    /// Waits in wall time, not World time, for the concurrent wave already
+    /// admitted by the previous deterministic request boundary. No physical
+    /// tick is skipped, and every result is imported before ordered commit.
+    private func synchronizeChunkGenerationBeforeWorldProgression() {
+        while !genInFlight.isEmpty {
+            let group = chunkGenerationCalculationGroup
+            group.wait()
+            calculatedChunkGenerationLock.lock()
+            let ready = calculatedChunkGenerations.values.filter {
+                $0.request.epoch == chunkGenerationEpoch
+            }.sorted {
+                $0.request.requestSequence < $1.request.requestSequence
+            }
+            for completion in ready {
+                calculatedChunkGenerations.removeValue(forKey:
+                    ChunkGenerationCompletionKey(
+                        epoch: completion.request.epoch,
+                        requestSequence: completion.request.requestSequence
+                    )
+                )
+            }
+            calculatedChunkGenerationLock.unlock()
+            for completion in ready {
+                receiveChunkGenerationCompletion(completion)
+            }
+            // A save-freshness tombstone may have deterministically issued a
+            // replacement ticket while the prior wave was committed.
+        }
+    }
+
+    private func commitCompletedChunkGenerations() {
+        while let completion = completedChunkGenerations.removeValue(
+            forKey: nextChunkGenerationCommitSequence
+        ) {
+            guard nextChunkGenerationCommitSequence < UInt64.max else {
+                fatalError("chunk generation commit sequence exhausted")
+            }
+            nextChunkGenerationCommitSequence += 1
+            commitChunkGeneration(completion)
+        }
+    }
+
+    private func commitChunkGeneration(_ completion: CompletedChunkGeneration) {
+        let request = completion.request
+        let world = completion.world
+        let dimension = Dim(rawValue: request.dimension)
+        genInFlight.remove(completion.flight)
+        physicalCoverageGenInFlight.remove(completion.flight)
+
+        guard inWorld,
+              worldRec?.id == request.worldID,
+              let dimension,
+              worlds[dimension] === world else {
+            testingChunkGenerationResolutionHook?(ChunkGenerationResolutionEvent(
+                request: request,
+                disposition: .discardedWorldState
+            ))
+            return
+        }
+        guard world.chunks[completion.key] == nil else {
+            testingChunkGenerationResolutionHook?(ChunkGenerationResolutionEvent(
+                request: request,
+                disposition: .discardedAlreadyResident
+            ))
+            return
+        }
+        if completion.playerStreaming {
+            let radius = settings.renderDistance + GEN_RADIUS_PAD
+            let playerChunkX = floorDiv(ifloor(player.x), CHUNK_W)
+            let playerChunkZ = floorDiv(ifloor(player.z), CHUNK_W)
+            guard dimension == dim,
+                  abs(request.chunkX - playerChunkX) <= radius,
+                  abs(request.chunkZ - playerChunkZ) <= radius else {
+                testingChunkGenerationResolutionHook?(
+                    ChunkGenerationResolutionEvent(
+                        request: request,
+                        disposition: .discardedNoLongerRequested
+                    )
+                )
+                return
+            }
+        }
+
+        saveCaptureLock.lock()
+        guard (latestChunkSaveCaptureSequence[completion.databaseKey] ?? 0)
+                == completion.selectedSaveSequence else {
+            saveCaptureLock.unlock()
+            testingChunkGenerationResolutionHook?(ChunkGenerationResolutionEvent(
+                request: request,
+                disposition: .requeuedForSaveFreshness
+            ))
+            requestChunk(
+                world,
+                request.chunkX,
+                request.chunkZ,
+                physicalCoverage: completion.physicalCoverage,
+                playerStreaming: completion.playerStreaming
+            )
+            return
+        }
+        defer { saveCaptureLock.unlock() }
+        if completion.loadedFullRecord {
+            savedFullKeys.insert(completion.databaseKey)
+        }
+        adoptChunk(
+            world,
+            completion.chunk,
+            completion.blockEntitySpecs,
+            completion.entitySpecs,
+            completion.savedRecord
+        )
+        enqueueLightAround(world, request.chunkX, request.chunkZ)
+        testingChunkGenerationResolutionHook?(ChunkGenerationResolutionEvent(
+            request: request,
+            disposition: .adopted
+        ))
+    }
+
     @discardableResult
     private func requestChunk(
         _ w: World,
         _ cx: Int,
         _ cz: Int,
         ignoringGenerationLimit: Bool = false,
-        physicalCoverage: Bool = false
+        physicalCoverage: Bool = false,
+        playerStreaming: Bool = false
     ) -> Bool {
         let key = chunkKey(cx, cz)
         let flight = DimChunk(dim: w.dim.rawValue, key: key)
@@ -1120,6 +1501,18 @@ public final class GameCore {
             return false
         }
         guard let rec = worldRec else { return false }
+        guard nextChunkGenerationRequestSequence < UInt64.max else {
+            fatalError("chunk generation request sequence exhausted")
+        }
+        let request = ChunkGenerationTestingEvent(
+            epoch: chunkGenerationEpoch,
+            requestSequence: nextChunkGenerationRequestSequence,
+            worldID: rec.id,
+            dimension: w.dim.rawValue,
+            chunkX: cx,
+            chunkZ: cz
+        )
+        nextChunkGenerationRequestSequence += 1
         genInFlight.insert(flight)
         if physicalCoverage { physicalCoverageGenInFlight.insert(flight) }
         let worldId = rec.id
@@ -1135,7 +1528,16 @@ public final class GameCore {
         saveCaptureLock.unlock()
         let db = self.db
         let minY = w.info.minY
+        let calculationHook = testingChunkGenerationCalculationHook
+        let calculationGroup = chunkGenerationCalculationGroup
+        calculationGroup.enter()
         genQueue.async { [weak self] in
+            self?.chunkGenerationCalculationStarted()
+            defer {
+                self?.chunkGenerationCalculationFinished()
+                calculationGroup.leave()
+            }
+            calculationHook?(request)
             var savedRec = unresolved
             if savedRec == nil, saved { savedRec = db.getChunk(worldId, d.rawValue, cx, cz) }
             let c: Chunk
@@ -1156,26 +1558,25 @@ public final class GameCore {
                 entitySpecs = savedRec != nil ? nil : out.entities
             }
             let savedFinal = savedRec
-            DispatchQueue.main.async {
-                guard let self else { return }
-                self.genInFlight.remove(flight)
-                self.physicalCoverageGenInFlight.remove(flight)
-                guard self.inWorld, self.worlds[d] === w, w.chunks[key] == nil else { return }
-                self.saveCaptureLock.lock()
-                guard (self.latestChunkSaveCaptureSequence[dbKey] ?? 0) == selectedSequence else {
-                    self.saveCaptureLock.unlock()
-                    self.requestChunk(
-                        w,
-                        cx,
-                        cz,
-                        physicalCoverage: physicalCoverage
-                    )
-                    return
-                }
-                defer { self.saveCaptureLock.unlock() }
-                if loadedFull { self.savedFullKeys.insert(dbKey) }
-                self.adoptChunk(w, c, beSpecs, entitySpecs, savedFinal)
-                self.enqueueLightAround(w, cx, cz)
+            guard let self else { return }
+            let completion = CompletedChunkGeneration(
+                request: request,
+                world: w,
+                flight: flight,
+                key: key,
+                databaseKey: dbKey,
+                selectedSaveSequence: selectedSequence,
+                physicalCoverage: physicalCoverage,
+                playerStreaming: playerStreaming,
+                chunk: c,
+                blockEntitySpecs: beSpecs,
+                entitySpecs: entitySpecs,
+                savedRecord: savedFinal,
+                loadedFullRecord: loadedFull
+            )
+            self.storeCalculatedChunkGeneration(completion)
+            DispatchQueue.main.async { [weak self] in
+                self?.deliverCalculatedChunkGeneration(for: request)
             }
         }
         return true
@@ -1404,7 +1805,8 @@ public final class GameCore {
         }
     }
 
-    /// Budgeted initial lighting: nearest chunks first, stop when the frame's budget is spent
+    /// Once per authoritative tick: nearest chunks first with canonical tie-breaks
+    /// and a fixed work count. Frame cadence is never physical authority.
     private func processLightQueue() {
         guard inWorld else { return }
         let w = world
@@ -1421,16 +1823,18 @@ public final class GameCore {
                 if !w.neighborsReady(c.cx, c.cz) { continue } // keep queued, never drop
                 ready.append((key, c, (c.cx - pcx) * (c.cx - pcx) + (c.cz - pcz) * (c.cz - pcz)))
             }
-            ready.sort { $0.d < $1.d }
-            let t0 = CFAbsoluteTimeGetCurrent()
-            for r in ready {
+            ready.sort {
+                if $0.d != $1.d { return $0.d < $1.d }
+                if $0.c.cz != $1.c.cz { return $0.c.cz < $1.c.cz }
+                return $0.c.cx < $1.c.cx
+            }
+            for r in ready.prefix(MAX_LIGHT_CHUNKS_PER_TICK) {
                 q.remove(r.key)
                 lightChunk(w, r.c)
-                if (CFAbsoluteTimeGetCurrent() - t0) * 1000 > LIGHT_BUDGET_MS { break }
             }
         }
         // self-heal: any chunk that slipped through the queue gets re-queued
-        // (this runs per frame — gate to once per qualifying tick)
+        // (once per qualifying tick)
         if w.time % 20 == 0 && lastLightHealTick != w.time {
             lastLightHealTick = w.time
             for c in w.chunks.values {
@@ -1539,7 +1943,9 @@ public final class GameCore {
                     if max(abs(dx), abs(dz)) != r { continue }
                     if genInFlight.count >= MAX_GEN_INFLIGHT { break outer }
                     let cx = pcx + dx, cz = pcz + dz
-                    if w.chunks[chunkKey(cx, cz)] == nil { requestChunk(w, cx, cz) }
+                    if w.chunks[chunkKey(cx, cz)] == nil {
+                        requestChunk(w, cx, cz, playerStreaming: true)
+                    }
                 }
             }
         }
@@ -1946,7 +2352,21 @@ public final class GameCore {
         paused = host?.screenPausesGame() ?? false
         if paused { return }
 
+        // The tick that issued a deterministic generation wave may finish.
+        // At the next physical boundary, wait for the concurrent work and
+        // commit the complete wave before progressing. Testing completion
+        // gates intentionally retain their manually controlled boundary.
+        if !genInFlight.isEmpty {
+            if testingChunkGenerationCompletionGate != nil { return }
+            synchronizeChunkGenerationBeforeWorldProgression()
+        }
+
         streamChunks()
+
+        // Seam lighting activates scheduled fluids, so it belongs to physical
+        // progression, not rendering. Resolve one bounded batch after ordered
+        // chunk adoption/streaming and before player and World physics.
+        LoadProf.shared.time("lightQ") { processLightQueue() }
 
         // ---- player intent ----
         let playerDead = p.dead || p.deathTime > 0
@@ -2722,7 +3142,7 @@ public final class GameCore {
     // ===========================================================================
     // Frame pump — the app's render loop calls this once per frame
     // ===========================================================================
-    /// Runs fixed-step sim ticks, then the budgeted light/mesh streamers.
+    /// Runs fixed-step sim ticks (including physical lighting), then visual meshing.
     /// Returns the interpolation partial for rendering.
     public func frame(dtMs: Double) -> Double {
         guard inWorld else { return 0 }
@@ -2734,7 +3154,6 @@ public final class GameCore {
             steps += 1
         }
         if steps >= 10 { accumulator = 0 }
-        LoadProf.shared.time("lightQ") { processLightQueue() }
         LoadProf.shared.time("streamMesh") { streamMeshes() }
         LoadProf.shared.tickPrint()
         return paused ? 1 : clampD(accumulator / TICK_MS, 0, 1)

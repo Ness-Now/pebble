@@ -377,11 +377,7 @@ final class PebbleAgentEcologicalObservationSensor {
                 emitted += 1
             } else if Self.plantNames.contains(name), emitted < reserve {
                 let edible = name == "sweet_berry_bush"
-                    ? edibleBlockBreakDropQualifications(for: cell, heldItem: nil)
-                        .first(where: { qualification in
-                            qualification.blockName == "sweet_berry_bush"
-                                && qualification.canonicalMaterialName == "sweet_berries"
-                        })
+                    ? edibleSweetBerryHarvestQualification(for: cell)
                     : nil
                 plants.append(AgentPlantObservation(
                     plantKey: name, position: position,

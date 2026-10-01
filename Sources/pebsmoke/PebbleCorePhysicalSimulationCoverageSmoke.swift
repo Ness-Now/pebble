@@ -858,6 +858,7 @@ private func runCoverageRandomTickDedupProofs() {
 
 func runPebbleCorePhysicalSimulationCoverageFullSmoke() {
     runPebbleCorePhysicalSimulationCoverageCheckpointSmoke()
+    runPebbleCoreStreamingDeterminismSmoke()
     section("PS01 Increment 03 physical scheduling and lifecycle")
     runCoverageRandomTickDedupProofs()
     runCoverageScheduledTickProofs()

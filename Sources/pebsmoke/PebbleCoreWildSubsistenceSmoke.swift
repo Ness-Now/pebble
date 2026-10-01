@@ -213,6 +213,83 @@ func runPebbleCoreWildSubsistenceSmoke() {
             })
     check("wild gather physically depletes the source", gatherWorld.getBlock(0, 64, 0) == 0)
 
+    check(
+        "preserving harvest does not qualify stage 0",
+        edibleSweetBerryHarvestQualification(
+            for: Int(cell(B.sweet_berry_bush, 0))
+        ) == nil
+    )
+    check(
+        "preserving harvest does not qualify stage 1",
+        edibleSweetBerryHarvestQualification(
+            for: Int(cell(B.sweet_berry_bush, 1))
+        ) == nil
+    )
+    check(
+        "preserving harvest qualifies stage 2 berries",
+        edibleSweetBerryHarvestQualification(
+            for: Int(cell(B.sweet_berry_bush, 2))
+        )?.canonicalMaterialName == "sweet_berries"
+    )
+    check(
+        "preserving harvest qualifies stage 3 berries",
+        edibleSweetBerryHarvestQualification(
+            for: Int(cell(B.sweet_berry_bush, 3))
+        )?.canonicalMaterialName == "sweet_berries"
+    )
+    check(
+        "preserving harvest rejects unrelated blocks",
+        edibleSweetBerryHarvestQualification(for: Int(cell(B.pumpkin))) == nil
+    )
+
+    resetGameRng(46)
+    let preservingWorld = wildCoreWorld()
+    preservingWorld.setBlock(
+        0, 64, 0, Int(cell(B.sweet_berry_bush, 3)), SET_SILENT
+    )
+    let preserving = executeSweetBerryHarvest(
+        SweetBerryHarvestRuleContext(world: preservingWorld),
+        0, 64, 0
+    )
+    let preservingDrops = preservingWorld.entities.compactMap {
+        $0 as? ItemEntity
+    }
+    check(
+        "canonical berry picking preserves one living stage-1 source",
+        preserving.status == .succeeded
+            && preserving.originalCell == Int(cell(B.sweet_berry_bush, 3))
+            && preserving.finalCell == Int(cell(B.sweet_berry_bush, 1))
+            && preserving.mutations == [PhysicalBlockMutation(
+                position: PhysicalBlockPosition(x: 0, y: 64, z: 0),
+                before: Int(cell(B.sweet_berry_bush, 3)),
+                after: Int(cell(B.sweet_berry_bush, 1))
+            )]
+    )
+    check(
+        "canonical berry picking emits exactly its real bounded output",
+        preserving.spawnedItemEntityIDs == preservingDrops.map(\.id)
+            && preservingDrops.count == 1
+            && itemDef(preservingDrops[0].stack.id).name == "sweet_berries"
+            && preservingDrops[0].stack.count == preserving.harvestedQuantity
+            && (2...3).contains(preserving.harvestedQuantity)
+    )
+
+    let immatureBefore = preservingWorld.getBlock(0, 64, 0)
+    let immatureEntities = preservingWorld.entities.map(\.id)
+    let immature = executeSweetBerryHarvest(
+        SweetBerryHarvestRuleContext(world: preservingWorld),
+        0, 64, 0
+    )
+    check(
+        "immature preserved source cannot mint another output",
+        immature.status == .refused
+            && preservingWorld.getBlock(0, 64, 0) == immatureBefore
+            && preservingWorld.entities.map(\.id) == immatureEntities
+            && immature.mutations.isEmpty
+            && immature.spawnedItemEntityIDs.isEmpty
+            && immature.harvestedQuantity == 0
+    )
+
     let growthWorld = wildCoreWorld()
     growthWorld.setBlock(0, 64, 0, Int(cell(B.sweet_berry_bush, 0)), SET_SILENT)
     growthWorld.getChunk(0, 0)!.setSky(0, 64, 0, 15)

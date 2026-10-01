@@ -66,6 +66,41 @@ func runPebbleCoreNavigationEmbodimentSmoke() {
           around?.contains(where: { $0.x == 1 && $0.y == 64 && $0.z == 0 }) == false
               && around?.isEmpty == false)
 
+    // Seed-14 renewable-food replay exposed a diagonal whose destination was
+    // valid but whose swept edge clipped a solid cardinal corner. A Core path
+    // node must also be physically executable by the ordinary Entity mover.
+    let corner = civ19NavigationWorld()
+    corner.setBlock(1, 64, 0, Int(cell(B.stone)), SET_SILENT)
+    corner.setBlock(1, 65, 0, Int(cell(B.stone)), SET_SILENT)
+    let aroundCorner = findPath(
+        corner, 0.5, 64, 0.5, 2.5, 64, 2.5, 600, true
+    )
+    check("CIV-19 Core excludes blocked diagonal corner edge",
+          aroundCorner?.first.map {
+              !($0.x == 1 && $0.y == 64 && $0.z == 1)
+          } == true)
+    let cornerProbe = LabCoreAgentEntity(
+        world: corner,
+        labAgentId: "civ19_corner_probe",
+        physicalId: "civ19_corner_probe"
+    )
+    cornerProbe.setPos(0.5, 64, 0.5) // fixture spawn only
+    corner.addEntity(cornerProbe)
+    if let node = aroundCorner?.first {
+        cornerProbe.move(
+            Double(node.x) + 0.5 - cornerProbe.x,
+            Double(node.y) - cornerProbe.y,
+            Double(node.z) + 0.5 - cornerProbe.z
+        )
+        check("CIV-19 replacement corner route is physically executable",
+              Int(cornerProbe.x.rounded(.down)) == node.x
+                  && Int(cornerProbe.y.rounded(.down)) == node.y
+                  && Int(cornerProbe.z.rounded(.down)) == node.z
+                  && !cornerProbe.horizontalCollision)
+    } else {
+        check("CIV-19 replacement corner route is physically executable", false)
+    }
+
     let dynamic = civ19NavigationWorld()
     let beforeChange = findPath(dynamic, 0.5, 64, 0.5, 4.5, 64, 0.5, 600, true)
     if let blockedNode = beforeChange?.first {

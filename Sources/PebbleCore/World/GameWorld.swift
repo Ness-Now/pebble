@@ -330,6 +330,15 @@ public final class World {
     public func hasScheduledTick(_ x: Int, _ y: Int, _ z: Int, _ id: Int) -> Bool {
         scheduledSet.contains(TickKey(x: x, y: y, z: z, id: id))
     }
+
+    /// Read-only pending physical work in exact execution order. Each row is
+    /// [dueTime, x, y, z, blockID, priority]. The process-global insertion serial
+    /// is represented by row order, not exposed as a new scheduling authority.
+    public func testingScheduledTickSnapshot() -> [[Int]] {
+        tickQueue.sorted { compareTicks($0, $1) < 0 }.map {
+            [$0.time, $0.x, $0.y, $0.z, $0.id, $0.priority]
+        }
+    }
     private func popDueTicks(_ out: inout [ScheduledTick]) {
         while !tickQueue.isEmpty && tickQueue[0].time <= time {
             let top = tickQueue[0]

@@ -2,6 +2,7 @@ import PebbleCore
 
 enum PebbleAgentPhysicalActionFamily: String {
     case breakBlock
+    case harvestSweetBerryBush
     case placeBlock
     case tillBlock
 }
@@ -83,6 +84,25 @@ struct PebbleAgentBlockBreakRequest {
         self.expectedCell = expectedCell
         self.heldItem = heldItem
         self.isCreative = isCreative
+        self.directActionRandomness = directActionRandomness
+    }
+}
+
+struct PebbleAgentSweetBerryHarvestRequest {
+    let actorID: String
+    let target: PhysicalBlockPosition
+    let expectedCell: Int
+    let directActionRandomness: PebbleAgentDirectActionRandomness?
+
+    init(
+        actorID: String,
+        target: PhysicalBlockPosition,
+        expectedCell: Int,
+        directActionRandomness: PebbleAgentDirectActionRandomness? = nil
+    ) {
+        self.actorID = actorID
+        self.target = target
+        self.expectedCell = expectedCell
         self.directActionRandomness = directActionRandomness
     }
 }
@@ -184,6 +204,211 @@ final class PebbleAgentPhysicalActionGateway {
     }
 
     var candidatePhysicalTransaction: PebbleCandidatePhysicalTransaction?
+
+    func harvestSweetBerryBush(
+        world: World,
+        actor: LabCoreAgentEntity,
+        request: PebbleAgentSweetBerryHarvestRequest,
+        occupiedPositions: [PhysicalBlockPosition],
+        acquireDrops: ([Int]) -> Bool = { _ in true },
+        verifyAfterMutation: () -> Bool = { true }
+    ) -> PebbleAgentPhysicalActionOutcome {
+        harvestSweetBerryBush(
+            world: world,
+            actor: PebbleAgentEmbodiment(probe: actor),
+            request: request,
+            occupiedPositions: occupiedPositions,
+            acquireDrops: acquireDrops,
+            verifyAfterMutation: verifyAfterMutation
+        )
+    }
+
+    func harvestSweetBerryBush(
+        world: World,
+        actor: PebbleAgentEmbodiment,
+        request: PebbleAgentSweetBerryHarvestRequest,
+        occupiedPositions: [PhysicalBlockPosition],
+        acquireDrops: ([Int]) -> Bool = { _ in true },
+        verifyAfterMutation: () -> Bool = { true }
+    ) -> PebbleAgentPhysicalActionOutcome {
+        let family = PebbleAgentPhysicalActionFamily.harvestSweetBerryBush
+        guard actor.agentID == request.actorID, actor.isValid(in: world) else {
+            return outcome(
+                family: family, request.actorID, .refused, request.target,
+                request.expectedCell, currentCell(world, request.target), [],
+                .invalidActor
+            )
+        }
+        guard request.expectedCell >> 4 == Int(B.sweet_berry_bush),
+              (request.expectedCell & 3) >= 2 else {
+            return outcome(
+                family: family, request.actorID, .refused, request.target,
+                request.expectedCell, currentCell(world, request.target), [],
+                .invalidRequest
+            )
+        }
+        guard isWithinBoundedReach(actor: actor, target: request.target) else {
+            return outcome(
+                family: family, request.actorID, .refused, request.target,
+                request.expectedCell, currentCell(world, request.target), [],
+                .outOfReach
+            )
+        }
+        guard world.isChunkReady(request.target.x >> 4, request.target.z >> 4) else {
+            return outcome(
+                family: family, request.actorID, .refused, request.target,
+                request.expectedCell, currentCell(world, request.target), [],
+                .chunkUnavailable
+            )
+        }
+        let before = currentCell(world, request.target)
+        guard before == request.expectedCell else {
+            return outcome(
+                family: family, request.actorID, .staleTarget, request.target,
+                request.expectedCell, before, [], .targetChanged
+            )
+        }
+        guard !occupiedPositions.contains(request.target) else {
+            return outcome(
+                family: family, request.actorID, .refused, request.target,
+                before, before, [], .occupiedTarget
+            )
+        }
+        guard world.getBlockEntity(
+            request.target.x, request.target.y, request.target.z
+        ) == nil else {
+            return outcome(
+                family: family, request.actorID, .refused, request.target,
+                before, before, [], .blockEntityUnsupported
+            )
+        }
+
+        let activeProbeBoundary = captureActiveProbePlacementBoundary(in: world)
+        let candidateReservation = reserveCandidateCompensation(
+            family: family, actorID: request.actorID, target: request.target
+        )
+        if case .refused = candidateReservation {
+            return outcome(
+                family: family, request.actorID, .rollbackFailure, request.target,
+                before, before, [], .rollbackMismatch
+            )
+        }
+        let entityIDsBefore = Set(world.entities.map(\.id))
+        let gameRngBefore = gameRng
+        let rollbackActorState = {
+            gameRng = gameRngBefore
+            return gameRng == gameRngBefore
+        }
+        let execute = {
+            captureCandidateWorldEffects(world: world) {
+                executeSweetBerryHarvest(
+                    SweetBerryHarvestRuleContext(
+                        world: world,
+                        vibrationSource: actor.entity,
+                        itemEntityBobOffsetRandom:
+                            request.directActionRandomness == nil
+                                ? nil : { gameRng.nextFloat() }
+                    ),
+                    request.target.x,
+                    request.target.y,
+                    request.target.z
+                )
+            }
+        }
+        let execution: (
+            SweetBerryHarvestRuleResult,
+            [PebbleCandidateBufferedWorldEffect]
+        )
+        if let randomness = request.directActionRandomness {
+            execution = world.withDirectPhysicalActionRandomness(
+                operationDomain: randomness.operationDomain,
+                x: request.target.x,
+                y: request.target.y,
+                z: request.target.z,
+                stableAttemptID: randomness.stableAttemptID,
+                execute
+            )
+        } else {
+            execution = execute()
+        }
+        let (physical, bufferedEffects) = execution
+        guard physical.status == .succeeded else {
+            return rolledBackFailure(
+                family: family, actorID: request.actorID, target: request.target,
+                before: before, world: world, mutations: physical.mutations,
+                entityIDsBefore: entityIDsBefore,
+                rollbackActorState: rollbackActorState,
+                statusAfterRollback: .physicalExecutionFailure,
+                failureAfterRollback: .coreRefused
+            )
+        }
+        let gameRngAfter = gameRng
+        let expectedAfter = Int(cell(B.sweet_berry_bush, 1))
+        let physicalOutcomeMatches = physical.target == request.target
+            && physical.originalCell == before
+            && physical.finalCell == expectedAfter
+            && currentCell(world, request.target) == expectedAfter
+            && physical.mutations.count == 1
+            && mutationsConform(world: world, mutations: physical.mutations)
+            && physical.harvestedQuantity > 0
+            && physical.spawnedItemEntityIDs.count == 1
+            && Set(physical.spawnedItemEntityIDs).count == 1
+            && physical.spawnedItemEntityIDs.allSatisfy { id in
+                guard let entity = world.entityById[id] as? ItemEntity else {
+                    return false
+                }
+                return itemDef(entity.stack.id).name == "sweet_berries"
+                    && entity.stack.count == physical.harvestedQuantity
+            }
+        let activeProbesValid = activeProbeBoundary.remainsValid(
+            in: world,
+            ignoringCandidateEntityIDs: Set(physical.spawnedItemEntityIDs)
+        )
+        let dropsAcquired = physicalOutcomeMatches && activeProbesValid
+            ? acquireDrops(physical.spawnedItemEntityIDs) : false
+        let acceptedAfterMutation = dropsAcquired && verifyAfterMutation()
+        guard physicalOutcomeMatches, activeProbesValid, dropsAcquired,
+              acceptedAfterMutation else {
+            let failure: PebbleAgentPhysicalActionFailure = !physicalOutcomeMatches
+                ? .outcomeMismatch
+                : !activeProbesValid ? .activeProbePlacementInvalid
+                : .postMutationRejected
+            return rolledBackFailure(
+                family: family, actorID: request.actorID, target: request.target,
+                before: before, world: world, mutations: physical.mutations,
+                entityIDsBefore: entityIDsBefore,
+                rollbackActorState: rollbackActorState,
+                statusAfterRollback: .verificationFailure,
+                failureAfterRollback: failure
+            )
+        }
+        guard registerCandidateCompensation(
+            reservation: candidateReservation,
+            family: family,
+            actorID: request.actorID,
+            target: request.target,
+            world: world,
+            mutations: physical.mutations,
+            entityIDsBefore: entityIDsBefore,
+            rollbackRestoredEntityIDs: Set(physical.spawnedItemEntityIDs),
+            expectedGameRng: gameRngAfter,
+            rollbackActorState: rollbackActorState,
+            bufferedEffects: bufferedEffects
+        ) else {
+            return outcome(
+                family: family, request.actorID, .rollbackFailure, request.target,
+                before, currentCell(world, request.target), physical.mutations,
+                .rollbackMismatch
+            )
+        }
+        return outcome(
+            family: family, request.actorID, .succeeded, request.target,
+            before, currentCell(world, request.target), physical.mutations, nil,
+            spawnedItemEntityIDs: physical.spawnedItemEntityIDs,
+            committedEffectCount: bufferedEffects.count
+        )
+    }
+
     func tillBlock(
         world: World,
         actor: PebbleAgentEmbodiment,

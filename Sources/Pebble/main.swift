@@ -5,6 +5,7 @@
 import AppKit
 import ImageIO
 import MetalKit
+import PebbleAgents
 import PebbleCore
 
 func suppressAutomaticPauseForDisposableWorldProof(
@@ -385,6 +386,15 @@ final class GameView: MTKView {
 // app delegate: window, game, renderer, UI, frame loop
 // ---------------------------------------------------------------------------
 final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWindowDelegate {
+    private struct Increment07LiveRenderCapture {
+        let path: String
+        let phase: String
+        let target: AgentPosition
+        let metadata: String
+        let terminateAfterCapture: Bool
+        var settleFramesRemaining: Int
+    }
+
     var window: NSWindow!
     var gameView: GameView!
     var renderer: WorldRenderer!
@@ -458,6 +468,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
     }()
     private var increment05CharacterizationStartWorldTick: Int?
     private var increment05CharacterizationCompleted = false
+    private let increment07LiveCaptureEnabled =
+        ProcessInfo.processInfo.environment[
+            "PEBBLELAB_PS01_INCREMENT07_LIVE_CAPTURE"
+        ] == "1"
+    private let increment07LiveCaptureDirectory =
+        ProcessInfo.processInfo.environment[
+            "PEBBLELAB_PS01_INCREMENT07_LIVE_CAPTURE_DIR"
+        ]
+    // This coordinate is used only to aim the camera and filter captured trace
+    // events. It is never provided to sensing, cognition, pathing, or execution.
+    private let increment07LiveObservedSource: AgentPosition? = {
+        guard let raw = ProcessInfo.processInfo.environment[
+            "PEBBLELAB_PS01_INCREMENT07_LIVE_OBSERVED_SOURCE"
+        ] else { return nil }
+        let values = raw.split(separator: ",").compactMap { Int($0) }
+        guard values.count == 3 else { return nil }
+        return AgentPosition(x: values[0], y: values[1], z: values[2])
+    }()
+    private var increment07LiveInitialCaptured = false
+    private var increment07LiveFirstAttemptID: AgentSubsistenceAttemptID?
+    private var increment07LiveRenderCapture: Increment07LiveRenderCapture?
+    private var increment07LivePlayerStart: (x: Double, y: Double, z: Double)?
+    private var increment07LiveObservedMovement = false
     private let gateB3AcceptanceShock: String? = {
         guard let value = ProcessInfo.processInfo.environment["PEBBLELAB_GATE_B3_SHOCK"],
               !value.isEmpty else { return nil }
@@ -595,7 +628,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         gameView.preferredFramesPerSecond = 120
         // capture hooks blit from the drawable, which framebufferOnly forbids
         let env = ProcessInfo.processInfo.environment
-        if env["PEBBLE_SHOT"] != nil || env["PEBBLE_PHOTOBOOTH"] != nil {
+        if env["PEBBLE_SHOT"] != nil || env["PEBBLE_PHOTOBOOTH"] != nil
+            || increment07LiveCaptureEnabled {
             gameView.framebufferOnly = false
         }
         window.contentView = gameView
@@ -1343,6 +1377,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
             }
             passiveObserverInputProof?.beforeFrame()
             let partial = game.frame(dtMs: frameDelta)
+            driveIncrement07LiveCaptureBeforeCognition()
             agentController.update(
                 world: game.world,
                 player: game.player,
@@ -1350,6 +1385,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
                 dimension: game.dim.rawValue,
                 maximumSimulationTick: gateB3AcceptanceHorizon
             )
+            driveIncrement07LiveCaptureAfterCognition()
             driveIncrement05NaturalCharacterization()
             if let evidence = increment03CoverageLiveProof?.afterFrame(
                 game: game,
@@ -1366,7 +1402,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
             bot?.tick()
             booth?.tickBooth()
             renderer.particles.tick(game.world)
-            let cam = game.camState(partial, timeSec: timeSec)
+            let baseCamera = game.camState(partial, timeSec: timeSec)
+            let cam = increment07LiveRenderCamera(overriding: baseCamera)
             enc = renderer.render(cmd: cmd, rpd: rpd, game: game, cam: cam, partial: partial, timeSec: timeSec)
         } else {
             agentController.update(world: nil, player: nil)
@@ -1611,6 +1648,232 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         NSApp.terminate(nil)
     }
 
+    private func driveIncrement07LiveCaptureBeforeCognition() {
+        guard increment07LiveCaptureEnabled,
+              let target = increment07LiveObservedSource,
+              let directory = increment07LiveCaptureDirectory,
+              game.hasWorld(), agentController.session != nil else { return }
+        if increment07LivePlayerStart == nil {
+            let player = game.player!
+            increment07LivePlayerStart = (player.x, player.y, player.z)
+            print(
+                String(
+                    format: "[lab-live] PS01_INCREMENT_07_PLAYER_BOUNDARY phase=start "
+                        + "worldTick=%d civilizationTick=%d position=%.6f,%.6f,%.6f "
+                        + "movementInput=none harnessPlayerMutation=none",
+                    game.world.time, agentController.session?.tick ?? -1,
+                    player.x, player.y, player.z
+                )
+            )
+            fflush(stdout)
+        }
+        let source = game.world.getBlock(target.x, target.y, target.z)
+        if !increment07LiveInitialCaptured,
+           source >> 4 == Int(B.sweet_berry_bush), source & 15 >= 2 {
+            increment07LiveInitialCaptured = true
+            scheduleIncrement07LiveCapture(
+                path: directory + "/01-initial-source.png",
+                phase: "preHarvest",
+                target: target,
+                metadata: "worldTick=\(game.world.time) "
+                    + "civilizationTick=\(agentController.session?.tick ?? -1) "
+                    + "sourceStage=\(source & 15)",
+                terminateAfterCapture: false
+            )
+            print(
+                "[lab-live] PS01_INCREMENT_07_INITIAL_SOURCE seed="
+                    + "\(game.world.seed) worldTick=\(game.world.time) target="
+                    + "\(target.x),\(target.y),\(target.z) stage=\(source & 15) "
+                    + "normalFounders=24 captureFilterOnly=1 "
+                    + "cameraAuthority=renderOnlyObserver"
+            )
+            fflush(stdout)
+        }
+    }
+
+    private func driveIncrement07LiveCaptureAfterCognition() {
+        guard increment07LiveCaptureEnabled,
+              let target = increment07LiveObservedSource,
+              let directory = increment07LiveCaptureDirectory,
+              game.hasWorld(), let session = agentController.session else { return }
+        if agentController.lastMovementOutcomes.contains(where: { $0.status == .moved }) {
+            increment07LiveObservedMovement = true
+        }
+        let retained = session.wildSubsistenceSnapshot().retainedOutcomes
+        let outcomes: [AgentSubsistenceOutcome] = retained.compactMap { record in
+            let outcome = record.outcome
+            guard outcome.status == .succeeded,
+                  outcome.targetPosition == target,
+                  outcome.attribution
+                    == "core-canonical-preserving-sweet-berry-harvest" else {
+                return nil
+            }
+            return outcome
+        }
+        if increment07LiveFirstAttemptID == nil, let first = outcomes.first {
+            increment07LiveFirstAttemptID = first.attemptID
+            let source = game.world.getBlock(target.x, target.y, target.z)
+            let totalAcquired = retained.map(\.outcome).reduce(0) { total, outcome in
+                total + outcome.acquiredItems.filter {
+                    $0.identity.itemKey == "sweet_berries"
+                }.reduce(0) { $0 + $1.count }
+            }
+            let totalCarried = agentController.probesByAgentId.values.reduce(0) {
+                total, probe in
+                total + probe.carriedItems.compactMap { $0 }.reduce(0) {
+                    $0 + (itemName($1.id) == "sweet_berries" ? $1.count : 0)
+                }
+            }
+            let totalConsumed = session.physicalFoodSurvivalSnapshot()?
+                .totalConsumedQuantity ?? 0
+            let conservation = totalAcquired == totalCarried + Int(totalConsumed)
+                ? "exact" : "diverged"
+            let custody = first.custodyFingerprint?.isEmpty == false
+                && !first.physicalCausalIDs.isEmpty ? "verified" : "missing"
+            let player = game.player!
+            let playerStart = increment07LivePlayerStart
+                ?? (player.x, player.y, player.z)
+            let playerUnchanged = player.x == playerStart.x
+                && player.y == playerStart.y
+                && player.z == playerStart.z
+            scheduleIncrement07LiveCapture(
+                path: directory + "/02-after-first-acquisition.png",
+                phase: "postFirstAcquisition",
+                target: target,
+                metadata: "worldTick=\(game.world.time) "
+                    + "civilizationTick=\(first.completedAtTick) "
+                    + "sourceStage=\(source & 15) actor=\(first.actorID.rawValue) "
+                    + "quantity=\(first.acquiredQuantity) custody=\(custody)",
+                terminateAfterCapture: true
+            )
+            let fields = [
+                "[lab-live] PS01_INCREMENT_07_FIRST_ACQUISITION",
+                "seed=\(game.world.seed)",
+                "worldTick=\(game.world.time)",
+                "civilizationTick=\(first.completedAtTick)",
+                "actor=\(first.actorID.rawValue)",
+                "target=\(target.x),\(target.y),\(target.z)",
+                "quantity=\(first.acquiredQuantity)",
+                "sourceStage=\(source & 15)",
+                "custody=\(custody)",
+                "physicalCausalIDs=\(first.physicalCausalIDs.map(String.init).joined(separator: ","))",
+                "acquiredTotal=\(totalAcquired)",
+                "consumedTotal=\(totalConsumed)",
+                "carriedTotal=\(totalCarried)",
+                "conservation=\(conservation)",
+                "founders=\(agentController.probesByAgentId.count)",
+                "movementObserved=\(increment07LiveObservedMovement ? 1 : 0)",
+                "runtimeErrors=\(agentController.runtimeErrorCount)",
+                "catchUpDrops=\(agentController.droppedCatchUpSteps)",
+                "fatalIntegrity=\(agentController.fatalSessionIntegrityFailure == nil ? 0 : 1)",
+                String(
+                    format: "playerStart=%.6f,%.6f,%.6f",
+                    playerStart.x, playerStart.y, playerStart.z
+                ),
+                String(
+                    format: "playerEnd=%.6f,%.6f,%.6f",
+                    player.x, player.y, player.z
+                ),
+                "playerUnchanged=\(playerUnchanged ? 1 : 0)",
+                "harnessPlayerMutation=none",
+                "cameraAuthority=renderOnlyObserver",
+            ]
+            print(fields.joined(separator: " "))
+            fflush(stdout)
+        }
+    }
+
+    private func scheduleIncrement07LiveCapture(
+        path: String,
+        phase: String,
+        target: AgentPosition,
+        metadata: String,
+        terminateAfterCapture: Bool
+    ) {
+        guard increment07LiveRenderCapture == nil else {
+            print(
+                "[lab-live] PS01_INCREMENT_07_CAPTURE_FAIL reason=pending-capture "
+                    + "phase=\(phase)"
+            )
+            fflush(stdout)
+            return
+        }
+        increment07LiveRenderCapture = Increment07LiveRenderCapture(
+            path: path,
+            phase: phase,
+            target: target,
+            metadata: metadata,
+            terminateAfterCapture: terminateAfterCapture,
+            settleFramesRemaining: 1
+        )
+    }
+
+    private func increment07LiveRenderCamera(overriding base: CamState) -> CamState {
+        guard increment07LiveCaptureEnabled,
+              var request = increment07LiveRenderCapture else { return base }
+        let player = game.player!
+        let playerBefore = (player.x, player.y, player.z)
+        var camera = base
+        camera.x = Double(request.target.x) + 6.5
+        camera.y = Double(request.target.y) + 4.0
+        camera.z = Double(request.target.z) + 6.5
+        let targetX = Double(request.target.x) + 0.5
+        let targetY = Double(request.target.y) + 0.75
+        let targetZ = Double(request.target.z) + 0.5
+        let dx = targetX - camera.x
+        let dy = targetY - camera.y
+        let dz = targetZ - camera.z
+        let horizontal = (dx * dx + dz * dz).squareRoot()
+        camera.yaw = atan2(-dx, dz)
+        camera.pitch = atan2(-dy, horizontal)
+        let distance = (dx * dx + dy * dy + dz * dz).squareRoot()
+        let forwardX = -sin(camera.yaw) * cos(camera.pitch)
+        let forwardY = -sin(camera.pitch)
+        let forwardZ = cos(camera.yaw) * cos(camera.pitch)
+        let alignment = distance > 0
+            ? (forwardX * dx + forwardY * dy + forwardZ * dz) / distance
+            : -1
+        let playerUnchanged = player.x == playerBefore.0
+            && player.y == playerBefore.1
+            && player.z == playerBefore.2
+        guard camera.yaw.isFinite, camera.pitch.isFinite,
+              alignment.isFinite, alignment >= 0.999_999,
+              playerUnchanged else {
+            print(
+                "[lab-live] PS01_INCREMENT_07_CAPTURE_FAIL reason=invalid-render-camera "
+                    + "phase=\(request.phase) alignment=\(alignment) "
+                    + "playerUnchanged=\(playerUnchanged ? 1 : 0)"
+            )
+            fflush(stdout)
+            increment07LiveRenderCapture = nil
+            shotQuitFrames = 1
+            return base
+        }
+        if request.settleFramesRemaining > 0 {
+            request.settleFramesRemaining -= 1
+            increment07LiveRenderCapture = request
+        } else if pendingCompositedCapturePath == nil {
+            pendingCompositedCapturePath = request.path
+            increment07LiveRenderCapture = nil
+            print(
+                String(
+                    format: "[lab-live] PS01_INCREMENT_07_CAPTURE phase=%@ %@ "
+                        + "cameraAuthority=renderOnlyObserver camera=%.6f,%.6f,%.6f "
+                        + "yawRadians=%.6f pitchRadians=%.6f alignment=%.9f "
+                        + "player=%.6f,%.6f,%.6f playerUnchanged=1 "
+                        + "harnessPlayerMutation=none settledRenderFrames=1 path=%@",
+                    request.phase, request.metadata,
+                    camera.x, camera.y, camera.z,
+                    camera.yaw, camera.pitch, alignment,
+                    player.x, player.y, player.z, request.path
+                )
+            )
+            fflush(stdout)
+            if request.terminateAfterCapture { shotQuitFrames = 180 }
+        }
+        return camera
+    }
+
     private func captureWorkDemandRefreshMilestone(
         _ proof: PebblePassiveProductProofSnapshot
     ) {
@@ -1767,6 +2030,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
             fflush(stdout)
         }
     }
+}
+
+if let faultStatus = PebbleIncrement07FaultHarness.runIfRequested() {
+    exit(faultStatus)
+}
+
+if let restartStatus = PebbleIncrement07RestartHarness.runIfRequested() {
+    exit(restartStatus)
+}
+
+if let invalidStartStatus = PebbleIncrement07InvalidStartHarness.runIfRequested() {
+    exit(invalidStartStatus)
 }
 
 if let headlessStatus = PebbleIncrement05NaturalCharacterization

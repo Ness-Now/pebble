@@ -570,13 +570,11 @@ struct PebbleAgentWildSubsistenceExecutor {
         let beforeCell = world.getBlock(target.x, target.y, target.z)
         guard beforeCell == expectedCell else { throw ExecutionError.staleWorld }
         if let edibleSourceEvidence {
-            guard let qualification = edibleBlockBreakDropQualifications(
-                for: beforeCell, heldItem: nil
-            ).first(where: {
-                $0.blockName == "sweet_berry_bush"
-                    && $0.canonicalMaterialName
-                        == edibleSourceEvidence.canonicalMaterialName
-            }), pebbleAgentEdibleSourceFingerprint(
+            guard let qualification = edibleSweetBerryHarvestQualification(
+                for: beforeCell
+            ), qualification.canonicalMaterialName
+                == edibleSourceEvidence.canonicalMaterialName,
+            pebbleAgentEdibleSourceFingerprint(
                 sourceCell: qualification.sourceCell,
                 blockName: qualification.blockName,
                 canonicalMaterialName: qualification.canonicalMaterialName
@@ -587,18 +585,10 @@ struct PebbleAgentWildSubsistenceExecutor {
         let destination = PebbleAgentMaterialCustodyEndpoint.liveAgent(actor, in: world)
         var acquisition: PebbleAgentItemEntityAcquisitionOutcome?
         var publicationError: Error?
-        let physical = physicalGateway.breakBlock(
-            world: world, actor: actor,
-            request: PebbleAgentBlockBreakRequest(
-                actorID: actor.agentID, target: target, expectedCell: beforeCell,
-                heldItem: nil, isCreative: false,
-                directActionRandomness: PebbleAgentDirectActionRandomness(
-                    operationDomain: 0x5042_4741,
-                    stableAttemptID: attemptID
-                )
-            ),
-            occupiedPositions: occupiedPositions,
-            acquireDrops: { ids in
+        let attribution = edibleSourceEvidence == nil
+            ? "core-canonical-block-break"
+            : "core-canonical-preserving-sweet-berry-harvest"
+        let acquireDrops: ([Int]) -> Bool = { ids in
                 guard let source = PebbleAgentItemEntityCustodyEndpoint(
                     spawnedItemEntityIDs: ids, world: world
                 ), let destinationBefore = try? materialGateway.fingerprint(destination) else {
@@ -632,7 +622,7 @@ struct PebbleAgentWildSubsistenceExecutor {
                             }
                             try publish(
                                 ids, acquired.acquired.map(\.material),
-                                acquired.destinationFingerprint ?? "", "core-canonical-block-break"
+                                acquired.destinationFingerprint ?? "", attribution
                             )
                             return true
                         } catch {
@@ -644,7 +634,38 @@ struct PebbleAgentWildSubsistenceExecutor {
                 acquisition = result
                 return result.succeeded
             }
+        let randomness = PebbleAgentDirectActionRandomness(
+            operationDomain: 0x5042_4741,
+            stableAttemptID: attemptID
         )
+        let physical: PebbleAgentPhysicalActionOutcome
+        if edibleSourceEvidence != nil {
+            physical = physicalGateway.harvestSweetBerryBush(
+                world: world,
+                actor: actor,
+                request: PebbleAgentSweetBerryHarvestRequest(
+                    actorID: actor.agentID,
+                    target: target,
+                    expectedCell: beforeCell,
+                    directActionRandomness: randomness
+                ),
+                occupiedPositions: occupiedPositions,
+                acquireDrops: acquireDrops
+            )
+        } else {
+            physical = physicalGateway.breakBlock(
+                world: world,
+                actor: actor,
+                request: PebbleAgentBlockBreakRequest(
+                    actorID: actor.agentID, target: target,
+                    expectedCell: beforeCell, heldItem: nil,
+                    isCreative: false,
+                    directActionRandomness: randomness
+                ),
+                occupiedPositions: occupiedPositions,
+                acquireDrops: acquireDrops
+            )
+        }
         if let publicationError { throw publicationError }
         guard physical.succeeded, let acquisition, acquisition.succeeded else {
             if physical.status == .rollbackFailure || acquisition?.status == .rollbackFailure {
@@ -664,7 +685,7 @@ struct PebbleAgentWildSubsistenceExecutor {
             physicalCausalIDs: physical.spawnedItemEntityIDs,
             acquired: acquisition.acquired.map(\.material),
             custodyFingerprint: acquisition.destinationFingerprint,
-            attribution: "core-canonical-block-break",
+            attribution: attribution,
             detail: "cell=\(beforeCell)->\(world.getBlock(target.x, target.y, target.z))",
             waitedTicks: 0, rodDurability: .unchanged
         )

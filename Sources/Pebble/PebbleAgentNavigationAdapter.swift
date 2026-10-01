@@ -148,47 +148,69 @@ struct PebbleAgentNavigationAdapter {
         occupiedAgentPositions: [AgentPosition],
         goalMode: AgentNavigationGoalMode = .cardinalAdjacent
     ) -> AgentNavigationObservation {
+        observe(
+            world: world,
+            origin: agent.position,
+            target: target,
+            occupiedAgentPositions: occupiedAgentPositions,
+            goalMode: goalMode
+        )
+    }
+
+    /// Shared live-World navigation observation from one physical origin.
+    ///
+    /// The origin overload keeps focused adapter proofs on the same production
+    /// classification path without manufacturing an `AgentSnapshot`. Physical
+    /// truth remains entirely in PebbleCore's placement assessment.
+    func observe(
+        world: World,
+        origin: AgentPosition,
+        target: AgentPosition,
+        occupiedAgentPositions: [AgentPosition],
+        goalMode: AgentNavigationGoalMode = .cardinalAdjacent
+    ) -> AgentNavigationObservation {
         var cells: [AgentNavigationCell] = []
+        // Entity occupancy remains the caller's explicit deterministic agent
+        // projection below. Ignore every current entity only for Core's terrain
+        // assessment so this does not silently change historical target/entity
+        // collision semantics or reject the observing actor as its own blocker.
+        let ignoredEntityIDs = Set(world.entities.map(\.id))
         for dx in -Self.radius...Self.radius {
             let remaining = Self.radius - abs(dx)
             for dz in -remaining...remaining {
-                let x = agent.position.x + dx
-                let z = agent.position.z + dz
+                let x = origin.x + dx
+                let z = origin.z + dz
                 guard world.isChunkReady(x >> 4, z >> 4) else {
                     cells.append(AgentNavigationCell(
-                        position: AgentPosition(x: x, y: agent.position.y, z: z),
+                        position: AgentPosition(x: x, y: origin.y, z: z),
                         status: .unavailable
                     ))
                     continue
                 }
 
-                let fixedY = agent.position.y
-                let fixedBelow = world.getBlock(x, fixedY - 1, z)
-                let fixedFeet = world.getBlock(x, fixedY, z)
-                let fixedHead = world.getBlock(x, fixedY + 1, z)
-                let fixedLevelTraversable = blockDefs[fixedBelow >> 4].solid
-                    && isAir(UInt16(truncatingIfNeeded: fixedFeet))
-                    && isAir(UInt16(truncatingIfNeeded: fixedHead))
+                let fixedY = origin.y
+                let fixedPosition = AgentPosition(x: x, y: fixedY, z: z)
+                let fixedLevelTraversable = physicalTerrainStatus(
+                    world: world,
+                    position: fixedPosition,
+                    ignoredEntityIDs: ignoredEntityIDs
+                ) == .traversable
                 let surfaceY = world.surfaceY(x, z)
                 var footLevels: [Int] = fixedLevelTraversable ? [fixedY] : []
                 if !footLevels.contains(surfaceY) { footLevels.append(surfaceY) }
                 if !footLevels.contains(target.y) { footLevels.append(target.y) }
                 for footY in footLevels {
                     let position = AgentPosition(x: x, y: footY, z: z)
-                    let below = world.getBlock(x, footY - 1, z)
-                    let feet = world.getBlock(x, footY, z)
-                    let head = world.getBlock(x, footY + 1, z)
                     let status: AgentNavigationCellStatus
                     if (goalMode == .cardinalAdjacent && position == target)
                         || occupiedAgentPositions.contains(position) {
                         status = .blocked
-                    } else if !blockDefs[below >> 4].solid {
-                        status = .dangerousDrop
-                    } else if !isAir(UInt16(truncatingIfNeeded: feet))
-                                || !isAir(UInt16(truncatingIfNeeded: head)) {
-                        status = .blocked
                     } else {
-                        status = .traversable
+                        status = physicalTerrainStatus(
+                            world: world,
+                            position: position,
+                            ignoredEntityIDs: ignoredEntityIDs
+                        )
                     }
                     cells.append(AgentNavigationCell(position: position, status: status))
                 }
@@ -196,11 +218,37 @@ struct PebbleAgentNavigationAdapter {
         }
         return AgentNavigationObservation(
             worldTick: world.time,
-            origin: agent.position,
+            origin: origin,
             target: target,
             radius: Self.radius,
             cells: cells
         )
+    }
+
+    private func physicalTerrainStatus(
+        world: World,
+        position: AgentPosition,
+        ignoredEntityIDs: Set<Int>
+    ) -> AgentNavigationCellStatus {
+        let assessment = assessEntityPlacement(
+            in: world,
+            at: EntityPlacementPosition(
+                x: position.x,
+                y: position.y,
+                z: position.z
+            ),
+            bodyWidth: 0.6,
+            bodyHeight: 1.8,
+            ignoringEntityIDs: ignoredEntityIDs
+        )
+        if assessment.isValid { return .traversable }
+        if assessment.rejections.contains(.chunkUnavailable) {
+            return .unavailable
+        }
+        if assessment.rejections.contains(.incompatibleSupport) {
+            return .dangerousDrop
+        }
+        return .blocked
     }
 
     func hasCardinalApproach(
