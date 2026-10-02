@@ -1,6 +1,7 @@
 # PS01 I08 Blocker 01 — Natural extinction/checkpoint causal compatibility
 
-Status: **LOCAL CORRECTION — FOCUSED EVIDENCE PASSED — READY FOR SUPERVISOR REVIEW — NOT PUBLISHED**.
+Status: **SENIOR REVIEW APPROVED — PUBLICATION CHAIN READY FOR USER PUSH**.
+Status after user publication: **BLOCKER_FIX_PUBLISHED**.
 Mission: `INVESTIGATE-AND-RESOLVE-PS01-I08-BLOCKER-01-NATURAL-EXTINCTION-CHECKPOINT-CAUSAL-COMPATIBILITY`.
 
 This is a separate blocker branch from canonical
@@ -11,6 +12,40 @@ The blocked 15-file I08 implementation is preserved in its original worktree;
 this correction neither incorporates that diff nor resumes I08 qualification.
 PS01 remains REQUIRED / IN PROGRESS / NOT COMPLETE. CIV-48 remains NOT STARTED
 and implementation not authorized. Gate H remains PLANNED.
+
+## Approved product correction and publication reconciliation
+
+Reconciliation mission:
+`PUBLISH-RECONCILIATION-PS01-I08-BLOCKER-01-MORTALITY-CHECKPOINT-CORRECTION`.
+
+Blocker: **PS01-I08-BLOCKER-01 — NATURAL EXTINCTION / CHECKPOINT CAUSAL COMPATIBILITY**.
+Root cause: **PRE-EXISTING SHARED CHECKPOINT COMPATIBILITY DEFECT DISCOVERED BY I08**.
+Approved product correction: `781329891411a883f62bc0b818b47f29e908bd9d`.
+Approved tree: `3b44436a90bd00ee6d065646b0ad398cff7dbcbb`.
+Exact parent: `79517ab038ff6b33326fd8d38595cb30fe906c8c`.
+
+Supervisor artifact review: **PASS**. Independent senior review:
+**PS01_I08_BLOCKER_01_INDEPENDENT_REVIEW_PASS**. The independent reviewer
+explicitly found the exact product commit safe to publish unchanged as a
+separate shared checkpoint compatibility correction within the existing
+bounded persistence contract. The approved commit is not amended.
+
+This documentation-only reconciliation prepares the publication record for
+manual user push. The status after that publication is
+**BLOCKER_FIX_PUBLISHED**, with published product correction `781329891411a883f62bc0b818b47f29e908bd9d`.
+At reconciliation time the fetched canonical remote still equals `79517ab038ff6b33326fd8d38595cb30fe906c8c`;
+manual user push and subsequent remote publication verification are pending.
+This record does not claim they have already occurred. The publication chain
+is the exact canonical baseline, then the unchanged approved product commit,
+then this documentation commit, whose identity is reported by Git delivery
+metadata rather than embedded self-referentially.
+
+Increment 08 remains **SELECTED / IMPLEMENTATION IN PROGRESS / NOT QUALIFIED /
+NOT PUBLISHED**. Its separate product worktree is excluded. This mission
+neither resumes implementation nor performs I08 qualification. Portal and VGS
+remain unresolved I08 work. PS01 remains **REQUIRED / IN PROGRESS / NOT
+COMPLETE**; CIV-48 remains **NOT STARTED / IMPLEMENTATION NOT AUTHORIZED**;
+Gate H remains **PLANNED**. All historical FAIL evidence remains immutable.
 
 ## Attribution control and exact diagnosis
 
@@ -112,8 +147,8 @@ Existing care validation then verifies the boundary and contiguous-prefix
 contract before checkpoint admission can succeed.
 
 No arbitrary missing cause is ignored. Exact exit equality, primary-chain
-admission, event kinds, actors, exact causes, strict ordering and no subsequent
-mortality remain enforced. No bound is raised, schema changed, transient cache
+admission, event kinds, existing actor/subject checks, exact causes, strict
+ordering and no subsequent mortality remain enforced. No bound is raised, schema changed, transient cache
 persisted, second authority introduced or empty-population special case added.
 Mortality, care and physical transitions are unchanged. Historical encodings
 and schema semantics retain their owning contracts.
@@ -237,6 +272,39 @@ The natural harness uses the existing manual checkpoint command and checkpoint
 restoration authority to answer this blocker question. It makes no claim that
 ordinary World save/re-entry is qualified; that remains I08 work.
 
+## Independent review residual risks — non-blocking
+
+### A. Evicted durable pointer authenticity
+
+A coordinated forged historical `dependentCareState.lastCareEventID`, matching
+rewritten exit causes and recomputed checksums can be admitted under the
+pre-existing bounded-history trust model. The independent reviewer changed
+boundary 104 to sequence 105 (`familyV1Initialized`) and consistently rewrote
+exit causes; admission succeeded. The unchanged Dependent Care validator also
+admitted pointer 105 in a non-extinct compacted checkpoint, establishing the
+underlying behavior as pre-existing, not introduced by B01. B01 does not claim
+cryptographic or provenance authentication for discarded causal events.
+With the durable pointer intact, unrelated or extra discarded exit causes
+remain refused by exact equality.
+
+### B. Mortality actor/subject validation gaps
+
+Some pre-existing primary mortality validations do not independently enforce
+actor/subject equality for every resources-retired, commitments-resolved or
+population-exit event. The independent reviewer admitted individual forged
+actor/subject fields on those events with recomputed checksums. Lethal actor
+and subject checks remain strict. B01 does not alter these predicates; this
+publication reconciliation does not broaden B01 to repair them.
+
+### C. Superseded care boundaries
+
+B01 supports the exact current durable care boundary. It does not claim
+support for an old mortality record whose care reference was superseded by
+later care transitions and then evicted. Such state retains honest refusal
+and requires its own future evidence-driven compatibility investigation.
+These three residual risks do not block publication of the approved B01
+correction within the existing bounded persistence contract.
+
 ## Remaining limits
 
 The fallback is deliberately limited to an existing durable care reference. It
@@ -245,8 +313,9 @@ superseded or when unknown older exit causes cannot be reconciled. Such cases
 retain honest refusal and require their own evidence-driven investigation.
 This correction does not establish general long-duration checkpoint admission,
 unlimited history, arbitrary historical migration or crash recovery.
-I08 remains blocked/unqualified until separate supervisor review and an
-explicitly resumed implementation/qualification mission.
+I08 remains SELECTED / IMPLEMENTATION IN PROGRESS / NOT QUALIFIED / NOT
+PUBLISHED. B01 approval does not resume its separate implementation or
+qualification mission; explicit resumption remains required.
 
 The original I08 worktree is unchanged: branch
 `codex/ps01-increment-08-normal-continuity`, HEAD
@@ -255,6 +324,8 @@ untracked files, no commits. All 15 source hashes and its exact status match
 the mission-start snapshot. Its later portal diagnostic source is not
 attributed to historical build-17 evidence. The correction has no I08 diff.
 Origin was fetched again before delivery and remained at the exact required
-baseline. The dedicated local correction commit is identified by delivery Git
-metadata rather than a self-referential commit ID in this record.
+baseline. The original correction delivery identified its commit through Git
+metadata.
+The approved product correction is now explicitly recorded above; only the
+new documentation commit identity remains in delivery metadata.
 Push attempted: **NO**.

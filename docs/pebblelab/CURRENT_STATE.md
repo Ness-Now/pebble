@@ -209,6 +209,23 @@ Visual Game Smoke passed. Full smoke was 4,906/4,909 with exactly three known
 pre-existing failures, not attributed to Increment 07. See
 [`PS01_INCREMENT_07_RENEWABLE_FOOD_CONTINUITY.md`](PS01_INCREMENT_07_RENEWABLE_FOOD_CONTINUITY.md).
 
+Increment 08 is **SELECTED / IMPLEMENTATION IN PROGRESS / NOT QUALIFIED /
+NOT PUBLISHED** in its separate worktree. PS01 I08 Blocker 01 is the
+**PRE-EXISTING SHARED CHECKPOINT COMPATIBILITY DEFECT DISCOVERED BY I08**.
+Supervisor artifact review and independent senior review both **PASS** for
+unchanged product correction `781329891411a883f62bc0b818b47f29e908bd9d`, tree
+`3b44436a90bd00ee6d065646b0ad398cff7dbcbb`, directly above `79517ab038ff6b33326fd8d38595cb30fe906c8c`.
+The publication record targets **BLOCKER_FIX_PUBLISHED** after manual user
+push; user push and remote verification remain pending. It preserves exact
+population-exit cause equality while admitting only the current durable care
+boundary under its existing bounded-history owner contract. Focused evidence
+is **375 / 0**, natural corrected evidence **12 / 0**; the baseline owning
+regression remains historical **12 passed / 2 failed**. The canonical stage-5
+result remains **4920 passed / 3 failed**, not a passing gate; no regold occurred.
+Evicted-pointer authenticity, incomplete primary actor/subject validation and
+superseded care boundaries remain non-blocking residual risks, documented in
+[PS01_I08_BLOCKER_01_MORTALITY_CHECKPOINT_CAUSAL_COMPATIBILITY.md](PS01_I08_BLOCKER_01_MORTALITY_CHECKPOINT_CAUSAL_COMPATIBILITY.md). Portal and VGS remain unresolved I08 work.
+
 The milestone must establish a normal bounded persistent sandbox path, first
 measured with approximately 24 full-cognition founders and designed for roughly
 20–30 without redesign. It must support safe Pause / Play / 1x, read-only free
@@ -230,10 +247,9 @@ integration issue. Increment 03 retires player location as authority for the
 bounded covered physical opportunity, but not every remaining integration
 risk. Other known risks are recorded in the roadmap milestone contract.
 
-Once this publication reconciliation is published and remotely verified, the
-next authorized technical action is the read-only
-`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-08` mission. Increment 08
-remains **UNSELECTED**, and no Increment-08 implementation is authorized.
+The next publication action is manual user push of the B01 product and
+documentation chain, followed by exact remote verification. B01 publication
+does not resume the separate I08 implementation/qualification mission.
 Population capacity/demographic headroom remains unresolved. CIV-48 remains
 **NOT STARTED — IMPLEMENTATION NOT AUTHORIZED** and is deferred until PLAYABLE
 SLICE 01 and the resulting evidence-driven roadmap recalibration are complete.
@@ -1096,7 +1112,11 @@ PLAYABLE SLICE 01 Increment 06 published tree: 7ee2a64b55ef12ec1193d068dd1145b10
 PLAYABLE SLICE 01 Increment 07: COMPLETE AND PUBLISHED — PASS — REMOTE VERIFIED
 PLAYABLE SLICE 01 Increment 07 published HEAD: 373b5e3688d25e1e139dd735a76d48e38743c1f8
 PLAYABLE SLICE 01 Increment 07 published tree: 56e50d1f910f8825ae344aab50e4a65553ae06ef
-next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-08
+PLAYABLE SLICE 01 Increment 08: SELECTED / IMPLEMENTATION IN PROGRESS / NOT QUALIFIED / NOT PUBLISHED
+PS01 I08 Blocker 01 approved product correction: 781329891411a883f62bc0b818b47f29e908bd9d
+PS01 I08 Blocker 01 status after user publication: BLOCKER_FIX_PUBLISHED
+PS01 I08 Blocker 01 publication: USER PUSH AND REMOTE VERIFICATION PENDING
+next authorized action: USER-PUSH-AND-REMOTE-VERIFY-PS01-I08-BLOCKER-01-PUBLICATION-CHAIN
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -1521,10 +1541,11 @@ published, qualification-passed and independently remote verified at
 published product/qualification HEAD
 `373b5e3688d25e1e139dd735a76d48e38743c1f8`. The bounded normal renewable
 sweet-berry continuity contract is resolved; population capacity/demographic
-headroom remains unresolved. Neither Increment-08 implementation nor CIV-48
-is authorized. The next authorized technical action after publication
-reconciliation is the read-only
-`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-08` mission. Gate G Evaluation
+headroom remains unresolved. Increment 08 is selected, implementation in
+progress, not qualified and not published. The next publication action is
+manual user push of the approved B01 correction and documentation chain,
+followed by exact remote verification. Separate I08 work requires explicit
+resumption; CIV-48 implementation remains unauthorized. Gate G Evaluation
 01 remains frozen historical FAIL evidence. Blocker 01 is senior-review
 approved, published and independently remote verified. Evaluation 02 is
 senior-review-approved published PASS evidence and its exact published HEAD is

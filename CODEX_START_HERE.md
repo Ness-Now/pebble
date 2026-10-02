@@ -271,7 +271,13 @@ for the compact status. In particular:
   final Risk-C is P0 0 / P1 0 / blocking P2 0. Natural Core random ticks now
   renew the same preserving-harvest sweet-berry source for a second normal
   acquisition with exact physical custody and conservation. The Core streaming
-  determinism blocker fix is published. Increment 08 remains unselected.
+  determinism blocker fix is published. Increment 08 is **SELECTED /
+  IMPLEMENTATION IN PROGRESS / NOT QUALIFIED / NOT PUBLISHED**. Its separate
+  B01 correction has supervisor and independent senior review PASS at product
+  commit `781329891411a883f62bc0b818b47f29e908bd9d`. The publication record
+  targets **BLOCKER_FIX_PUBLISHED** after manual user push; push and remote
+  verification are pending. Portal and VGS remain unresolved I08 work. See
+  [PS01_I08_BLOCKER_01_MORTALITY_CHECKPOINT_CAUSAL_COMPATIBILITY.md](docs/pebblelab/PS01_I08_BLOCKER_01_MORTALITY_CHECKPOINT_CAUSAL_COMPATIBILITY.md).
 - CIV-48 remains **NOT STARTED**, implementation is not authorized, and it is
   deferred until PLAYABLE SLICE 01 and the resulting evidence-driven roadmap
   recalibration are complete. Gate H remains planned. See

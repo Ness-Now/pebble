@@ -107,10 +107,13 @@ SHA-256 is `742f12009735032c0ea0a0e43b01bf2db8d1549b9a066afc552f664505eb348a`;
 final Risk-C is P0 0 / P1 0 / blocking P2 0. The bounded normal renewable
 sweet-berry continuity contract and its Core streaming determinism blocker are
 resolved and published. Population capacity/demographic headroom remains
-unresolved. The next authorized technical action after publication
-reconciliation is the read-only
-`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-08` mission; Increment 08 remains
-unselected and no implementation is authorized. CIV-48 remains not started,
+unresolved. Increment 08 is **SELECTED / IMPLEMENTATION IN PROGRESS / NOT
+QUALIFIED / NOT PUBLISHED**. Its separate Blocker 01 correction has supervisor
+and independent senior review PASS at unchanged product commit
+`781329891411a883f62bc0b818b47f29e908bd9d`. The publication record targets
+**BLOCKER_FIX_PUBLISHED** after manual user push; push and remote verification
+remain pending. Portal and VGS remain unresolved I08 work. See
+[PS01_I08_BLOCKER_01_MORTALITY_CHECKPOINT_CAUSAL_COMPATIBILITY.md](PS01_I08_BLOCKER_01_MORTALITY_CHECKPOINT_CAUSAL_COMPATIBILITY.md). CIV-48 remains not started,
 implementation unauthorized and deferred behind the slice and evidence-driven
 roadmap recalibration.
 See
@@ -267,7 +270,11 @@ PLAYABLE SLICE 01 Increment 06 published tree: 7ee2a64b55ef12ec1193d068dd1145b10
 PLAYABLE SLICE 01 Increment 07: COMPLETE AND PUBLISHED — PASS — REMOTE VERIFIED
 PLAYABLE SLICE 01 Increment 07 published HEAD: 373b5e3688d25e1e139dd735a76d48e38743c1f8
 PLAYABLE SLICE 01 Increment 07 published tree: 56e50d1f910f8825ae344aab50e4a65553ae06ef
-next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-08
+PLAYABLE SLICE 01 Increment 08: SELECTED / IMPLEMENTATION IN PROGRESS / NOT QUALIFIED / NOT PUBLISHED
+PS01 I08 Blocker 01 approved product correction: 781329891411a883f62bc0b818b47f29e908bd9d
+PS01 I08 Blocker 01 status after user publication: BLOCKER_FIX_PUBLISHED
+PS01 I08 Blocker 01 publication: USER PUSH AND REMOTE VERIFICATION PENDING
+next authorized action: USER-PUSH-AND-REMOTE-VERIFY-PS01-I08-BLOCKER-01-PUBLICATION-CHAIN
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
@@ -1677,7 +1684,11 @@ PLAYABLE SLICE 01 Increment 06 published tree: 7ee2a64b55ef12ec1193d068dd1145b10
 PLAYABLE SLICE 01 Increment 07: COMPLETE AND PUBLISHED — PASS — REMOTE VERIFIED
 PLAYABLE SLICE 01 Increment 07 published HEAD: 373b5e3688d25e1e139dd735a76d48e38743c1f8
 PLAYABLE SLICE 01 Increment 07 published tree: 56e50d1f910f8825ae344aab50e4a65553ae06ef
-next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-08
+PLAYABLE SLICE 01 Increment 08: SELECTED / IMPLEMENTATION IN PROGRESS / NOT QUALIFIED / NOT PUBLISHED
+PS01 I08 Blocker 01 approved product correction: 781329891411a883f62bc0b818b47f29e908bd9d
+PS01 I08 Blocker 01 status after user publication: BLOCKER_FIX_PUBLISHED
+PS01 I08 Blocker 01 publication: USER PUSH AND REMOTE VERIFICATION PENDING
+next authorized action: USER-PUSH-AND-REMOTE-VERIFY-PS01-I08-BLOCKER-01-PUBLICATION-CHAIN
 CIV-39 status: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 Gate F status: ACQUIRED AND PUBLISHED — REMOTE VERIFIED
@@ -2465,11 +2476,14 @@ As the milestone is characterized, its evidence drives a roadmap
 recalibration before Wave 6 begins. CIV-48 remains **NOT STARTED —
 IMPLEMENTATION NOT AUTHORIZED**. Gate H remains planned and continues to
 require CIV-48 through CIV-52 unless a future separately authorized roadmap
-review changes that contract. The next authorized technical action after
-publication reconciliation is the read-only
-`REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-08` mission. Increment 08 remains
-**UNSELECTED**; population capacity/demographic headroom remains unresolved,
-and neither Increment-08 implementation nor CIV-48 is authorized.
+review changes that contract. Increment 08 remains **SELECTED /
+IMPLEMENTATION IN PROGRESS / NOT QUALIFIED / NOT PUBLISHED**. The next
+publication action is manual user push of the approved B01 product and
+documentation chain, followed by exact remote verification. This does not
+resume the separate I08 implementation/qualification mission. Portal and VGS
+remain unresolved I08 work; population capacity/demographic headroom remains
+unresolved, and CIV-48 implementation remains unauthorized. See
+[PS01_I08_BLOCKER_01_MORTALITY_CHECKPOINT_CAUSAL_COMPATIBILITY.md](PS01_I08_BLOCKER_01_MORTALITY_CHECKPOINT_CAUSAL_COMPATIBILITY.md).
 
 ## Wave 6 — Organizations, land and law
 
