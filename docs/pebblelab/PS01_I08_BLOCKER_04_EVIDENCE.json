@@ -1,6 +1,6 @@
 {
   "mission": "RESOLVE-PS01-I08-BLOCKER-04-CROSS-WORLD-STRONGHOLD-CACHE-CONCURRENCY",
-  "status": "LOCAL_CORRECTION_READY_FOR_SUPERVISOR_REVIEW_NOT_PUBLISHED",
+  "status": "SENIOR_REVIEW_APPROVED_LOCAL_PUBLICATION_CHAIN_READY_FOR_USER_PUSH_NOT_PUBLISHED",
   "attribution": "PREEXISTING_SHARED_CORE_DEFECT_DISCOVERED_BY_I08",
   "owner": "PebbleCore",
   "environment": {
@@ -1171,7 +1171,24 @@
     "PS01_complete": false,
     "CIV48_authorized": false,
     "GateH_acquired": false,
-    "push_attempted": "NO"
+    "push_attempted": "NO",
+    "local_chain_ready": true,
+    "status": "APPROVED_PUBLICATION_CHAIN_READY_FOR_USER_PUSH",
+    "status_after_user_push_and_remote_verification": "BLOCKER_FIX_PUBLISHED",
+    "manual_user_push_completed": false,
+    "publication_verified": false,
+    "approved_correction_commit": "aa07e3ce71c34842e45611d8e9064de9cb563a16",
+    "approved_correction_tree": "daf3cd604f70c455da0ed13a04cc0b5703856ab8",
+    "approved_correction_parent": "9919e575819dca02ee8e893a37ac9eaaebc36012",
+    "canonical_remote_at_reconciliation": "9919e575819dca02ee8e893a37ac9eaaebc36012",
+    "documentation_commit_identity": "Containing documentation-only commit; resolve through Git delivery metadata",
+    "chain": [
+      "9919e575819dca02ee8e893a37ac9eaaebc36012",
+      "aa07e3ce71c34842e45611d8e9064de9cb563a16",
+      "containingDocumentationPublicationCommit"
+    ],
+    "B03_status": "LOCAL_UNCOMMITTED_CORRECTION_PAUSED_PENDING_B04_PUBLICATION_RECONCILIATION",
+    "I08_status": "IN_PROGRESS_NOT_QUALIFIED_NOT_PUBLISHED"
   },
   "artifact_root": "/tmp/ps01-i08-b04-20261003",
   "canonical_regression_accounting": {
@@ -1245,5 +1262,46 @@
     "evidence_count_and_source_hash_consistency": "PASS",
     "bash_n": "PASS",
     "git_diff_check": "PASS"
+  },
+  "independent_review": {
+    "result": "PS01_I08_BLOCKER_04_INDEPENDENT_REVIEW_PASS",
+    "findings": {
+      "P0": 0,
+      "P1": 0,
+      "blocking_P2": 0
+    },
+    "approved_commit": "aa07e3ce71c34842e45611d8e9064de9cb563a16",
+    "approved_tree": "daf3cd604f70c455da0ed13a04cc0b5703856ab8",
+    "approved_sole_parent": "9919e575819dca02ee8e893a37ac9eaaebc36012",
+    "approved_subject": "fix(core): isolate cross-world seeded structure caches",
+    "safe_to_publish_unchanged": true,
+    "source": "Supervisor-provided independent senior review result",
+    "non_blocking_risk": {
+      "classification": "NON_BLOCKING_RISK",
+      "identity": "preExistingGeneralStructurePlanCacheContextIdentityLimitation",
+      "canonical_and_corrected_example": "Village plans under distinct arbitrary GenCtx height closures can share a cache identity",
+      "introduced_by_B04": false,
+      "bounded_approval_basis": "Canonical seeded generation is adequately identified by the corrected seed-qualified key; stronghold plans do not depend on arbitrary terrain/biome probes",
+      "disposition": "Separate future owning follow-up; no B04 scope expansion",
+      "universal_arbitrary_GenCtx_correctness_claimed": false
+    }
+  },
+  "publication_reconciliation": {
+    "mission": "PUBLISH-RECONCILIATION-PS01-I08-BLOCKER-04-STRONGHOLD-CACHE-CONCURRENCY",
+    "date": "2026-10-03",
+    "scope": "DOCUMENTATION_ONLY",
+    "previous_record_status": "LOCAL_CORRECTION_READY_FOR_SUPERVISOR_REVIEW_NOT_PUBLISHED",
+    "approved_product_commit_amended": false,
+    "product_tests_harnesses_scripts_modified": false,
+    "qualification_rerun": false,
+    "historical_evidence_preserved": true,
+    "canonical_remote": "9919e575819dca02ee8e893a37ac9eaaebc36012",
+    "protected_i08_head": "8b7b1970c0f85e14b905ab032c2448057e9737b9",
+    "protected_i08_diff_sha256": "b5b98710ee334c47ecc3b38f5a1bdbb6416c45127a7e72eaaf735f3ba5760d1c",
+    "protected_i08_modified_tracked_files": 9,
+    "protected_i08_insertions": 236,
+    "protected_i08_deletions": 19,
+    "protected_i08_staged_changes": false,
+    "protected_i08_untracked_files": false
   }
 }

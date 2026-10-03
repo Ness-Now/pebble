@@ -2478,11 +2478,21 @@ IMPLEMENTATION NOT AUTHORIZED**. Gate H remains planned and continues to
 require CIV-48 through CIV-52 unless a future separately authorized roadmap
 review changes that contract. Increment 08 remains **SELECTED /
 IMPLEMENTATION IN PROGRESS / NOT QUALIFIED / NOT PUBLISHED**. The next
-publication action is manual user push of the approved B01 product and
-documentation chain, followed by exact remote verification. This does not
-resume the separate I08 implementation/qualification mission. Portal and VGS
-remain unresolved I08 work; population capacity/demographic headroom remains
-unresolved, and CIV-48 implementation remains unauthorized. See
+publication action is manual user push of the approved B04 correction and
+documentation chain, followed by exact remote verification. B01 is already
+**BLOCKER_FIX_PUBLISHED** in canonical `9919e575819dca02ee8e893a37ac9eaaebc36012`.
+B04 shared Core correction `aa07e3ce71c34842e45611d8e9064de9cb563a16` is
+independent-senior-review PASS (P0 0 / P1 0 / blocking P2 0), safe to publish
+unchanged, **LOCAL PUBLICATION CHAIN READY / NOT PUBLISHED**. Only successful
+user push and remote verification establish its **BLOCKER_FIX_PUBLISHED**
+status. Its immutable seeded stronghold ownership and seed-qualified plan key
+resolve a pre-existing shared Core defect; arbitrary public `GenCtx` context
+identity remains a separate non-blocking risk. Historical crash/race/gate FAIL
+evidence is preserved. The protected uncommitted B03 correction remains paused
+pending B04 publication/reconciliation. This does not resume or qualify I08;
+final-source qualification remains pending. Population capacity/demographic
+headroom remains unresolved, and CIV-48 implementation remains unauthorized. See
+[PS01_I08_BLOCKER_04_CROSS_WORLD_STRONGHOLD_CACHE_CONCURRENCY.md](PS01_I08_BLOCKER_04_CROSS_WORLD_STRONGHOLD_CACHE_CONCURRENCY.md) and
 [PS01_I08_BLOCKER_01_MORTALITY_CHECKPOINT_CAUSAL_COMPATIBILITY.md](PS01_I08_BLOCKER_01_MORTALITY_CHECKPOINT_CAUSAL_COMPATIBILITY.md).
 
 ## Wave 6 — Organizations, land and law

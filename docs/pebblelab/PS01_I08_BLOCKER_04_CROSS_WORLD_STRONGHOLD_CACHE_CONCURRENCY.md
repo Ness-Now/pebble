@@ -1,6 +1,7 @@
 # PS01 I08 Blocker 04 — Cross-World stronghold cache concurrency
 
-Status: **LOCAL CORRECTION CANDIDATE — NOT PUBLISHED — SUPERVISOR REVIEW REQUIRED**.
+Status: **SENIOR REVIEW APPROVED — LOCAL PUBLICATION CHAIN READY FOR USER PUSH — NOT PUBLISHED**.
+Status after successful user push and remote verification: **BLOCKER_FIX_PUBLISHED**.
 Mission: `RESOLVE-PS01-I08-BLOCKER-04-CROSS-WORLD-STRONGHOLD-CACHE-CONCURRENCY`.
 Attribution: `PREEXISTING_SHARED_CORE_DEFECT_DISCOVERED_BY_I08`.
 Owner: **PebbleCore**.
@@ -9,13 +10,42 @@ This dedicated branch starts directly at canonical
 `9919e575819dca02ee8e893a37ac9eaaebc36012`, fetched from
 `https://github.com/Ness-Now/pebble.git` and checked against both the remote
 tracking ref and `git ls-remote`. It contains no I08, B02 or B03 implementation.
-The candidate is local; Git delivery metadata identifies its one commit, tree
-and exact parent without embedding a self-referential commit SHA here.
+The unchanged approved correction is `aa07e3ce71c34842e45611d8e9064de9cb563a16`, tree
+`daf3cd604f70c455da0ed13a04cc0b5703856ab8`, sole parent
+`9919e575819dca02ee8e893a37ac9eaaebc36012`, subject
+`fix(core): isolate cross-world seeded structure caches`.
+The containing documentation commit is identified by Git delivery metadata
+rather than embedded self-referentially. The local publication chain contains
+exactly the canonical baseline, this approved correction, then that one
+documentation-only commit.
 
 I08 remains selected / implementation in progress / not qualified / not
 published. PS01 remains required / in progress / not complete. CIV-48 remains
 not started / implementation not authorized. Gate H remains planned. This
 mission does not run the I08 campaign, reconcile its worktree or acquire a gate.
+
+## Independent review and publication reconciliation
+
+Reconciliation mission:
+`PUBLISH-RECONCILIATION-PS01-I08-BLOCKER-04-STRONGHOLD-CACHE-CONCURRENCY`.
+Independent senior review: **PS01_I08_BLOCKER_04_INDEPENDENT_REVIEW_PASS**;
+**P0 0 / P1 0 / blocking P2 0**. The independent reviewer explicitly concluded
+that exact correction `aa07e3ce71c34842e45611d8e9064de9cb563a16` is safe to
+publish unchanged as the bounded shared Core correction. It is not amended.
+The earlier local-candidate / supervisor-review-required status is superseded
+by this approval; its qualification and historical FAIL evidence remain intact.
+
+At documentation reconciliation the fetched canonical remote remains
+`9919e575819dca02ee8e893a37ac9eaaebc36012`. This prepares a **local publication
+chain** only. **User push and subsequent exact remote verification are pending**;
+B04 is not yet published. Only after both succeed does its publication status
+become **BLOCKER_FIX_PUBLISHED**. No I08 lifecycle code is included in B04.
+
+The established B01 product/documentation publication chain is already in
+that canonical history. Publishing B04 does not qualify I08. The separate
+uncommitted B03 correction remains paused pending B04 publication/reconciliation
+and explicit I08 resumption. All earlier I08/B01/B02/B03 FAIL records retain
+their original meaning; corrected evidence is additive.
 
 ## Protected I08/B03 worktree
 
@@ -216,7 +246,25 @@ overworld (0,0), nether (0,0), and end (0,0). Output includes block/biome SHA-25
 complete block-entity/entity specifications with sorted data keys, and structure
 refs. Both corrected native and TSan builds ran twice per seed. All twelve
 outputs per build match their canonical counterpart byte-for-byte, and the
-six distinct seed captures have distinct hashes. Goldens are untouched.
+six distinct seed captures have distinct hashes. The comparison matrix covers
+114 stronghold plans and 30 complete chunk outputs; deterministic Core and
+generation sections also retain **352 / 0** owning assertions. Goldens are untouched.
+
+## Independent non-blocking context-identity risk
+
+**NON_BLOCKING_RISK — PRE-EXISTING GENERAL PLAN-CACHE CONTEXT IDENTITY LIMITATION**.
+Arbitrary public `GenCtx` instances can supply terrain/biome closures whose
+behavior is not fully represented by the cache key. The reviewer demonstrated
+both canonical and corrected village examples in which different height
+behavior can share a cache identity. This limitation exists on canonical and
+is not introduced by B04. Normal canonical seeded generation is adequately
+identified by the corrected seed-qualified key; stronghold plans do not depend
+on those arbitrary terrain/biome probes.
+
+This is a separate future owning follow-up, outside B04. Approval does not
+claim universally correct plan-cache reuse for every arbitrary public `GenCtx`.
+No context-identity expansion or additional correction is part of this
+publication reconciliation.
 
 ## Residual risks and non-claims
 
