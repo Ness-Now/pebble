@@ -27,6 +27,22 @@ func checkD(_ name: String, _ got: Double, _ want: Double, tol: Double = 1e-12) 
 func section(_ name: String) { print("\n— \(name)") }
 
 if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
+    == "core-stronghold-concurrency" {
+    runPebbleCoreStrongholdConcurrencySmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
+if let mode = ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"],
+   ["core-stronghold-ordinary", "core-stronghold-repeated"].contains(mode) {
+    runPebbleCoreStrongholdOrdinaryReplacementSmoke(
+        replacements: mode == "core-stronghold-ordinary" ? 1 : 8
+    )
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
     == "ps01-increment-06-restart" {
     runPebbleAgentsMovementSmoke()
     print("\n\(passed) passed, \(failed) failed")
@@ -3010,6 +3026,7 @@ runPebbleAgentsEcologicalObservationSmoke()
 runPebbleAgentsAgricultureSmoke()
 runPebbleAgentsAgricultureCycleObservationSmoke()
 runPebbleAgentsHarvestPublicationSmoke()
+runPebbleCoreStrongholdConcurrencySmoke()
 runPebbleCorePhysicalActionSmoke()
 runPebbleCoreAgricultureSmoke()
 runPebbleCoreWildSubsistenceSmoke()

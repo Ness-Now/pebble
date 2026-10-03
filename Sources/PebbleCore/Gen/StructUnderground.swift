@@ -5,14 +5,6 @@ import Foundation
 
 private let AIR = 0
 
-private var strongholdCache: (seed: UInt32, positions: [(Int, Int)])?
-private func strongholdChunks(_ seed: UInt32) -> [(Int, Int)] {
-    if strongholdCache == nil || strongholdCache!.seed != seed {
-        strongholdCache = (seed, strongholdPositions(seed))
-    }
-    return strongholdCache!.positions
-}
-
 func registerUndergroundStructures() {
     registerStructure(StructureDef(
         // radius must cover the worst-case corridor walk (~103 blocks ≈ 7
@@ -125,7 +117,7 @@ func registerUndergroundStructures() {
         // (the PORTAL ROOM is always last/farthest) get sliced off
         id: "stronghold", spacing: 1, separation: 0, salt: 0, maxRadiusChunks: 11,
         check: { ctx, ocx, ocz, _ in
-            for (sx, sz) in strongholdChunks(ctx.seed) where sx == ocx && sz == ocz { return true }
+            for (sx, sz) in ctx.strongholdOrigins where sx == ocx && sz == ocz { return true }
             return false
         },
         plan: { _, ocx, ocz, rng in

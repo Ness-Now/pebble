@@ -226,6 +226,21 @@ Evicted-pointer authenticity, incomplete primary actor/subject validation and
 superseded care boundaries remain non-blocking residual risks, documented in
 [PS01_I08_BLOCKER_01_MORTALITY_CHECKPOINT_CAUSAL_COMPATIBILITY.md](PS01_I08_BLOCKER_01_MORTALITY_CHECKPOINT_CAUSAL_COMPATIBILITY.md). Portal and VGS remain unresolved I08 work.
 
+PS01 I08 Blocker 04, cross-World stronghold cache concurrency, is a separate
+**LOCAL SHARED CORE CORRECTION CANDIDATE — NOT PUBLISHED** from exact canonical
+`9919e575819dca02ee8e893a37ac9eaaebc36012`. It is attributed to
+`PREEXISTING_SHARED_CORE_DEFECT_DISCOVERED_BY_I08`, independently of I08
+continuation and B02/B03 custody work. The original exit-139 crash and canonical
+TSan race remain historical FAIL evidence. Qualification and ownership details
+are recorded in
+[PS01_I08_BLOCKER_04_CROSS_WORLD_STRONGHOLD_CACHE_CONCURRENCY.md](PS01_I08_BLOCKER_04_CROSS_WORLD_STRONGHOLD_CACHE_CONCURRENCY.md).
+This candidate requires supervisor review and user publication; it does not
+qualify I08, complete PS01, authorize CIV-48 or acquire Gate H.
+Focused TSan qualification passes 838/0, with ungated single/eight replacement
+controls passing 6/0 and 34/0. Native stress passes 18 fresh processes and 72
+replacements. Canonical smoke remains 5,758/3 with the same three historical
+failures; the repository gate stops at stage 5 and is not PASS.
+
 The milestone must establish a normal bounded persistent sandbox path, first
 measured with approximately 24 full-cognition founders and designed for roughly
 20–30 without redesign. It must support safe Pause / Play / 1x, read-only free

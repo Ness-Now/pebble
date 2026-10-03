@@ -885,3 +885,7 @@ roadmap, manifest or status.
 ## Reviewed blocker publication records
 
 - [PS01 I08 Blocker 01 — Natural extinction/checkpoint causal compatibility](PS01_I08_BLOCKER_01_MORTALITY_CHECKPOINT_CAUSAL_COMPATIBILITY.md): supervisor and independent senior review PASS for unchanged product correction `781329891411a883f62bc0b818b47f29e908bd9d`; publication record targets `BLOCKER_FIX_PUBLISHED` after manual user push, with remote verification pending. Historical FAIL evidence and all three non-blocking residual risks are preserved. I08 remains selected, implementation in progress, not qualified and not published; portal/VGS work remains unresolved.
+
+## Local blocker correction candidates
+
+- [PS01 I08 Blocker 04 — Cross-World stronghold cache concurrency](PS01_I08_BLOCKER_04_CROSS_WORLD_STRONGHOLD_CACHE_CONCURRENCY.md): separate shared PebbleCore correction from exact canonical `9919e575819dca02ee8e893a37ac9eaaebc36012`; local candidate requiring supervisor review, not published and not I08 qualification. Preserves exit-139 and TSan historical FAIL evidence; restores immutable seeded stronghold ownership and seed-qualified structure-plan reuse.

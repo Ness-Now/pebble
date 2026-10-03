@@ -24,6 +24,10 @@ public final class Rng {
 
 public struct GenCtx {
     public let seed: UInt32
+    /// Immutable seed-derived lookup owned by this calculation context. Old
+    /// World workers may retain it across an epoch change without sharing a
+    /// mutable cache slot with the incoming World.
+    let strongholdOrigins: [(Int, Int)]
     /// noise-based surface height estimate (overworld) or floor probe (nether/end)
     public let heightAt: (Int, Int) -> Int
     public let biomeAt: (Int, Int) -> Int
@@ -31,6 +35,7 @@ public struct GenCtx {
 
     public init(seed: UInt32, heightAt: @escaping (Int, Int) -> Int, biomeAt: @escaping (Int, Int) -> Int, dim: Int) {
         self.seed = seed
+        self.strongholdOrigins = strongholdPositions(seed)
         self.heightAt = heightAt
         self.biomeAt = biomeAt
         self.dim = dim
@@ -248,7 +253,9 @@ public func structureOriginFor(_ def: StructureDef, _ seed: UInt32, _ rcx: Int, 
 }
 
 public func getPlan(_ def: StructureDef, _ ctx: GenCtx, _ ocx: Int, _ ocz: Int) -> StructurePlan? {
-    let key = "\(ctx.dim):\(def.id):\(ocx):\(ocz)"
+    // Epoch reset can overlap old and new seeded calculations. A late old
+    // plan is reusable only by the same seed, even at identical coordinates.
+    let key = "\(ctx.seed):\(ctx.dim):\(def.id):\(ocx):\(ocz)"
     planCacheLock.lock()
     if let cached = planCache[key] {
         planCacheLock.unlock()

@@ -1,0 +1,1249 @@
+{
+  "mission": "RESOLVE-PS01-I08-BLOCKER-04-CROSS-WORLD-STRONGHOLD-CACHE-CONCURRENCY",
+  "status": "LOCAL_CORRECTION_READY_FOR_SUPERVISOR_REVIEW_NOT_PUBLISHED",
+  "attribution": "PREEXISTING_SHARED_CORE_DEFECT_DISCOVERED_BY_I08",
+  "owner": "PebbleCore",
+  "environment": {
+    "date": "2026-10-03",
+    "architecture": "arm64",
+    "macOS": "26.6.2 (25G83)",
+    "swift": "Apple Swift 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)"
+  },
+  "baseline": {
+    "repository": "Ness-Now/pebble",
+    "remote": "https://github.com/Ness-Now/pebble.git",
+    "remote_ref": "refs/heads/lab/pebblelab-v1",
+    "remote_sha": "9919e575819dca02ee8e893a37ac9eaaebc36012",
+    "tree": "0536031690eca74648a637f1ef9a48aa1784b10d",
+    "fetch_command": "git fetch origin",
+    "fetch_exit": 0,
+    "verification_commands": [
+      "git rev-parse origin/lab/pebblelab-v1",
+      "git ls-remote origin refs/heads/lab/pebblelab-v1"
+    ],
+    "initial_b04_status": "CLEAN",
+    "worktree": "/Users/nessnow/.codex/worktrees/ps01-i08-blocker-04/pebble-lab",
+    "branch": "codex/ps01-i08-blocker-04-stronghold-cache-concurrency",
+    "final_remote_sha": "9919e575819dca02ee8e893a37ac9eaaebc36012"
+  },
+  "i08_protection": {
+    "before": {
+      "path": "/Users/nessnow/Dev/pebble-lab",
+      "branch": "codex/ps01-increment-08-normal-continuity",
+      "head": "8b7b1970c0f85e14b905ab032c2448057e9737b9",
+      "status": " M Sources/Pebble/CommandsM.swift\n M Sources/Pebble/PebbleAgentController+Commands.swift\n M Sources/Pebble/PebbleAgentController+Lifecycle.swift\n M Sources/Pebble/PebbleAgentController+Persistence.swift\n M Sources/Pebble/PebbleAgentController+WorldContinuation.swift\n M Sources/Pebble/PebbleIncrement08ContinuationHarness.swift\n M Sources/PebbleCore/Game/GameCore.swift\n M Sources/pebsmoke/PebbleCoreWorldContinuationSmoke.swift\n M scripts/verify-pebblelab-ps01-increment-08.sh\n",
+      "diff_sha256": "b5b98710ee334c47ecc3b38f5a1bdbb6416c45127a7e72eaaf735f3ba5760d1c",
+      "index_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": {
+        "Sources/Pebble/CommandsM.swift": "10fdf6eafc36a3ab502bd9d069e7f456357db33bcef55522e9b54d7e199099ae",
+        "Sources/Pebble/PebbleAgentController+Commands.swift": "51c574be0e8067723b7b612ea93b51e9f07738862ed55889d1029135c7400914",
+        "Sources/Pebble/PebbleAgentController+Lifecycle.swift": "dd28118c9c9f8aa2e0c92a550cfea1ae556fdcddad25fd7d53053be4277293be",
+        "Sources/Pebble/PebbleAgentController+Persistence.swift": "a56c83f4da1d78cd08f247a7719402bf5502143ad92b6542e7069000c4b79ba8",
+        "Sources/Pebble/PebbleAgentController+WorldContinuation.swift": "af571284dda4245e7ccb39ef8f05adf01687999794585504e464fac53e221a73",
+        "Sources/Pebble/PebbleIncrement08ContinuationHarness.swift": "a0306a7d7cc3e74828c1691e49831e492eaca210e5df1c0824bf4cf7bf5041cb",
+        "Sources/PebbleCore/Game/GameCore.swift": "e7ff07463b65ca46652db25bc3d3181235f36a24d8a6c68356d88734e6f5eaac",
+        "Sources/pebsmoke/PebbleCoreWorldContinuationSmoke.swift": "41a8b6bed4ceed231096a6322437d91d5448af0199fe1bff8ba1bb564c79a015",
+        "scripts/verify-pebblelab-ps01-increment-08.sh": "dcea22843cc3d4ccc9bae5c1d527cb6205f9cdf1db2a180d5d929b05276d5e4d"
+      },
+      "numstat": "8\t0\tSources/Pebble/CommandsM.swift\n17\t1\tSources/Pebble/PebbleAgentController+Commands.swift\n19\t3\tSources/Pebble/PebbleAgentController+Lifecycle.swift\n5\t1\tSources/Pebble/PebbleAgentController+Persistence.swift\n21\t6\tSources/Pebble/PebbleAgentController+WorldContinuation.swift\n135\t1\tSources/Pebble/PebbleIncrement08ContinuationHarness.swift\n18\t6\tSources/PebbleCore/Game/GameCore.swift\n12\t0\tSources/pebsmoke/PebbleCoreWorldContinuationSmoke.swift\n1\t1\tscripts/verify-pebblelab-ps01-increment-08.sh\n"
+    },
+    "after": {
+      "path": "/Users/nessnow/Dev/pebble-lab",
+      "branch": "codex/ps01-increment-08-normal-continuity",
+      "head": "8b7b1970c0f85e14b905ab032c2448057e9737b9",
+      "status": " M Sources/Pebble/CommandsM.swift\n M Sources/Pebble/PebbleAgentController+Commands.swift\n M Sources/Pebble/PebbleAgentController+Lifecycle.swift\n M Sources/Pebble/PebbleAgentController+Persistence.swift\n M Sources/Pebble/PebbleAgentController+WorldContinuation.swift\n M Sources/Pebble/PebbleIncrement08ContinuationHarness.swift\n M Sources/PebbleCore/Game/GameCore.swift\n M Sources/pebsmoke/PebbleCoreWorldContinuationSmoke.swift\n M scripts/verify-pebblelab-ps01-increment-08.sh\n",
+      "diff_sha256": "b5b98710ee334c47ecc3b38f5a1bdbb6416c45127a7e72eaaf735f3ba5760d1c",
+      "index_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": {
+        "Sources/Pebble/CommandsM.swift": "10fdf6eafc36a3ab502bd9d069e7f456357db33bcef55522e9b54d7e199099ae",
+        "Sources/Pebble/PebbleAgentController+Commands.swift": "51c574be0e8067723b7b612ea93b51e9f07738862ed55889d1029135c7400914",
+        "Sources/Pebble/PebbleAgentController+Lifecycle.swift": "dd28118c9c9f8aa2e0c92a550cfea1ae556fdcddad25fd7d53053be4277293be",
+        "Sources/Pebble/PebbleAgentController+Persistence.swift": "a56c83f4da1d78cd08f247a7719402bf5502143ad92b6542e7069000c4b79ba8",
+        "Sources/Pebble/PebbleAgentController+WorldContinuation.swift": "af571284dda4245e7ccb39ef8f05adf01687999794585504e464fac53e221a73",
+        "Sources/Pebble/PebbleIncrement08ContinuationHarness.swift": "a0306a7d7cc3e74828c1691e49831e492eaca210e5df1c0824bf4cf7bf5041cb",
+        "Sources/PebbleCore/Game/GameCore.swift": "e7ff07463b65ca46652db25bc3d3181235f36a24d8a6c68356d88734e6f5eaac",
+        "Sources/pebsmoke/PebbleCoreWorldContinuationSmoke.swift": "41a8b6bed4ceed231096a6322437d91d5448af0199fe1bff8ba1bb564c79a015",
+        "scripts/verify-pebblelab-ps01-increment-08.sh": "dcea22843cc3d4ccc9bae5c1d527cb6205f9cdf1db2a180d5d929b05276d5e4d"
+      },
+      "numstat": "8\t0\tSources/Pebble/CommandsM.swift\n17\t1\tSources/Pebble/PebbleAgentController+Commands.swift\n19\t3\tSources/Pebble/PebbleAgentController+Lifecycle.swift\n5\t1\tSources/Pebble/PebbleAgentController+Persistence.swift\n21\t6\tSources/Pebble/PebbleAgentController+WorldContinuation.swift\n135\t1\tSources/Pebble/PebbleIncrement08ContinuationHarness.swift\n18\t6\tSources/PebbleCore/Game/GameCore.swift\n12\t0\tSources/pebsmoke/PebbleCoreWorldContinuationSmoke.swift\n1\t1\tscripts/verify-pebblelab-ps01-increment-08.sh\n"
+    },
+    "identical": true
+  },
+  "cache_architecture": {
+    "stronghold_owner": "immutable GenCtx value; 19 origins derived once from captured seed",
+    "stronghold_global_mutation": "REMOVED",
+    "plan_cache_key": [
+      "seed",
+      "dimension",
+      "structure_id",
+      "origin_x",
+      "origin_z"
+    ],
+    "plan_lock": "existing NSLock; lookup/publication only",
+    "plan_eviction": "unchanged count > 600 clear; deterministic recomputation",
+    "world_reset": "no cache reset required; old epoch results rejected by unchanged Core owner",
+    "worker_drain": "NOT_ADDED"
+  },
+  "historical_evidence": {
+    "original_release_crash": {
+      "verdict": "FAIL_IMMUTABLE",
+      "exit": 139,
+      "executable_sha256": "e021ff7e4dddb573566eb810e3b51d0a173258f83a8ba95d47903fc48126d026",
+      "outgoing_seed": 14,
+      "incoming_seed": 73,
+      "artifacts": "/tmp/ps01-i08-b03-20261002/qualification-crashed-core/"
+    },
+    "canonical_ordinary_tsan": {
+      "verdict": "FAIL_IMMUTABLE",
+      "exit": 134,
+      "executable_sha256": "605f464412eeef71a673a539262eb5d3091be43f31ed7d0622e3e14aaa9a875b",
+      "trace": "BEFORE_REPLACEMENT seed=14 nextSeed=73 outstanding=24 active=9 epoch=1 continuation=NONE controller=NONE\n==================\nWARNING: ThreadSanitizer: data race (pid=43964)\n  Read of size 8 at 0x000100a19858 by thread T20:\n    #0 strongholdChunks(_:) StructUnderground.swift:10 (canonical-ordinary-tsan:arm64+0x100643170)\n    #1 closure #3 in registerUndergroundStructures() StructUnderground.swift:128 (canonical-ordinary-tsan:arm64+0x100646a6c)\n    #2 getPlan(_:_:_:_:) StructFramework.swift:260 (canonical-ordinary-tsan:arm64+0x10061d0fc)\n    #3 buildStructuresForChunk(_:_:_:_:_:) StructFramework.swift:283 (canonical-ordinary-tsan:arm64+0x10061dd08)\n    #4 generateChunk(_:_:_:_:) Generator.swift:129 (canonical-ordinary-tsan:arm64+0x100375ba0)\n    #5 closure #3 in closure #1 in GameCore.requestChunk(_:_:_:ignoringGenerationLimit:physicalCoverage:playerStreaming:) GameCore.swift:1554 (canonical-ordinary-tsan:arm64+0x100307988)\n    #6 partial apply for closure #3 in closure #1 in GameCore.requestChunk(_:_:_:ignoringGenerationLimit:physicalCoverage:playerStreaming:) /<compiler-generated> (canonical-ordinary-tsan:arm64+0x10034ff90)\n    #7 LoadProf.time<A>(_:_:) GameCore.swift:43 (canonical-ordinary-tsan:arm64+0x1002cfd44)\n    #8 closure #1 in GameCore.requestChunk(_:_:_:ignoringGenerationLimit:physicalCoverage:playerStreaming:) GameCore.swift:1554 (canonical-ordinary-tsan:arm64+0x100306370)\n    #9 partial apply for closure #1 in GameCore.requestChunk(_:_:_:ignoringGenerationLimit:physicalCoverage:playerStreaming:) /<compiler-generated> (canonical-ordinary-tsan:arm64+0x1003133e0)\n    #10 thunk for @escaping @callee_guaranteed @Sendable () -> () /<compiler-generated> (canonical-ordinary-tsan:arm64+0x1002fef60)\n    #11 __tsan::invoke_and_release_block(void*) <null> (libclang_rt.tsan_osx_dynamic.dylib:arm64e+0x8cb18)\n    #12 _dispatch_client_callout <null> (libdispatch.dylib:arm64e+0x1b4ac)\n\n  Previous write of size 8 at 0x000100a19858 by main thread (mutexes: write M0):\n    #0 strongholdChunks(_:) StructUnderground.swift:11 (canonical-ordinary-tsan:arm64+0x100643368)\n    #1 closure #3 in registerUndergroundStructures() StructUnderground.swift:128 (canonical-ordinary-tsan:arm64+0x100646a6c)\n    #2 getPlan(_:_:_:_:) StructFramework.swift:260 (canonical-ordinary-tsan:arm64+0x10061d0fc)\n    #3 buildStructuresForChunk(_:_:_:_:_:) StructFramework.swift:283 (canonical-ordinary-tsan:arm64+0x10061dd08)\n    #4 generateChunk(_:_:_:_:) Generator.swift:129 (canonical-ordinary-tsan:arm64+0x100375ba0)\n    #5 GameCore.ensureChunksLoaded(_:_:_:_:) GameCore.swift:1877 (canonical-ordinary-tsan:arm64+0x1002e3dd8)\n    #6 GameCore.enterWorld(_:_:_:) GameCore.swift:885 (canonical-ordinary-tsan:arm64+0x1002f3418)\n    #7 GameCore.loadWorld(_:) GameCore.swift:816 (canonical-ordinary-tsan:arm64+0x1002f497c)\n    #8 main ordinary-world-replacement.swift:23 (canonical-ordinary-tsan:arm64+0x100001e8c)\n\n  Location is global 'strongholdCache' at 0x000100a19850 (canonical-ordinary-tsan+0x1007c5858)\n\n  Mutex M0 (0x00010be2c2e8) created at:\n    #0 pthread_mutex_init <null> (libclang_rt.tsan_osx_dynamic.dylib:arm64e+0x352ec)\n    #1 -[NSRecursiveLock init] <null> (Foundation:arm64e+0x9c04)\n    #2 NSRecursiveLock.__allocating_init() NSObject.h (canonical-ordinary-tsan:arm64+0x1002dce40)\n    #3 GameCore.init() GameCore.swift:390 (canonical-ordinary-tsan:arm64+0x1002e6cb0)\n    #4 GameCore.__allocating_init() GameCore.swift (canonical-ordinary-tsan:arm64+0x1002e6110)\n    #5 main ordinary-world-replacement.swift:12 (canonical-ordinary-tsan:arm64+0x100001350)\n\n  Thread T20 (tid=24586451, running) is a GCD worker thread\n\nSUMMARY: ThreadSanitizer: data race StructUnderground.swift:10 in strongholdChunks(_:)\n==================\n"
+    },
+    "prior_control_accounting": {
+      "b02-fixture-tsan": [
+        0
+      ],
+      "b02-ordinary-release-v2": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "b02-ordinary-tsan": [
+        134,
+        0,
+        0
+      ],
+      "b02-sequence-release": [
+        0,
+        0,
+        0
+      ],
+      "b02-sequence-tsan": [
+        134
+      ],
+      "b03-fixture-tsan": [
+        0
+      ],
+      "b03-ordinary-release": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "b03-ordinary-release-v2": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "b03-ordinary-tsan": [
+        0,
+        0,
+        0
+      ],
+      "b03-sequence-release": [
+        0,
+        0,
+        0
+      ],
+      "b03-sequence-tsan": [
+        134
+      ],
+      "canonical-cache-tsan": [
+        134
+      ],
+      "canonical-fixture-tsan": [
+        0
+      ],
+      "canonical-ordinary-release-v2": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "canonical-ordinary-tsan": [
+        0,
+        0,
+        0
+      ],
+      "canonical-ordinary-tsan-second-batch": [
+        0,
+        0,
+        134
+      ],
+      "canonical-sequence-release": [
+        0,
+        0,
+        0
+      ],
+      "canonical-sequence-tsan": [
+        0
+      ]
+    },
+    "source_ownership_hashes": {
+      "Sources/PebbleCore/Gen/StructUnderground.swift": {
+        "9919e575819dca02ee8e893a37ac9eaaebc36012": "c2796fdc5a3ee4651669d14b2699eb32b5e43870594274cbe776d5839329f7a8",
+        "066704f53275ca56f863b5911d8799d8072c2196": "c2796fdc5a3ee4651669d14b2699eb32b5e43870594274cbe776d5839329f7a8",
+        "8b7b1970c0f85e14b905ab032c2448057e9737b9": "c2796fdc5a3ee4651669d14b2699eb32b5e43870594274cbe776d5839329f7a8",
+        "CURRENT_B03": "c2796fdc5a3ee4651669d14b2699eb32b5e43870594274cbe776d5839329f7a8"
+      },
+      "Sources/PebbleCore/Gen/StructFramework.swift": {
+        "9919e575819dca02ee8e893a37ac9eaaebc36012": "d49f9f1c76690a8c592e61bbe1cfc4a8d19cfa22aeed65d892110b738446a993",
+        "066704f53275ca56f863b5911d8799d8072c2196": "d49f9f1c76690a8c592e61bbe1cfc4a8d19cfa22aeed65d892110b738446a993",
+        "8b7b1970c0f85e14b905ab032c2448057e9737b9": "d49f9f1c76690a8c592e61bbe1cfc4a8d19cfa22aeed65d892110b738446a993",
+        "CURRENT_B03": "d49f9f1c76690a8c592e61bbe1cfc4a8d19cfa22aeed65d892110b738446a993"
+      },
+      "Sources/PebbleCore/Gen/StructBigNetherEnd.swift": {
+        "9919e575819dca02ee8e893a37ac9eaaebc36012": "af7d75df7818aaeb9af4231937ff7009b886044b5d3132c3836ba53aa83ceef1",
+        "066704f53275ca56f863b5911d8799d8072c2196": "af7d75df7818aaeb9af4231937ff7009b886044b5d3132c3836ba53aa83ceef1",
+        "8b7b1970c0f85e14b905ab032c2448057e9737b9": "af7d75df7818aaeb9af4231937ff7009b886044b5d3132c3836ba53aa83ceef1",
+        "CURRENT_B03": "af7d75df7818aaeb9af4231937ff7009b886044b5d3132c3836ba53aa83ceef1"
+      },
+      "Sources/PebbleCore/Gen/Generator.swift": {
+        "9919e575819dca02ee8e893a37ac9eaaebc36012": "65918ffffb68dc484f5abc3403dee65491dc8e8cc152978909dc0c95e520ff23",
+        "066704f53275ca56f863b5911d8799d8072c2196": "65918ffffb68dc484f5abc3403dee65491dc8e8cc152978909dc0c95e520ff23",
+        "8b7b1970c0f85e14b905ab032c2448057e9737b9": "65918ffffb68dc484f5abc3403dee65491dc8e8cc152978909dc0c95e520ff23",
+        "CURRENT_B03": "65918ffffb68dc484f5abc3403dee65491dc8e8cc152978909dc0c95e520ff23"
+      },
+      "Sources/PebbleCore/Gen/Terrain.swift": {
+        "9919e575819dca02ee8e893a37ac9eaaebc36012": "60b401f24f71d4f16a3d17fe8a97cdfabc675396866418add2b4255c1f9b9289",
+        "066704f53275ca56f863b5911d8799d8072c2196": "60b401f24f71d4f16a3d17fe8a97cdfabc675396866418add2b4255c1f9b9289",
+        "8b7b1970c0f85e14b905ab032c2448057e9737b9": "60b401f24f71d4f16a3d17fe8a97cdfabc675396866418add2b4255c1f9b9289",
+        "CURRENT_B03": "60b401f24f71d4f16a3d17fe8a97cdfabc675396866418add2b4255c1f9b9289"
+      },
+      "Sources/PebbleCore/Gen/NetherEnd.swift": {
+        "9919e575819dca02ee8e893a37ac9eaaebc36012": "f3ae60d3ce5f9b280ac76b002197ee4c9413885f27879f12cc9c2ad9a2611239",
+        "066704f53275ca56f863b5911d8799d8072c2196": "f3ae60d3ce5f9b280ac76b002197ee4c9413885f27879f12cc9c2ad9a2611239",
+        "8b7b1970c0f85e14b905ab032c2448057e9737b9": "f3ae60d3ce5f9b280ac76b002197ee4c9413885f27879f12cc9c2ad9a2611239",
+        "CURRENT_B03": "f3ae60d3ce5f9b280ac76b002197ee4c9413885f27879f12cc9c2ad9a2611239"
+      },
+      "Sources/PebbleCore/Game/GameCore.swift": {
+        "9919e575819dca02ee8e893a37ac9eaaebc36012": "d1e92f5e38c0af43a7adaf246a2a9fd6210c7db9bd4d2e3570fa6576f4c7c8b3",
+        "066704f53275ca56f863b5911d8799d8072c2196": "21d28e851746379b704eaae7fe582ab7322e4347d0861e64bd092d9a69a83d59",
+        "8b7b1970c0f85e14b905ab032c2448057e9737b9": "97b2419c13224f440dab4eb01cc959c88d011ebe6a6e5a0ceaf9d3b32ad1ddc0",
+        "CURRENT_B03": "e7ff07463b65ca46652db25bc3d3181235f36a24d8a6c68356d88734e6f5eaac"
+      },
+      "Sources/pebsmoke/PebbleCorePersistenceCorrection07Smoke.swift": {
+        "9919e575819dca02ee8e893a37ac9eaaebc36012": "f34b6cade404d4b831bac7b587efde6c79bd183ca346a5a74c04033dbbeb344f",
+        "066704f53275ca56f863b5911d8799d8072c2196": "f34b6cade404d4b831bac7b587efde6c79bd183ca346a5a74c04033dbbeb344f",
+        "8b7b1970c0f85e14b905ab032c2448057e9737b9": "f34b6cade404d4b831bac7b587efde6c79bd183ca346a5a74c04033dbbeb344f",
+        "CURRENT_B03": "f34b6cade404d4b831bac7b587efde6c79bd183ca346a5a74c04033dbbeb344f"
+      },
+      "Sources/pebsmoke/PebbleCorePersistenceCorrection08Smoke.swift": {
+        "9919e575819dca02ee8e893a37ac9eaaebc36012": "901836b8f29dd6967edec31deaf8609239b51a5c002982a4109f59537d5bc6c1",
+        "066704f53275ca56f863b5911d8799d8072c2196": "901836b8f29dd6967edec31deaf8609239b51a5c002982a4109f59537d5bc6c1",
+        "8b7b1970c0f85e14b905ab032c2448057e9737b9": "901836b8f29dd6967edec31deaf8609239b51a5c002982a4109f59537d5bc6c1",
+        "CURRENT_B03": "901836b8f29dd6967edec31deaf8609239b51a5c002982a4109f59537d5bc6c1"
+      },
+      "Sources/pebsmoke/main.swift": {
+        "9919e575819dca02ee8e893a37ac9eaaebc36012": "8eb45c1e26de4cd40339929809ad176102b5c1d10d4e104c750d5a1ce7476b46",
+        "066704f53275ca56f863b5911d8799d8072c2196": "b71ec4f8f7c96b16a46f549a0125d31f7ab9ad8003485d13049bd22cad1ab4a4",
+        "8b7b1970c0f85e14b905ab032c2448057e9737b9": "b71ec4f8f7c96b16a46f549a0125d31f7ab9ad8003485d13049bd22cad1ab4a4",
+        "CURRENT_B03": "b71ec4f8f7c96b16a46f549a0125d31f7ab9ad8003485d13049bd22cad1ab4a4"
+      },
+      "Sources/pebsmoke/PebbleCoreWorldContinuationSmoke.swift": {
+        "9919e575819dca02ee8e893a37ac9eaaebc36012": "ABSENT",
+        "066704f53275ca56f863b5911d8799d8072c2196": "a9e24eb5bf020c3a3e93ae955b91e4a960effbb18348ff2d3c89a533efbf1c13",
+        "8b7b1970c0f85e14b905ab032c2448057e9737b9": "65a519d4c040c714b28d5358eee904626affcd29ede3d78d3189b86e61babda9",
+        "CURRENT_B03": "41a8b6bed4ceed231096a6322437d91d5448af0199fe1bff8ba1bb564c79a015"
+      }
+    },
+    "artifact_sha256": {
+      "all-control-results.json": "9527787de59a15795c1b250e733d1796fbd877d0712a3fe96cc2a360b713b68e",
+      "source-ownership-hashes.json": "abef569604e70d7946607ec33f01fa352a82a9b93f38ac074b1ce36a91fe6e2c",
+      "generation-function-hashes.json": "17fcd1bca30eca12290bbe115bb553d72f8ca4c2a27038d2e88649dbb3de0948",
+      "crash-runtime-worlds.json": "f79aec16e5ac854eb06692bc38999f6829b11ec29e4f6cf8e37082327ce845ba",
+      "runs/canonical-ordinary-tsan-second-batch/run-3.log": "01a073e08a74e626bf00d84db273bfc95d4cfe7ed485e757c57c25c1507c9c57",
+      "runs/canonical-ordinary-tsan-second-batch/results.txt": "7e0a5ed0e713292506b69e7db83a081073a0b2c636cfeceebc573eeebc064b7e",
+      "b03-stage-run-1.log": "afcdada83eac45a55a4a1c2d8904ffb6f5875214502d4bd8e8b10c70d7c2fe96",
+      "b03-stage-run-1.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "/tmp/ps01-i08-b03-20261002/qualification-crashed-core-driver.log": "ce83ef63c6842e7090f482509770a2a405fc41ad2aba9c37cf2020d0cda7efdd",
+      "/tmp/ps01-i08-b03-20261002/qualification-crashed-core/crash.ips": "c3500ad1b25db58c1b9473d7412dc04987afe356626b56b29f5e329b3f4c91ec",
+      "/tmp/ps01-i08-b03-20261002/qualification-crashed-core/core-focused.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "/tmp/ps01-i08-b03-20261002/qualification-crashed-core/executable.sha256": "ec4dc6d2b372a4841afc690cbe78d1190af1f64d9246333cd2dd5bdea2124901",
+      "/tmp/ps01-i08-b03-20261002/tsan/run.log": "afcdada83eac45a55a4a1c2d8904ffb6f5875214502d4bd8e8b10c70d7c2fe96",
+      "/tmp/ps01-i08-b03-attribution-20261003/runs/b02-ordinary-tsan/run-1.log": "222b808d0104f0ef5016ea50bf2b0e1e949e89519ad34028a2da2df63b4e8997",
+      "/tmp/ps01-i08-b03-attribution-20261003/runs/b02-sequence-tsan/run-1.log": "fa014445da6dd568b93f40fe121278dd7fc2f5daa61067e4d1f7b954ce62ace7",
+      "/tmp/ps01-i08-b03-attribution-20261003/runs/b03-sequence-tsan/run-1.log": "0ebf0c5170c50190ff5a27d3fdc5f005ae94e81150434a9e37d54ec7091a1217"
+    }
+  },
+  "canonical_reconfirmation": {
+    "tsan_build_command": "swift build -c debug --sanitize=thread --target PebbleCore --scratch-path /tmp/ps01-i08-b04-20261003/baseline-tsan-build",
+    "build_exit": 0,
+    "ordinary_fresh_controls": {
+      "sha256": "b1fd9505f8ae3ad8c1907bd78e5bc21b544d816fca317cb9b9ffa648d8dab5cf",
+      "runs": [
+        {
+          "run": 1,
+          "returncode": 0,
+          "shell_exit": 0,
+          "command": "CFFIXED_USER_HOME=/tmp/ps01-i08-b04-20261003/baseline-home-1 TSAN_OPTIONS=halt_on_error=1:exitcode=66 /tmp/ps01-i08-b04-20261003/baseline-ordinary-tsan"
+        },
+        {
+          "run": 2,
+          "returncode": 0,
+          "shell_exit": 0,
+          "command": "CFFIXED_USER_HOME=/tmp/ps01-i08-b04-20261003/baseline-home-2 TSAN_OPTIONS=halt_on_error=1:exitcode=66 /tmp/ps01-i08-b04-20261003/baseline-ordinary-tsan"
+        },
+        {
+          "run": 3,
+          "returncode": 0,
+          "shell_exit": 0,
+          "command": "CFFIXED_USER_HOME=/tmp/ps01-i08-b04-20261003/baseline-home-3 TSAN_OPTIONS=halt_on_error=1:exitcode=66 /tmp/ps01-i08-b04-20261003/baseline-ordinary-tsan"
+        }
+      ],
+      "compile_command": "swiftc -g -sanitize=thread -I /tmp/ps01-i08-b04-20261003/baseline-tsan-build/arm64-apple-macosx/debug/Modules /tmp/ps01-i08-b03-attribution-20261003/ordinary-world-replacement.swift /tmp/ps01-i08-b04-20261003/baseline-tsan-build/arm64-apple-macosx/debug/PebbleCore.build/*.o -o /tmp/ps01-i08-b04-20261003/baseline-ordinary-tsan"
+    },
+    "focused_canonical": {
+      "returncode": -6,
+      "shell_exit": 134,
+      "sha256": "5cf4912d58b5f7395e272f30a8d9890fa7b83eda58fa416b486bc50f54370251",
+      "sequential_passed_before_abort": 234,
+      "sequential_failed_before_abort": 570,
+      "race_location": "global strongholdCache; StructUnderground.swift:10/11",
+      "log_sha256": "5cba5feb289f81b4e94115ebbad9787115cfa74501f0411bf4fca5edb2329bc4",
+      "compile_command": "swiftc -g -sanitize=thread -I /tmp/ps01-i08-b04-20261003/baseline-tsan-build/arm64-apple-macosx/debug/Modules /tmp/ps01-i08-b04-20261003/main.swift Sources/pebsmoke/PebbleCoreStrongholdConcurrencySmoke.swift /tmp/ps01-i08-b04-20261003/baseline-tsan-build/arm64-apple-macosx/debug/PebbleCore.build/*.o -o /tmp/ps01-i08-b04-20261003/baseline-focused-tsan",
+      "run_command": "CFFIXED_USER_HOME=/tmp/ps01-i08-b04-20261003/baseline-focused-home TSAN_OPTIONS=halt_on_error=1:exitcode=66 /tmp/ps01-i08-b04-20261003/baseline-focused-tsan"
+    }
+  },
+  "thread_sanitizer": {
+    "command": "scripts/verify-pebblelab-ps01-i08-blocker-04.sh --tsan",
+    "exit": 0,
+    "directory": "/var/folders/23/t4l5dv055dl3x1zqylcpl9wc0000gn/T/PebbleCore-B04.9gE4Yf",
+    "binary_sha256": "cab92913d39351eca183e77504f8bd23397edbb0d210fa84619816c8ce2686f0",
+    "runs": [
+      {
+        "mode": "core-stronghold-concurrency",
+        "exit": 0,
+        "passed": 838,
+        "failed": 0,
+        "tsan_diagnostic_count": 0,
+        "log": "/var/folders/23/t4l5dv055dl3x1zqylcpl9wc0000gn/T/PebbleCore-B04.9gE4Yf/core-stronghold-concurrency-1/output.log",
+        "log_sha256": "c4f9ab84cf2e134e98a1a54452d32d9dfeedb364cdc4489945ffc4dc52cb6cc5"
+      },
+      {
+        "mode": "core-stronghold-ordinary",
+        "exit": 0,
+        "passed": 6,
+        "failed": 0,
+        "tsan_diagnostic_count": 0,
+        "log": "/var/folders/23/t4l5dv055dl3x1zqylcpl9wc0000gn/T/PebbleCore-B04.9gE4Yf/core-stronghold-ordinary-1/output.log",
+        "log_sha256": "7fbbc1b9bd48035e82ead2cce5f77443a1c1111243b38bc93a6de2cbbc9620cb"
+      },
+      {
+        "mode": "core-stronghold-repeated",
+        "exit": 0,
+        "passed": 34,
+        "failed": 0,
+        "tsan_diagnostic_count": 0,
+        "log": "/var/folders/23/t4l5dv055dl3x1zqylcpl9wc0000gn/T/PebbleCore-B04.9gE4Yf/core-stronghold-repeated-1/output.log",
+        "log_sha256": "2b6fa4e3bb601682867ff6732f325f630dcbbb938caabad9f7bd4cddc5bd1ed9"
+      }
+    ]
+  },
+  "final_focused_tsan_rerun": {
+    "reason": "Preserve any earlier test scheduling timeout instead of overwriting its flag; final source recompiled and rerun",
+    "compile_command": "swiftc -g -sanitize=thread -I /tmp/ps01-i08-b04-20261003/corrected-tsan-build/arm64-apple-macosx/debug/Modules /tmp/ps01-i08-b04-20261003/main.swift Sources/pebsmoke/PebbleCoreStrongholdConcurrencySmoke.swift /tmp/ps01-i08-b04-20261003/corrected-tsan-build/arm64-apple-macosx/debug/PebbleCore.build/*.o -o /tmp/ps01-i08-b04-20261003/final-focused-tsan",
+    "run_command": "CFFIXED_USER_HOME=/tmp/ps01-i08-b04-20261003/final-focused-tsan-home TSAN_OPTIONS=halt_on_error=1:exitcode=66 /tmp/ps01-i08-b04-20261003/final-focused-tsan",
+    "exit": 0,
+    "passed": 838,
+    "failed": 0,
+    "diagnostic_count": 0,
+    "binary_sha256": "6fd3135ca8271c7c95a50c07fa68d761cbd9f05e945eee1f8fd0a53b5cf95a3b",
+    "log_sha256": "c4f9ab84cf2e134e98a1a54452d32d9dfeedb364cdc4489945ffc4dc52cb6cc5"
+  },
+  "determinism": {
+    "driver": "scripts/pebblecore-stronghold-determinism.swift",
+    "baseline_release_build_command": "swift build -c release --target PebbleCore --scratch-path /tmp/ps01-i08-b04-20261003/baseline-release-build",
+    "baseline_release_build_exit": 0,
+    "native_compile_template": "swiftc -O -g -I <selected-release-build>/Modules scripts/pebblecore-stronghold-determinism.swift <selected-release-build>/PebbleCore.build/*.o -o <diagnostic-binary>",
+    "run_template": "<diagnostic-binary> <seed>",
+    "tsan_compile_template": "swiftc -O -g -sanitize=thread -I <selected-debug-build>/Modules scripts/pebblecore-stronghold-determinism.swift <selected-debug-build>/PebbleCore.build/*.o -o <diagnostic-binary>",
+    "seed_captures": [
+      {
+        "seed": 0,
+        "exit": 0,
+        "sha256": "d963ced3aed0a3e4cc622681918ed8e4a22f1f017c997725f31b3f39a9c67b53",
+        "position_count": 19,
+        "plan_count": 19,
+        "first_origin": [
+          -5,
+          117
+        ],
+        "chunk_count": 5,
+        "chunk_hashes": [
+          {
+            "dim": 0,
+            "cx": -5,
+            "cz": 117,
+            "blocks": "daf9ed7c95f5b21f28920245716fbf9576e1d776b84b889104abc2a549e9eef2",
+            "biomes": "4fd49f9bdb750657b15e232707d8a60711b26d00a9875aa77faf67a6480fa8ea"
+          },
+          {
+            "dim": 0,
+            "cx": -4,
+            "cz": 117,
+            "blocks": "9d02345e6d8755948134735d7083f09f6bff00c2d4f3408ab574b0492ccb3263",
+            "biomes": "71f6956121cdcf810892583bab37b99fd596e47eb3e599a63189b633ec5c6e86"
+          },
+          {
+            "dim": 0,
+            "cx": 0,
+            "cz": 0,
+            "blocks": "b3207d038fc4ce4db81ac2102fed9473f7e7779543f916034c072078dc52b1d9",
+            "biomes": "d660fae794ef603d36f99a4cba844d88f97cb515d6a750c46e9c377b39ed8a21"
+          },
+          {
+            "dim": 1,
+            "cx": 0,
+            "cz": 0,
+            "blocks": "da11ec94e5e0caffeb3770c91f86bd7dffac8410f7a8fbb2e22c04ea6fba76dc",
+            "biomes": "a0336c7513c3d686f649e61f968db6560172a1165a4c3f5d52c680a2f99981ea"
+          },
+          {
+            "dim": 2,
+            "cx": 0,
+            "cz": 0,
+            "blocks": "ac7db7ab1702532b53ef527e3ae1c8f08ca6069406732cf1a946dc1a3b3679c0",
+            "biomes": "17e3cf2edd8eb7b181b3bddff3b31e30256d15ed0a1271de859aca93e7c13414"
+          }
+        ]
+      },
+      {
+        "seed": 14,
+        "exit": 0,
+        "sha256": "0001f2c96e552cd9d10f5980f78fad4c070f3ca6a3ce2860ec016d944739864a",
+        "position_count": 19,
+        "plan_count": 19,
+        "first_origin": [
+          -98,
+          -73
+        ],
+        "chunk_count": 5,
+        "chunk_hashes": [
+          {
+            "dim": 0,
+            "cx": -98,
+            "cz": -73,
+            "blocks": "c6430e48716c35480c945f5b0deb1e1ceb70957a4f987d56ca239cf66a2b33e7",
+            "biomes": "ac4904ec51608932bd9acd2aecf4e8171b88d336a8e1fad1e8cd6f29afb45060"
+          },
+          {
+            "dim": 0,
+            "cx": -97,
+            "cz": -73,
+            "blocks": "2ff86087923482369f31f166fedb5ba11dea7e4c042183a0af965a1e1a27bc35",
+            "biomes": "2a71b8c651c5cc4a7521f08b7440273b32d82c3914818fc7552a6655dac951a8"
+          },
+          {
+            "dim": 0,
+            "cx": 0,
+            "cz": 0,
+            "blocks": "644a3f7377a24a7bdd0cbd3050a9fa2ec674135bea88aa6f13ccc7304474cb51",
+            "biomes": "21e35e30363eb0f96df5fb850f7c0a0539164163e96a1a8cafef3a7512dd55e2"
+          },
+          {
+            "dim": 1,
+            "cx": 0,
+            "cz": 0,
+            "blocks": "b3a39e7e09cd0f2791c9639553f7b11d80f501d5d01574f53bb1ccb956b83b39",
+            "biomes": "372307fa30e21a7fbc4b5c5b29c837259d2c0bd0eaf82653ee281a3692b1e736"
+          },
+          {
+            "dim": 2,
+            "cx": 0,
+            "cz": 0,
+            "blocks": "a503df552c420e1fb54b51655422b935544db0b8be7c9528fd4229d0a3d912f4",
+            "biomes": "17e3cf2edd8eb7b181b3bddff3b31e30256d15ed0a1271de859aca93e7c13414"
+          }
+        ]
+      },
+      {
+        "seed": 46,
+        "exit": 0,
+        "sha256": "c18d285c40056326b9e794985f22f9bf99e536fa2f0c67466ca8d8857ed053ed",
+        "position_count": 19,
+        "plan_count": 19,
+        "first_origin": [
+          -110,
+          21
+        ],
+        "chunk_count": 5,
+        "chunk_hashes": [
+          {
+            "dim": 0,
+            "cx": -110,
+            "cz": 21,
+            "blocks": "aa13a995cbd740c0f5152194f98a1626ae8d867e27e766feee122d5dd87d4c2c",
+            "biomes": "dbbbc9931568e48f8ced46203bd693bf6e37a6af9189a7879e1e1e755bd9eab5"
+          },
+          {
+            "dim": 0,
+            "cx": -109,
+            "cz": 21,
+            "blocks": "7f076eecd9721c24c7137fdfe877a039d2905d274cdb47b3151daa3658b6ecc9",
+            "biomes": "8027df826bf46ad8962d5e9ab44c5c28a186899b6fe45aae141cf1c1bd0d162d"
+          },
+          {
+            "dim": 0,
+            "cx": 0,
+            "cz": 0,
+            "blocks": "2518a459899f5e9febe85b68ddf984aeb0481787a818c212828657ea9ee44110",
+            "biomes": "5ab5343bee819880ecb4f72f419584d3fc141a9556d6fe54dbc674f06208f3e3"
+          },
+          {
+            "dim": 1,
+            "cx": 0,
+            "cz": 0,
+            "blocks": "4bb06100be2b83ac22a630a95c6406ddf7d834b4419f27c2991fcf8b99c968f4",
+            "biomes": "ef07f5a848febb8fc1c083ae2cde23060ea49bce2b42918ed9e6da0589d3dac5"
+          },
+          {
+            "dim": 2,
+            "cx": 0,
+            "cz": 0,
+            "blocks": "1041ba2ae0f040caeecd5287ae0d7194522a7348d2eb6836612fd98ef6f6275a",
+            "biomes": "17e3cf2edd8eb7b181b3bddff3b31e30256d15ed0a1271de859aca93e7c13414"
+          }
+        ]
+      },
+      {
+        "seed": 73,
+        "exit": 0,
+        "sha256": "f3c4f7ebf8e5879c1ac46ffc34cd531666f0916352a7e07a0316134204f7f10d",
+        "position_count": 19,
+        "plan_count": 19,
+        "first_origin": [
+          58,
+          100
+        ],
+        "chunk_count": 5,
+        "chunk_hashes": [
+          {
+            "dim": 0,
+            "cx": 58,
+            "cz": 100,
+            "blocks": "06f7acfc3d3fd196243b008fd08eaf76b51f4714cadca3c866259d51d573d4fd",
+            "biomes": "498723fff3278cb92e0910f60d5a39313af024c8c226640dc4a5ea77a0790ecc"
+          },
+          {
+            "dim": 0,
+            "cx": 59,
+            "cz": 100,
+            "blocks": "7b1aaf12fef79cabec8cec3a56e1ca6f553b35826f38d06510c9cdf9c4445cb8",
+            "biomes": "498723fff3278cb92e0910f60d5a39313af024c8c226640dc4a5ea77a0790ecc"
+          },
+          {
+            "dim": 0,
+            "cx": 0,
+            "cz": 0,
+            "blocks": "6ee423b47dc03ce631d1cc4d2851e32acb064bdbf17677817b2de05727c2916f",
+            "biomes": "5773ff66612a0878a93e99dbec8e8bc03e1d1aa699ca4d4ff84d28fe2f224430"
+          },
+          {
+            "dim": 1,
+            "cx": 0,
+            "cz": 0,
+            "blocks": "9f2e4f872fbb5c78eb1c1feb15df8f2ac1c04ef354d278b7f7fbb4c9bb8bd3f5",
+            "biomes": "372307fa30e21a7fbc4b5c5b29c837259d2c0bd0eaf82653ee281a3692b1e736"
+          },
+          {
+            "dim": 2,
+            "cx": 0,
+            "cz": 0,
+            "blocks": "c4850dde64d156a5631bf7fcf4cf38e8a0ff9e359b31a31f5ce85d658461341c",
+            "biomes": "17e3cf2edd8eb7b181b3bddff3b31e30256d15ed0a1271de859aca93e7c13414"
+          }
+        ]
+      },
+      {
+        "seed": 887,
+        "exit": 0,
+        "sha256": "a66d17b6491acd8ff17b369eb78b60e9cc6b2f913be926a2a9c49cc02aa8e834",
+        "position_count": 19,
+        "plan_count": 19,
+        "first_origin": [
+          109,
+          -15
+        ],
+        "chunk_count": 5,
+        "chunk_hashes": [
+          {
+            "dim": 0,
+            "cx": 109,
+            "cz": -15,
+            "blocks": "42a627f15264638e3fb271a6e217eb01adb2050a0cae42fbd64d812a4d0f3497",
+            "biomes": "99f32ef371cbde53daf9c7a6b0cf58dfe1948473a264bf5375215ccf56676f1d"
+          },
+          {
+            "dim": 0,
+            "cx": 110,
+            "cz": -15,
+            "blocks": "559558ffa7d11a496966fbcbf62dc6abb8e28dd33d1ca68f4ce933f22380265f",
+            "biomes": "2acd9114a3a6bf54626aa312f64c4a411578060ce01f136dd2a7de2502ff6450"
+          },
+          {
+            "dim": 0,
+            "cx": 0,
+            "cz": 0,
+            "blocks": "0fa7798deb9c5ba8f25ee291f6a59ed5d13fd7039a2bd0899ca82092fd6b716b",
+            "biomes": "73ba22d5193a218ac4a6438df1c9291fd130a1748fc1fb22a066fe56b0ce505e"
+          },
+          {
+            "dim": 1,
+            "cx": 0,
+            "cz": 0,
+            "blocks": "c4113ef6d1a530e187b631af7131cd13f6856a91408bfc6072f54948533a7985",
+            "biomes": "0982c6a0d2eddfad0b995512cc2984da7238594047366aab35c83a34cb55d123"
+          },
+          {
+            "dim": 2,
+            "cx": 0,
+            "cz": 0,
+            "blocks": "b56cabae52541b4f154e01d56e427fa53e6db0f6281ed4309c10ca7ac0aa03a6",
+            "biomes": "17e3cf2edd8eb7b181b3bddff3b31e30256d15ed0a1271de859aca93e7c13414"
+          }
+        ]
+      },
+      {
+        "seed": 4294967295,
+        "exit": 0,
+        "sha256": "62fc12572685bd2427a61b5e27ccab719f8a68f9ea12cd42b9a4d3f6cd269c80",
+        "position_count": 19,
+        "plan_count": 19,
+        "first_origin": [
+          110,
+          -24
+        ],
+        "chunk_count": 5,
+        "chunk_hashes": [
+          {
+            "dim": 0,
+            "cx": 110,
+            "cz": -24,
+            "blocks": "052d171b38a231d8a36dc13f7387706f216237cb5d4830d031532d42f8d44fc0",
+            "biomes": "89a95398beb47e64b3b1a15f6a49ee1997513670150503998aac108944be36d9"
+          },
+          {
+            "dim": 0,
+            "cx": 111,
+            "cz": -24,
+            "blocks": "ee0352bc9adcfe961d0645dd95ab6be19b885376ab65f476f023e7617b02c54d",
+            "biomes": "4eb8c2328d1149c5f0b72660455fda45ef04ec21dffd312b04e7eeca26953289"
+          },
+          {
+            "dim": 0,
+            "cx": 0,
+            "cz": 0,
+            "blocks": "f1891638c36bb15f003f9e69c7d3bf15beacd415ca55a37c7731b227daf6b4ef",
+            "biomes": "181f69a15be123f1b59c3c7408319f5a631fd44ef3247fa9cef12b7b2937a172"
+          },
+          {
+            "dim": 1,
+            "cx": 0,
+            "cz": 0,
+            "blocks": "1e0e91fa3a4e348a23b8ba8b5bee58a197843da60861dd05bb23822a7e8502b1",
+            "biomes": "58409cc6e4b945d28b08b31eaf9c6d7a1b5abe25f6ea00cfe299cc94f0714592"
+          },
+          {
+            "dim": 2,
+            "cx": 0,
+            "cz": 0,
+            "blocks": "06306afe403effd1583bfd0c5af44b10835d0c0e0e7762e8694ea62cad7c4e27",
+            "biomes": "17e3cf2edd8eb7b181b3bddff3b31e30256d15ed0a1271de859aca93e7c13414"
+          }
+        ]
+      }
+    ],
+    "corrected_native_runs": [
+      {
+        "seed": 0,
+        "repeat": 1,
+        "exit": 0,
+        "sha256": "d963ced3aed0a3e4cc622681918ed8e4a22f1f017c997725f31b3f39a9c67b53",
+        "canonical_identical": true
+      },
+      {
+        "seed": 14,
+        "repeat": 1,
+        "exit": 0,
+        "sha256": "0001f2c96e552cd9d10f5980f78fad4c070f3ca6a3ce2860ec016d944739864a",
+        "canonical_identical": true
+      },
+      {
+        "seed": 46,
+        "repeat": 1,
+        "exit": 0,
+        "sha256": "c18d285c40056326b9e794985f22f9bf99e536fa2f0c67466ca8d8857ed053ed",
+        "canonical_identical": true
+      },
+      {
+        "seed": 73,
+        "repeat": 1,
+        "exit": 0,
+        "sha256": "f3c4f7ebf8e5879c1ac46ffc34cd531666f0916352a7e07a0316134204f7f10d",
+        "canonical_identical": true
+      },
+      {
+        "seed": 887,
+        "repeat": 1,
+        "exit": 0,
+        "sha256": "a66d17b6491acd8ff17b369eb78b60e9cc6b2f913be926a2a9c49cc02aa8e834",
+        "canonical_identical": true
+      },
+      {
+        "seed": 4294967295,
+        "repeat": 1,
+        "exit": 0,
+        "sha256": "62fc12572685bd2427a61b5e27ccab719f8a68f9ea12cd42b9a4d3f6cd269c80",
+        "canonical_identical": true
+      },
+      {
+        "seed": 0,
+        "repeat": 2,
+        "exit": 0,
+        "sha256": "d963ced3aed0a3e4cc622681918ed8e4a22f1f017c997725f31b3f39a9c67b53",
+        "canonical_identical": true
+      },
+      {
+        "seed": 14,
+        "repeat": 2,
+        "exit": 0,
+        "sha256": "0001f2c96e552cd9d10f5980f78fad4c070f3ca6a3ce2860ec016d944739864a",
+        "canonical_identical": true
+      },
+      {
+        "seed": 46,
+        "repeat": 2,
+        "exit": 0,
+        "sha256": "c18d285c40056326b9e794985f22f9bf99e536fa2f0c67466ca8d8857ed053ed",
+        "canonical_identical": true
+      },
+      {
+        "seed": 73,
+        "repeat": 2,
+        "exit": 0,
+        "sha256": "f3c4f7ebf8e5879c1ac46ffc34cd531666f0916352a7e07a0316134204f7f10d",
+        "canonical_identical": true
+      },
+      {
+        "seed": 887,
+        "repeat": 2,
+        "exit": 0,
+        "sha256": "a66d17b6491acd8ff17b369eb78b60e9cc6b2f913be926a2a9c49cc02aa8e834",
+        "canonical_identical": true
+      },
+      {
+        "seed": 4294967295,
+        "repeat": 2,
+        "exit": 0,
+        "sha256": "62fc12572685bd2427a61b5e27ccab719f8a68f9ea12cd42b9a4d3f6cd269c80",
+        "canonical_identical": true
+      }
+    ],
+    "corrected_tsan_runs": [
+      {
+        "seed": 0,
+        "repeat": 1,
+        "exit": 0,
+        "sha256": "d963ced3aed0a3e4cc622681918ed8e4a22f1f017c997725f31b3f39a9c67b53",
+        "canonical_identical": true
+      },
+      {
+        "seed": 14,
+        "repeat": 1,
+        "exit": 0,
+        "sha256": "0001f2c96e552cd9d10f5980f78fad4c070f3ca6a3ce2860ec016d944739864a",
+        "canonical_identical": true
+      },
+      {
+        "seed": 46,
+        "repeat": 1,
+        "exit": 0,
+        "sha256": "c18d285c40056326b9e794985f22f9bf99e536fa2f0c67466ca8d8857ed053ed",
+        "canonical_identical": true
+      },
+      {
+        "seed": 73,
+        "repeat": 1,
+        "exit": 0,
+        "sha256": "f3c4f7ebf8e5879c1ac46ffc34cd531666f0916352a7e07a0316134204f7f10d",
+        "canonical_identical": true
+      },
+      {
+        "seed": 887,
+        "repeat": 1,
+        "exit": 0,
+        "sha256": "a66d17b6491acd8ff17b369eb78b60e9cc6b2f913be926a2a9c49cc02aa8e834",
+        "canonical_identical": true
+      },
+      {
+        "seed": 4294967295,
+        "repeat": 1,
+        "exit": 0,
+        "sha256": "62fc12572685bd2427a61b5e27ccab719f8a68f9ea12cd42b9a4d3f6cd269c80",
+        "canonical_identical": true
+      },
+      {
+        "seed": 0,
+        "repeat": 2,
+        "exit": 0,
+        "sha256": "d963ced3aed0a3e4cc622681918ed8e4a22f1f017c997725f31b3f39a9c67b53",
+        "canonical_identical": true
+      },
+      {
+        "seed": 14,
+        "repeat": 2,
+        "exit": 0,
+        "sha256": "0001f2c96e552cd9d10f5980f78fad4c070f3ca6a3ce2860ec016d944739864a",
+        "canonical_identical": true
+      },
+      {
+        "seed": 46,
+        "repeat": 2,
+        "exit": 0,
+        "sha256": "c18d285c40056326b9e794985f22f9bf99e536fa2f0c67466ca8d8857ed053ed",
+        "canonical_identical": true
+      },
+      {
+        "seed": 73,
+        "repeat": 2,
+        "exit": 0,
+        "sha256": "f3c4f7ebf8e5879c1ac46ffc34cd531666f0916352a7e07a0316134204f7f10d",
+        "canonical_identical": true
+      },
+      {
+        "seed": 887,
+        "repeat": 2,
+        "exit": 0,
+        "sha256": "a66d17b6491acd8ff17b369eb78b60e9cc6b2f913be926a2a9c49cc02aa8e834",
+        "canonical_identical": true
+      },
+      {
+        "seed": 4294967295,
+        "repeat": 2,
+        "exit": 0,
+        "sha256": "62fc12572685bd2427a61b5e27ccab719f8a68f9ea12cd42b9a4d3f6cd269c80",
+        "canonical_identical": true
+      }
+    ],
+    "binary_sha256": {
+      "baseline-determinism": "c4638f7a52e5d0f0a0cff5a7857c6f6896ded899d67aac224bca2a6975565faa",
+      "corrected-determinism-native": "b771c483dc581880ffbf35a117781841333e404257bd752084b0dddce8f886d7",
+      "corrected-determinism-tsan": "d23f003b2b17995ab2255809104bc010461e7aaac36fba7ca690609246b5999e"
+    },
+    "product_output_change": "NONE for isolated fixed seed and coordinate captures",
+    "golden_changes": "NONE"
+  },
+  "native_stress": {
+    "command": "scripts/verify-pebblelab-ps01-i08-blocker-04.sh --stress",
+    "exit": 0,
+    "directory": "/var/folders/23/t4l5dv055dl3x1zqylcpl9wc0000gn/T/PebbleCore-B04.PvUhDQ",
+    "binary_sha256": "8f6b00553fedb25cd80580a7dbf74b37c2852910fe11e59e553ab949a6027612",
+    "repetitions_per_case": 6,
+    "process_count": 18,
+    "replacement_count": 72,
+    "assertion_count": 5268,
+    "runs": [
+      {
+        "suite": "core-stronghold-concurrency",
+        "repetition": 1,
+        "exit": 0,
+        "passed": 838,
+        "failed": 0,
+        "log_sha256": "61c91a3f15de0f379eab9ff9f7f9e6a9fd534fbabc4a3086d02fced7f4fd52f8"
+      },
+      {
+        "suite": "core-stronghold-concurrency",
+        "repetition": 2,
+        "exit": 0,
+        "passed": 838,
+        "failed": 0,
+        "log_sha256": "61c91a3f15de0f379eab9ff9f7f9e6a9fd534fbabc4a3086d02fced7f4fd52f8"
+      },
+      {
+        "suite": "core-stronghold-concurrency",
+        "repetition": 3,
+        "exit": 0,
+        "passed": 838,
+        "failed": 0,
+        "log_sha256": "61c91a3f15de0f379eab9ff9f7f9e6a9fd534fbabc4a3086d02fced7f4fd52f8"
+      },
+      {
+        "suite": "core-stronghold-concurrency",
+        "repetition": 4,
+        "exit": 0,
+        "passed": 838,
+        "failed": 0,
+        "log_sha256": "61c91a3f15de0f379eab9ff9f7f9e6a9fd534fbabc4a3086d02fced7f4fd52f8"
+      },
+      {
+        "suite": "core-stronghold-concurrency",
+        "repetition": 5,
+        "exit": 0,
+        "passed": 838,
+        "failed": 0,
+        "log_sha256": "61c91a3f15de0f379eab9ff9f7f9e6a9fd534fbabc4a3086d02fced7f4fd52f8"
+      },
+      {
+        "suite": "core-stronghold-concurrency",
+        "repetition": 6,
+        "exit": 0,
+        "passed": 838,
+        "failed": 0,
+        "log_sha256": "61c91a3f15de0f379eab9ff9f7f9e6a9fd534fbabc4a3086d02fced7f4fd52f8"
+      },
+      {
+        "suite": "core-stronghold-ordinary",
+        "repetition": 1,
+        "exit": 0,
+        "passed": 6,
+        "failed": 0,
+        "log_sha256": "b5a7ebf2d47af053fb3449475b97c55b1df9ccef5b6dab52325a6ea511c7195a"
+      },
+      {
+        "suite": "core-stronghold-ordinary",
+        "repetition": 2,
+        "exit": 0,
+        "passed": 6,
+        "failed": 0,
+        "log_sha256": "80a07929a86b19ca143ceddb0d12ec702c0fed8bfb08357afbaea18e0ecd1212"
+      },
+      {
+        "suite": "core-stronghold-ordinary",
+        "repetition": 3,
+        "exit": 0,
+        "passed": 6,
+        "failed": 0,
+        "log_sha256": "b5a7ebf2d47af053fb3449475b97c55b1df9ccef5b6dab52325a6ea511c7195a"
+      },
+      {
+        "suite": "core-stronghold-ordinary",
+        "repetition": 4,
+        "exit": 0,
+        "passed": 6,
+        "failed": 0,
+        "log_sha256": "80a07929a86b19ca143ceddb0d12ec702c0fed8bfb08357afbaea18e0ecd1212"
+      },
+      {
+        "suite": "core-stronghold-ordinary",
+        "repetition": 5,
+        "exit": 0,
+        "passed": 6,
+        "failed": 0,
+        "log_sha256": "ed7ce42af73a34fb26cc40f639ab714f523f2b60de5196e52d3cf66ecb6ff7c5"
+      },
+      {
+        "suite": "core-stronghold-ordinary",
+        "repetition": 6,
+        "exit": 0,
+        "passed": 6,
+        "failed": 0,
+        "log_sha256": "b5a7ebf2d47af053fb3449475b97c55b1df9ccef5b6dab52325a6ea511c7195a"
+      },
+      {
+        "suite": "core-stronghold-repeated",
+        "repetition": 1,
+        "exit": 0,
+        "passed": 34,
+        "failed": 0,
+        "log_sha256": "b06700e308ff4fa8855be38e1a2a99d9242e0ee1fe7db65edc06eb12b3f0135e"
+      },
+      {
+        "suite": "core-stronghold-repeated",
+        "repetition": 2,
+        "exit": 0,
+        "passed": 34,
+        "failed": 0,
+        "log_sha256": "3e4a884bd5b20fd439486e9ef3df3e60969f49da63234b80780450a10435a426"
+      },
+      {
+        "suite": "core-stronghold-repeated",
+        "repetition": 3,
+        "exit": 0,
+        "passed": 34,
+        "failed": 0,
+        "log_sha256": "04a1eb5c5ceb9e7a8b5888ae0b81e4a45445e727865038dc9588645523931bff"
+      },
+      {
+        "suite": "core-stronghold-repeated",
+        "repetition": 4,
+        "exit": 0,
+        "passed": 34,
+        "failed": 0,
+        "log_sha256": "89531b3a654a9b72ecd66b081f8e295612c67a938ecb0aa2bef43b4b981bea4b"
+      },
+      {
+        "suite": "core-stronghold-repeated",
+        "repetition": 5,
+        "exit": 0,
+        "passed": 34,
+        "failed": 0,
+        "log_sha256": "bcf06c7efc7fc33b14c26a254d0ae4f92445ec275500285dfc74442f63b9bc6d"
+      },
+      {
+        "suite": "core-stronghold-repeated",
+        "repetition": 6,
+        "exit": 0,
+        "passed": 34,
+        "failed": 0,
+        "log_sha256": "d3c03e3ff6ce56fda86b537e7600b442be8fcbb2720ad37ee8d7112adc0fa35c"
+      }
+    ]
+  },
+  "native_stress_cleanup": [
+    {
+      "run": "core-stronghold-concurrency-1",
+      "remaining_world_rows": 0,
+      "remaining_chunk_rows": 0
+    },
+    {
+      "run": "core-stronghold-concurrency-2",
+      "remaining_world_rows": 0,
+      "remaining_chunk_rows": 0
+    },
+    {
+      "run": "core-stronghold-concurrency-3",
+      "remaining_world_rows": 0,
+      "remaining_chunk_rows": 0
+    },
+    {
+      "run": "core-stronghold-concurrency-4",
+      "remaining_world_rows": 0,
+      "remaining_chunk_rows": 0
+    },
+    {
+      "run": "core-stronghold-concurrency-5",
+      "remaining_world_rows": 0,
+      "remaining_chunk_rows": 0
+    },
+    {
+      "run": "core-stronghold-concurrency-6",
+      "remaining_world_rows": 0,
+      "remaining_chunk_rows": 0
+    },
+    {
+      "run": "core-stronghold-ordinary-1",
+      "remaining_world_rows": 0,
+      "remaining_chunk_rows": 0
+    },
+    {
+      "run": "core-stronghold-ordinary-2",
+      "remaining_world_rows": 0,
+      "remaining_chunk_rows": 0
+    },
+    {
+      "run": "core-stronghold-ordinary-3",
+      "remaining_world_rows": 0,
+      "remaining_chunk_rows": 0
+    },
+    {
+      "run": "core-stronghold-ordinary-4",
+      "remaining_world_rows": 0,
+      "remaining_chunk_rows": 0
+    },
+    {
+      "run": "core-stronghold-ordinary-5",
+      "remaining_world_rows": 0,
+      "remaining_chunk_rows": 0
+    },
+    {
+      "run": "core-stronghold-ordinary-6",
+      "remaining_world_rows": 0,
+      "remaining_chunk_rows": 0
+    },
+    {
+      "run": "core-stronghold-repeated-1",
+      "remaining_world_rows": 0,
+      "remaining_chunk_rows": 0
+    },
+    {
+      "run": "core-stronghold-repeated-2",
+      "remaining_world_rows": 0,
+      "remaining_chunk_rows": 0
+    },
+    {
+      "run": "core-stronghold-repeated-3",
+      "remaining_world_rows": 0,
+      "remaining_chunk_rows": 0
+    },
+    {
+      "run": "core-stronghold-repeated-4",
+      "remaining_world_rows": 0,
+      "remaining_chunk_rows": 0
+    },
+    {
+      "run": "core-stronghold-repeated-5",
+      "remaining_world_rows": 0,
+      "remaining_chunk_rows": 0
+    },
+    {
+      "run": "core-stronghold-repeated-6",
+      "remaining_world_rows": 0,
+      "remaining_chunk_rows": 0
+    }
+  ],
+  "owning_suites": {
+    "binary_sha256": "8f6b00553fedb25cd80580a7dbf74b37c2852910fe11e59e553ab949a6027612",
+    "runs": [
+      {
+        "mode": "civ-45-correction07",
+        "exit": 0,
+        "passed": 8,
+        "failed": 0,
+        "log_sha256": "de0152096163603c80bc1b5d2618291d0ae858991901aa2706f96d098539ad29",
+        "command": "CFFIXED_USER_HOME=/tmp/ps01-i08-b04-20261003/owning-final-civ-45-correction07-home PEBBLELAB_SMOKE_ONLY=civ-45-correction07 .build/arm64-apple-macosx/release/pebsmoke"
+      },
+      {
+        "mode": "civ-45-correction08",
+        "exit": 0,
+        "passed": 6,
+        "failed": 0,
+        "log_sha256": "1ff529de16c5402358461df28aa36f57416c29208462bc53c127d8fb49902f61",
+        "command": "CFFIXED_USER_HOME=/tmp/ps01-i08-b04-20261003/owning-final-civ-45-correction08-home PEBBLELAB_SMOKE_ONLY=civ-45-correction08 .build/arm64-apple-macosx/release/pebsmoke"
+      },
+      {
+        "mode": "ps01-increment-03-coverage",
+        "exit": 0,
+        "passed": 48,
+        "failed": 0,
+        "log_sha256": "436ef047efd12596499e3b8b2ffc67a0c2dad334b4dd9e02d7d5a5bbd5b266dd",
+        "command": "CFFIXED_USER_HOME=/tmp/ps01-i08-b04-20261003/owning-final-ps01-increment-03-coverage-home PEBBLELAB_SMOKE_ONLY=ps01-increment-03-coverage .build/arm64-apple-macosx/release/pebsmoke"
+      }
+    ],
+    "command_template": "CFFIXED_USER_HOME=/tmp/ps01-i08-b04-20261003/owning-final-<mode>-home PEBBLELAB_SMOKE_ONLY=<mode> .build/arm64-apple-macosx/release/pebsmoke"
+  },
+  "release_build": {
+    "command": "swift build -c release",
+    "exit": 0,
+    "log_sha256": "7f79fab84d05309db0dcfcae2ecb2f6256918611aac822b2f2331ce8c6e89e19"
+  },
+  "preliminary_limits_and_preparation_failures": [
+    {
+      "control": "baseline-preliminary-eight-replacements",
+      "timeout_seconds": 180,
+      "command_exit": 1,
+      "result": "INCOMPLETE_TIMEOUT",
+      "race_diagnostic": false,
+      "log_sha256": "6fa8c1e225fb2b5cefa06f45b92093db6fd8377305c7fea33ccece89ab46ee32"
+    },
+    {
+      "control": "corrected-preliminary-eight-replacements",
+      "timeout_seconds": 180,
+      "command_exit": 1,
+      "result": "INCOMPLETE_TIMEOUT",
+      "race_diagnostic": false,
+      "log_sha256": "082134931988a5646d807731034a4842bb7c9ac2e2419cdf23b21c54aa769824"
+    },
+    {
+      "command": "swift build -c release --product pebsmoke",
+      "exit": 1,
+      "result": "BUILD_REJECTED_SOURCE_CHANGED_DURING_COMPILATION",
+      "log": "corrected-release-build.log",
+      "reason": "A test-only timeout flag was tightened while its source was compiling; stable-source rebuild follows."
+    },
+    {
+      "command": "owning suite preparation using .build/release/pebsmoke before final build completed",
+      "exit": 1,
+      "result": "PREPARATION_FILE_NOT_FOUND",
+      "reason": "SwiftPM had not created the convenience symlink; no owning case ran in this attempt. Final cases use the actual arm64 build path."
+    }
+  ],
+  "visual_policy": {
+    "policy": "Visual Game Smoke Policy V5",
+    "selection": "headless Core calculation/lifetime and unchanged generation outputs; no rendered behavior claim",
+    "Pebble_process_launched": false,
+    "representative_screenshot_inspected": false,
+    "I08_campaign_run": false
+  },
+  "publication": {
+    "published": false,
+    "I08_qualified": false,
+    "PS01_complete": false,
+    "CIV48_authorized": false,
+    "GateH_acquired": false,
+    "push_attempted": "NO"
+  },
+  "artifact_root": "/tmp/ps01-i08-b04-20261003",
+  "canonical_regression_accounting": {
+    "command": "CFFIXED_USER_HOME=/tmp/ps01-i08-b04-20261003/canonical-gate-home scripts/verify-pebblelab.sh",
+    "exit": 1,
+    "passed": 5758,
+    "failed": 3,
+    "stopped_stage": 5,
+    "total_stages": 35,
+    "verdict": "FAIL_WITH_HISTORICAL_CANONICAL_FAILURES",
+    "failure_lines": [
+      "  \u2717 zoo: 55 mob types \u00d7 200 ticks bit-identical (3 checkpoints) ",
+      "  \u2717 combat: player + 5 mobs, damage/knockback in lockstep ",
+      "  \u2717 8 A* paths node-identical "
+    ],
+    "log_sha256": "7bff72bec66a5841e1cda906f2601d732145fd98dbe0001657b4b284627413b0"
+  },
+  "source_sha256": {
+    "Sources/PebbleCore/Gen/StructFramework.swift": "38b96a365400fbf0fc09e0f8fd51567fff654b95dddb1c162872f61229444afe",
+    "Sources/PebbleCore/Gen/StructUnderground.swift": "ae8adf2cf4f79f361c62a2317af632d44d7462084b2bda4ccfead10de66d1a08",
+    "Sources/pebsmoke/PebbleCoreStrongholdConcurrencySmoke.swift": "d535743b8494685e9cd90006367b0236564fa43d7ee2339a73006017cc147a92",
+    "Sources/pebsmoke/main.swift": "067caab1e2b50f5052da597204c7a20fac8fb1970fe6002ed8301d9e3d83eae2",
+    "scripts/verify-pebblelab-ps01-i08-blocker-04.sh": "346e8c17e44e3eb4af818060b8498d665c9a557af5f00f6ba1b6858333003861",
+    "scripts/pebblecore-stronghold-determinism.swift": "4b36e7c1ba6201897ba74c12a550a814ac1b718672df2aad09ef0d61688b3507"
+  },
+  "generation_and_deterministic_core_coverage": [
+    {
+      "section": "random (vs goldens)",
+      "passed": 7,
+      "failed": 0
+    },
+    {
+      "section": "simplex noise (vs goldens)",
+      "passed": 15,
+      "failed": 0
+    },
+    {
+      "section": "math",
+      "passed": 13,
+      "failed": 0
+    },
+    {
+      "section": "biomes (vs goldens)",
+      "passed": 9,
+      "failed": 0
+    },
+    {
+      "section": "overworld terrain (vs goldens)",
+      "passed": 59,
+      "failed": 0
+    },
+    {
+      "section": "full chunk pipeline with features (vs goldens)",
+      "passed": 238,
+      "failed": 0
+    },
+    {
+      "section": "world simulation: light engine + fluids + ticks (vs goldens)",
+      "passed": 10,
+      "failed": 0
+    },
+    {
+      "section": "portable fdlibm math (vs fmath goldens)",
+      "passed": 1,
+      "failed": 0
+    }
+  ],
+  "documentation_checks": {
+    "json_parse": "PASS",
+    "added_local_markdown_links": "PASS",
+    "evidence_count_and_source_hash_consistency": "PASS",
+    "bash_n": "PASS",
+    "git_diff_check": "PASS"
+  }
+}
