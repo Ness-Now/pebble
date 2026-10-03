@@ -748,7 +748,12 @@ extension PebbleAgentController {
         )
         if let worldID = persistenceWorldID {
             let persistence = try PebbleAgentPersistenceStore(worldID: worldID)
-            for name in try persistence.checkpointNames() {
+            // Ordinary bundles are usable only with their exact Core revision.
+            // Current candidate receipts remain protected above; pruning any
+            // older receipt atomically invalidates that continuation reference.
+            // Standalone manual checkpoints retain their historical protection.
+            for name in try persistence.checkpointNames()
+            where !name.rawValue.lowercased().hasPrefix("ps01-continuation-") {
                 guard let checkpoint = try? persistence.loadCheckpoint(
                     name: name
                 ), let restored = try? AgentSimulationSession.restoring(
@@ -828,7 +833,8 @@ extension PebbleAgentController {
         }
         if let worldID = persistenceWorldID {
             let persistence = try PebbleAgentPersistenceStore(worldID: worldID)
-            for name in try persistence.checkpointNames() {
+            for name in try persistence.checkpointNames()
+            where !name.rawValue.lowercased().hasPrefix("ps01-continuation-") {
                 guard let checkpoint = try? persistence.loadCheckpoint(
                     name: name
                 ), let restored = try? AgentSimulationSession.restoring(

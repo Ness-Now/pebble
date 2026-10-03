@@ -72,6 +72,9 @@ final class PebbleAgentController {
     var movementWasEverEnabledSinceReset = false
     var activeWorld: World?
     weak var lifecyclePreparedWorld: World?
+    var pendingWorldContinuation: PebblePendingWorldContinuation?
+    var continuationRestoreRefused = false
+    var testingWorldContinuationFailure: PebbleWorldContinuationFailure?
     var overlayModeByCommand: PebbleAgentOverlayMode?
     var observerUIState = PebbleObserverUIState()
     var followMode: PebbleAgentFollowMode = .off
@@ -311,6 +314,7 @@ final class PebbleAgentController {
     ) {
         persistenceWorldID = worldID
         persistenceDimension = dimension
+        guard !continuationRestoreRefused, pendingWorldContinuation == nil else { return }
         guard let world else {
             if session != nil { stop(reason: "world unavailable") }
             return

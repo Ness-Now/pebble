@@ -285,7 +285,7 @@ func makeCheckpointPhysicalCustodyEvidence(
     )
 }
 
-private func decodeCheckpointPhysicalCustodyEvidence(
+func decodeCheckpointPhysicalCustodyEvidence(
     _ evidence: AgentCheckpointProbeCustodyEvidence
 ) throws -> PebbleAgentCheckpointDecodedCustody {
     var slots = Array<ItemStack?>(
@@ -521,9 +521,14 @@ enum PebbleAgentCheckpointPhysicalCustodyFailurePoint {
 extension PebbleAgentController {
     func handleCheckpoint(
         _ arguments: [String],
-        world: World
+        world: World,
+        normalContinuationCapture: Bool = false
     ) -> PebbleAgentCommandResult {
-        if let candidatePhysicalHardFailure {
+        let readOnly = ["status", "list"].contains(arguments.first?.lowercased() ?? "")
+        if pendingWorldContinuation != nil, !normalContinuationCapture, !readOnly {
+            return failure("Checkpoint mutation refused: continuation compensation remains owned.")
+        }
+        if let candidatePhysicalHardFailure, !readOnly {
             return failure(
                 "Checkpoint operation refused after candidate physical hard failure: "
                     + candidatePhysicalHardFailure.description
@@ -537,6 +542,9 @@ extension PebbleAgentController {
             )
         }
         guard let subcommand = arguments.first?.lowercased() else { return failure(usage) }
+        if !normalContinuationCapture, arguments.dropFirst().first?.lowercased().hasPrefix("ps01-continuation-") == true {
+            return failure("Ordinary continuation bundles are managed by World Save/Continue and Save/Exit.")
+        }
         do {
             let store = try persistenceStore()
             switch subcommand {
@@ -570,9 +578,13 @@ extension PebbleAgentController {
                 }
                 var recorder = replayRecorder
                 let wasPaused = isPaused
+                let creditBeforeCapture = credit
                 isPaused = true
                 credit = 0
-                defer { isPaused = wasPaused }
+                defer {
+                    isPaused = wasPaused
+                    if normalContinuationCapture { credit = creditBeforeCapture }
+                }
                 try reconcilePhysiologicalTimeIfRecording(
                     mode: wasPaused ? .rebase : .advance,
                     worldTick: world.time,
@@ -1433,12 +1445,16 @@ extension PebbleAgentController {
         }
     }
 
-    private func loadLiveCheckpoint(
+    func loadLiveCheckpoint(
         name: AgentCheckpointName,
         world: World,
-        store: PebbleAgentPersistenceStore
+        store: PebbleAgentPersistenceStore,
+        continuingWorld: Bool = false
     ) throws -> PebbleAgentCommandResult {
-        guard let oldSession = session, activeWorld === world else {
+        let oldSession = session
+        guard continuingWorld
+            ? (oldSession == nil && activeWorld == nil && probesByAgentId.isEmpty)
+            : (oldSession != nil && activeWorld === world) else {
             return failure("No active PebbleAgents session.")
         }
         guard liveRestartSafety().safe else {
@@ -1608,7 +1624,7 @@ extension PebbleAgentController {
         }
         let candidateAgents = candidate.snapshot().agents.sorted { $0.id < $1.id }
         let candidateAgentIDs = candidateAgents.map(\.id)
-        let currentAgentIDs = oldSession.snapshot().agents.map(\.id).sorted()
+        let currentAgentIDs = oldSession?.snapshot().agents.map(\.id).sorted() ?? []
         let worldProbeIDs = world.entities.compactMap {
             ($0 as? LabCoreAgentEntity)?.labAgentId
         }.sorted()
@@ -1707,7 +1723,7 @@ extension PebbleAgentController {
                     throw PebbleAgentCheckpointCustodyError
                         .conflictingCurrentCustody(agentID)
                 }
-                guard oldSession.tick == 0 else {
+                guard oldSession?.tick == 0 else {
                     throw PebbleAgentCheckpointCustodyError
                         .nonFreshEmptyPlaceholder(agentID)
                 }
@@ -2306,6 +2322,7 @@ extension PebbleAgentController {
                 toWorldTick: world.time
             )
             session = candidate
+            if continuingWorld { activeWorld = world }
             constructionExecutor = candidateConstructionExecutor
             interactionExecutor = candidateInteractionExecutor
             naturalResourceExecutor = candidateNaturalResourceExecutor
@@ -2315,6 +2332,10 @@ extension PebbleAgentController {
             cognitiveHz = stored.manifest.orchestration.cognitiveHz
             isPaused = true
             movementEnabled = stored.manifest.orchestration.movementEnabled
+            // This runtime validation guard is derived from the restored
+            // authority, not a durable cache or a founder-start side effect.
+            movementWasEverEnabledSinceReset = movementEnabled
+                || candidateAgents.contains { $0.movementCount > 0 }
             autoInteractionEnabled = stored.manifest.orchestration.autoInteractionEnabled
             economyAutoEnabled = stored.manifest.orchestration.economyAutoEnabled
             seed = stored.manifest.worldBinding.seed

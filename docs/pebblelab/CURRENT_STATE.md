@@ -209,8 +209,7 @@ Visual Game Smoke passed. Full smoke was 4,906/4,909 with exactly three known
 pre-existing failures, not attributed to Increment 07. See
 [`PS01_INCREMENT_07_RENEWABLE_FOOD_CONTINUITY.md`](PS01_INCREMENT_07_RENEWABLE_FOOD_CONTINUITY.md).
 
-Increment 08 is **SELECTED / IMPLEMENTATION IN PROGRESS / NOT QUALIFIED /
-NOT PUBLISHED** in its separate worktree. PS01 I08 Blocker 01 is the
+Increment 08 is **LOCAL QUALIFIED CANDIDATE / NOT PUBLISHED** in a new canonical-based worktree. PS01 I08 Blocker 01 is the
 **PRE-EXISTING SHARED CHECKPOINT COMPATIBILITY DEFECT DISCOVERED BY I08**.
 Supervisor artifact review and independent senior review both **PASS** for
 unchanged product correction `781329891411a883f62bc0b818b47f29e908bd9d`, tree
@@ -225,11 +224,13 @@ regression remains historical **12 passed / 2 failed**. The canonical stage-5
 result remains **4920 passed / 3 failed**, not a passing gate; no regold occurred.
 Evicted-pointer authenticity, incomplete primary actor/subject validation and
 superseded care boundaries remain non-blocking residual risks, documented in
-[PS01_I08_BLOCKER_01_MORTALITY_CHECKPOINT_CAUSAL_COMPATIBILITY.md](PS01_I08_BLOCKER_01_MORTALITY_CHECKPOINT_CAUSAL_COMPATIBILITY.md). I08 final-source qualification remains pending.
+[PS01_I08_BLOCKER_01_MORTALITY_CHECKPOINT_CAUSAL_COMPATIBILITY.md](PS01_I08_BLOCKER_01_MORTALITY_CHECKPOINT_CAUSAL_COMPATIBILITY.md). I08 final-source qualification passes from the new canonical-based candidate; independent review/publication remain pending.
 
 PS01 I08 Blocker 04, cross-World stronghold cache concurrency, is a separate
-**SENIOR REVIEW APPROVED — LOCAL PUBLICATION CHAIN READY FOR USER PUSH — NOT
-PUBLISHED** shared PebbleCore correction. Exact approved commit
+**BLOCKER_FIX_PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** shared
+PebbleCore correction. The fetched remote and independent `git ls-remote`
+confirm publication in `c58fe2c0fbb2c5b568426c5f936e7a50e573ff08`.
+Exact approved commit
 `aa07e3ce71c34842e45611d8e9064de9cb563a16`, tree
 `daf3cd604f70c455da0ed13a04cc0b5703856ab8`, has sole parent
 `9919e575819dca02ee8e893a37ac9eaaebc36012`. Independent senior review is
@@ -241,8 +242,8 @@ and adds seed to the existing locked structure-plan key. Generation algorithm,
 RNG behavior, registry order, lock scope and eviction remain unchanged; no I08
 lifecycle code is included.
 
-User push and exact remote verification are pending. B04 becomes
-**BLOCKER_FIX_PUBLISHED** only after both succeed. The original exit-139 crash,
+The published chain is `9919e575` → `aa07e3c` → `c58fe2c`. The original
+pre-publication B04 record and evidence manifest remain immutable. The original exit-139 crash,
 canonical/B02/B03 TSan races, fresh canonical focused TSan failure and earlier
 I08 FAIL evidence remain immutable. Focused evidence is **838 / 0**; ordinary
 single/eight-replacement controls are **6 / 0** and **34 / 0**; native stress is
@@ -258,9 +259,17 @@ The review's pre-existing arbitrary-`GenCtx` context-identity limitation is a
 biome closures are not universally identified by this cache key. Qualification,
 review and publication details are in
 [PS01_I08_BLOCKER_04_CROSS_WORLD_STRONGHOLD_CACHE_CONCURRENCY.md](PS01_I08_BLOCKER_04_CROSS_WORLD_STRONGHOLD_CACHE_CONCURRENCY.md).
-B03's uncommitted correction remains paused in its protected worktree pending
-B04 publication/reconciliation. B04 does not qualify or publish I08, complete
-PS01, authorize CIV-48 or acquire Gate H.
+B03's exact nine-file uncommitted correction remains preserved in its protected
+historical worktree. Explicit supervisor resumption reconstructed I08/B02/B03
+semantics directly on `c58fe2c` in branch
+`codex/ps01-increment-08-final-after-b04`; neither reviewed FAIL commit is in
+its ancestry. The external safety artifact preserves the old committed tree,
+modified files, modes, patch and hashes. Full final-source qualification passes: 366/0 campaign, B03 71/0, B02+B03
+99/0, owning 1,270/0, VGS 12/0. Candidate canonical remains historical FAIL
+5,789/3; supplemental stages 6–35 pass 30/30. B04 publication alone did not
+qualify or publish I08, complete PS01,
+authorize CIV-48 or acquire Gate H. See
+[PS01_INCREMENT_08_NORMAL_CONTINUITY.md](PS01_INCREMENT_08_NORMAL_CONTINUITY.md).
 
 The milestone must establish a normal bounded persistent sandbox path, first
 measured with approximately 24 full-cognition founders and designed for roughly
@@ -283,9 +292,10 @@ integration issue. Increment 03 retires player location as authority for the
 bounded covered physical opportunity, but not every remaining integration
 risk. Other known risks are recorded in the roadmap milestone contract.
 
-The next publication action is manual user push of the approved B04 correction
-and documentation chain, followed by exact remote verification. B04 publication
-does not resume or qualify the separate I08/B03 implementation mission.
+B04 publication is verified. The authorized I08/B03 resumption now requires
+a new coherent local qualified candidate directly above `c58fe2c` for
+independent supervisor review; full post-B04 qualification has completed.
+Historical FAIL commits remain local evidence and are not publication candidates.
 Population capacity/demographic headroom remains unresolved. CIV-48 remains
 **NOT STARTED — IMPLEMENTATION NOT AUTHORIZED** and is deferred until PLAYABLE
 SLICE 01 and the resulting evidence-driven roadmap recalibration are complete.
@@ -1148,16 +1158,15 @@ PLAYABLE SLICE 01 Increment 06 published tree: 7ee2a64b55ef12ec1193d068dd1145b10
 PLAYABLE SLICE 01 Increment 07: COMPLETE AND PUBLISHED — PASS — REMOTE VERIFIED
 PLAYABLE SLICE 01 Increment 07 published HEAD: 373b5e3688d25e1e139dd735a76d48e38743c1f8
 PLAYABLE SLICE 01 Increment 07 published tree: 56e50d1f910f8825ae344aab50e4a65553ae06ef
-PLAYABLE SLICE 01 Increment 08: SELECTED / IMPLEMENTATION IN PROGRESS / NOT QUALIFIED / NOT PUBLISHED
+PLAYABLE SLICE 01 Increment 08: LOCAL QUALIFIED CANDIDATE / NOT PUBLISHED
 PS01 I08 Blocker 01 approved product correction: 781329891411a883f62bc0b818b47f29e908bd9d
 PS01 I08 Blocker 01 status: BLOCKER_FIX_PUBLISHED
 PS01 I08 Blocker 01 publication: VERIFIED IN CANONICAL 9919e575819dca02ee8e893a37ac9eaaebc36012
 PS01 I08 Blocker 04 approved correction: aa07e3ce71c34842e45611d8e9064de9cb563a16
-PS01 I08 Blocker 04 status: SENIOR REVIEW APPROVED / LOCAL PUBLICATION CHAIN READY / NOT PUBLISHED
-PS01 I08 Blocker 04 status after successful user push and remote verification: BLOCKER_FIX_PUBLISHED
-PS01 I08 Blocker 04 publication: USER PUSH AND REMOTE VERIFICATION PENDING
-PS01 I08 Blocker 03 correction: LOCAL UNCOMMITTED / PAUSED PENDING B04 PUBLICATION RECONCILIATION
-next authorized action: USER-PUSH-AND-REMOTE-VERIFY-PS01-I08-BLOCKER-04-PUBLICATION-CHAIN
+PS01 I08 Blocker 04 status: BLOCKER_FIX_PUBLISHED / SENIOR REVIEW APPROVED / REMOTE VERIFIED
+PS01 I08 Blocker 04 publication: VERIFIED IN CANONICAL c58fe2c0fbb2c5b568426c5f936e7a50e573ff08
+PS01 I08 Blocker 03 correction: EXACT HISTORICAL DIRTY STATE PRESERVED / RECONSTITUTED ON PUBLISHED B04 / LOCAL QUALIFIED CANDIDATE
+next authorized action: INDEPENDENT-SUPERVISOR-REVIEW-NEW-CANONICAL-BASED-I08-FINAL-CANDIDATE
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1 status: COMPLETE AND PUBLISHED
@@ -1582,12 +1591,11 @@ published, qualification-passed and independently remote verified at
 published product/qualification HEAD
 `373b5e3688d25e1e139dd735a76d48e38743c1f8`. The bounded normal renewable
 sweet-berry continuity contract is resolved; population capacity/demographic
-headroom remains unresolved. Increment 08 is selected, implementation in
-progress, not qualified and not published. The next publication action is
-manual user push of the approved B04 correction and documentation chain,
-followed by exact remote verification. The protected uncommitted I08/B03 work
-remains paused; separate I08 work requires explicit resumption and final-source
-qualification. CIV-48 implementation remains unauthorized. Gate G Evaluation
+headroom remains unresolved. B04 is published and remote verified in `c58fe2c`.
+Increment 08 has been explicitly resumed and reconstructed on that canonical;
+final-source qualification passes and it is a local qualified candidate, not published. The
+protected historical I08/B03 dirty worktree remains unchanged. The new local candidate is committed directly above `c58fe2c` after complete
+post-B04 qualification, then submitted for independent supervisor review. CIV-48 implementation remains unauthorized. Gate G Evaluation
 01 remains frozen historical FAIL evidence. Blocker 01 is senior-review
 approved, published and independently remote verified. Evaluation 02 is
 senior-review-approved published PASS evidence and its exact published HEAD is

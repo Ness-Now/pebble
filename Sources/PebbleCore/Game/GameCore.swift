@@ -306,6 +306,13 @@ public final class GameCore {
     /// lifecycle save, while irreversible runtime teardown remains post-save.
     public var prepareExternalLifecycleState: (() -> Bool)?
     public var finalizeExternalLifecycleState: (() -> Void)?
+    public var requiresExternalContinuation: (() -> Bool)?
+    public var prepareExternalContinuation: (() -> Bool)?
+    public var completeExternalContinuation: ((_ saved: Bool, _ exiting: Bool) -> Bool)?
+    /// Returns prepared custody to the retained live owner, with verification.
+    public var cancelExternalContinuation: (() -> Bool)?
+    public var restoreExternalContinuation: (() -> Bool)?
+    public private(set) var worldContinuationReady = true
     /// Pebble supplies derived live-embodiment coverage. GameCore remains the
     /// sole owner of generation, retention and physical ticking.
     public var physicalSimulationCoverageProvider:
@@ -313,7 +320,13 @@ public final class GameCore {
     /// Default-nil deterministic refusal seam for bounded fault proofs.
     public var testingPhysicalSimulationCoverageRequestRefusal:
         ((World, Int, Int) -> Bool)?
-    private var lifecyclePersistencePrepared = false
+    private enum LifecyclePersistenceState { case idle, prepared, blocked }
+    private var lifecyclePersistenceState = LifecyclePersistenceState.idle
+    /// One existing lifecycle halt policy for ticking and direct physical input.
+    /// Presentation and diagnostic input can remain available while halted.
+    public var worldMutationAllowed: Bool {
+        worldContinuationReady && lifecyclePersistenceState == .idle
+    }
 
     // world state
     public var worlds: [Dim: World] = [:]
@@ -679,7 +692,9 @@ public final class GameCore {
         // respawn at bed / anchor / world spawn
         var dest: (Double, Double, Double)? = nil
         var destDim = Dim(rawValue: p.spawnDim) ?? .overworld
-        if let sp = p.spawnPoint {
+        let dimensionBound = externalContinuationIsRequired
+        if dimensionBound && destDim != dim { destDim = dim }
+        if let sp = p.spawnPoint, !dimensionBound || p.spawnDim == dim.rawValue {
             let w = worlds[destDim]!
             ensureChunksLoaded(w, floorDiv(sp.0, 16), floorDiv(sp.2, 16), 1)
             let (sx, sy, sz) = sp
@@ -698,8 +713,8 @@ public final class GameCore {
             }
         }
         if dest == nil {
-            destDim = .overworld
-            let w = worlds[.overworld]!
+            destDim = dimensionBound ? dim : .overworld
+            let w = worlds[destDim]!
             ensureChunksLoaded(w, floorDiv(Int(w.spawnX), 16), floorDiv(Int(w.spawnZ), 16), 1)
             dest = (w.spawnX + 0.5, Double(w.surfaceY(Int(w.spawnX), Int(w.spawnZ))), w.spawnZ + 0.5)
         }
@@ -713,17 +728,22 @@ public final class GameCore {
     @discardableResult
     public func exitToTitle() -> Bool {
         let exitingWorldID = worldRec?.id
-        guard prepareForTermination() else {
-            host?.pushChat("§cSave failed — staying in this World so retry state is preserved.")
-            host?.showActionBar("§cSave failed — exit refused", 200)
-            return false
-        }
-        guard completePreparedLifecycle() else {
-            host?.pushChat("§cLifecycle cleanup failed — exit refused.")
-            host?.showActionBar("§cLifecycle cleanup failed — exit refused", 200)
-            return false
+        // A refused restore has never progressed. Leaving it must not overwrite
+        // the durable refusal baseline with the partially materialized World.
+        if worldContinuationReady {
+            guard prepareForTermination() else {
+                host?.pushChat("§cSave failed — staying in this World so retry state is preserved.")
+                host?.showActionBar("§cSave failed — exit refused", 200)
+                return false
+            }
+            guard completePreparedLifecycle() else {
+                host?.pushChat("§cLifecycle cleanup failed — exit refused.")
+                host?.showActionBar("§cLifecycle cleanup failed — exit refused", 200)
+                return false
+            }
         }
         inWorld = false
+        worldContinuationReady = true
         worldRec = nil
         signInscriptionIdentityCatalog = nil
         dragonSpawned = false
@@ -756,6 +776,9 @@ public final class GameCore {
         let replacingWorld = inWorld
         let previousWorldID = worldRec?.id
         guard prepareForWorldReplacement() else { return }
+        // Every admission refusal still retains the old World/session. Only
+        // completePreparedLifecycle commits teardown and consumes preparation.
+        defer { if replacingWorld { _ = cancelPreparedLifecycle() } }
         let trimmed = seedText.trimmingCharacters(in: .whitespaces)
         var seed: Int32
         if trimmed.isEmpty {
@@ -806,6 +829,7 @@ public final class GameCore {
         let replacingWorld = inWorld
         let previousWorldID = worldRec?.id
         guard prepareForWorldReplacement() else { return }
+        defer { if replacingWorld { _ = cancelPreparedLifecycle() } }
         guard let rec = db.getWorld(id) else { return }
         let playerData = db.getPlayer(id)
         let adv = db.getAdvancements(id)
@@ -893,6 +917,8 @@ public final class GameCore {
         }
 
         inWorld = true
+        worldContinuationReady = restoreExternalContinuation?()
+            ?? (db.worldContinuation(rec.id) == nil)
         deathScreenShown = false
         ticksSinceSave = 0
         host?.closeAllScreens()
@@ -902,6 +928,10 @@ public final class GameCore {
         if w.info.hasSky && Double(w.heightAt(bx, bz)) > player.eyeY() + 10 {
             host?.pushChat("§eYou are deep underground. Type §f/surface§e to climb out.")
             host?.showActionBar("§eDeep underground — press T, type §f/surface", 400)
+        }
+        if !worldContinuationReady {
+            host?.pushChat("§cCivilization continuation refused — World progression and saving are blocked. Return to title to retry.")
+            host?.showActionBar("§cContinuation refused", 400)
         }
     }
 
@@ -937,6 +967,23 @@ public final class GameCore {
 
     @discardableResult
     public func saveAndFlush(synchronous: Bool = false) -> Bool {
+        guard worldContinuationReady, lifecyclePersistenceState == .idle else { return false }
+        guard externalContinuationIsRequired else {
+            return savePhysicalAndFlush(synchronous: synchronous)
+        }
+        guard prepareExternalContinuation?() == true else {
+            if cancelExternalContinuation?() != true { lifecyclePersistenceState = .blocked }
+            return false
+        }
+        let saved = savePhysicalAndFlush(synchronous: true)
+        let completed = completeExternalContinuation?(saved, false) ?? false
+        if !completed, cancelExternalContinuation?() != true {
+            lifecyclePersistenceState = .blocked
+        }
+        return completed
+    }
+
+    private func savePhysicalAndFlush(synchronous: Bool) -> Bool {
         let first = submitChunkSave(synchronous: synchronous)
         guard synchronous else { return first.succeeded }
         guard first.requiredWritesSucceeded else { return false }
@@ -952,23 +999,62 @@ public final class GameCore {
         return retry.succeeded && !hasUnresolvedChunkSaves(worldID: worldID)
     }
 
+    private var externalContinuationIsRequired: Bool {
+        if requiresExternalContinuation?() == true { return true }
+        guard let id = worldRec?.id else { return false }
+        return db.worldContinuation(id) != nil
+    }
+
     /// Lifecycle owners use the synchronous result to refuse destruction or
-    /// termination, then immediately call `completePreparedLifecycle()` before
-    /// destruction. Failure never exists solely in an unexecuted main callback.
+    /// termination, then commit with `completePreparedLifecycle()` or cancel
+    /// with `cancelPreparedLifecycle()` if the old World is retained.
     @discardableResult
     public func prepareForTermination() -> Bool {
-        lifecyclePersistencePrepared = false
-        guard prepareExternalLifecycleState?() ?? true else { return false }
+        if lifecyclePersistenceState == .prepared { return true }
+        guard lifecyclePersistenceState == .idle else { return false }
+        guard worldContinuationReady else { return false }
+        let coupled = externalContinuationIsRequired
+        func refused() -> Bool {
+            if coupled {
+                _ = completeExternalContinuation?(false, false)
+                if cancelExternalContinuation?() != true {
+                    lifecyclePersistenceState = .blocked
+                }
+            }
+            return false
+        }
+        if coupled, prepareExternalContinuation?() != true { return refused() }
+        guard prepareExternalLifecycleState?() ?? true else { return refused() }
         if inWorld {
             for dimension in worlds.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
                 guard let world = worlds[dimension],
                       prepareLabCoreAgentProbesForLifecycle(in: world) else {
-                    return false
+                    return refused()
                 }
             }
-            guard saveAndFlush(synchronous: true) else { return false }
+            guard savePhysicalAndFlush(synchronous: true) else { return refused() }
         }
-        lifecyclePersistencePrepared = true
+        if coupled, completeExternalContinuation?(true, true) != true {
+            if cancelExternalContinuation?() != true {
+                lifecyclePersistenceState = .blocked
+            }
+            return false
+        }
+        lifecyclePersistenceState = .prepared
+        return true
+    }
+
+    /// Idempotent after verified cancellation or committed teardown. Failed
+    /// compensation retains the prepared owner and blocks progression/retry.
+    @discardableResult
+    public func cancelPreparedLifecycle() -> Bool {
+        if lifecyclePersistenceState == .idle { return true }
+        guard externalContinuationIsRequired || lifecyclePersistenceState == .prepared else { return false }
+        if externalContinuationIsRequired, cancelExternalContinuation?() != true {
+            lifecyclePersistenceState = .blocked
+            return false
+        }
+        lifecyclePersistenceState = .idle
         return true
     }
 
@@ -976,19 +1062,25 @@ public final class GameCore {
     /// lifecycle barrier. Every probe must already have empty custody.
     @discardableResult
     public func completePreparedLifecycle() -> Bool {
-        guard lifecyclePersistencePrepared else { return false }
-        lifecyclePersistencePrepared = false
+        guard lifecyclePersistenceState == .prepared else { return false }
         let probes = worlds.values.flatMap { world in
             world.entities.compactMap { $0 as? LabCoreAgentEntity }
         }
         guard probes.allSatisfy({ $0.carriedItems.allSatisfy { $0 == nil } }) else {
+            _ = cancelPreparedLifecycle()
             return false
         }
         finalizeExternalLifecycleState?()
         let remaining = worlds.values.reduce(0) { count, world in
             count + world.entities.compactMap { $0 as? LabCoreAgentEntity }.count
         }
-        return clearLabCoreAgentProbes() == remaining
+        // Teardown is now irreversible. A corrupt Core removal invariant is a
+        // hard failure, never a return claiming the old session can continue.
+        let removed = clearLabCoreAgentProbesAfterLifecycleCommit()
+        precondition(removed == remaining,
+            "committed lifecycle probe removal failed")
+        lifecyclePersistenceState = .idle
+        return true
     }
 
     private func submitChunkSave(synchronous: Bool) -> SaveSubmissionResult {
@@ -1194,6 +1286,7 @@ public final class GameCore {
 
     private func prepareForWorldReplacement() -> Bool {
         guard inWorld else { return true }
+        guard worldContinuationReady else { return false }
         guard prepareForTermination() else {
             host?.pushChat("§cSave failed — World switch refused.")
             host?.showActionBar("§cSave failed — World switch refused", 200)
@@ -1852,6 +1945,20 @@ public final class GameCore {
     }
 
     /// Guarantee an area exists before placing the player in it (synchronous)
+    /// Materializes bounded saved continuation cells before any World tick.
+    /// The adapter supplies coordinates; Core remains the sole chunk owner.
+    public func prepareWorldContinuationChunks(
+        dimension: Int, coordinates: [(Int, Int)]
+    ) -> Bool {
+        guard let d = Dim(rawValue: dimension), let w = worlds[d],
+              coordinates.count <= 270 else { return false }
+        for (cx, cz) in coordinates {
+            ensureChunksLoaded(w, cx, cz, 0)
+        }
+        return coordinates.allSatisfy { w.isChunkReady($0.0, $0.1) }
+    }
+
+    /// Guarantee an area exists before placing the player in it (synchronous)
     private func ensureChunksLoaded(_ w: World, _ ccx: Int, _ ccz: Int, _ radius: Int) {
         let worldId = worldRec?.id
         for dz in -radius...radius {
@@ -2190,6 +2297,11 @@ public final class GameCore {
     // ===========================================================================
     @discardableResult
     public func clearLabCoreAgentProbes() -> Int {
+        guard worldMutationAllowed else { return 0 }
+        return clearLabCoreAgentProbesAfterLifecycleCommit()
+    }
+
+    private func clearLabCoreAgentProbesAfterLifecycleCommit() -> Int {
         var removed = 0
         for world in worlds.values {
             removed += PebbleCore.clearLabCoreAgentProbes(in: world)
@@ -2215,8 +2327,17 @@ public final class GameCore {
         }
     }
 
+    private func permitContinuationDimensionTravel() -> Bool {
+        guard !externalContinuationIsRequired else {
+            player?.portalCooldown = 200
+            host?.showActionBar("§cDimension travel refused — civilization continuation binds this dimension", 200)
+            return false
+        }
+        return true
+    }
+
     private func travelNetherPortal() {
-        if traveling { return }
+        if traveling || !permitContinuationDimensionTravel() { return }
         traveling = true
         defer { traveling = false }
         let p = player!
@@ -2240,7 +2361,7 @@ public final class GameCore {
     }
 
     private func travelEndPortal() {
-        if traveling { return }
+        if traveling || !permitContinuationDimensionTravel() { return }
         traveling = true
         defer { traveling = false }
         let p = player!
@@ -2346,7 +2467,7 @@ public final class GameCore {
     // Tick
     // ===========================================================================
     private func tick() {
-        if !inWorld { return }
+        if !inWorld || !worldMutationAllowed { return }
         let w = world
         let p = player!
         paused = host?.screenPausesGame() ?? false
@@ -3044,7 +3165,7 @@ public final class GameCore {
     // Input — the app forwards events here when no screen is open
     // ===========================================================================
     public func mouseDown(_ button: Int) {
-        guard inWorld, !(host?.hasScreen() ?? false) else { return }
+        guard inWorld, worldMutationAllowed, !(host?.hasScreen() ?? false) else { return }
         if button == 0 {
             leftDown = true
             doAttack()
@@ -3061,7 +3182,7 @@ public final class GameCore {
         if button == 0 { leftDown = false }
         if button == 2 {
             rightDown = false
-            if player?.usingItem == true { releaseUsingItem(interactCtx()) }
+            if worldMutationAllowed, player?.usingItem == true { releaseUsingItem(interactCtx()) }
         }
     }
 
@@ -3082,7 +3203,9 @@ public final class GameCore {
     /// `now` is a monotonic millisecond clock for double-tap detection.
     public func keyDown(_ code: String, now: Double, ctrlOrCmd: Bool = false) {
         guard inWorld else { return }
-        keys.insert(code)
+        let diagnostic = ["Escape", keybinds["perspective"], keybinds["chat"], keybinds["command"]].contains(code)
+        guard worldMutationAllowed || diagnostic else { return }
+        if worldMutationAllowed { keys.insert(code) }
         let p = player!
         if code == "Escape" {
             host?.openPauseScreen()

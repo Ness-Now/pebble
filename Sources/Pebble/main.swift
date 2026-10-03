@@ -486,6 +486,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         guard values.count == 3 else { return nil }
         return AgentPosition(x: values[0], y: values[1], z: values[2])
     }()
+    private let increment08LivePhase = ProcessInfo.processInfo.environment["PEBBLELAB_PS01_INCREMENT08_LIVE_PHASE"]
+    private let increment08LiveDirectory = ProcessInfo.processInfo.environment["PEBBLELAB_PS01_INCREMENT08_LIVE_CAPTURE_DIR"]
+    private var increment08LiveStage = 0
+    private var increment08LiveResumeTick = 0
+    private var increment08LiveConsumed: UInt64 = 0
+    private var increment08LiveCapturePath: String?
     private var increment07LiveInitialCaptured = false
     private var increment07LiveFirstAttemptID: AgentSubsistenceAttemptID?
     private var increment07LiveRenderCapture: Increment07LiveRenderCapture?
@@ -588,6 +594,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         game = GameCore()
         game.host = host
         agentController.worldSideReceiptDatabase = game.db
+        agentController.installWorldContinuation(on: game)
         game.physicalSimulationCoverageProvider = { [weak agentController] world in
             agentController?.physicalSimulationCoverageRequest(for: world)
                 ?? .inactive
@@ -629,7 +636,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         // capture hooks blit from the drawable, which framebufferOnly forbids
         let env = ProcessInfo.processInfo.environment
         if env["PEBBLE_SHOT"] != nil || env["PEBBLE_PHOTOBOOTH"] != nil
-            || increment07LiveCaptureEnabled {
+            || increment07LiveCaptureEnabled || increment08LivePhase != nil {
             gameView.framebufferOnly = false
         }
         window.contentView = gameView
@@ -660,6 +667,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
             self.hud.pushSubtitle(text)
         }
 
+        if increment08LivePhase != nil {
+            // Existing Video Settings option, presentation only. Keep the
+            // ordinary debug overlay legible without covering the subject.
+            game.settings.guiScale = 2
+        }
         ui.resize(Double(gameView.drawableSize.width), Double(gameView.drawableSize.height), game.settings.guiScale)
 
         // settings.resourcePacks holds USER packs only — the default pack
@@ -1368,7 +1380,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
             // Once its final batch has run, freeze World age until the scripted
             // shutdown so the saved continuation boundary is byte-reproducible.
             let frameDelta: Double
-            if pendingCmdWorldTick == nil {
+            if increment08LiveStage == 1 || increment08LiveStage == 3 {
+                frameDelta = 0
+            } else if pendingCmdWorldTick == nil {
                 frameDelta = dt
             } else if pendingCmds == nil {
                 frameDelta = 0
@@ -1386,6 +1400,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
                 maximumSimulationTick: gateB3AcceptanceHorizon
             )
             driveIncrement07LiveCaptureAfterCognition()
+            driveIncrement08LiveContinuation()
             driveIncrement05NaturalCharacterization()
             if let evidence = increment03CoverageLiveProof?.afterFrame(
                 game: game,
@@ -1783,6 +1798,99 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         }
     }
 
+    /// Launch-gated visual evidence; saves and restores remain ordinary product
+    /// callbacks. Camera changes are render-only and never move the Player.
+    private func increment08LiveTerrainReady(around target: AgentPosition) -> Bool {
+        // LoadingScreen has a timeout, and physical chunk readiness does not
+        // imply that asynchronous lighting/meshing has reached the renderer.
+        // Observe existing GPU uploads around the subject; never force a mesh
+        // or advance a separate rendering/simulation owner.
+        let cx = target.x >> 4, cz = target.z >> 4
+        for dz in -1...1 {
+            for dx in -1...1 {
+                guard let chunk = game.world.getChunk(cx + dx, cz + dz), chunk.status == .lit else { return false }
+                let surfaceY = Int(chunk.heightmap[8 * 16 + 8])
+                let sy = (surfaceY - chunk.minY) >> 4
+                guard renderer.sections[SectionKey(cx: cx + dx, sy: sy, cz: cz + dz)]?.opaque != nil else { return false }
+            }
+        }
+        let sy = (target.y - 1 - game.world.info.minY) >> 4
+        return renderer.sections[SectionKey(cx: cx, sy: sy, cz: cz)]?.opaque != nil
+    }
+
+    private func driveIncrement08LiveContinuation() {
+        guard let phase = increment08LivePhase, let directory = increment08LiveDirectory,
+              ["write", "read", "resave", "observe"].contains(phase), increment08LiveStage < 4,
+              let session = agentController.session else { return }
+        guard !(ui.current() is LoadingScreen) else { return }
+        precondition(game.worldContinuationReady && agentController.runtimeErrorCount == 0
+            && agentController.fatalSessionIntegrityFailure == nil, "I08 live integrity")
+        let consumed = session.physicalFoodSurvivalSnapshot()?.totalConsumedQuantity ?? 0
+        let carrying = agentController.probesByAgentId.values.filter {
+            $0.carriedItems.compactMap { $0 }.contains { itemName($0.id) == "sweet_berries" }
+        }.sorted { $0.labAgentId < $1.labAgentId }
+        guard let target = carrying.first ?? agentController.probesByAgentId.values.sorted(by: { $0.labAgentId < $1.labAgentId }).first else { return }
+        let position = AgentPosition(x: Int(target.x.rounded(.down)), y: Int(target.y.rounded(.down)), z: Int(target.z.rounded(.down)))
+        func capture(_ name: String) {
+            let cx = position.x >> 4, cz = position.z >> 4
+            let sy = (position.y - 1 - game.world.info.minY) >> 4
+            let terrain = renderer.sections[SectionKey(cx: cx, sy: sy, cz: cz)]
+            let neighborStates = [(-1, 0), (1, 0), (0, -1), (0, 1)].map {
+                game.world.getChunk(cx + $0.0, cz + $0.1).map { String(describing: $0.status) } ?? "absent"
+            }.joined(separator: ",")
+            print("[lab-live] PS01_INCREMENT_08_RENDER_READY phase=\(name) worldTick=\(game.world.time) target=\(position.x),\(position.y),\(position.z) chunkStatus=\(game.world.getChunk(cx, cz).map { String(describing: $0.status) } ?? "absent") neighbors=\(neighborStates) sections=\(renderer.sections.count) targetOpaque=\(terrain?.opaque?.indexCount ?? 0) targetCutout=\(terrain?.cutout?.indexCount ?? 0) targetTranslucent=\(terrain?.translucent?.indexCount ?? 0) surfaceNeighborhood=9 loadingScreen=0")
+            let path = directory + "/" + name + ".png"
+            increment08LiveCapturePath = path
+            scheduleIncrement07LiveCapture(path: path, phase: "i08-" + name, target: position,
+                metadata: "increment=08 living=\(session.snapshot().agents.count) worldTick=\(game.world.time) civilizationTick=\(session.tick) consumed=\(consumed) carryingAgents=\(carrying.count)", terminateAfterCapture: false)
+            print("[lab-live] PS01_INCREMENT_08_CAPTURE_REQUEST phase=\(name) world=\(game.worldRec!.id) simulation=\(session.simulationID.rawValue) tick=\(session.tick) consumed=\(consumed) carryingAgents=\(carrying.count) cameraAuthority=renderOnlyObserver path=\(path)")
+            fflush(stdout)
+        }
+        if increment08LiveStage == 0 {
+            guard pendingCmds == nil, increment08LiveTerrainReady(around: position) else { return }
+            if (phase == "write" || phase == "resave") && carrying.isEmpty { return }
+            precondition(session.snapshot().agents.count == 24, "I08 live founder envelope")
+            capture(phase == "write" || phase == "resave" ? "before-save" : "after-restore")
+            increment08LiveStage = 1
+            increment08LiveConsumed = consumed
+            return
+        }
+        if increment08LiveStage == 1 || increment08LiveStage == 3 {
+            guard let path = increment08LiveCapturePath, FileManager.default.fileExists(atPath: path) else { return }
+            if (phase == "read" || phase == "observe") && increment08LiveStage == 1 {
+                increment08LiveResumeTick = game.world.time
+                increment08LiveStage = 2
+                return
+            }
+            increment08LiveStage = 4
+            let digest = try! session.durableStateDigest().rawValue
+            let tick = session.tick
+            let material = agentController.probesByAgentId.values.reduce(0) { total, probe in
+                total + probe.carriedItems.compactMap { $0 }.reduce(0) { $0 + $1.count }
+            }
+            precondition(phase != "read" || consumed > increment08LiveConsumed, "I08 live restored food remains usable")
+            precondition(session.wildSubsistenceEnabled && session.physicalFoodSurvivalEnabled,
+                "I08 live ordinary subsistence remains enabled")
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                precondition(self.game.saveAndFlush(), "I08 live Save/Continue")
+                precondition((try! self.agentController.session!.durableStateDigest().rawValue) == digest, "I08 live capture changes civilization")
+                precondition(self.game.exitToTitle(), "I08 live Save/Exit")
+                precondition(self.agentController.session == nil && self.agentController.probesByAgentId.isEmpty, "I08 live lifecycle cleanup")
+                print("[lab-live] PS01_INCREMENT_08_LIVE_PASS phase=\(phase) tick=\(tick) digest=\(digest) carried=\(material) consumed=\(consumed) foundersCreated=\(phase == "write" ? 24 : 0) subsistenceEnabled=1 saveContinue=PASS saveExit=PASS probesFinal=0")
+                fflush(stdout)
+                NSApp.terminate(nil)
+            }
+            return
+        }
+        if increment08LiveStage == 2 && game.world.time - increment08LiveResumeTick >= 1200
+            && increment08LiveTerrainReady(around: position)
+            && (phase != "read" || consumed > increment08LiveConsumed) {
+            capture("continued")
+            increment08LiveStage = 3
+        }
+    }
+
     private func scheduleIncrement07LiveCapture(
         path: String,
         phase: String,
@@ -1809,7 +1917,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
     }
 
     private func increment07LiveRenderCamera(overriding base: CamState) -> CamState {
-        guard increment07LiveCaptureEnabled,
+        guard increment07LiveCaptureEnabled || increment08LivePhase != nil,
               var request = increment07LiveRenderCapture else { return base }
         let player = game.player!
         let playerBefore = (player.x, player.y, player.z)
@@ -2034,6 +2142,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
 
 if let blockerStatus = PebbleMortalityCheckpointBlockerHarness.runIfRequested() {
     exit(blockerStatus)
+}
+
+if let continuationStatus = PebbleIncrement08ContinuationHarness.runIfRequested() {
+    exit(continuationStatus)
 }
 
 if let faultStatus = PebbleIncrement07FaultHarness.runIfRequested() {

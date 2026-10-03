@@ -28,6 +28,21 @@ extension PebbleAgentController {
         game: GameCore? = nil
     ) -> PebbleAgentCommandResult {
         let command = arguments.first?.lowercased() ?? "status"
+        if pendingWorldContinuation != nil {
+            if command == "resume", arguments.count == 1, let game {
+                guard game.cancelPreparedLifecycle() else {
+                    return failure("Resume refused: continuation compensation could not be verified.")
+                }
+            } else {
+                let readOnlyCheckpoint = command == "checkpoint"
+                    && ["status", "list"].contains(arguments.dropFirst().first ?? "")
+                let readOnlyDemo = command == "demo" && arguments.dropFirst().first == "status"
+                guard PebbleFatalIntegrityCommandPolicy(command: command) == .observational
+                    || readOnlyCheckpoint || readOnlyDemo else {
+                    return failure("Command refused: continuation compensation remains owned.")
+                }
+            }
+        }
         if let fatalSessionIntegrityFailure,
            PebbleFatalIntegrityCommandPolicy(command: command)
             == .refuseMutation {
@@ -46,8 +61,9 @@ extension PebbleAgentController {
             )
         }
         if let candidatePhysicalHardFailure,
+           !(command == "demo" && arguments == ["demo", "status"]),
            ![
-               "help", "status", "observer", "causality", "scale", "pause",
+               "help", "status", "observer", "causality", "scale", "focus", "next", "follow", "overlay", "pause",
                "stop", "clear", "start", "resume", "step", "reset",
                "checkpoint",
            ].contains(command) {

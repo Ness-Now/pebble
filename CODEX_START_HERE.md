@@ -271,16 +271,19 @@ for the compact status. In particular:
   final Risk-C is P0 0 / P1 0 / blocking P2 0. Natural Core random ticks now
   renew the same preserving-harvest sweet-berry source for a second normal
   acquisition with exact physical custody and conservation. The Core streaming
-  determinism blocker fix is published. Increment 08 is **SELECTED /
-  IMPLEMENTATION IN PROGRESS / NOT QUALIFIED / NOT PUBLISHED**. Its separate
-  B01 correction is **BLOCKER_FIX_PUBLISHED**, verified in fetched canonical
-  `9919e575819dca02ee8e893a37ac9eaaebc36012`. Separate shared Core B04 correction
-  `aa07e3ce71c34842e45611d8e9064de9cb563a16` has independent senior review PASS
-  with P0 0 / P1 0 / blocking P2 0 and is safe to publish unchanged. Its local
-  publication chain is ready for user push; publication and remote verification
-  remain pending. Only afterward does B04 become **BLOCKER_FIX_PUBLISHED**.
-  The protected uncommitted I08/B03 work remains paused pending B04 publication/
-  reconciliation and explicit resumption; I08 qualification remains pending. See
+  determinism blocker fix is published. Increment 08 is **LOCAL QUALIFIED CANDIDATE /
+  NOT PUBLISHED**. Its
+  separate B01 correction remains **BLOCKER_FIX_PUBLISHED**. Shared Core B04
+  correction `aa07e3ce71c34842e45611d8e9064de9cb563a16` is now
+  **BLOCKER_FIX_PUBLISHED — REMOTE VERIFIED** in canonical
+  `c58fe2c0fbb2c5b568426c5f936e7a50e573ff08`, with independent senior review
+  PASS, P0 0 / P1 0 / blocking P2 0. Its original pre-publication record and
+  all historical FAIL evidence remain preserved. I08/B02/B03 has been
+  reconstructed directly on that canonical in a new managed worktree, without
+  rebasing or replaying the two historical independently reviewed FAIL commits.
+  The original nine-file dirty worktree and an external safety archive remain
+  unchanged. I08 final-source qualification passes; independent supervisor review is next. See
+  [PS01_INCREMENT_08_NORMAL_CONTINUITY.md](docs/pebblelab/PS01_INCREMENT_08_NORMAL_CONTINUITY.md),
   [PS01_I08_BLOCKER_04_CROSS_WORLD_STRONGHOLD_CACHE_CONCURRENCY.md](docs/pebblelab/PS01_I08_BLOCKER_04_CROSS_WORLD_STRONGHOLD_CACHE_CONCURRENCY.md) and
   [PS01_I08_BLOCKER_01_MORTALITY_CHECKPOINT_CAUSAL_COMPATIBILITY.md](docs/pebblelab/PS01_I08_BLOCKER_01_MORTALITY_CHECKPOINT_CAUSAL_COMPATIBILITY.md).
 - CIV-48 remains **NOT STARTED**, implementation is not authorized, and it is

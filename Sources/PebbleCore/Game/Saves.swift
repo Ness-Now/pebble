@@ -55,6 +55,9 @@ public struct WorldRecord: Codable {
     public var dragonKilled: Bool
     public var gatewaysSpawned: Int
     public var nextEntityId: Int
+    /// Missing adapter evidence must not silently turn a continued World into
+    /// a new civilization-free World. Optional for pre-continuation saves.
+    public var externalContinuationRequired: Bool?
 
     public init(id: String, name: String, seed: Int32, gameMode: Int, difficulty: Int) {
         self.id = id
@@ -141,6 +144,13 @@ public enum RequiredPersistenceWrite: String {
     case advancements
 }
 
+/// Opaque adapter continuation reference. Core owns only its physical revision;
+/// the adapter owns the payload and its existing persistence codec.
+public struct WorldContinuationRecord {
+    public let revision: Int64
+    public let payload: Data?
+}
+
 public final class SaveDB {
     private var db: OpaquePointer?
     private let databaseLock = NSRecursiveLock()
@@ -152,6 +162,8 @@ public final class SaveDB {
     public var testingSignInscriptionPersistenceHook: ((SignInscriptionPersistencePhase) -> Bool)?
     /// Default-nil deterministic seam for required non-chunk lifecycle writes.
     public var testingRequiredPersistenceWriteHook: ((RequiredPersistenceWrite) -> Bool)?
+    public var testingContinuationPublicationRefusal: (() -> Bool)?
+    private var continuationSchemaReady = false
 
     public init() {
         let url = vcSupportDir().appendingPathComponent("pebble.db")
@@ -181,6 +193,27 @@ public final class SaveDB {
             world TEXT NOT NULL, kind TEXT NOT NULL, receiptID TEXT NOT NULL,
             data BLOB NOT NULL, PRIMARY KEY(world, kind, receiptID)) WITHOUT ROWID
         """)
+        continuationSchemaReady = exec("""
+        CREATE TABLE IF NOT EXISTS world_continuations(
+            world TEXT PRIMARY KEY, revision INTEGER NOT NULL DEFAULT 0, payload BLOB)
+        """)
+        // Invalidation belongs to the same SQLite statement as the physical
+        // write, including streaming and failed/partial lifecycle attempts.
+        // Absence of a row preserves ordinary Worlds without civilization.
+        for (table, column) in [("worlds", "id"), ("chunks", "world"),
+                                ("player", "world"), ("advancements", "world"),
+                                ("world_receipts", "world")] {
+            for operation in ["INSERT", "UPDATE", "DELETE"] {
+                let source = operation == "DELETE" ? "OLD" : "NEW"
+                continuationSchemaReady = exec("""
+                CREATE TRIGGER IF NOT EXISTS continuation_\(table)_\(operation)
+                AFTER \(operation) ON \(table) BEGIN
+                  UPDATE world_continuations SET revision=revision+1, payload=NULL
+                    WHERE world=\(source).\(column);
+                END
+                """) && continuationSchemaReady
+            }
+        }
         signInscriptionIndexSchemaReady = ensureSignInscriptionIndexSchema()
         migrateLegacySaves()
     }
@@ -268,6 +301,10 @@ public final class SaveDB {
     @discardableResult
     public func putWorld(_ rec: WorldRecord) -> Bool {
         guard testingRequiredPersistenceWriteHook?(.world) ?? true else { return false }
+        var rec = rec
+        if getWorld(rec.id)?.externalContinuationRequired == true {
+            rec.externalContinuationRequired = true
+        }
         guard let data = try? JSONEncoder().encode(rec),
               let json = String(data: data, encoding: .utf8) else { return false }
         return run("INSERT OR REPLACE INTO worlds(id, json, lastPlayed) VALUES(?,?,?)", bind: { stmt in
@@ -282,12 +319,60 @@ public final class SaveDB {
         exec("BEGIN")
         for table in [
             "worlds", "chunks", "player", "advancements", "world_receipts",
-            "sign_inscription_chunks",
+            "sign_inscription_chunks", "world_continuations",
         ] {
             let col = table == "worlds" ? "id" : "world"
             run("DELETE FROM \(table) WHERE \(col)=?", bind: { self.bindText($0, 1, id) })
         }
         exec("COMMIT")
+    }
+
+    /// Establishes a fail-closed requirement without selecting a continuation.
+    @discardableResult
+    public func requireWorldContinuation(_ worldID: String) -> Bool {
+        guard continuationSchemaReady, var record = getWorld(worldID) else { return false }
+        guard run("INSERT OR IGNORE INTO world_continuations(world) VALUES(?)",
+                  bind: { self.bindText($0, 1, worldID) }) else { return false }
+        if record.externalContinuationRequired == true { return true }
+        record.externalContinuationRequired = true
+        return putWorld(record)
+    }
+
+    public func worldContinuation(_ worldID: String) -> WorldContinuationRecord? {
+        guard continuationSchemaReady else {
+            return WorldContinuationRecord(revision: -1, payload: nil)
+        }
+        var value: WorldContinuationRecord?
+        let ok = run("SELECT revision,payload FROM world_continuations WHERE world=?",
+            bind: { self.bindText($0, 1, worldID) }, row: {
+                value = WorldContinuationRecord(
+                    revision: sqlite3_column_int64($0, 0),
+                    payload: self.columnData($0, 1))
+            })
+        if !ok || (value == nil && getWorld(worldID)?.externalContinuationRequired == true) {
+            return WorldContinuationRecord(revision: -1, payload: nil)
+        }
+        return value
+    }
+
+    /// Called only after Core's synchronous barrier. Compare-and-publish refuses
+    /// any intervening physical write; a failed attempt never selects its bundle.
+    @discardableResult
+    public func publishWorldContinuation(
+        _ worldID: String, revision: Int64, payload: Data
+    ) -> Bool {
+        databaseLock.lock()
+        defer { databaseLock.unlock() }
+        guard continuationSchemaReady, !payload.isEmpty,
+              payload.count <= 1_048_576,
+              !(testingContinuationPublicationRefusal?() ?? false) else { return false }
+        let ok = run("UPDATE world_continuations SET payload=? WHERE world=? AND revision=?",
+                     bind: {
+            self.bindData($0, 1, payload)
+            self.bindText($0, 2, worldID)
+            sqlite3_bind_int64($0, 3, revision)
+        })
+        return ok && sqlite3_changes(db) == 1
     }
 
     // ---- World-side physical receipts ---------------------------------------

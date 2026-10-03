@@ -1,0 +1,972 @@
+{
+  "version": 1,
+  "mission": "RESUME-PS01-I08-B03-AFTER-PUBLISHED-B04-AND-RECONSTITUTE-FINAL-CANDIDATE",
+  "canonical_ref": "origin/lab/pebblelab-v1",
+  "canonical_head": "c58fe2c0fbb2c5b568426c5f936e7a50e573ff08",
+  "published_chain": [
+    "9919e575819dca02ee8e893a37ac9eaaebc36012",
+    "aa07e3ce71c34842e45611d8e9064de9cb563a16",
+    "c58fe2c0fbb2c5b568426c5f936e7a50e573ff08"
+  ],
+  "candidate_branch": "codex/ps01-increment-08-final-after-b04",
+  "candidate_worktree": "/Users/nessnow/.codex/worktrees/ps01-i08-final-after-b04/pebble-lab",
+  "candidate_commit_and_tree_identity": "external delivery-manifest.json created after the single candidate commit; no circular self-SHA claim",
+  "historical_fail_commits": [
+    "066704f53275ca56f863b5911d8799d8072c2196",
+    "8b7b1970c0f85e14b905ab032c2448057e9737b9"
+  ],
+  "historical_worktree": {
+    "head": "8b7b1970c0f85e14b905ab032c2448057e9737b9",
+    "branch": "codex/ps01-increment-08-normal-continuity",
+    "diff_sha256": "b5b98710ee334c47ecc3b38f5a1bdbb6416c45127a7e72eaaf735f3ba5760d1c",
+    "status": [
+      " M Sources/Pebble/CommandsM.swift",
+      " M Sources/Pebble/PebbleAgentController+Commands.swift",
+      " M Sources/Pebble/PebbleAgentController+Lifecycle.swift",
+      " M Sources/Pebble/PebbleAgentController+Persistence.swift",
+      " M Sources/Pebble/PebbleAgentController+WorldContinuation.swift",
+      " M Sources/Pebble/PebbleIncrement08ContinuationHarness.swift",
+      " M Sources/PebbleCore/Game/GameCore.swift",
+      " M Sources/pebsmoke/PebbleCoreWorldContinuationSmoke.swift",
+      " M scripts/verify-pebblelab-ps01-increment-08.sh"
+    ],
+    "diff_stats": "9 files changed, 236 insertions(+), 19 deletions(-)",
+    "staged_files": 0,
+    "untracked_files": 0,
+    "verification": "unchanged during post-B04 builds and qualification"
+  },
+  "safety_artifact": "/Users/nessnow/.codex/artifacts/ps01-i08-b03-safety-20261004",
+  "safety_manifest_sha256": "2799432100705cb0e1485974c0843e9dc691bcdbcb2473b1a07d3f660f01528a",
+  "safety_committed_archive_sha256": "e19a5bf770613d6cf6f0bddf3058d1530fd1089adfdd1207387a9e6d4868a0c1",
+  "safety_git_bundle_sha256": "e865c00a480c8c2a2868bf403fed1e07996c8680276419b5b6cb5a9a996cb0f3",
+  "initial_reconstitution_proof_sha256": "cb8845429691c2476da9872c66c716c59e708e79b1143b9f67eeabf12387e410",
+  "file_mapping": [
+    {
+      "old_historical_file": "/Users/nessnow/Dev/pebble-lab/Sources/Pebble/CommandsM.swift",
+      "final_reconstituted_file": "/Users/nessnow/.codex/worktrees/ps01-i08-final-after-b04/pebble-lab/Sources/Pebble/CommandsM.swift",
+      "relative_path": "Sources/Pebble/CommandsM.swift",
+      "historical_sha256": "10fdf6eafc36a3ab502bd9d069e7f456357db33bcef55522e9b54d7e199099ae",
+      "reconstituted_sha256": "10fdf6eafc36a3ab502bd9d069e7f456357db33bcef55522e9b54d7e199099ae",
+      "canonical_sha256": "b93b5ba29dc2ed12346a7681aa3db7cc629fd11a747305538a33bee5c981da05",
+      "mode": "0o644",
+      "deliberate_difference": "Exact preserved historical I08/B02 plus B03 file",
+      "b03_modified": true,
+      "final_delivered_sha256": "10fdf6eafc36a3ab502bd9d069e7f456357db33bcef55522e9b54d7e199099ae",
+      "final_documentation_augmentation": false
+    },
+    {
+      "old_historical_file": "/Users/nessnow/Dev/pebble-lab/Sources/Pebble/PebbleAgentController+Commands.swift",
+      "final_reconstituted_file": "/Users/nessnow/.codex/worktrees/ps01-i08-final-after-b04/pebble-lab/Sources/Pebble/PebbleAgentController+Commands.swift",
+      "relative_path": "Sources/Pebble/PebbleAgentController+Commands.swift",
+      "historical_sha256": "51c574be0e8067723b7b612ea93b51e9f07738862ed55889d1029135c7400914",
+      "reconstituted_sha256": "51c574be0e8067723b7b612ea93b51e9f07738862ed55889d1029135c7400914",
+      "canonical_sha256": "9e6af030defdecb57190059c44ae3fb0cf5c2da5e9504ea8d65a894bb7dbdfea",
+      "mode": "0o644",
+      "deliberate_difference": "Exact preserved historical I08/B02 plus B03 file",
+      "b03_modified": true,
+      "final_delivered_sha256": "51c574be0e8067723b7b612ea93b51e9f07738862ed55889d1029135c7400914",
+      "final_documentation_augmentation": false
+    },
+    {
+      "old_historical_file": "/Users/nessnow/Dev/pebble-lab/Sources/Pebble/PebbleAgentController+Lifecycle.swift",
+      "final_reconstituted_file": "/Users/nessnow/.codex/worktrees/ps01-i08-final-after-b04/pebble-lab/Sources/Pebble/PebbleAgentController+Lifecycle.swift",
+      "relative_path": "Sources/Pebble/PebbleAgentController+Lifecycle.swift",
+      "historical_sha256": "dd28118c9c9f8aa2e0c92a550cfea1ae556fdcddad25fd7d53053be4277293be",
+      "reconstituted_sha256": "dd28118c9c9f8aa2e0c92a550cfea1ae556fdcddad25fd7d53053be4277293be",
+      "canonical_sha256": "22adff7045d39bab60c223db26e3c5f3b4153a14f4eba86e32a3f181d3dbb69c",
+      "mode": "0o644",
+      "deliberate_difference": "Exact preserved historical I08/B02 plus B03 file",
+      "b03_modified": true,
+      "final_delivered_sha256": "dd28118c9c9f8aa2e0c92a550cfea1ae556fdcddad25fd7d53053be4277293be",
+      "final_documentation_augmentation": false
+    },
+    {
+      "old_historical_file": "/Users/nessnow/Dev/pebble-lab/Sources/Pebble/PebbleAgentController+Persistence.swift",
+      "final_reconstituted_file": "/Users/nessnow/.codex/worktrees/ps01-i08-final-after-b04/pebble-lab/Sources/Pebble/PebbleAgentController+Persistence.swift",
+      "relative_path": "Sources/Pebble/PebbleAgentController+Persistence.swift",
+      "historical_sha256": "a56c83f4da1d78cd08f247a7719402bf5502143ad92b6542e7069000c4b79ba8",
+      "reconstituted_sha256": "a56c83f4da1d78cd08f247a7719402bf5502143ad92b6542e7069000c4b79ba8",
+      "canonical_sha256": "f418e6ed68cfd6e375230e013915c60a0503a234ec91e8c306ef3562f14e269f",
+      "mode": "0o644",
+      "deliberate_difference": "Exact preserved historical I08/B02 plus B03 file",
+      "b03_modified": true,
+      "final_delivered_sha256": "a56c83f4da1d78cd08f247a7719402bf5502143ad92b6542e7069000c4b79ba8",
+      "final_documentation_augmentation": false
+    },
+    {
+      "old_historical_file": "/Users/nessnow/Dev/pebble-lab/Sources/Pebble/PebbleAgentController+WorldContinuation.swift",
+      "final_reconstituted_file": "/Users/nessnow/.codex/worktrees/ps01-i08-final-after-b04/pebble-lab/Sources/Pebble/PebbleAgentController+WorldContinuation.swift",
+      "relative_path": "Sources/Pebble/PebbleAgentController+WorldContinuation.swift",
+      "historical_sha256": "af571284dda4245e7ccb39ef8f05adf01687999794585504e464fac53e221a73",
+      "reconstituted_sha256": "af571284dda4245e7ccb39ef8f05adf01687999794585504e464fac53e221a73",
+      "canonical_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "mode": "0o644",
+      "deliberate_difference": "Exact preserved historical I08/B02 plus B03 file",
+      "b03_modified": true,
+      "final_delivered_sha256": "af571284dda4245e7ccb39ef8f05adf01687999794585504e464fac53e221a73",
+      "final_documentation_augmentation": false
+    },
+    {
+      "old_historical_file": "/Users/nessnow/Dev/pebble-lab/Sources/Pebble/PebbleAgentController.swift",
+      "final_reconstituted_file": "/Users/nessnow/.codex/worktrees/ps01-i08-final-after-b04/pebble-lab/Sources/Pebble/PebbleAgentController.swift",
+      "relative_path": "Sources/Pebble/PebbleAgentController.swift",
+      "historical_sha256": "9a06bfe7c715df513d68947c87f0b005f99b9f4171f610364607b360d60fb510",
+      "reconstituted_sha256": "9a06bfe7c715df513d68947c87f0b005f99b9f4171f610364607b360d60fb510",
+      "canonical_sha256": "f3247723801a0ac85a563874c916e4a4dd3250eb514f6a4b4ed807b8f7ef811d",
+      "mode": "0o664",
+      "deliberate_difference": "Exact preserved historical I08/B02 plus B03 file",
+      "b03_modified": false,
+      "final_delivered_sha256": "9a06bfe7c715df513d68947c87f0b005f99b9f4171f610364607b360d60fb510",
+      "final_documentation_augmentation": false
+    },
+    {
+      "old_historical_file": "/Users/nessnow/Dev/pebble-lab/Sources/Pebble/PebbleIncrement08ContinuationHarness.swift",
+      "final_reconstituted_file": "/Users/nessnow/.codex/worktrees/ps01-i08-final-after-b04/pebble-lab/Sources/Pebble/PebbleIncrement08ContinuationHarness.swift",
+      "relative_path": "Sources/Pebble/PebbleIncrement08ContinuationHarness.swift",
+      "historical_sha256": "a0306a7d7cc3e74828c1691e49831e492eaca210e5df1c0824bf4cf7bf5041cb",
+      "reconstituted_sha256": "a0306a7d7cc3e74828c1691e49831e492eaca210e5df1c0824bf4cf7bf5041cb",
+      "canonical_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "mode": "0o644",
+      "deliberate_difference": "Exact preserved historical I08/B02 plus B03 file",
+      "b03_modified": true,
+      "final_delivered_sha256": "a0306a7d7cc3e74828c1691e49831e492eaca210e5df1c0824bf4cf7bf5041cb",
+      "final_documentation_augmentation": false
+    },
+    {
+      "old_historical_file": "/Users/nessnow/Dev/pebble-lab/Sources/Pebble/PebbleWorldEcologicalObservationReceiptStore.swift",
+      "final_reconstituted_file": "/Users/nessnow/.codex/worktrees/ps01-i08-final-after-b04/pebble-lab/Sources/Pebble/PebbleWorldEcologicalObservationReceiptStore.swift",
+      "relative_path": "Sources/Pebble/PebbleWorldEcologicalObservationReceiptStore.swift",
+      "historical_sha256": "22f8464d7135868eca78d5a1bec35e6204c7defcee91c532f1cf429f660acbdb",
+      "reconstituted_sha256": "22f8464d7135868eca78d5a1bec35e6204c7defcee91c532f1cf429f660acbdb",
+      "canonical_sha256": "c8a550f6afa6da747dfb7c609484b703b537ed4e37496741a6c0b4cce9e76c75",
+      "mode": "0o664",
+      "deliberate_difference": "Exact preserved historical I08/B02 plus B03 file",
+      "b03_modified": false,
+      "final_delivered_sha256": "22f8464d7135868eca78d5a1bec35e6204c7defcee91c532f1cf429f660acbdb",
+      "final_documentation_augmentation": false
+    },
+    {
+      "old_historical_file": "/Users/nessnow/Dev/pebble-lab/Sources/Pebble/main.swift",
+      "final_reconstituted_file": "/Users/nessnow/.codex/worktrees/ps01-i08-final-after-b04/pebble-lab/Sources/Pebble/main.swift",
+      "relative_path": "Sources/Pebble/main.swift",
+      "historical_sha256": "6f20a29079f3b693fa3d207b7401447620a324aec4cdc2b55edf8d6405cfda20",
+      "reconstituted_sha256": "6f20a29079f3b693fa3d207b7401447620a324aec4cdc2b55edf8d6405cfda20",
+      "canonical_sha256": "9f5cf4aa911af809a1febdfd3996d5330fc56294142a51528bdfa0ed25767afb",
+      "mode": "0o664",
+      "deliberate_difference": "Exact preserved historical I08/B02 plus B03 file",
+      "b03_modified": false,
+      "final_delivered_sha256": "6f20a29079f3b693fa3d207b7401447620a324aec4cdc2b55edf8d6405cfda20",
+      "final_documentation_augmentation": false
+    },
+    {
+      "old_historical_file": "/Users/nessnow/Dev/pebble-lab/Sources/PebbleCore/Game/GameCore.swift",
+      "final_reconstituted_file": "/Users/nessnow/.codex/worktrees/ps01-i08-final-after-b04/pebble-lab/Sources/PebbleCore/Game/GameCore.swift",
+      "relative_path": "Sources/PebbleCore/Game/GameCore.swift",
+      "historical_sha256": "e7ff07463b65ca46652db25bc3d3181235f36a24d8a6c68356d88734e6f5eaac",
+      "reconstituted_sha256": "e7ff07463b65ca46652db25bc3d3181235f36a24d8a6c68356d88734e6f5eaac",
+      "canonical_sha256": "d1e92f5e38c0af43a7adaf246a2a9fd6210c7db9bd4d2e3570fa6576f4c7c8b3",
+      "mode": "0o644",
+      "deliberate_difference": "Exact preserved historical I08/B02 plus B03 file",
+      "b03_modified": true,
+      "final_delivered_sha256": "e7ff07463b65ca46652db25bc3d3181235f36a24d8a6c68356d88734e6f5eaac",
+      "final_documentation_augmentation": false
+    },
+    {
+      "old_historical_file": "/Users/nessnow/Dev/pebble-lab/Sources/PebbleCore/Game/Saves.swift",
+      "final_reconstituted_file": "/Users/nessnow/.codex/worktrees/ps01-i08-final-after-b04/pebble-lab/Sources/PebbleCore/Game/Saves.swift",
+      "relative_path": "Sources/PebbleCore/Game/Saves.swift",
+      "historical_sha256": "7bca4bb42cecbe290c4c9971a41ff8e9522cb4620510c9dbda6fec54dbeb8b02",
+      "reconstituted_sha256": "7bca4bb42cecbe290c4c9971a41ff8e9522cb4620510c9dbda6fec54dbeb8b02",
+      "canonical_sha256": "b0b0dd26cb3d65e2e0806081b32d24f545e9061fa189a2d58b446c6cffb2484a",
+      "mode": "0o664",
+      "deliberate_difference": "Exact preserved historical I08/B02 plus B03 file",
+      "b03_modified": false,
+      "final_delivered_sha256": "7bca4bb42cecbe290c4c9971a41ff8e9522cb4620510c9dbda6fec54dbeb8b02",
+      "final_documentation_augmentation": false
+    },
+    {
+      "old_historical_file": "/Users/nessnow/Dev/pebble-lab/Sources/pebsmoke/PebbleCoreWorldContinuationSmoke.swift",
+      "final_reconstituted_file": "/Users/nessnow/.codex/worktrees/ps01-i08-final-after-b04/pebble-lab/Sources/pebsmoke/PebbleCoreWorldContinuationSmoke.swift",
+      "relative_path": "Sources/pebsmoke/PebbleCoreWorldContinuationSmoke.swift",
+      "historical_sha256": "41a8b6bed4ceed231096a6322437d91d5448af0199fe1bff8ba1bb564c79a015",
+      "reconstituted_sha256": "41a8b6bed4ceed231096a6322437d91d5448af0199fe1bff8ba1bb564c79a015",
+      "canonical_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "mode": "0o644",
+      "deliberate_difference": "Exact preserved historical I08/B02 plus B03 file",
+      "b03_modified": true,
+      "final_delivered_sha256": "41a8b6bed4ceed231096a6322437d91d5448af0199fe1bff8ba1bb564c79a015",
+      "final_documentation_augmentation": false
+    },
+    {
+      "old_historical_file": "/Users/nessnow/Dev/pebble-lab/Sources/pebsmoke/main.swift",
+      "final_reconstituted_file": "/Users/nessnow/.codex/worktrees/ps01-i08-final-after-b04/pebble-lab/Sources/pebsmoke/main.swift",
+      "relative_path": "Sources/pebsmoke/main.swift",
+      "historical_sha256": "b71ec4f8f7c96b16a46f549a0125d31f7ab9ad8003485d13049bd22cad1ab4a4",
+      "reconstituted_sha256": "722cc6c8efb0afab6d1f71d12cf523d1909b095e9d99fa0f1dcb6c3e8d4bb6c7",
+      "canonical_sha256": "067caab1e2b50f5052da597204c7a20fac8fb1970fe6002ed8301d9e3d83eae2",
+      "mode": "0o664",
+      "deliberate_difference": "Preserve canonical B04 dispatch/full-smoke checks; add exact historical I08 dispatch/full-smoke check",
+      "b03_modified": false,
+      "final_delivered_sha256": "722cc6c8efb0afab6d1f71d12cf523d1909b095e9d99fa0f1dcb6c3e8d4bb6c7",
+      "final_documentation_augmentation": false
+    },
+    {
+      "old_historical_file": "/Users/nessnow/Dev/pebble-lab/docs/pebblelab/DOCUMENTATION_INDEX.md",
+      "final_reconstituted_file": "/Users/nessnow/.codex/worktrees/ps01-i08-final-after-b04/pebble-lab/docs/pebblelab/DOCUMENTATION_INDEX.md",
+      "relative_path": "docs/pebblelab/DOCUMENTATION_INDEX.md",
+      "historical_sha256": "eb2dc958bb85d740835c7109f129ac160a09a1b9e63af2723e82618129893f7c",
+      "reconstituted_sha256": "abd6aad13b64c6b6bcbc7de4cd841c307982e521313be36113735c0ae33b8d3a",
+      "canonical_sha256": "d07b060e6ccdfd9a276a8c66d2be104caae8cc2f6b8b5b743d5c207bff49062d",
+      "mode": "0o664",
+      "deliberate_difference": "Retain canonical B01/B04 index records; append historical I08 candidate entry",
+      "b03_modified": false,
+      "final_delivered_sha256": "1e10013a55d64cb5eeeea0039ac778e65fd7969bdf18e8f6c1ae6adba0626386",
+      "final_documentation_augmentation": true
+    },
+    {
+      "old_historical_file": "/Users/nessnow/Dev/pebble-lab/docs/pebblelab/PS01_INCREMENT_08_NORMAL_CONTINUITY.md",
+      "final_reconstituted_file": "/Users/nessnow/.codex/worktrees/ps01-i08-final-after-b04/pebble-lab/docs/pebblelab/PS01_INCREMENT_08_NORMAL_CONTINUITY.md",
+      "relative_path": "docs/pebblelab/PS01_INCREMENT_08_NORMAL_CONTINUITY.md",
+      "historical_sha256": "9b878604272c1f74f6db4d4f3b93066e023e5c7039aa2f3fa1a50f39f9b4e3f5",
+      "reconstituted_sha256": "9b878604272c1f74f6db4d4f3b93066e023e5c7039aa2f3fa1a50f39f9b4e3f5",
+      "canonical_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "mode": "0o664",
+      "deliberate_difference": "Exact preserved historical I08/B02 plus B03 file",
+      "b03_modified": false,
+      "final_delivered_sha256": "3c249f562370b5caedaace5440cc654389d47403a653f33aa8af7c5b7459581f",
+      "final_documentation_augmentation": true
+    },
+    {
+      "old_historical_file": "/Users/nessnow/Dev/pebble-lab/scripts/verify-pebblelab-ps01-increment-08-live.sh",
+      "final_reconstituted_file": "/Users/nessnow/.codex/worktrees/ps01-i08-final-after-b04/pebble-lab/scripts/verify-pebblelab-ps01-increment-08-live.sh",
+      "relative_path": "scripts/verify-pebblelab-ps01-increment-08-live.sh",
+      "historical_sha256": "d47eecba2eb530c7173684c6ad77d7f6a453595c33ed28f26b181ce19d0e1105",
+      "reconstituted_sha256": "d47eecba2eb530c7173684c6ad77d7f6a453595c33ed28f26b181ce19d0e1105",
+      "canonical_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "mode": "0o775",
+      "deliberate_difference": "Exact preserved historical I08/B02 plus B03 file",
+      "b03_modified": false,
+      "final_delivered_sha256": "d47eecba2eb530c7173684c6ad77d7f6a453595c33ed28f26b181ce19d0e1105",
+      "final_documentation_augmentation": false
+    },
+    {
+      "old_historical_file": "/Users/nessnow/Dev/pebble-lab/scripts/verify-pebblelab-ps01-increment-08.sh",
+      "final_reconstituted_file": "/Users/nessnow/.codex/worktrees/ps01-i08-final-after-b04/pebble-lab/scripts/verify-pebblelab-ps01-increment-08.sh",
+      "relative_path": "scripts/verify-pebblelab-ps01-increment-08.sh",
+      "historical_sha256": "dcea22843cc3d4ccc9bae5c1d527cb6205f9cdf1db2a180d5d929b05276d5e4d",
+      "reconstituted_sha256": "dcea22843cc3d4ccc9bae5c1d527cb6205f9cdf1db2a180d5d929b05276d5e4d",
+      "canonical_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "mode": "0o755",
+      "deliberate_difference": "Exact preserved historical I08/B02 plus B03 file",
+      "b03_modified": true,
+      "final_delivered_sha256": "dcea22843cc3d4ccc9bae5c1d527cb6205f9cdf1db2a180d5d929b05276d5e4d",
+      "final_documentation_augmentation": false
+    }
+  ],
+  "runtime_source_manifest_sha256": "d55270750541629eef042427de6996b39624f78b15507e7c902af43fb3725834",
+  "runtime_source_file_count": 567,
+  "runtime_source_drift": false,
+  "qualification": {
+    "full_campaign": {
+      "core_passed": 45,
+      "product_passed": 319,
+      "deterministic_comparisons": 2,
+      "total_passed": 366,
+      "failed": 0,
+      "exit": 0,
+      "phase_results": [
+        {
+          "phase_log": "faults-faults.log",
+          "passed": 169,
+          "failed": 0,
+          "exit": 0
+        },
+        {
+          "phase_log": "envelope-20-envelope.log",
+          "passed": 6,
+          "failed": 0,
+          "exit": 0
+        },
+        {
+          "phase_log": "envelope-20-read.log",
+          "passed": 9,
+          "failed": 0,
+          "exit": 0
+        },
+        {
+          "phase_log": "envelope-30-envelope.log",
+          "passed": 6,
+          "failed": 0,
+          "exit": 0
+        },
+        {
+          "phase_log": "envelope-30-read.log",
+          "passed": 9,
+          "failed": 0,
+          "exit": 0
+        },
+        {
+          "phase_log": "deterministic-a-envelope.log",
+          "passed": 6,
+          "failed": 0,
+          "exit": 0
+        },
+        {
+          "phase_log": "deterministic-a-read.log",
+          "passed": 9,
+          "failed": 0,
+          "exit": 0
+        },
+        {
+          "phase_log": "deterministic-b-envelope.log",
+          "passed": 6,
+          "failed": 0,
+          "exit": 0
+        },
+        {
+          "phase_log": "deterministic-b-read.log",
+          "passed": 9,
+          "failed": 0,
+          "exit": 0
+        },
+        {
+          "phase_log": "retention-retention.log",
+          "passed": 11,
+          "failed": 0,
+          "exit": 0
+        },
+        {
+          "phase_log": "retention-read.log",
+          "passed": 9,
+          "failed": 0,
+          "exit": 0
+        },
+        {
+          "phase_log": "retention-manual-retention-manual.log",
+          "passed": 12,
+          "failed": 0,
+          "exit": 0
+        },
+        {
+          "phase_log": "retention-manual-read.log",
+          "passed": 9,
+          "failed": 0,
+          "exit": 0
+        },
+        {
+          "phase_log": "positive-write.log",
+          "passed": 7,
+          "failed": 0,
+          "exit": 0
+        },
+        {
+          "phase_log": "positive-read.log",
+          "passed": 10,
+          "failed": 0,
+          "exit": 0
+        },
+        {
+          "phase_log": "scarcity-write.log",
+          "passed": 6,
+          "failed": 0,
+          "exit": 0
+        },
+        {
+          "phase_log": "scarcity-read.log",
+          "passed": 9,
+          "failed": 0,
+          "exit": 0
+        },
+        {
+          "phase_log": "zero-zero.log",
+          "passed": 8,
+          "failed": 0,
+          "exit": 0
+        },
+        {
+          "phase_log": "zero-read.log",
+          "passed": 9,
+          "failed": 0,
+          "exit": 0
+        }
+      ]
+    },
+    "focused": [
+      {
+        "phase": "compensation",
+        "passed": 71,
+        "failed": 0,
+        "exit": 0
+      },
+      {
+        "phase": "replacement",
+        "passed": 99,
+        "failed": 0,
+        "exit": 0
+      }
+    ],
+    "adversarial": {
+      "core": 45,
+      "product": 169,
+      "failed": 0,
+      "exit": 0
+    },
+    "owning": {
+      "suites": [
+        {
+          "suite": "checkpoint-replay",
+          "passed": 49,
+          "failed": 0,
+          "exit": 0
+        },
+        {
+          "suite": "persistence-reconciliation",
+          "passed": 19,
+          "failed": 0,
+          "exit": 0
+        },
+        {
+          "suite": "ps01-increment-07-focused",
+          "passed": 175,
+          "failed": 0,
+          "exit": 0
+        },
+        {
+          "suite": "ecological-observation",
+          "passed": 89,
+          "failed": 0,
+          "exit": 0
+        },
+        {
+          "suite": "agriculture",
+          "passed": 86,
+          "failed": 0,
+          "exit": 0
+        },
+        {
+          "suite": "mortality-checkpoint-compaction",
+          "passed": 14,
+          "failed": 0,
+          "exit": 0
+        },
+        {
+          "suite": "core-stronghold-concurrency",
+          "passed": 838,
+          "failed": 0,
+          "exit": 0
+        }
+      ],
+      "passed": 1270,
+      "failed": 0,
+      "driver_exit": 0
+    },
+    "determinism_extra": {
+      "assertions": 8,
+      "failed": 0,
+      "exit": 0,
+      "checks": [
+        "exact World binding and seed",
+        "authoritative World/civilization timing after continuation",
+        "same civilization identity",
+        "same finalized durable semantic digest after exit capture",
+        "exact retained causal authority and rolling digest",
+        "exact population authority",
+        "exact material totals and protected custody authority",
+        "exact durable continuation outcome without founder reconstruction"
+      ],
+      "worldID": "ps01-i08-seed-46-founders-24",
+      "simulationID": "live-46-8-76--112",
+      "worldTick": 92,
+      "civilizationTick": 7,
+      "semanticDigest": "c6dad433d9a16929effe1853a13af2dc84ad09f63905615e815d47c847707828",
+      "causalRollingDigest": "4ce66bf265be56d8",
+      "comparison": "durable authority only; no runtime cache or process incarnation comparison"
+    },
+    "vgs": {
+      "driver_assertions": 8,
+      "conservation_assertions": 4,
+      "failed": 0,
+      "driver_exit": 0,
+      "conservation_exit": 0,
+      "captures": {
+        "before-save": {
+          "phase": "before-save",
+          "worldTick": "9668",
+          "target": "212,66,-27",
+          "chunkStatus": "lit",
+          "neighbors": "lit,lit,lit,lit",
+          "sections": "1824",
+          "targetOpaque": "1236",
+          "targetCutout": "5088",
+          "targetTranslucent": "0",
+          "surfaceNeighborhood": "9",
+          "loadingScreen": "0",
+          "world": "wmusyo8cnh3rs",
+          "simulation": "live-14-208-67--32",
+          "tick": "1921",
+          "consumed": "0",
+          "carryingAgents": "2",
+          "cameraAuthority": "renderOnlyObserver",
+          "path": "/tmp/ps01-i08-final-after-b04-20261004/visual-final/captures/before-save.png"
+        },
+        "after-restore": {
+          "phase": "after-restore",
+          "worldTick": "10873",
+          "target": "212,66,-27",
+          "chunkStatus": "lit",
+          "neighbors": "lit,lit,lit,lit",
+          "sections": "1824",
+          "targetOpaque": "1236",
+          "targetCutout": "5088",
+          "targetTranslucent": "0",
+          "surfaceNeighborhood": "9",
+          "loadingScreen": "0",
+          "world": "wmusyo8cnh3rs",
+          "simulation": "live-14-208-67--32",
+          "tick": "2162",
+          "consumed": "6",
+          "carryingAgents": "1",
+          "cameraAuthority": "renderOnlyObserver",
+          "path": "/tmp/ps01-i08-final-after-b04-20261004/visual-final/captures/after-restore.png"
+        },
+        "continued": {
+          "phase": "continued",
+          "worldTick": "12073",
+          "target": "212,66,-27",
+          "chunkStatus": "lit",
+          "neighbors": "lit,lit,lit,lit",
+          "sections": "1824",
+          "targetOpaque": "1236",
+          "targetCutout": "5088",
+          "targetTranslucent": "0",
+          "surfaceNeighborhood": "9",
+          "loadingScreen": "0",
+          "world": "wmusyo8cnh3rs",
+          "simulation": "live-14-208-67--32",
+          "tick": "2402",
+          "consumed": "7",
+          "carryingAgents": "1",
+          "cameraAuthority": "renderOnlyObserver",
+          "path": "/tmp/ps01-i08-final-after-b04-20261004/visual-final/captures/continued.png"
+        }
+      },
+      "conservation": {
+        "offline_assertions": 4,
+        "exit_code": 0,
+        "worldID": "wmusyo8cnh3rs",
+        "simulationID": "live-14-208-67--32",
+        "checkpoint": "ps01-continuation-b",
+        "checkpointID": "checkpoint-ffa193aae626-t2402-8d40804d3010d83f",
+        "revision": 105568,
+        "retained_natural_harvest_outcomes": 4,
+        "acquired": 8,
+        "consumed": 7,
+        "carried": 1,
+        "eviction_counts": {
+          "opportunities": 0,
+          "outcomes": 0,
+          "processedAttemptIDs": 0
+        },
+        "conservation": "8 acquired = 7 consumed + 1 carried",
+        "authority": "existing checkpoint, protected custody manifest, Core reference and live verified outcomes; read-only"
+      },
+      "visual_inspection": "all three frames inspected; matching natural forest/water/hillside and situated Pebbles, no loading or Observer obstruction; continued frame naturally night-dark but readable",
+      "historical_variation": "earlier live captures used World 9671/10876/12076; final uses 9668/10873/12073. Four actual harvests acquired quantities 1+3+3+1 rather than prior 2+2+3+2; last acquisition civilization tick 2342 rather than 2341. Different ordinary live capture/tick boundary, exact conserved quantities; no injected material or golden change."
+    },
+    "canonical": {
+      "status": "FAIL",
+      "stage": 5,
+      "passed": 5789,
+      "failed": 3,
+      "exit": 1,
+      "failures": [
+        "\u2717 zoo: 55 mob types \u00d7 200 ticks bit-identical (3 checkpoints)",
+        "\u2717 combat: player + 5 mobs, damage/knockback in lockstep",
+        "\u2717 8 A* paths node-identical"
+      ],
+      "regold": false,
+      "weakened_comparison": false,
+      "native_executables": {
+        "Pebble": {
+          "path": "/Users/nessnow/.codex/worktrees/ps01-i08-final-after-b04/pebble-lab/.build/arm64-apple-macosx/release/Pebble",
+          "sha256": "6b741347be178bb40c22c3c0fef5e99b6d7993122415cc457dcb2285ffadb92d",
+          "architecture": "arm64"
+        },
+        "pebsmoke": {
+          "path": "/Users/nessnow/.codex/worktrees/ps01-i08-final-after-b04/pebble-lab/.build/arm64-apple-macosx/release/pebsmoke",
+          "sha256": "7180d57274a25345207fa9bea9380dd4c3b0d28edae556e579c9091d35030a4a",
+          "architecture": "arm64"
+        },
+        "PebbleLab": {
+          "path": "/Users/nessnow/.codex/worktrees/ps01-i08-final-after-b04/pebble-lab/.build/arm64-apple-macosx/release/PebbleLab",
+          "sha256": "a92a7078a02ee4b61ffe4a9b6e20fdd02349b068e31ffe0fb9f6af898a2b0c2e",
+          "architecture": "arm64"
+        }
+      }
+    },
+    "supplemental": {
+      "steps": [
+        {
+          "stage": 6,
+          "description": "agents_basic deterministic run A",
+          "exit": 0
+        },
+        {
+          "stage": 7,
+          "description": "agents_basic deterministic run B",
+          "exit": 0
+        },
+        {
+          "stage": 8,
+          "description": "agents_basic canonical outputs",
+          "exit": 0
+        },
+        {
+          "stage": 9,
+          "description": "agents_basic deterministic replay comparison",
+          "exit": 0
+        },
+        {
+          "stage": 10,
+          "description": "Canonical regression_smoke business checks",
+          "exit": 0
+        },
+        {
+          "stage": 11,
+          "description": "settlement metrics deterministic run A",
+          "exit": 0
+        },
+        {
+          "stage": 12,
+          "description": "settlement metrics deterministic run B",
+          "exit": 0
+        },
+        {
+          "stage": 13,
+          "description": "settlement metrics canonical outputs and replay comparison",
+          "exit": 0
+        },
+        {
+          "stage": 14,
+          "description": "local ecology deterministic run A",
+          "exit": 0
+        },
+        {
+          "stage": 15,
+          "description": "local ecology deterministic run B",
+          "exit": 0
+        },
+        {
+          "stage": 16,
+          "description": "local ecology canonical outputs and replay comparison",
+          "exit": 0
+        },
+        {
+          "stage": 17,
+          "description": "mortality deterministic run A",
+          "exit": 0
+        },
+        {
+          "stage": 18,
+          "description": "mortality deterministic run B",
+          "exit": 0
+        },
+        {
+          "stage": 19,
+          "description": "mortality canonical outputs and replay comparison",
+          "exit": 0
+        },
+        {
+          "stage": 20,
+          "description": "lifecycle deterministic run A",
+          "exit": 0
+        },
+        {
+          "stage": 21,
+          "description": "lifecycle deterministic run B",
+          "exit": 0
+        },
+        {
+          "stage": 22,
+          "description": "lifecycle canonical outputs and replay comparison",
+          "exit": 0
+        },
+        {
+          "stage": 23,
+          "description": "kinship deterministic run A",
+          "exit": 0
+        },
+        {
+          "stage": 24,
+          "description": "kinship deterministic run B",
+          "exit": 0
+        },
+        {
+          "stage": 25,
+          "description": "kinship canonical outputs and replay comparison",
+          "exit": 0
+        },
+        {
+          "stage": 26,
+          "description": "household deterministic run A",
+          "exit": 0
+        },
+        {
+          "stage": 27,
+          "description": "household deterministic run B",
+          "exit": 0
+        },
+        {
+          "stage": 28,
+          "description": "household canonical outputs and replay comparison",
+          "exit": 0
+        },
+        {
+          "stage": 29,
+          "description": "dependent care deterministic run A",
+          "exit": 0
+        },
+        {
+          "stage": 30,
+          "description": "dependent care deterministic run B",
+          "exit": 0
+        },
+        {
+          "stage": 31,
+          "description": "dependent care canonical outputs and replay comparison",
+          "exit": 0
+        },
+        {
+          "stage": 32,
+          "description": "practice skills deterministic run A",
+          "exit": 0
+        },
+        {
+          "stage": 33,
+          "description": "practice skills deterministic run B",
+          "exit": 0
+        },
+        {
+          "stage": 34,
+          "description": "practice skills canonical outputs and replay comparison",
+          "exit": 0
+        },
+        {
+          "stage": 35,
+          "description": "Repository hygiene",
+          "exit": 0
+        }
+      ],
+      "passed_stages": 30,
+      "exit": 0,
+      "canonical_remains": "FAIL at stage 5; unchanged historical three comparisons",
+      "original_temporary_outputs": "/var/folders/23/t4l5dv055dl3x1zqylcpl9wc0000gn/T/PebbleLab-verify.OMTGXD",
+      "derivation": "canonical script stages 6\u201335, unchanged checks and comparisons"
+    },
+    "positive_boundary": {
+      "living": 24,
+      "civilizationTick": 1921,
+      "semanticDigest": "374b22dc92daa027fc74de98867b4f0835f5316f114b79e3addb00c409be29f6",
+      "worldTick": 9657,
+      "causalDigest": "f87c33f689a5bc9e",
+      "consumed": 0,
+      "worldID": "ps01-i08-seed-14-founders-24",
+      "seed": "14",
+      "acquired": 5,
+      "carried": 5,
+      "founders": 24
+    },
+    "positive_read": {
+      "assertions": 10,
+      "continuedConsumed": 4,
+      "continuedDigest": "7440021374f4cb9c8e76c3c4b70afb57408ed6c8933ab3fb5c18380e49837b00",
+      "continuedTick": 1924,
+      "foundersCreated": 0,
+      "loadedCarried": 5,
+      "loadedDigest": "374b22dc92daa027fc74de98867b4f0835f5316f114b79e3addb00c409be29f6",
+      "loadedLiving": 24,
+      "phase": "read",
+      "worldCleanup": true,
+      "worldID": "ps01-i08-seed-14-founders-24"
+    },
+    "scarcity_boundary": {
+      "semanticDigest": "12bdc3ffb10b9f39b990621e8cfb95c7cf4c8cba5a0a9ba4a63518c032cd5d6e",
+      "causalDigest": "c96459da1a66fff7",
+      "worldTick": 1252,
+      "civilizationTick": 240,
+      "living": 24,
+      "acquired": 0,
+      "seed": "46",
+      "carried": 0,
+      "worldID": "ps01-i08-seed-46-founders-24",
+      "founders": 24,
+      "consumed": 0
+    },
+    "scarcity_read": {
+      "assertions": 9,
+      "continuedConsumed": 0,
+      "continuedDigest": "2a22fc98c4f5e7bdd16455675ccf74f6f6f2bd4460235eca5b8e4feb8b879390",
+      "continuedTick": 243,
+      "foundersCreated": 0,
+      "loadedCarried": 0,
+      "loadedDigest": "12bdc3ffb10b9f39b990621e8cfb95c7cf4c8cba5a0a9ba4a63518c032cd5d6e",
+      "loadedLiving": 24,
+      "phase": "read",
+      "worldCleanup": true,
+      "worldID": "ps01-i08-seed-46-founders-24"
+    },
+    "zero_boundary": {
+      "carried": 0,
+      "worldTick": 27652,
+      "causalDigest": "b5436d9e57367ee1",
+      "civilizationTick": 1380,
+      "semanticDigest": "80e92cdcf8878b473210a5a8eda4e91948992265689b89bd0d707000a03b12e3",
+      "living": 0,
+      "consumed": 0,
+      "founders": 24,
+      "worldID": "ps01-i08-seed-46-founders-24",
+      "seed": "46",
+      "acquired": 0
+    },
+    "zero_read": {
+      "assertions": 9,
+      "continuedConsumed": 0,
+      "continuedDigest": "c78b8c59b385d567853b22b80ab1269657ef36d65513110bb249a7f70888d492",
+      "continuedTick": 1381,
+      "foundersCreated": 0,
+      "loadedCarried": 0,
+      "loadedDigest": "80e92cdcf8878b473210a5a8eda4e91948992265689b89bd0d707000a03b12e3",
+      "loadedLiving": 0,
+      "phase": "read",
+      "worldCleanup": true,
+      "worldID": "ps01-i08-seed-46-founders-24"
+    },
+    "runtime_source_manifest_sha256": "d55270750541629eef042427de6996b39624f78b15507e7c902af43fb3725834",
+    "reconstitution_proof_sha256": "cb8845429691c2476da9872c66c716c59e708e79b1143b9f67eeabf12387e410"
+  },
+  "commands": [
+    {
+      "command": "swift build --product Pebble --scratch-path /tmp/ps01-i08-final-after-b04-20261004/debug-build",
+      "exit": 0,
+      "result": "native debug Pebble 117.10s"
+    },
+    {
+      "command": "swift build -c release --product Pebble",
+      "exit": 0,
+      "result": "native release Pebble 566.18s"
+    },
+    {
+      "command": "swift build -c release --product pebsmoke",
+      "exit": 0,
+      "result": "native release pebsmoke 184.00s"
+    },
+    {
+      "command": "bash /tmp/ps01-i08-final-after-b04-20261004/focused-final/run.sh compensation",
+      "exit": 0,
+      "result": "71/0"
+    },
+    {
+      "command": "bash /tmp/ps01-i08-final-after-b04-20261004/focused-final/run.sh replacement",
+      "exit": 0,
+      "result": "99/0"
+    },
+    {
+      "command": "PEBBLELAB_I08_SKIP_BUILD=1 scripts/verify-pebblelab-ps01-increment-08.sh /tmp/ps01-i08-final-after-b04-20261004/qualification-final",
+      "exit": 0,
+      "result": "366/0"
+    },
+    {
+      "command": "bash /tmp/ps01-i08-final-after-b04-20261004/owning-final/run.sh",
+      "exit": 0,
+      "result": "1270/0"
+    },
+    {
+      "command": "scripts/verify-pebblelab-live.sh --dry-run --persistence",
+      "exit": 0,
+      "result": "canonical live preflight"
+    },
+    {
+      "command": "PEBBLELAB_I08_EVIDENCE_ROOT=/tmp/ps01-i08-final-after-b04-20261004/visual-final scripts/verify-pebblelab-ps01-increment-08-live.sh --dry-run",
+      "exit": 0,
+      "result": "I08 rendered preflight"
+    },
+    {
+      "command": "PEBBLELAB_I08_EVIDENCE_ROOT=/tmp/ps01-i08-final-after-b04-20261004/visual-final scripts/verify-pebblelab-ps01-increment-08-live.sh",
+      "exit": 0,
+      "result": "8 visual/continuity assertions; both process exits 0"
+    },
+    {
+      "command": "python3 /tmp/ps01-i08-final-after-b04-20261004/visual-final/inspect-conservation.py /tmp/ps01-i08-final-after-b04-20261004/visual-final",
+      "exit": 0,
+      "result": "4/0; 8 acquired = 7 consumed + 1 carried"
+    },
+    {
+      "command": "python3 /tmp/ps01-i08-final-after-b04-20261004/inspect-determinism.py /tmp/ps01-i08-final-after-b04-20261004/qualification-final",
+      "exit": 0,
+      "result": "8/0 additional read-only authority checks"
+    },
+    {
+      "command": "CFFIXED_USER_HOME=/tmp/ps01-i08-final-after-b04-20261004/canonical/home scripts/verify-pebblelab.sh",
+      "exit": 1,
+      "result": "stage 5; 5789/3, exactly published historical failures"
+    },
+    {
+      "command": "CFFIXED_USER_HOME=/tmp/ps01-i08-final-after-b04-20261004/canonical/home bash /tmp/ps01-i08-final-after-b04-20261004/canonical/remaining.sh",
+      "exit": 0,
+      "result": "canonical supplemental stages 6\u201335, 30/30"
+    }
+  ],
+  "original_execution_root": "/tmp/ps01-i08-final-after-b04-20261004",
+  "permanent_evidence_archive": "/Users/nessnow/.codex/artifacts/ps01-i08-final-after-b04-20261004",
+  "ownership_audit": {
+    "scope": "post-reconstitution production ownership audit",
+    "owner_disposal": [
+      {
+        "file": "Sources/Pebble/PebbleAgentController+WorldContinuation.swift",
+        "line": 137,
+        "condition": "custodyReturned only after exact live probe snapshots and escrow absence are verified"
+      },
+      {
+        "file": "Sources/Pebble/PebbleAgentController+WorldContinuation.swift",
+        "line": 204,
+        "condition": "explicit cancellation verifies same owner, original World/session, matching hard-failure identity and exact custody"
+      },
+      {
+        "file": "Sources/Pebble/PebbleAgentController+Lifecycle.swift",
+        "line": 935,
+        "condition": "private finalization reached only after successful lifecycle commitment or public stop preflight with no pending owner"
+      }
+    ],
+    "destructive_paths": [
+      "command stop/clear/start/reset/demo/checkpoint mutation policy",
+      "direct controller stop/shutdown/rebuild",
+      "Core direct probe cleanup",
+      "/labprobe clear",
+      "/kill @e",
+      "drop/mouse/key input during Core lifecycle halt",
+      "World replacement/exit/termination barrier",
+      "dimension-bound portal refusal"
+    ],
+    "retained_evidence": "checkpoint + original probe object snapshots + prior handoff + session/World identity survive unresolved compensation",
+    "simulation_cleanup": "mortality/population/restore mutation callbacks are inside controller progression or command paths already blocked while pending; proof-only object disposal is separately gated harness code",
+    "public_deleteWorld": "normal caller is title-world selection screen, unavailable until successful exit has committed retained ownership; harness-only callers are disclosed test operations",
+    "result": "no equivalent production disposal path missed by reconstruction",
+    "runtime_sources_changed_during_audit": false
+  },
+  "status": {
+    "I08": "LOCAL QUALIFIED CANDIDATE / NOT PUBLISHED",
+    "PS01": "IN PROGRESS / NOT COMPLETE",
+    "CIV48": "NOT STARTED / IMPLEMENTATION NOT AUTHORIZED",
+    "GateH": "PLANNED",
+    "B01": "BLOCKER_FIX_PUBLISHED",
+    "B04": "BLOCKER_FIX_PUBLISHED / REMOTE VERIFIED"
+  },
+  "push_attempted": false,
+  "regold": false,
+  "historical_fail_evidence_immutable": true,
+  "validator_diagnostics": "Supplementary offline checker initially conflated pre-exit and post-capture physiological boundaries, then misread time at WorldRecord root instead of dims[0]. Both diagnostics retained, excluded from product failure evidence. Correct same-boundary A/B full authority checks pass without runtime or product-assertion changes.",
+  "additional_status_documents": {
+    "CODEX_START_HERE.md": "236280efa1d09e8c0f73c7962d8dc8f9e0a008ed4a30af10ae934a9f2c1e19f2",
+    "docs/pebblelab/CURRENT_STATE.md": "443523ebbd19ba1614d48b0723ad5883aad50d5432c9e1422a9501b1ec50f5a0"
+  }
+}

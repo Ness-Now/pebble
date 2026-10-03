@@ -14,7 +14,8 @@ extension PebbleAgentController {
     func prepareForLifecyclePersistence(world: World) -> Bool {
         lifecyclePreparedWorld = nil
         guard session != nil || activeWorld != nil else { return true }
-        guard session != nil, activeWorld === world else { return false }
+        guard session != nil, activeWorld === world,
+              candidatePhysicalHardFailure == nil else { return false }
         // The registry is a binding cache, never an out-of-World custody
         // authority. Refuse before mutation unless every current cognitive
         // agent resolves to exactly one identical live World probe and no
@@ -65,7 +66,8 @@ extension PebbleAgentController {
     /// state. Probe inventories are required to be empty before the normal,
     /// irreversible runtime shutdown removes the transient probes.
     func finalizeLifecycleAfterPersistence() {
-        guard let preparedWorld = lifecyclePreparedWorld,
+        guard candidatePhysicalHardFailure == nil,
+              let preparedWorld = lifecyclePreparedWorld,
               activeWorld === preparedWorld,
               lifecycleProbeBindingsReconciled(in: preparedWorld),
               probesByAgentId.values.allSatisfy({
@@ -86,7 +88,7 @@ extension PebbleAgentController {
             return
         }
         lifecyclePreparedWorld = nil
-        _ = stop(reason: "termination", fallbackWorld: preparedWorld)
+        _ = stopAfterOwnershipPreflight(reason: "termination", fallbackWorld: preparedWorld)
         precondition(
             session == nil && activeWorld == nil,
             "lifecycle runtime shutdown did not complete"
@@ -109,6 +111,9 @@ extension PebbleAgentController {
     }
 
     func start(world: World, player: Player, founders: PebbleNormalFounderProfile? = nil) -> PebbleAgentCommandResult {
+        guard !continuationRestoreRefused else {
+            return failure("Start refused: this World requires its saved civilization continuation.")
+        }
         if let fatalSessionIntegrityFailure, session != nil {
             return failure(
                 "PebbleAgents start refused while the current session is "
@@ -166,6 +171,9 @@ extension PebbleAgentController {
         resetSpeed: Bool,
         founders: PebbleNormalFounderProfile? = nil
     ) -> PebbleAgentCommandResult {
+        guard pendingWorldContinuation == nil else {
+            return failure("PebbleAgents restart refused: continuation compensation remains owned.")
+        }
         if let candidatePhysicalHardFailure {
             return failure(
                 "PebbleAgents restart refused after candidate physical hard failure: "
@@ -723,6 +731,17 @@ extension PebbleAgentController {
 
     @discardableResult
     func stop(reason: String, fallbackWorld: World? = nil) -> Int {
+        guard pendingWorldContinuation == nil else {
+            lastError = "PebbleAgents stop refused: continuation compensation remains owned."
+            trace(lastError!)
+            return 0
+        }
+        return stopAfterOwnershipPreflight(reason: reason, fallbackWorld: fallbackWorld)
+    }
+
+    /// Called only with no pending owner, or by the validated committed
+    /// lifecycle finalizer above. Ordinary shutdown cannot bypass that check.
+    private func stopAfterOwnershipPreflight(reason: String, fallbackWorld: World?) -> Int {
         let snapshot = session?.snapshot()
         let causalSummary = session?.causalLedgerSnapshot().summary
         let socialSummary = session?.socialSummary()
@@ -913,6 +932,7 @@ extension PebbleAgentController {
         productionGateway.reset()
         session = nil
         activeWorld = nil
+        pendingWorldContinuation = nil
         lifecyclePreparedWorld = nil
         probesByAgentId.removeAll()
         cleanupWorld?.applyPhysicalSimulationCoverage(.inactive)
@@ -1024,6 +1044,9 @@ extension PebbleAgentController {
         }
         var taggedCustodySpills = 0
         let processed = orderedProbes.reduce(0) { count, probe in
+            if pendingWorldContinuation != nil,
+               testingWorldContinuationFailure == .afterFirstCustodyPreparation,
+               count > 0 { return count }
             let provenance: ((Int, ItemStack) -> String?)? = custodyHandoffExact
                 ? { slot, _ in
                     guard let token = provenanceByAgentAndSlot[

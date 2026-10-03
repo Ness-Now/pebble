@@ -42,6 +42,21 @@ if let mode = ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"],
     exit(failed > 0 ? 1 : 0)
 }
 
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "ps01-increment-08" {
+    registerAllBlocks()
+    registerAllItems()
+    registerAllBiomes()
+    registerAllRecipes()
+    registerAllLootTables()
+    registerAllEntities()
+    registerAllSystems()
+    runPebbleCoreWorldContinuationSmoke()
+    runPebbleCorePersistenceCorrection07Smoke()
+    runPebbleCorePersistenceCorrection08Smoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
 if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
     == "ps01-increment-06-restart" {
     runPebbleAgentsMovementSmoke()
@@ -3060,5 +3075,6 @@ runPebbleAgentsContractSmoke()
 runPebbleAgentsMarketSmoke()
 runPebbleAgentsComposedAssetCommitmentSmoke()
 
+runPebbleCoreWorldContinuationSmoke()
 print("\n\(passed) passed, \(failed) failed")
 exit(failed > 0 ? 1 : 0)

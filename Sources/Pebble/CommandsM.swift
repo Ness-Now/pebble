@@ -103,6 +103,10 @@ func runCommand(_ game: GameCore, _ raw: String) {
         ok("Seed: \(world.seed)")
     case "kill":
         if arg(0) == "@e" {
+            guard game.worldMutationAllowed,
+                  gAppDelegate?.agentController.pendingWorldContinuation == nil else {
+                return fail("Entity cleanup refused: continuation compensation remains owned.")
+            }
             var n = 0
             for e in Array(world.entities) {
                 guard let ent = e as? Entity, !ent.isPlayer else { continue }
@@ -296,6 +300,10 @@ func runCommand(_ game: GameCore, _ raw: String) {
             world.addEntity(probe)
             ok(String(format: "Spawned transient lab probe id=%d at %.1f %.1f %.1f", probe.id, probe.x, probe.y, probe.z))
         case "clear":
+            guard game.worldMutationAllowed,
+                  gAppDelegate?.agentController.pendingWorldContinuation == nil else {
+                return fail("Lab probe cleanup refused: continuation compensation remains owned.")
+            }
             let removed = clearLabCoreAgentProbes(in: world)
             ok("Removed \(removed) lab probe\(removed == 1 ? "" : "s")")
         default:
