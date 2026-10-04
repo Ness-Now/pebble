@@ -1,3 +1,60 @@
+# PS01 Increment 08 — Published normal World/civilization continuity
+
+Status: **COMPLETE_AND_PUBLISHED / REMOTE VERIFIED**.
+Mission: `POST-I08-REMOTE-PUBLICATION-RECONCILIATION-AND-PS01-NEXT-ACTION-CANONIZATION`.
+
+## Verified I08 publication
+
+The user manually pushed the approved chain. Fetched `origin/lab/pebblelab-v1`
+and independent `git ls-remote` both verify exact published HEAD
+`a4f07590b6d899b7cd8d8c25e5b2824aff85c1c7`, subject
+`docs(ps01): publish increment 08 normal continuity`, tree
+`7a55c4ee3b184ec6593e284211afad35e1ce5b50`.
+The publication chain is exactly `c58fe2c0fbb2c5b568426c5f936e7a50e573ff08` →
+`eab79c7e2723f3aafbbd5bb65c8562b2b911cae8` → `a4f07590b6d899b7cd8d8c25e5b2824aff85c1c7`.
+
+The approved product commit remains unchanged: `eab79c7e2723f3aafbbd5bb65c8562b2b911cae8`,
+tree `ff7582d0ed096eae057d00e2cedec6dc761cd496`, sole parent `c58fe2c0fbb2c5b568426c5f936e7a50e573ff08`.
+Final review remains **PS01_INCREMENT_08_FINAL_INDEPENDENT_REVIEW_PASS —
+P0 0 / P1 0 / blocking P2 0**. No I08 qualification was rerun.
+
+Git is the authority for publication of documentation commits.
+
+## Post-I08 supervisor decision
+
+The supervisor has completed selection/recalibration. The next substantive PS01
+action is **BOUNDED MULTI-SEED AUTONOMOUS EMERGENCE CHARACTERIZATION**, a separate
+evaluation to execute later in a **new Codex conversation** from the
+**then-published canonical HEAD**. Observe the already acquired systems together
+through the normal product path and let evidence identify the owning integration
+gap, if any. Blockers may be discovered; no solution or Increment 09 product
+implementation is preselected or authorized. Detailed current scope is in
+[the roadmap](PEBBLE_CIVILIZATION_ROADMAP.md#selected-next-ps01-action--bounded-multi-seed-characterization).
+
+PS01 remains **REQUIRED / IN PROGRESS / NOT COMPLETE**. CIV-48 remains
+**NOT_STARTED / IMPLEMENTATION NOT AUTHORIZED**. Gate H remains **PLANNED**.
+B01 and B04 remain published. Canonical regression remains historical **FAIL:
+5789 passed / 3 failed**, exit 1: zoo bit-identical, combat lockstep and eight
+A* paths node-identical. No regold or weakened comparison.
+
+Open limits/questions remain demographic admission/birth headroom, B01 bounded-
+history trust/validation, B04 arbitrary-GenCtx context identity, arbitrary crash
+recovery outside I08 scope, populations above the validated bounded scope,
+multi-dimension continuation, unactivated integration domains, long-run
+authority/history saturation, Observer completeness and eventual integrated
+multi-seed characterization. These are not preselected implementation blockers.
+
+## Historical candidate, qualification and pre-push record — retained verbatim
+
+The following complete record was authored and committed in `a4f07590` before
+the user push, then published by that push.
+Its pending-publication and next-action wording describes that historical
+boundary; the current publication state and supervisor decision are above.
+All earlier FAIL evidence remains immutable and outside publication ancestry.
+
+<details>
+<summary>Historical final candidate and pre-push reconciliation, including earlier FAIL chronology</summary>
+
 # PS01 Increment 08 — Final candidate after published B04
 
 Status: **PUBLICATION CHAIN READY / USER PUSH PENDING / NOT PUBLISHED**.
@@ -1176,6 +1233,8 @@ honestly. Arbitrary process crashes, user-edited save repair and arbitrary
 legacy migration remain outside the contract. Population capacity, unactivated
 slice domains, longer authority saturation, observer completeness and eventual
 PS01 characterization remain open after this increment.
+
+</details>
 
 </details>
 

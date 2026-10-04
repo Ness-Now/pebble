@@ -271,7 +271,7 @@ for the compact status. In particular:
   final Risk-C is P0 0 / P1 0 / blocking P2 0. Natural Core random ticks now
   renew the same preserving-harvest sweet-berry source for a second normal
   acquisition with exact physical custody and conservation. The Core streaming
-  determinism blocker fix is published. Increment 08 is **PUBLICATION CHAIN READY / USER PUSH PENDING / NOT PUBLISHED**. Its
+  determinism blocker fix is published. Increment 08 is **COMPLETE_AND_PUBLISHED / REMOTE VERIFIED**. Its
   separate B01 correction remains **BLOCKER_FIX_PUBLISHED**. Shared Core B04
   correction `aa07e3ce71c34842e45611d8e9064de9cb563a16` is now
   **BLOCKER_FIX_PUBLISHED — REMOTE VERIFIED** in canonical
@@ -284,8 +284,13 @@ for the compact status. In particular:
   unchanged. I08 final-source qualification and final independent review pass
   (**PS01_INCREMENT_08_FINAL_INDEPENDENT_REVIEW_PASS**, P0 0 / P1 0 / blocking P2 0).
   Approved candidate `eab79c7e2723f3aafbbd5bb65c8562b2b911cae8` is safe to publish unchanged
-  within Increment-08 scope. User push and remote verification are next;
-  afterward the supervisor selects/recalibrates subsequent work. See
+  within Increment-08 scope. The user manually published its chain; fetched
+  canonical and independent remote verification agree on `a4f07590b6d899b7cd8d8c25e5b2824aff85c1c7`.
+  The supervisor has selected **BOUNDED MULTI-SEED AUTONOMOUS EMERGENCE CHARACTERIZATION**
+  as the next substantive PS01 action, to run later in a new Codex conversation
+  from the then-published canonical HEAD. It observes the acquired systems
+  through the normal product path and may discover blockers; no Increment 09
+  implementation or demographic-headroom solution is preselected or authorized. See
   [PS01_INCREMENT_08_NORMAL_CONTINUITY.md](docs/pebblelab/PS01_INCREMENT_08_NORMAL_CONTINUITY.md),
   [PS01_I08_BLOCKER_04_CROSS_WORLD_STRONGHOLD_CACHE_CONCURRENCY.md](docs/pebblelab/PS01_I08_BLOCKER_04_CROSS_WORLD_STRONGHOLD_CACHE_CONCURRENCY.md) and
   [PS01_I08_BLOCKER_01_MORTALITY_CHECKPOINT_CAUSAL_COMPATIBILITY.md](docs/pebblelab/PS01_I08_BLOCKER_01_MORTALITY_CHECKPOINT_CAUSAL_COMPATIBILITY.md).

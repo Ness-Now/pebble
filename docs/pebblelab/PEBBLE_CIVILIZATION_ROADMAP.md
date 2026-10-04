@@ -107,14 +107,17 @@ SHA-256 is `742f12009735032c0ea0a0e43b01bf2db8d1549b9a066afc552f664505eb348a`;
 final Risk-C is P0 0 / P1 0 / blocking P2 0. The bounded normal renewable
 sweet-berry continuity contract and its Core streaming determinism blocker are
 resolved and published. Population capacity/demographic headroom remains
-unresolved. Increment 08 is **PUBLICATION CHAIN READY / USER PUSH PENDING / NOT PUBLISHED**.
+unresolved. Increment 08 is **COMPLETE_AND_PUBLISHED / REMOTE VERIFIED**.
 Complete post-B04 final-source qualification and final independent review pass
 (P0 0 / P1 0 / blocking P2 0) for unchanged candidate
 `eab79c7e2723f3aafbbd5bb65c8562b2b911cae8`, directly above `c58fe2c0fbb2c5b568426c5f936e7a50e573ff08`.
 Portal refusal, persistence/restart, zero-population continuation and VGS V5
 pass within the documented scope. B01 and B04 are published and remote verified.
-User push of the I08 candidate/documentation chain and remote verification are
-next; only then may Increment 08 become `COMPLETE_AND_PUBLISHED`. See
+The user manually published the exact candidate/documentation chain, verified
+at `a4f07590b6d899b7cd8d8c25e5b2824aff85c1c7`. The supervisor-selected next substantive
+action is **BOUNDED MULTI-SEED AUTONOMOUS EMERGENCE CHARACTERIZATION**, to run later
+in a new Codex conversation from the then-published canonical HEAD. It observes
+normal integrated operation; no next product increment is preselected. See
 [PS01_INCREMENT_08_NORMAL_CONTINUITY.md](PS01_INCREMENT_08_NORMAL_CONTINUITY.md). CIV-48 remains not started,
 implementation unauthorized and deferred behind the slice and evidence-driven
 roadmap recalibration.
@@ -272,7 +275,7 @@ PLAYABLE SLICE 01 Increment 06 published tree: 7ee2a64b55ef12ec1193d068dd1145b10
 PLAYABLE SLICE 01 Increment 07: COMPLETE AND PUBLISHED — PASS — REMOTE VERIFIED
 PLAYABLE SLICE 01 Increment 07 published HEAD: 373b5e3688d25e1e139dd735a76d48e38743c1f8
 PLAYABLE SLICE 01 Increment 07 published tree: 56e50d1f910f8825ae344aab50e4a65553ae06ef
-PLAYABLE SLICE 01 Increment 08: PUBLICATION CHAIN READY / USER PUSH PENDING / NOT PUBLISHED
+PLAYABLE SLICE 01 Increment 08: COMPLETE_AND_PUBLISHED / REMOTE VERIFIED
 PLAYABLE SLICE 01 Increment 08 approved candidate: eab79c7e2723f3aafbbd5bb65c8562b2b911cae8
 PLAYABLE SLICE 01 Increment 08 independent review: PS01_INCREMENT_08_FINAL_INDEPENDENT_REVIEW_PASS / P0 0 / P1 0 / blocking P2 0
 PS01 I08 Blocker 01 approved product correction: 781329891411a883f62bc0b818b47f29e908bd9d
@@ -280,8 +283,9 @@ PS01 I08 Blocker 01 status: BLOCKER_FIX_PUBLISHED
 PS01 I08 Blocker 01 publication: VERIFIED IN CANONICAL 9919e575819dca02ee8e893a37ac9eaaebc36012
 PS01 I08 Blocker 04 status: BLOCKER_FIX_PUBLISHED / SENIOR REVIEW APPROVED / REMOTE VERIFIED
 PS01 I08 Blocker 04 publication: VERIFIED IN CANONICAL c58fe2c0fbb2c5b568426c5f936e7a50e573ff08
-next authorized action: USER-PUSH-AND-REMOTE-VERIFY-PS01-INCREMENT-08-PUBLICATION-CHAIN
-next action after verified I08 publication: SUPERVISOR-SELECTION-AND-ROADMAP-RECALIBRATION
+PLAYABLE SLICE 01 Increment 08 published canonical HEAD: a4f07590b6d899b7cd8d8c25e5b2824aff85c1c7
+next substantive action: BOUNDED-MULTI-SEED-AUTONOMOUS-EMERGENCE-CHARACTERIZATION
+next substantive action execution: LATER / NEW CODEX CONVERSATION / THEN-PUBLISHED CANONICAL HEAD
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
@@ -1691,7 +1695,7 @@ PLAYABLE SLICE 01 Increment 06 published tree: 7ee2a64b55ef12ec1193d068dd1145b10
 PLAYABLE SLICE 01 Increment 07: COMPLETE AND PUBLISHED — PASS — REMOTE VERIFIED
 PLAYABLE SLICE 01 Increment 07 published HEAD: 373b5e3688d25e1e139dd735a76d48e38743c1f8
 PLAYABLE SLICE 01 Increment 07 published tree: 56e50d1f910f8825ae344aab50e4a65553ae06ef
-PLAYABLE SLICE 01 Increment 08: PUBLICATION CHAIN READY / USER PUSH PENDING / NOT PUBLISHED
+PLAYABLE SLICE 01 Increment 08: COMPLETE_AND_PUBLISHED / REMOTE VERIFIED
 PLAYABLE SLICE 01 Increment 08 approved candidate: eab79c7e2723f3aafbbd5bb65c8562b2b911cae8
 PLAYABLE SLICE 01 Increment 08 independent review: PS01_INCREMENT_08_FINAL_INDEPENDENT_REVIEW_PASS / P0 0 / P1 0 / blocking P2 0
 PS01 I08 Blocker 01 approved product correction: 781329891411a883f62bc0b818b47f29e908bd9d
@@ -1699,8 +1703,9 @@ PS01 I08 Blocker 01 status: BLOCKER_FIX_PUBLISHED
 PS01 I08 Blocker 01 publication: VERIFIED IN CANONICAL 9919e575819dca02ee8e893a37ac9eaaebc36012
 PS01 I08 Blocker 04 status: BLOCKER_FIX_PUBLISHED / SENIOR REVIEW APPROVED / REMOTE VERIFIED
 PS01 I08 Blocker 04 publication: VERIFIED IN CANONICAL c58fe2c0fbb2c5b568426c5f936e7a50e573ff08
-next authorized action: USER-PUSH-AND-REMOTE-VERIFY-PS01-INCREMENT-08-PUBLICATION-CHAIN
-next action after verified I08 publication: SUPERVISOR-SELECTION-AND-ROADMAP-RECALIBRATION
+PLAYABLE SLICE 01 Increment 08 published canonical HEAD: a4f07590b6d899b7cd8d8c25e5b2824aff85c1c7
+next substantive action: BOUNDED-MULTI-SEED-AUTONOMOUS-EMERGENCE-CHARACTERIZATION
+next substantive action execution: LATER / NEW CODEX CONVERSATION / THEN-PUBLISHED CANONICAL HEAD
 CIV-39 status: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 Gate F status: ACQUIRED AND PUBLISHED — REMOTE VERIFIED
@@ -2488,13 +2493,13 @@ As the milestone is characterized, its evidence drives a roadmap
 recalibration before Wave 6 begins. CIV-48 remains **NOT STARTED —
 IMPLEMENTATION NOT AUTHORIZED**. Gate H remains planned and continues to
 require CIV-48 through CIV-52 unless a future separately authorized roadmap
-review changes that contract. Increment 08 is **PUBLICATION CHAIN READY / USER PUSH PENDING / NOT PUBLISHED**.
+review changes that contract. Increment 08 is **COMPLETE_AND_PUBLISHED / REMOTE VERIFIED**.
 The exact candidate `eab79c7e2723f3aafbbd5bb65c8562b2b911cae8` has final-source qualification
 and **PS01_INCREMENT_08_FINAL_INDEPENDENT_REVIEW_PASS**, P0 0 / P1 0 /
 blocking P2 0, and is safe to publish unchanged within the authorized scope.
-The next action is user push of its clean candidate/documentation chain and
-exact remote verification. Afterward, a supervisor selection/recalibration
-decision is required; no subsequent implementation is authorized automatically.
+Manual user publication of the chain is complete and remote verified at
+`a4f07590b6d899b7cd8d8c25e5b2824aff85c1c7`. The supervisor has completed post-I08
+selection/recalibration and selected the characterization described below.
 
 B01 and B04 are **BLOCKER_FIX_PUBLISHED — REMOTE VERIFIED** in canonical
 `c58fe2c0fbb2c5b568426c5f936e7a50e573ff08`. Published B04 product correction
@@ -2513,6 +2518,29 @@ authorize CIV-48 or acquire Gate H. See
 [PS01_INCREMENT_08_NORMAL_CONTINUITY.md](PS01_INCREMENT_08_NORMAL_CONTINUITY.md),
 [PS01_I08_BLOCKER_04_CROSS_WORLD_STRONGHOLD_CACHE_CONCURRENCY.md](PS01_I08_BLOCKER_04_CROSS_WORLD_STRONGHOLD_CACHE_CONCURRENCY.md) and
 [PS01_I08_BLOCKER_01_MORTALITY_CHECKPOINT_CAUSAL_COMPATIBILITY.md](PS01_I08_BLOCKER_01_MORTALITY_CHECKPOINT_CAUSAL_COMPATIBILITY.md).
+
+### Selected next PS01 action — bounded multi-seed characterization
+
+The next substantive action is **BOUNDED MULTI-SEED AUTONOMOUS EMERGENCE CHARACTERIZATION**.
+This is a separate characterization/evaluation mission to execute later from
+the then-published canonical HEAD in a **new Codex conversation**. This
+status-only mission does not execute that campaign or claim its result.
+
+Observe already acquired systems operating together through the normal bounded
+product path. The evidence must determine which integration gap, if any, should
+own the next product increment. The campaign may discover blockers; neither a
+solution nor Increment 09 product implementation is selected or authorized.
+Demographic admission/birth headroom is a known risk, not an automatically
+authorized implementation. CIV-48 implementation remains unauthorized; PS01
+remains required, in progress and not complete; Gate H remains planned.
+
+Open risks/questions remain: demographic admission/birth headroom; B01 bounded-
+history trust/validation; B04 arbitrary-GenCtx context identity; arbitrary crash
+recovery outside I08 scope; populations above the validated bounded scope;
+multi-dimension continuation; unactivated PS01 integration domains; long-run
+authority/history saturation; Observer completeness; and eventual integrated
+multi-seed characterization. Their preservation does not classify each as a
+proven product blocker or authorize a repair in advance.
 
 ## Wave 6 — Organizations, land and law
 

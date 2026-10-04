@@ -119,7 +119,7 @@ CIV-37: COMPLETE AND PUBLISHED
 CIV-38: OPTIONAL — NOT STARTED
 V4-GATE-E-v1: ACQUIRED AND PUBLISHED
 V4-GATE-E-v1 acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f76744f83
-active phase: PLAYABLE SLICE 01 — IN PROGRESS / NEXT INCREMENT REVIEW AND SELECTION
+active phase: PLAYABLE SLICE 01 — IN PROGRESS / BOUNDED MULTI-SEED CHARACTERIZATION SELECTED
 completed through: CIV-47 (CIV-38 and CIV-40 optional and unstarted)
 published through: CIV-47
 next required milestone: PLAYABLE SLICE 01 — Autonomous Emergence Baseline
@@ -144,7 +144,9 @@ PLAYABLE SLICE 01 Increment 06 published tree: 7ee2a64b55ef12ec1193d068dd1145b10
 PLAYABLE SLICE 01 Increment 07: COMPLETE AND PUBLISHED — PASS — REMOTE VERIFIED
 PLAYABLE SLICE 01 Increment 07 published HEAD: 373b5e3688d25e1e139dd735a76d48e38743c1f8
 PLAYABLE SLICE 01 Increment 07 published tree: 56e50d1f910f8825ae344aab50e4a65553ae06ef
-next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-08
+PLAYABLE SLICE 01 Increment 08: COMPLETE_AND_PUBLISHED / REMOTE VERIFIED
+PLAYABLE SLICE 01 Increment 08 published canonical HEAD: a4f07590b6d899b7cd8d8c25e5b2824aff85c1c7
+next substantive action: BOUNDED-MULTI-SEED-AUTONOMOUS-EMERGENCE-CHARACTERIZATION
 next eligible CIV phase: CIV-48 — DEFERRED / NOT STARTED / IMPLEMENTATION NOT AUTHORIZED
 Gate E Evaluation 01: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 01: FIXED + PUBLISHED + REMOTE VERIFIED
@@ -155,7 +157,9 @@ V4-GATE-E-v1 Blocker 03: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 04: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 04: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 05: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
-next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-08
+PLAYABLE SLICE 01 Increment 08: COMPLETE_AND_PUBLISHED / REMOTE VERIFIED
+PLAYABLE SLICE 01 Increment 08 published canonical HEAD: a4f07590b6d899b7cd8d8c25e5b2824aff85c1c7
+next substantive action: BOUNDED-MULTI-SEED-AUTONOMOUS-EMERGENCE-CHARACTERIZATION
 CIV-39: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 V4-GATE-F-v1: ACQUIRED AND PUBLISHED — REMOTE VERIFIED
@@ -245,7 +249,9 @@ PLAYABLE SLICE 01 Increment 06: COMPLETE AND PUBLISHED — PASS — SENIOR REVIE
 PLAYABLE SLICE 01 Increment 06 published HEAD: 3e9d8e285dd81f6c015f046d2f2469489b4667d8
 PLAYABLE SLICE 01 Increment 07: COMPLETE AND PUBLISHED — PASS — REMOTE VERIFIED
 PLAYABLE SLICE 01 Increment 07 published HEAD: 373b5e3688d25e1e139dd735a76d48e38743c1f8
-next authorized action: REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-08
+PLAYABLE SLICE 01 Increment 08: COMPLETE_AND_PUBLISHED / REMOTE VERIFIED
+PLAYABLE SLICE 01 Increment 08 published canonical HEAD: a4f07590b6d899b7cd8d8c25e5b2824aff85c1c7
+next substantive action: BOUNDED-MULTI-SEED-AUTONOMOUS-EMERGENCE-CHARACTERIZATION
 CIV-48: NOT STARTED — IMPLEMENTATION NOT AUTHORIZED
 V4-GATE-H-v1: PLANNED
 ```
@@ -604,10 +610,13 @@ The bounded normal renewable sweet-berry continuity path and its Core
 streaming determinism blocker are resolved and published; historical failed
 evidence remains preserved. See
 [`PS01_INCREMENT_07_RENEWABLE_FOOD_CONTINUITY.md`](PS01_INCREMENT_07_RENEWABLE_FOOD_CONTINUITY.md).
-The next authorized technical action after publication reconciliation is the
-read-only `REVIEW-AND-SELECT-PLAYABLE-SLICE-01-INCREMENT-08` mission. Increment
-08 remains unselected; population capacity/demographic headroom remains
-unresolved. CIV-48 remains not started, implementation is not authorized and
+Increment 08 is **COMPLETE_AND_PUBLISHED / REMOTE VERIFIED** at
+`a4f07590b6d899b7cd8d8c25e5b2824aff85c1c7`. The supervisor-selected next
+substantive action is **BOUNDED MULTI-SEED AUTONOMOUS EMERGENCE CHARACTERIZATION**,
+a later evaluation in a new Codex conversation from the then-published canonical
+HEAD. Evidence may discover blockers; no Increment 09 implementation or
+demographic-headroom solution is preselected. Population capacity/demographic
+headroom remains unresolved. CIV-48 remains not started, implementation is not authorized and
 it is deferred behind the slice and evidence-driven roadmap recalibration;
 Gate H remains planned. See
 [`CIV_45_PHASE_SUMMARY.md`](CIV_45_PHASE_SUMMARY.md) and
@@ -885,11 +894,11 @@ roadmap, manifest or status.
 ## Reviewed blocker publication records
 
 - [PS01 I08 Blocker 01 — Natural extinction/checkpoint causal compatibility](PS01_I08_BLOCKER_01_MORTALITY_CHECKPOINT_CAUSAL_COMPATIBILITY.md): approved product correction `781329891411a883f62bc0b818b47f29e908bd9d` and its documentation chain are published and verified in canonical `9919e575819dca02ee8e893a37ac9eaaebc36012`. The original pre-push record, historical FAIL evidence and all three non-blocking residual risks remain preserved.
-- [PS01 I08 Blocker 04 — Cross-World stronghold cache concurrency](PS01_I08_BLOCKER_04_CROSS_WORLD_STRONGHOLD_CACHE_CONCURRENCY.md): independent senior review PASS (P0 0 / P1 0 / blocking P2 0) for unchanged shared Core correction `aa07e3ce71c34842e45611d8e9064de9cb563a16`, directly above canonical `9919e575819dca02ee8e893a37ac9eaaebc36012`. **BLOCKER_FIX_PUBLISHED — REMOTE VERIFIED** in fetched canonical `c58fe2c0fbb2c5b568426c5f936e7a50e573ff08`. The original pre-publication record remains historical evidence. Preserves original exit-139 and canonical/B02/B03 race FAIL evidence, corrected bounded qualification and the pre-existing arbitrary-`GenCtx` context-identity non-blocking risk. I08 is a local qualified candidate reconstructed on published B04, final independent review PASS and publication chain ready, with user push/remote verification pending and not published; the historical B03 dirty worktree remains unchanged.
+- [PS01 I08 Blocker 04 — Cross-World stronghold cache concurrency](PS01_I08_BLOCKER_04_CROSS_WORLD_STRONGHOLD_CACHE_CONCURRENCY.md): independent senior review PASS (P0 0 / P1 0 / blocking P2 0) for unchanged shared Core correction `aa07e3ce71c34842e45611d8e9064de9cb563a16`, directly above canonical `9919e575819dca02ee8e893a37ac9eaaebc36012`. **BLOCKER_FIX_PUBLISHED — REMOTE VERIFIED** in fetched canonical `c58fe2c0fbb2c5b568426c5f936e7a50e573ff08`. The original pre-publication record remains historical evidence. Preserves original exit-139 and canonical/B02/B03 race FAIL evidence, corrected bounded qualification and the pre-existing arbitrary-`GenCtx` context-identity non-blocking risk. I08 is **COMPLETE_AND_PUBLISHED / REMOTE VERIFIED** at `a4f07590b6d899b7cd8d8c25e5b2824aff85c1c7`, with final independent review PASS; the historical B03 dirty worktree remains unchanged.
 - [B04 additive machine-readable evidence](PS01_I08_BLOCKER_04_EVIDENCE.json): immutable historical and corrected campaign counts/hashes, exact approved correction identity, independent review and historical pre-publication semantics. B04 publication is now remote verified; no I08 qualification is implied by this historical manifest.
 
-## Local implementation candidates
+## Published Increment 08 and historical candidate evidence
 
-- [PS01 Increment 08 — Normal World/Civilization Continuity](PS01_INCREMENT_08_NORMAL_CONTINUITY.md): supervisor-authorized canonical-based reconstitution of the complete I08/B02/B03 semantics; exact historical FAIL chronology and worktree preservation, post-B04 qualification evidence, accepted final independent review **PS01_INCREMENT_08_FINAL_INDEPENDENT_REVIEW_PASS** (P0 0 / P1 0 / blocking P2 0), exact approved `eab79c7e2723f3aafbbd5bb65c8562b2b911cae8` identity and **PUBLICATION CHAIN READY / USER PUSH PENDING / NOT PUBLISHED** semantics.
+- [PS01 Increment 08 — Normal World/Civilization Continuity](PS01_INCREMENT_08_NORMAL_CONTINUITY.md): supervisor-authorized canonical-based reconstitution of the complete I08/B02/B03 semantics; exact historical FAIL chronology and worktree preservation, post-B04 qualification evidence, accepted final independent review **PS01_INCREMENT_08_FINAL_INDEPENDENT_REVIEW_PASS** (P0 0 / P1 0 / blocking P2 0), exact approved `eab79c7e2723f3aafbbd5bb65c8562b2b911cae8` identity and **COMPLETE_AND_PUBLISHED / REMOTE VERIFIED** at `a4f07590b6d899b7cd8d8c25e5b2824aff85c1c7`. Records the supervisor-selected later bounded multi-seed autonomous emergence characterization in a new Codex conversation.
 
-- [PS01 Increment 08 final additive evidence](PS01_INCREMENT_08_FINAL_EVIDENCE.json): canonical-based source reconstruction, historical preservation, final native executable hashes, all counts/exits, natural zero, VGS conservation and historical unpublished candidate status. This approved qualification manifest remains unchanged; the owning Increment-08 record adds the subsequent independent review and pending publication reconciliation.
+- [PS01 Increment 08 final additive evidence](PS01_INCREMENT_08_FINAL_EVIDENCE.json): canonical-based source reconstruction, historical preservation, final native executable hashes, all counts/exits, natural zero, VGS conservation and historical unpublished candidate status. This approved qualification manifest remains unchanged; the owning Increment-08 document records the subsequent independent review, verified I08 publication and next-action selection; the original pre-push record is retained verbatim as historical evidence.
