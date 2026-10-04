@@ -271,8 +271,7 @@ for the compact status. In particular:
   final Risk-C is P0 0 / P1 0 / blocking P2 0. Natural Core random ticks now
   renew the same preserving-harvest sweet-berry source for a second normal
   acquisition with exact physical custody and conservation. The Core streaming
-  determinism blocker fix is published. Increment 08 is **LOCAL QUALIFIED CANDIDATE /
-  NOT PUBLISHED**. Its
+  determinism blocker fix is published. Increment 08 is **PUBLICATION CHAIN READY / USER PUSH PENDING / NOT PUBLISHED**. Its
   separate B01 correction remains **BLOCKER_FIX_PUBLISHED**. Shared Core B04
   correction `aa07e3ce71c34842e45611d8e9064de9cb563a16` is now
   **BLOCKER_FIX_PUBLISHED — REMOTE VERIFIED** in canonical
@@ -282,7 +281,11 @@ for the compact status. In particular:
   reconstructed directly on that canonical in a new managed worktree, without
   rebasing or replaying the two historical independently reviewed FAIL commits.
   The original nine-file dirty worktree and an external safety archive remain
-  unchanged. I08 final-source qualification passes; independent supervisor review is next. See
+  unchanged. I08 final-source qualification and final independent review pass
+  (**PS01_INCREMENT_08_FINAL_INDEPENDENT_REVIEW_PASS**, P0 0 / P1 0 / blocking P2 0).
+  Approved candidate `eab79c7e2723f3aafbbd5bb65c8562b2b911cae8` is safe to publish unchanged
+  within Increment-08 scope. User push and remote verification are next;
+  afterward the supervisor selects/recalibrates subsequent work. See
   [PS01_INCREMENT_08_NORMAL_CONTINUITY.md](docs/pebblelab/PS01_INCREMENT_08_NORMAL_CONTINUITY.md),
   [PS01_I08_BLOCKER_04_CROSS_WORLD_STRONGHOLD_CACHE_CONCURRENCY.md](docs/pebblelab/PS01_I08_BLOCKER_04_CROSS_WORLD_STRONGHOLD_CACHE_CONCURRENCY.md) and
   [PS01_I08_BLOCKER_01_MORTALITY_CHECKPOINT_CAUSAL_COMPATIBILITY.md](docs/pebblelab/PS01_I08_BLOCKER_01_MORTALITY_CHECKPOINT_CAUSAL_COMPATIBILITY.md).

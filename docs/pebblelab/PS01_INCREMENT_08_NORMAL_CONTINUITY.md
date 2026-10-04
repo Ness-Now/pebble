@@ -1,7 +1,40 @@
 # PS01 Increment 08 — Final candidate after published B04
 
-Status: **LOCAL QUALIFIED CANDIDATE / READY FOR INDEPENDENT SUPERVISOR REVIEW / NOT PUBLISHED**.
+Status: **PUBLICATION CHAIN READY / USER PUSH PENDING / NOT PUBLISHED**.
+Publication reconciliation mission: `PUBLISH-RECONCILIATION-PS01-INCREMENT-08-NORMAL-CONTINUITY`.
 Mission: `RESUME-PS01-I08-B03-AFTER-PUBLISHED-B04-AND-RECONSTITUTE-FINAL-CANDIDATE`.
+
+## Final independent review and pending user publication
+
+The supervisor-provided final independent review concluded
+**PS01_INCREMENT_08_FINAL_INDEPENDENT_REVIEW_PASS**, with **P0 0 / P1 0 / blocking P2 0**.
+The exact approved candidate is `eab79c7e2723f3aafbbd5bb65c8562b2b911cae8`, tree
+`ff7582d0ed096eae057d00e2cedec6dc761cd496`, sole parent `c58fe2c0fbb2c5b568426c5f936e7a50e573ff08`,
+subject `feat(ps01): add coherent normal World and civilization continuation`.
+The review explicitly finds this commit **safe to publish unchanged within the
+documented Increment-08 scope**. This documentation-only reconciliation records
+that accepted conclusion; it does not amend the candidate or rerun qualification.
+
+The local publication chain is exactly:
+
+`c58fe2c0fbb2c5b568426c5f936e7a50e573ff08` →
+`eab79c7e2723f3aafbbd5bb65c8562b2b911cae8` → this single documentation reconciliation commit.
+
+Its final documentation SHA/tree are reported externally after commit creation.
+No historical FAIL commit or unrelated commit enters this chain. The publication
+branch is `codex/ps01-increment-08-final-after-b04` in
+`/Users/nessnow/.codex/worktrees/ps01-i08-final-after-b04/pebble-lab`.
+Fetched canonical remains `c58fe2c0fbb2c5b568426c5f936e7a50e573ff08`. **User push is pending;
+I08 is not remotely published.** Only successful user push followed by remote
+verification of the exact publication chain permits Increment 08 itself to become
+`COMPLETE_AND_PUBLISHED`. Codex does not push.
+
+After verified publication, the next action remains **supervisor selection /
+roadmap recalibration**. Publication does not start another increment, Wave 6,
+CIV-48 or Gate H. PS01 remains **IN PROGRESS / NOT COMPLETE**; CIV-48 remains
+**NOT STARTED / IMPLEMENTATION NOT AUTHORIZED**; Gate H remains **PLANNED**.
+B01 and B04 remain published. Historical FAIL evidence and residual limits below
+remain unchanged.
 
 ## Canonical and historical ownership
 
@@ -258,8 +291,8 @@ headroom remains a PS01 integration issue. Published B01 bounded-history trust
 risks and B04's arbitrary-GenCtx context-identity limitation remain non-blocking
 owning follow-ups; neither was reopened or disguised as a new I08 correction.
 
-I08 is **LOCAL QUALIFIED CANDIDATE / NOT PUBLISHED**, ready for independent
-supervisor review, not independently approved by this implementation mission.
+I08 is **PUBLICATION CHAIN READY / USER PUSH PENDING / NOT PUBLISHED**,
+with accepted final independent review PASS for the unchanged candidate above.
 PS01 remains **IN PROGRESS / NOT COMPLETE**. CIV-48 remains **NOT STARTED /
 IMPLEMENTATION NOT AUTHORIZED**. Gate H remains **PLANNED**. B01 and B04 remain
 published. **Push attempted: NO**.
@@ -291,6 +324,13 @@ published. **Push attempted: NO**.
    semantics on new canonical, with no replay of historical FAIL commits, and
    requalifies the final source. Previous portal/VGS harness failures and the
    canonical zoo/combat/eight-A* failures remain historical FAIL evidence.
+
+8. Final post-B04 candidate `eab79c7e2723f3aafbbd5bb65c8562b2b911cae8` completed qualification and
+   received **PS01_INCREMENT_08_FINAL_INDEPENDENT_REVIEW_PASS**, P0 0 / P1 0 /
+   blocking P2 0, safe to publish unchanged. This additive documentation
+   reconciliation prepares the exact two-commit local publication chain;
+   user push and remote verification remain pending. Earlier FAIL evidence
+   stays FAIL.
 
 Original archives remain at
 `/Users/nessnow/Dev/pebble-lab-i08-resumed-evidence-20261002` and
