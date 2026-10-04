@@ -25,6 +25,253 @@ private func wildAgent(_ index: Int) -> AgentSessionAgentState {
     )
 }
 
+private func historicalActorSession(
+    _ id: String, survivors: Set<Int>, retainedDeaths: Int = 32
+) -> AgentSimulationSession {
+    let agents = (0..<24).map { index in
+        let position = AgentPosition(x: index, y: 64, z: 0)
+        let lethal = !survivors.contains(index)
+        return AgentSessionAgentState(
+            id: "agent_\(index)", state: "idle", position: position,
+            needs: AgentNeeds(hunger: lethal ? 1 : 0, fatigue: 0, curiosity: 0, safety: 1),
+            health: lethal ? 10 : 100, fear: 0, homePosition: position, nearbyAgents: [],
+            currentGoal: AgentGoal(kind: .idle, reason: "retained identity fixture", startedAtTick: 0, urgency: 0),
+            lastAction: nil, lastActionEffect: nil, memory: [], tickCreated: 0,
+            ticksAlive: 0, observationCount: 0, nearbyObservationCount: 0,
+            goalSelectionCount: 0, goalChangeCount: 0, actionCount: 0,
+            actionEffectCount: 0, movementCount: 0, totalManhattanDistanceMoved: 0,
+            returnHomeMoveCount: 0, totalDistanceReducedTowardHome: 0,
+            survivalProgress: AgentSurvivalProgress(
+                status: lethal ? .starving : .stable,
+                consecutiveCriticalHungerTicks: lethal ? 2 : 0
+            )
+        )
+    }
+    var session = try! AgentSimulationSession(
+        configuration: try! AgentSessionConfiguration(seed: 14, memoryPolicy: .bounded(maxEntries: 128)),
+        agents: agents, simulationID: AgentSimulationID(rawValue: id)!,
+        causalLedgerPolicy: .bounded(maxEvents: 16_384)
+    )
+    session.setSurvivalEnabled(true)
+    try! session.initializePopulationRegistry(
+        settlementAnchor: wildOrigin, receptionPosition: wildOrigin,
+        configuration: try! AgentPopulationConfiguration(maximumActivePopulation: 30)
+    )
+    try! session.setLifecycleEnabled(true, configuration: wildLifecycle)
+    try! session.setKinshipEnabled(true)
+    try! session.setSkillsEnabled(true)
+    try! session.setEcologicalObservationEnabled(true)
+    try! session.setWildSubsistenceEnabled(true)
+    try! session.setAutonomousActivityEnabled(true)
+    try! session.setMortalityEnabled(true, configuration: try! AgentMortalityConfiguration(
+        maximumDeathsPerTick: 30, maximumRetainedDeathRecords: retainedDeaths
+    ))
+    try! session.useLegacyCognitivePhysiologyReplayFixture(
+        schemaVersion: AgentCheckpointSchema.independentEcologicalReceiptVersion
+    )
+    return session
+}
+
+private func historicalActivityCandidate(_ index: Int, actor: Int = 16) -> AgentAutonomousActivityCandidate {
+    AgentAutonomousActivityCandidate(
+        candidateID: "historical-\(actor)-\(index)", actorID: AgentID(rawValue: "agent_\(actor)")!,
+        domain: .wildGathering, actionKey: "wildGathering", stableReference: "retained-\(index)",
+        target: AgentPosition(x: index, y: 64, z: 0),
+        logicalTargetKey: "plant-\(index)", materialFingerprint: "ripe-\(index)",
+        source: .opportunity, priorityBand: 30, urgency: 70, distance: 1, observedAtTick: 0
+    )
+}
+
+/// Re-sign the envelope after attacks; no outer-checksum-only rejection counts.
+private func retainedIdentityAttackRefused(
+    _ checkpoint: AgentSessionCheckpoint, mutate: (inout [String: Any]) -> Void
+) -> Bool {
+    var root = try! JSONSerialization.jsonObject(with: AgentCheckpointCodec.encode(checkpoint)) as! [String: Any]
+    var state = root["durableState"] as! [String: Any]
+    mutate(&state)
+    let decoded = try! AgentCheckpointCodec.decode(AgentSessionDurableState.self,
+        from: JSONSerialization.data(withJSONObject: state))
+    let bytes = try! AgentCheckpointCodec.encode(decoded)
+    let digest = AgentCheckpointDigest.sha256(bytes)
+    let simulationDigest = AgentCheckpointDigest.sha256(Data(decoded.clock.simulationID.rawValue.utf8))
+    root["durableState"] = try! JSONSerialization.jsonObject(with: bytes)
+    root["semanticDigest"] = digest.rawValue
+    root["checkpointID"] = "checkpoint-\(simulationDigest.rawValue.prefix(12))-t\(decoded.clock.tick.rawValue)-\(digest.rawValue.prefix(16))"
+    let attacked = try! AgentCheckpointCodec.decode(AgentSessionCheckpoint.self,
+        from: JSONSerialization.data(withJSONObject: root))
+    do { _ = try AgentSimulationSession.restoring(attacked); return false }
+    catch { return (error as? AgentCheckpointError) != .semanticDigestMismatch }
+}
+
+func runPebbleAgentsRetainedHistoricalIdentitySmoke() {
+    section("finalized mortality and authenticated retained actor history")
+    let actor = AgentID(rawValue: "agent_16")!
+    let survivor = AgentID(rawValue: "agent_18")!
+    var session = historicalActorSession("historical-actor-seed14", survivors: [9, 18])
+    _ = try! session.recordEcologicalObservation(wildObservation(session, observer: actor.rawValue))
+    let context = AgentSubsistenceDecisionContext(actorID: actor,
+        fishingRodAvailable: false, huntingWeaponAvailable: false, agricultureAvailable: false)
+    let completed = try! session.selectWildSubsistenceOpportunity(context)
+    let record = try! session.recordWildSubsistenceOutcome(wildOutcome(
+        session, opportunity: completed, suffix: "historical-founder", item: "sweet_berries"
+    ))
+    let selected = try! session.selectWildSubsistenceOpportunity(context)
+    for index in 0..<4 {
+        let activity = try! session.selectAutonomousActivities([historicalActivityCandidate(index)])[0]
+        _ = try! session.recordAutonomousActivityOutcome(AgentAutonomousActivityOutcome(
+            activityID: activity.activityID, actorID: actor, lifecycle: .blocked,
+            completedAtTick: session.tick, reason: "navigationReplanLimit"
+        ))
+    }
+    let active = try! session.selectAutonomousActivities([historicalActivityCandidate(5)])[0]
+    let survivorActive = try! session.selectAutonomousActivities([
+        historicalActivityCandidate(5), historicalActivityCandidate(7, actor: 18)
+    ]).first { $0.candidate.actorID == survivor }!
+    let preDeath = try! session.makeCheckpoint()
+    let retainedBefore = session.wildSubsistenceSnapshot().retainedOutcomes
+    let cooldownsBefore = session.autonomousActivitySnapshot().cooldowns
+    _ = try! session.advanceTick()
+    check("seed14 boundary finalizes 22 founders through mortality with exact survivors",
+        session.mortalitySnapshot().totalDeathCount == 22
+            && session.expectedActiveAgentIDs() == [AgentID(rawValue: "agent_9")!, survivor].sorted())
+    check("founder material success remains exact retained evidence after death",
+        session.wildSubsistenceSnapshot().retainedOutcomes == retainedBefore
+            && retainedBefore[0] == record)
+    check("death interrupts selected subsistence without inventing an outcome",
+        session.wildSubsistenceSnapshot().opportunities.first { $0.opportunityID == selected.opportunityID }?.status == .interrupted
+            && !session.wildSubsistenceSnapshot().opportunities.contains { $0.actorID == actor && !$0.status.isTerminal })
+    check("dead autonomous executor is interrupted and four cooldowns are retained exactly",
+        session.activeAutonomousActivity(for: actor) == nil
+            && session.autonomousActivitySnapshot().cooldowns == cooldownsBefore
+            && session.autonomousActivitySnapshot().recentRecords.last?.outcome.lifecycle == .interrupted)
+    check("unrelated living autonomous activity remains exact across finalization",
+        session.activeAutonomousActivity(for: survivor) == survivorActive)
+    let checkpoint = try? session.makeCheckpoint()
+    check("seed14 native checkpoint capture admits legitimate history", checkpoint != nil)
+    guard let checkpoint else { return }
+    let decoded = try! AgentCheckpointCodec.decode(AgentSessionCheckpoint.self,
+        from: AgentCheckpointCodec.encode(checkpoint))
+    var restored = try! AgentSimulationSession.restoring(decoded)
+    check("fresh codec restore preserves exact bytes and schema without migration",
+        (try! restored.durableStateBytes()) == (try! session.durableStateBytes())
+            && decoded.schemaVersion == preDeath.schemaVersion)
+    check("finalized founder cannot select wild work", {
+        do { _ = try restored.selectWildSubsistenceOpportunity(context); return false }
+        catch { return true }
+    }())
+    check("finalized founder cannot select autonomous execution", {
+        do { _ = try restored.selectAutonomousActivities([historicalActivityCandidate(6)]); return false }
+        catch { return true }
+    }())
+    _ = try! restored.recordEcologicalObservation(wildObservation(restored, observer: survivor.rawValue))
+    let survivingSelection = try? restored.selectWildSubsistenceOpportunity(
+        AgentSubsistenceDecisionContext(actorID: survivor, fishingRodAvailable: false,
+            huntingWeaponAvailable: false, agricultureAvailable: false))
+    check("living survivor continues ordinary wild selection and checkpoint validation",
+        survivingSelection?.actorID == survivor && survivingSelection?.strategy == .wildGathering
+            && restored.activeAutonomousActivity(for: survivor) == survivorActive
+            && (try? restored.makeCheckpoint()) != nil)
+
+    for forged in ["unknown_actor", "agent_29"] {
+        check("forged retained wild actor \(forged) refuses", retainedIdentityAttackRefused(checkpoint) { state in
+            var wild = state["wildSubsistenceState"] as! [String: Any]
+            var opportunities = wild["opportunities"] as! [[String: Any]]
+            opportunities[0]["actorID"] = forged
+            wild["opportunities"] = opportunities; state["wildSubsistenceState"] = wild
+        })
+        check("forged cooldown actor \(forged) refuses", retainedIdentityAttackRefused(checkpoint) { state in
+            var autonomy = state["autonomousActivityState"] as! [String: Any]
+            var cooldowns = autonomy["cooldowns"] as! [[String: Any]]
+            cooldowns[0]["actorID"] = forged
+            autonomy["cooldowns"] = cooldowns; state["autonomousActivityState"] = autonomy
+        })
+    }
+    check("active wild opportunity for finalized actor refuses", retainedIdentityAttackRefused(checkpoint) { state in
+        var wild = state["wildSubsistenceState"] as! [String: Any]
+        var opportunities = wild["opportunities"] as! [[String: Any]]
+        opportunities[0]["status"] = "selected"
+        wild["opportunities"] = opportunities; state["wildSubsistenceState"] = wild
+    })
+    check("active autonomous executor for finalized actor refuses", retainedIdentityAttackRefused(checkpoint) { state in
+        var autonomy = state["autonomousActivityState"] as! [String: Any]
+        autonomy["activeActivities"] = [try! JSONSerialization.jsonObject(with: AgentCheckpointCodec.encode(active))]
+        state["autonomousActivityState"] = autonomy
+    })
+    check("future wild causal reference refuses", retainedIdentityAttackRefused(checkpoint) { state in
+        var wild = state["wildSubsistenceState"] as! [String: Any]
+        var opportunities = wild["opportunities"] as! [[String: Any]]
+        var event = opportunities[0]["selectedEventID"] as! [String: Any]
+        event["sequence"] = session.causalLedgerSnapshot().summary.latestSequence + 1
+        opportunities[0]["selectedEventID"] = event
+        wild["opportunities"] = opportunities; state["wildSubsistenceState"] = wild
+    })
+    check("wild event after finalized death refuses", retainedIdentityAttackRefused(checkpoint) { state in
+        var wild = state["wildSubsistenceState"] as! [String: Any]
+        var opportunities = wild["opportunities"] as! [[String: Any]]
+        opportunities[0]["selectedEventID"] = try! JSONSerialization.jsonObject(with:
+            AgentCheckpointCodec.encode(session.mortalitySnapshot().records.first { $0.agentID == actor }!.deathEventID))
+        wild["opportunities"] = opportunities; state["wildSubsistenceState"] = wild
+    })
+    check("post-death cooldown creation refuses", retainedIdentityAttackRefused(checkpoint) { state in
+        var autonomy = state["autonomousActivityState"] as! [String: Any]
+        var cooldowns = autonomy["cooldowns"] as! [[String: Any]]
+        cooldowns[0]["untilTick"] = 10_000
+        autonomy["cooldowns"] = cooldowns; state["autonomousActivityState"] = autonomy
+    })
+    check("retained wild uniqueness still refuses", retainedIdentityAttackRefused(checkpoint) { state in
+        var wild = state["wildSubsistenceState"] as! [String: Any]
+        var opportunities = wild["opportunities"] as! [[String: Any]]
+        opportunities.append(opportunities[0])
+        wild["opportunities"] = opportunities; state["wildSubsistenceState"] = wild
+    })
+    check("cooldown numerical bound still refuses", retainedIdentityAttackRefused(checkpoint) { state in
+        var autonomy = state["autonomousActivityState"] as! [String: Any]
+        let cooldown = (autonomy["cooldowns"] as! [[String: Any]])[0]
+        autonomy["cooldowns"] = Array(repeating: cooldown, count: 257)
+        state["autonomousActivityState"] = autonomy
+    })
+
+    for retainedDeaths in [32, 1] {
+        var extinct = historicalActorSession("historical-actor-extinct-\(retainedDeaths)", survivors: [], retainedDeaths: retainedDeaths)
+        // The legacy v30 fixture predates empty-population restore support.
+        // Exercise the native current format using authoritative World time.
+        try! extinct.rebasePhysiologicalTime(toWorldTick: 0)
+        try! extinct.advancePhysiologicalTime(toWorldTick: 1_200)
+        _ = try! extinct.recordEcologicalObservation(wildObservation(extinct, observer: actor.rawValue))
+        let extinctOpportunity = try! extinct.selectWildSubsistenceOpportunity(context)
+        let extinctRecord = try! extinct.recordWildSubsistenceOutcome(wildOutcome(
+            extinct, opportunity: extinctOpportunity, suffix: "extinct-founder", item: "sweet_berries"
+        ))
+        for index in 0..<4 {
+            let activity = try! extinct.selectAutonomousActivities([historicalActivityCandidate(index)])[0]
+            _ = try! extinct.recordAutonomousActivityOutcome(AgentAutonomousActivityOutcome(
+                activityID: activity.activityID, actorID: actor, lifecycle: .blocked,
+                completedAtTick: 0, reason: "navigationReplanLimit"))
+        }
+        _ = try! extinct.advanceTick()
+        check("wild terminal history survives full or compacted mortality authority (retention \(retainedDeaths))",
+            extinct.wildSubsistenceSnapshot().retainedOutcomes == [extinctRecord]
+                && !extinct.wildSubsistenceSnapshot().opportunities.contains { !$0.status.isTerminal })
+        let saved = try? extinct.makeCheckpoint()
+        check("seed101 extinction with four retained cooldowns captures (death retention \(retainedDeaths))",
+            extinct.expectedActiveAgentIDs().isEmpty && extinct.mortalitySnapshot().totalDeathCount == 24
+                && extinct.autonomousActivitySnapshot().activeActivities.isEmpty
+                && extinct.autonomousActivitySnapshot().cooldowns.count == 4 && saved != nil)
+        var restoredBytes: Data?
+        if let saved {
+            do {
+                restoredBytes = try AgentSimulationSession.restoring(
+                    AgentCheckpointCodec.decode(AgentSessionCheckpoint.self,
+                        from: AgentCheckpointCodec.encode(saved))).durableStateBytes()
+            } catch {
+                print("EXTINCT_IDENTITY_RESTORE_REFUSAL retention=\(retainedDeaths) \(error)")
+            }
+        }
+        check("extinct decode and restore is exact (death retention \(retainedDeaths))",
+            restoredBytes == (try? extinct.durableStateBytes()))
+    }
+}
+
 private func wildBase(_ id: String) -> AgentSimulationSession {
     var session = try! AgentSimulationSession(
         configuration: try! AgentSessionConfiguration(seed: 46, memoryPolicy: .bounded(maxEntries: 128)),

@@ -413,7 +413,8 @@ extension AgentSimulationSession {
     func validateWildSubsistenceStateIfEnabled() throws {
         guard let state = wildSubsistenceState else { return }
         try Self.validateWildSubsistenceState(
-            state, agents: Set(statesById.values.map(\.agentID)), clock: clock,
+            state, agents: Set(statesById.values.map(\.agentID)),
+            mortality: mortalityState, clock: clock,
             causalLatestSequence: causalLedger.latestSequence,
             causalDroppedEventCount: causalLedger.droppedEventCount,
             causalEvents: causalLedger.events
@@ -423,6 +424,7 @@ extension AgentSimulationSession {
     static func validateWildSubsistenceState(
         _ state: AgentWildSubsistenceState,
         agents: Set<AgentID>,
+        mortality: AgentMortalityState?,
         clock: AgentSimulationClock,
         causalLatestSequence: UInt64,
         causalDroppedEventCount: UInt64,
@@ -453,6 +455,7 @@ extension AgentSimulationSession {
             throw AgentWildSubsistenceError.invalidState("bounds, uniqueness, or counters")
         }
         let knownEvents = Dictionary(uniqueKeysWithValues: causalEvents.map { ($0.eventID, $0) })
+        let identities = AgentRetainedActorIdentity(activeIDs: agents, mortality: mortality)
         func validReference(_ id: AgentCausalEventID) -> Bool {
             id.simulationID == clock.simulationID
                 && id.sequence.rawValue <= causalLatestSequence
@@ -461,7 +464,18 @@ extension AgentSimulationSession {
         guard validReference(state.initializedEventID),
               validReference(state.lastSubsistenceEventID),
               state.opportunities.allSatisfy({ opportunity in
-                  agents.contains(opportunity.actorID)
+                  (opportunity.status == .selected
+                      ? agents.contains(opportunity.actorID)
+                      : identities.permitsHistory(
+                          for: opportunity.actorID, at: opportunity.selectedAtTick,
+                          eventID: opportunity.selectedEventID
+                      ))
+                      && (opportunity.terminalEventID.map {
+                          identities.permitsHistory(
+                              for: opportunity.actorID, at: opportunity.selectedAtTick,
+                              eventID: $0
+                          )
+                      } ?? true)
                       && !opportunity.targetKey.isEmpty && opportunity.targetKey.count <= 200
                       && opportunity.selectedAtTick <= clock.tick.rawValue
                       && opportunity.expiresAtTick >= opportunity.selectedAtTick
@@ -471,7 +485,10 @@ extension AgentSimulationSession {
                       && opportunity.edibleSourceEvidence.map(validEdibleEvidence) ?? true
               }),
               state.retainedOutcomes.allSatisfy({ record in
-                  agents.contains(record.outcome.actorID)
+                  identities.permitsHistory(
+                      for: record.outcome.actorID, at: record.outcome.completedAtTick,
+                      eventID: record.subsistenceEventID
+                  )
                       && record.outcome.completedAtTick <= clock.tick.rawValue
                       && record.outcome.strategy.isWild
                       && validReference(record.subsistenceEventID)
@@ -480,6 +497,22 @@ extension AgentSimulationSession {
               state.successfulCounts.allSatisfy({ $0.key.isWild && $0.value >= 0 }) else {
             throw AgentWildSubsistenceError.invalidState("references or histories")
         }
+    }
+
+    /// Retain the selected evidence, but release its operational reservation.
+    /// A mortality interruption creates no physical outcome or skill credit.
+    mutating func interruptWildSubsistenceForDeath(
+        _ actorID: AgentID, causeEventID: AgentCausalEventID
+    ) {
+        guard var state = wildSubsistenceState else { return }
+        for index in state.opportunities.indices where
+            state.opportunities[index].actorID == actorID
+                && state.opportunities[index].status == .selected {
+            state.opportunities[index].status = .interrupted
+            state.opportunities[index].terminalEventID = causeEventID
+        }
+        evictTerminalOpportunitiesIfNeeded(&state)
+        wildSubsistenceState = state
     }
 
     private func agricultureCandidate(

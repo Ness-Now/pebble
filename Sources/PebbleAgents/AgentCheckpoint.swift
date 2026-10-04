@@ -1915,6 +1915,9 @@ extension AgentSimulationSession {
                 throw AgentCheckpointError.invalidConfiguration
             }
             let activeActors = autonomy.activeActivities.map { $0.candidate.actorID }
+            let retainedIdentities = AgentRetainedActorIdentity(
+                activeIDs: agentIDs, mortality: state.mortalityState
+            )
             let counters = autonomy.counters
             guard autonomy.activeActivities.count
                     <= autonomy.configuration.maximumActiveActivities,
@@ -1923,7 +1926,36 @@ extension AgentSimulationSession {
                   autonomy.cooldowns.count <= autonomy.configuration.maximumCooldowns,
                   Set(activeActors).count == activeActors.count,
                   activeActors.allSatisfy(agentIDs.contains),
-                  autonomy.cooldowns.allSatisfy({ agentIDs.contains($0.actorID) }),
+                  autonomy.cooldowns.allSatisfy({ cooldown in
+                      let completion = cooldown.untilTick.subtractingReportingOverflow(
+                          autonomy.configuration.blockedCooldownTicks
+                      )
+                      return !completion.overflow
+                          && completion.partialValue <= state.clock.tick.rawValue
+                          && retainedIdentities.permitsHistory(
+                              for: cooldown.actorID, at: completion.partialValue
+                          )
+                  }),
+                  autonomy.recentRecords.allSatisfy({ record in
+                      record.activity.lifecycle.isTerminal
+                          && record.outcome.lifecycle == record.activity.lifecycle
+                          && record.outcome.actorID == record.activity.candidate.actorID
+                          && record.outcome.activityID == record.activity.activityID
+                          && record.activity.selectedAtTick >= 0
+                          && record.activity.selectedAtTick <= record.outcome.completedAtTick
+                          && record.outcome.completedAtTick <= state.clock.tick.rawValue
+                          && (record.outcome.sourceEventID.map { id in
+                              id.simulationID == state.clock.simulationID
+                                  && id.sequence.rawValue <= state.causalLedger.latestSequence
+                                  && (id.sequence.rawValue <= state.causalLedger.droppedEventCount
+                                      || state.causalLedger.events.contains { $0.eventID == id })
+                          } ?? true)
+                          && retainedIdentities.permitsHistory(
+                              for: record.outcome.actorID,
+                              at: record.outcome.completedAtTick,
+                              eventID: record.outcome.sourceEventID
+                          )
+                  }),
                   counters.decisionCount >= 0, counters.candidateCount >= 0,
                   counters.startCount >= 0, counters.completionCount >= 0,
                   counters.blockCount >= 0, counters.switchCount >= 0,
@@ -3361,6 +3393,7 @@ extension AgentSimulationSession {
                 try validateWildSubsistenceState(
                     wildSubsistence,
                     agents: Set(state.agents.map(\.agentID)),
+                    mortality: state.mortalityState,
                     clock: state.clock,
                     causalLatestSequence: state.causalLedger.latestSequence,
                     causalDroppedEventCount: state.causalLedger.droppedEventCount,

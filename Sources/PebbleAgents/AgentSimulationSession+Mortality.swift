@@ -812,6 +812,9 @@ extension AgentSimulationSession {
             // Capture the terminal activity boundary after lethal survival and
             // before the authoritative active-state removal below.
             let terminalActivity = AgentTerminalActivitySnapshot(state: state)
+            interruptWildSubsistenceForDeath(
+                item.agentID, causeEventID: lethalEvent.eventID
+            )
             if let activity = activeAutonomousActivity(for: item.agentID) {
                 _ = try recordAutonomousActivityOutcome(
                     AgentAutonomousActivityOutcome(
@@ -1286,6 +1289,7 @@ extension AgentSimulationSession {
         try validateDependentCareCrossDomainIfEnabled()
         try validateEstateCrossDomainIfEnabled()
         try validateEcologicalObservationStateIfEnabled()
+        try validateWildSubsistenceStateIfEnabled()
         try validateKnowledgeGraphStateIfEnabled()
         try validateLanguageStateIfInitialized()
         try validateOralTransmissionStateIfInitialized()
