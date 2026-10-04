@@ -35,7 +35,7 @@ These documents form the minimal permanent memory of the project:
 | Document | Role |
 | --- | --- |
 | [`CODEX_START_HERE.md`](../../CODEX_START_HERE.md) | Short entry point, authority map and mission-specific reading routes. |
-| [`CURRENT_STATE.md`](CURRENT_STATE.md) | Compact acquired state, product baseline, debt and next authorized action. |
+| [`CURRENT_STATE.md`](CURRENT_STATE.md) | Compact acquired state, product baseline, debt and next authorized action; [published terminal-identity correction](CURRENT_STATE.md#published-terminal-historical-identity-correction), historical characterization FAIL and remaining scientific questions. |
 | [`PEBBLE_CIVILIZATION_VISION.md`](PEBBLE_CIVILIZATION_VISION.md) | Durable V4 product purpose and invariants. |
 | [`PEBBLE_CIVILIZATION_ROADMAP.md`](PEBBLE_CIVILIZATION_ROADMAP.md) | Canonical human V4 program, required/optional phases, slices and versioned gates. |
 | [`ROADMAP_MANIFEST.json`](ROADMAP_MANIFEST.json) | Deterministic machine projection of the V4 roadmap and status. |
@@ -119,7 +119,7 @@ CIV-37: COMPLETE AND PUBLISHED
 CIV-38: OPTIONAL — NOT STARTED
 V4-GATE-E-v1: ACQUIRED AND PUBLISHED
 V4-GATE-E-v1 acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f76744f83
-active phase: PLAYABLE SLICE 01 — IN PROGRESS / BOUNDED MULTI-SEED CHARACTERIZATION SELECTED
+active phase: PLAYABLE SLICE 01 — IN PROGRESS / CHARACTERIZATION CONTINUATION SELECTED
 completed through: CIV-47 (CIV-38 and CIV-40 optional and unstarted)
 published through: CIV-47
 next required milestone: PLAYABLE SLICE 01 — Autonomous Emergence Baseline
@@ -146,7 +146,10 @@ PLAYABLE SLICE 01 Increment 07 published HEAD: 373b5e3688d25e1e139dd735a76d48e38
 PLAYABLE SLICE 01 Increment 07 published tree: 56e50d1f910f8825ae344aab50e4a65553ae06ef
 PLAYABLE SLICE 01 Increment 08: COMPLETE_AND_PUBLISHED / REMOTE VERIFIED
 PLAYABLE SLICE 01 Increment 08 published canonical HEAD: a4f07590b6d899b7cd8d8c25e5b2824aff85c1c7
-next substantive action: BOUNDED-MULTI-SEED-AUTONOMOUS-EMERGENCE-CHARACTERIZATION
+PS01 terminal historical identity correction: PUBLISHED / REMOTE VERIFIED
+PS01 terminal historical identity correction published HEAD: 01347e34910e9d16329d1341d3aff6e6cfb3cf70
+PS01 historical characterization: FAIL / PS01_CHARACTERIZATION_PRODUCT_BLOCKER_DISCOVERED
+next substantive action: RESUME-AND-COMPLETE-BOUNDED-MULTI-SEED-AUTONOMOUS-EMERGENCE-CHARACTERIZATION
 next eligible CIV phase: CIV-48 — DEFERRED / NOT STARTED / IMPLEMENTATION NOT AUTHORIZED
 Gate E Evaluation 01: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 01: FIXED + PUBLISHED + REMOTE VERIFIED
@@ -159,7 +162,10 @@ V4-GATE-E-v1 Blocker 04: FIXED + PUBLISHED + REMOTE VERIFIED
 Gate E Evaluation 05: PASS — SENIOR REVIEW APPROVED — PUBLISHED EVIDENCE
 PLAYABLE SLICE 01 Increment 08: COMPLETE_AND_PUBLISHED / REMOTE VERIFIED
 PLAYABLE SLICE 01 Increment 08 published canonical HEAD: a4f07590b6d899b7cd8d8c25e5b2824aff85c1c7
-next substantive action: BOUNDED-MULTI-SEED-AUTONOMOUS-EMERGENCE-CHARACTERIZATION
+PS01 terminal historical identity correction: PUBLISHED / REMOTE VERIFIED
+PS01 terminal historical identity correction published HEAD: 01347e34910e9d16329d1341d3aff6e6cfb3cf70
+PS01 historical characterization: FAIL / PS01_CHARACTERIZATION_PRODUCT_BLOCKER_DISCOVERED
+next substantive action: RESUME-AND-COMPLETE-BOUNDED-MULTI-SEED-AUTONOMOUS-EMERGENCE-CHARACTERIZATION
 CIV-39: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 V4-GATE-F-v1: ACQUIRED AND PUBLISHED — REMOTE VERIFIED
@@ -251,7 +257,10 @@ PLAYABLE SLICE 01 Increment 07: COMPLETE AND PUBLISHED — PASS — REMOTE VERIF
 PLAYABLE SLICE 01 Increment 07 published HEAD: 373b5e3688d25e1e139dd735a76d48e38743c1f8
 PLAYABLE SLICE 01 Increment 08: COMPLETE_AND_PUBLISHED / REMOTE VERIFIED
 PLAYABLE SLICE 01 Increment 08 published canonical HEAD: a4f07590b6d899b7cd8d8c25e5b2824aff85c1c7
-next substantive action: BOUNDED-MULTI-SEED-AUTONOMOUS-EMERGENCE-CHARACTERIZATION
+PS01 terminal historical identity correction: PUBLISHED / REMOTE VERIFIED
+PS01 terminal historical identity correction published HEAD: 01347e34910e9d16329d1341d3aff6e6cfb3cf70
+PS01 historical characterization: FAIL / PS01_CHARACTERIZATION_PRODUCT_BLOCKER_DISCOVERED
+next substantive action: RESUME-AND-COMPLETE-BOUNDED-MULTI-SEED-AUTONOMOUS-EMERGENCE-CHARACTERIZATION
 CIV-48: NOT STARTED — IMPLEMENTATION NOT AUTHORIZED
 V4-GATE-H-v1: PLANNED
 ```
@@ -611,12 +620,19 @@ streaming determinism blocker are resolved and published; historical failed
 evidence remains preserved. See
 [`PS01_INCREMENT_07_RENEWABLE_FOOD_CONTINUITY.md`](PS01_INCREMENT_07_RENEWABLE_FOOD_CONTINUITY.md).
 Increment 08 is **COMPLETE_AND_PUBLISHED / REMOTE VERIFIED** at
-`a4f07590b6d899b7cd8d8c25e5b2824aff85c1c7`. The supervisor-selected next
-substantive action is **BOUNDED MULTI-SEED AUTONOMOUS EMERGENCE CHARACTERIZATION**,
-a later evaluation in a new Codex conversation from the then-published canonical
-HEAD. Evidence may discover blockers; no Increment 09 implementation or
-demographic-headroom solution is preselected. Population capacity/demographic
-headroom remains unresolved. CIV-48 remains not started, implementation is not authorized and
+`a4f07590b6d899b7cd8d8c25e5b2824aff85c1c7`. The terminal historical actor identity
+correction is **PUBLISHED — REMOTE VERIFIED** at `01347e34910e9d16329d1341d3aff6e6cfb3cf70`.
+The accepted characterization remains historical **FAIL /
+PS01_CHARACTERIZATION_PRODUCT_BLOCKER_DISCOVERED**; post-correction seeds 14,
+101 and 46 retire the two demonstrated terminal blockers. See the
+[published correction record](CURRENT_STATE.md#published-terminal-historical-identity-correction)
+for identities, immutable archive, qualification, regression truth and remaining
+questions. Next: **RESUME-AND-COMPLETE-BOUNDED-MULTI-SEED-AUTONOMOUS-EMERGENCE-CHARACTERIZATION**,
+in a new Codex conversation from then-published corrected canonical; reuse valid
+evidence, complete scientific questions and return to the supervisor for roadmap
+recalibration. No fix, Increment 09 or Wave 6 is selected or authorized.
+Capacity 30 was not demonstrated as the active demographic blocker. CIV-48
+remains not started, implementation is not authorized and
 it is deferred behind the slice and evidence-driven roadmap recalibration;
 Gate H remains planned. See
 [`CIV_45_PHASE_SUMMARY.md`](CIV_45_PHASE_SUMMARY.md) and

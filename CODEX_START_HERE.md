@@ -286,11 +286,18 @@ for the compact status. In particular:
   Approved candidate `eab79c7e2723f3aafbbd5bb65c8562b2b911cae8` is safe to publish unchanged
   within Increment-08 scope. The user manually published its chain; fetched
   canonical and independent remote verification agree on `a4f07590b6d899b7cd8d8c25e5b2824aff85c1c7`.
-  The supervisor has selected **BOUNDED MULTI-SEED AUTONOMOUS EMERGENCE CHARACTERIZATION**
-  as the next substantive PS01 action, to run later in a new Codex conversation
-  from the then-published canonical HEAD. It observes the acquired systems
-  through the normal product path and may discover blockers; no Increment 09
-  implementation or demographic-headroom solution is preselected or authorized. See
+  The terminal historical actor identity correction is **PUBLISHED — REMOTE
+  VERIFIED** at `01347e34910e9d16329d1341d3aff6e6cfb3cf70`, after independent
+  supervisor **PASS — APPROVED FOR MANUAL FAST-FORWARD** and manual user publication.
+  It retires the demonstrated WildSubsistence history and AutonomousActivity
+  cooldown/history mortality blockers. The accepted characterization remains
+  historical **FAIL / PS01_CHARACTERIZATION_PRODUCT_BLOCKER_DISCOVERED**.
+  Next: **RESUME-AND-COMPLETE-BOUNDED-MULTI-SEED-AUTONOMOUS-EMERGENCE-CHARACTERIZATION**,
+  later in a new Codex conversation from then-published canonical. Preserve the
+  failed campaign, reuse valid evidence and complete the remaining scientific
+  questions before supervisor roadmap recalibration. PS01 remains incomplete;
+  no Increment 09, Wave 6 or implementation fix is selected or authorized. See
+  [published correction and remaining questions](docs/pebblelab/CURRENT_STATE.md#published-terminal-historical-identity-correction),
   [PS01_INCREMENT_08_NORMAL_CONTINUITY.md](docs/pebblelab/PS01_INCREMENT_08_NORMAL_CONTINUITY.md),
   [PS01_I08_BLOCKER_04_CROSS_WORLD_STRONGHOLD_CACHE_CONCURRENCY.md](docs/pebblelab/PS01_I08_BLOCKER_04_CROSS_WORLD_STRONGHOLD_CACHE_CONCURRENCY.md) and
   [PS01_I08_BLOCKER_01_MORTALITY_CHECKPOINT_CAUSAL_COMPATIBILITY.md](docs/pebblelab/PS01_I08_BLOCKER_01_MORTALITY_CHECKPOINT_CAUSAL_COMPATIBILITY.md).

@@ -114,10 +114,14 @@ Complete post-B04 final-source qualification and final independent review pass
 Portal refusal, persistence/restart, zero-population continuation and VGS V5
 pass within the documented scope. B01 and B04 are published and remote verified.
 The user manually published the exact candidate/documentation chain, verified
-at `a4f07590b6d899b7cd8d8c25e5b2824aff85c1c7`. The supervisor-selected next substantive
-action is **BOUNDED MULTI-SEED AUTONOMOUS EMERGENCE CHARACTERIZATION**, to run later
-in a new Codex conversation from the then-published canonical HEAD. It observes
-normal integrated operation; no next product increment is preselected. See
+at `a4f07590b6d899b7cd8d8c25e5b2824aff85c1c7`. The subsequent historical failed
+characterization discovered two terminal-identity blockers, now corrected and
+published at `01347e34910e9d16329d1341d3aff6e6cfb3cf70` with remote verification.
+The next substantive action is **RESUME-AND-COMPLETE-BOUNDED-MULTI-SEED-AUTONOMOUS-EMERGENCE-CHARACTERIZATION**,
+later in a new Codex conversation from then-published corrected canonical.
+Preserve the historical FAIL and reuse valid evidence; complete the remaining
+scientific questions before supervisor roadmap recalibration. No implementation
+fix, Increment 09 or Wave 6 is selected or authorized. See
 [PS01_INCREMENT_08_NORMAL_CONTINUITY.md](PS01_INCREMENT_08_NORMAL_CONTINUITY.md). CIV-48 remains not started,
 implementation unauthorized and deferred behind the slice and evidence-driven
 roadmap recalibration.
@@ -284,7 +288,10 @@ PS01 I08 Blocker 01 publication: VERIFIED IN CANONICAL 9919e575819dca02ee8e893a3
 PS01 I08 Blocker 04 status: BLOCKER_FIX_PUBLISHED / SENIOR REVIEW APPROVED / REMOTE VERIFIED
 PS01 I08 Blocker 04 publication: VERIFIED IN CANONICAL c58fe2c0fbb2c5b568426c5f936e7a50e573ff08
 PLAYABLE SLICE 01 Increment 08 published canonical HEAD: a4f07590b6d899b7cd8d8c25e5b2824aff85c1c7
-next substantive action: BOUNDED-MULTI-SEED-AUTONOMOUS-EMERGENCE-CHARACTERIZATION
+PS01 terminal historical identity correction: PUBLISHED / REMOTE VERIFIED
+PS01 terminal historical identity correction published HEAD: 01347e34910e9d16329d1341d3aff6e6cfb3cf70
+PS01 historical characterization: FAIL / PS01_CHARACTERIZATION_PRODUCT_BLOCKER_DISCOVERED
+next substantive action: RESUME-AND-COMPLETE-BOUNDED-MULTI-SEED-AUTONOMOUS-EMERGENCE-CHARACTERIZATION
 next substantive action execution: LATER / NEW CODEX CONVERSATION / THEN-PUBLISHED CANONICAL HEAD
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
@@ -1704,7 +1711,10 @@ PS01 I08 Blocker 01 publication: VERIFIED IN CANONICAL 9919e575819dca02ee8e893a3
 PS01 I08 Blocker 04 status: BLOCKER_FIX_PUBLISHED / SENIOR REVIEW APPROVED / REMOTE VERIFIED
 PS01 I08 Blocker 04 publication: VERIFIED IN CANONICAL c58fe2c0fbb2c5b568426c5f936e7a50e573ff08
 PLAYABLE SLICE 01 Increment 08 published canonical HEAD: a4f07590b6d899b7cd8d8c25e5b2824aff85c1c7
-next substantive action: BOUNDED-MULTI-SEED-AUTONOMOUS-EMERGENCE-CHARACTERIZATION
+PS01 terminal historical identity correction: PUBLISHED / REMOTE VERIFIED
+PS01 terminal historical identity correction published HEAD: 01347e34910e9d16329d1341d3aff6e6cfb3cf70
+PS01 historical characterization: FAIL / PS01_CHARACTERIZATION_PRODUCT_BLOCKER_DISCOVERED
+next substantive action: RESUME-AND-COMPLETE-BOUNDED-MULTI-SEED-AUTONOMOUS-EMERGENCE-CHARACTERIZATION
 next substantive action execution: LATER / NEW CODEX CONVERSATION / THEN-PUBLISHED CANONICAL HEAD
 CIV-39 status: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
@@ -2509,8 +2519,13 @@ identity limitation remains a separate non-blocking owning risk. The exact dirty
 historical I08/B03 worktree remains unchanged; final I08/B02/B03 semantics were
 reconstructed directly on published canonical and completely requalified.
 Historical crash/race/review/portal/VGS/gate FAIL evidence stays FAIL.
-Canonical remains **FAIL: 5789 passed / 3 failed**, exit 1 at stage 5;
-supplemental stages 6–35 pass 30/30, exit 0. No regold or comparison weakening.
+Historical I08/pre-correction canonical evidence remains **FAIL: 5789 passed /
+3 failed**. The published terminal-identity correction gate is **FAIL: 5816
+passed / 3 failed** in an isolated home, exit 1 at stage 5, with the same three
+failures; supplemental stages 6–35 pass 30/30, exit 0. The initial candidate
+**5806 / 13** reflects fixed-ID B02/B03 fixture/home continuation contamination,
+not ten current product regressions or a repaired fixture. No regold or
+comparison weakening; ten goldens remain byte-identical.
 Arbitrary crash recovery, higher population scales, multi-dimension continuation,
 B01 bounded-history trust/validation, B04 context identity and demographic
 headroom remain documented limits. Publishing I08 does not complete PS01,
@@ -2519,28 +2534,65 @@ authorize CIV-48 or acquire Gate H. See
 [PS01_I08_BLOCKER_04_CROSS_WORLD_STRONGHOLD_CACHE_CONCURRENCY.md](PS01_I08_BLOCKER_04_CROSS_WORLD_STRONGHOLD_CACHE_CONCURRENCY.md) and
 [PS01_I08_BLOCKER_01_MORTALITY_CHECKPOINT_CAUSAL_COMPATIBILITY.md](PS01_I08_BLOCKER_01_MORTALITY_CHECKPOINT_CAUSAL_COMPATIBILITY.md).
 
-### Selected next PS01 action — bounded multi-seed characterization
+### Published terminal historical identity correction
 
-The next substantive action is **BOUNDED MULTI-SEED AUTONOMOUS EMERGENCE CHARACTERIZATION**.
-This is a separate characterization/evaluation mission to execute later from
-the then-published canonical HEAD in a **new Codex conversation**. This
-status-only mission does not execute that campaign or claim its result.
+`PS01-BLOCKER-FINALIZED-MORTALITY-RETAINED-HISTORICAL-ACTOR-IDENTITY` is
+**PUBLISHED — REMOTE VERIFIED** at `01347e34910e9d16329d1341d3aff6e6cfb3cf70`,
+tree `2b39680f29c4961a6cb967f643cd4c8d96c82ab1`, sole parent
+`ec183bb2884b0074b8905628570faa9be972a12f`. Independent supervisor review is
+**PASS — APPROVED FOR MANUAL FAST-FORWARD**; manual user publication completed.
+Only the demonstrated finalized-actor WildSubsistence history and
+AutonomousActivity retained cooldown/history compatibility blockers are retired.
+Current operational state still requires live actors; bounded history requires
+existing mortality authority and valid causal/time/reference integrity.
 
-Observe already acquired systems operating together through the normal bounded
-product path. The evidence must determine which integration gap, if any, should
-own the next product increment. The campaign may discover blockers; neither a
-solution nor Increment 09 product implementation is selected or authorized.
-Demographic admission/birth headroom is a known risk, not an automatically
-authorized implementation. CIV-48 implementation remains unauthorized; PS01
-remains required, in progress and not complete; Gate H remains planned.
+Accepted characterization remains **FAIL — HISTORICAL IMMUTABLE EVIDENCE**,
+disposition `PS01_CHARACTERIZATION_PRODUCT_BLOCKER_DISCOVERED`, accepted archive
+SHA-256 `43a2df56918cb6a78245d3b07312c5ad8f417746efee2dddd2e10a077b8a4525`. Correction qualification is
+**27 / 0** focused, **805 / 0** across fifteen owning/dependent suites, and seeds
+14/101/46 with 24 founders and 36,000 World ticks each plus fresh readers:
+all 12 invocations exit 0, no runtime errors/catch-up drops, ordinary
+Save/Continue/Save/Exit and fresh restores succeed. Seed 14 crosses 22 deaths;
+seed 101 retains four records/four cooldowns for finalized `agent_16` without an
+active executor; seed 46 is the valid extinction control. All three validly
+reach extinction. This qualification does not declare PS01 characterization
+complete. Full publication, qualification, regression and trust-limit evidence:
+[CURRENT_STATE correction record](CURRENT_STATE.md#published-terminal-historical-identity-correction).
 
-Open risks/questions remain: demographic admission/birth headroom; B01 bounded-
-history trust/validation; B04 arbitrary-GenCtx context identity; arbitrary crash
-recovery outside I08 scope; populations above the validated bounded scope;
-multi-dimension continuation; unactivated PS01 integration domains; long-run
-authority/history saturation; Observer completeness; and eventual integrated
-multi-seed characterization. Their preservation does not classify each as a
-proven product blocker or authorize a repair in advance.
+### Selected next PS01 action — resume and complete characterization
+
+**RESUME-AND-COMPLETE-BOUNDED-MULTI-SEED-AUTONOMOUS-EMERGENCE-CHARACTERIZATION**
+is the next substantive action. The earlier bounded multi-seed campaign has
+already run and established the historical blocker; preserve that failed
+campaign and use the now-published corrected canonical for continuation.
+Execute later in a **new Codex conversation** from the then-published, fetched
+and verified canonical state. Reuse valid evidence without unnecessary reruns;
+complete the scientific characterization questions, then return to the
+supervisor for evidence-driven roadmap recalibration. This documentation
+mission does not launch characterization or preselect an implementation fix.
+Increment 09 and Wave 6 remain unauthorized.
+
+Remaining questions, without authorized fixes:
+
+- Normal reproduction activation is disabled; physical berry custody versus
+  legacy ecology / abstract `foodRaw` reproductive prerequisites is unresolved.
+- Capacity 30 is a known boundary, not the demonstrated active demographic
+  blocker. No demographic-headroom correction is preselected.
+- Agriculture, productive/economic and cultural owners are inactive on the
+  characterized normal founder path; normal autonomous migration activation
+  remains unresolved.
+- Observer biological-age projection mismatch is nonblocking; seed-101 berry
+  reachability/navigation suppression remains unresolved.
+- Production/ProductiveSource/Livestock findings are separate, unproven sibling
+  risks, untouched because no immediate equivalent terminal defect was
+  demonstrated on this path and their owners need separate evidence/authorization.
+- B01 bounded-history trust limits and B04 arbitrary-`GenCtx` context identity
+  remain. Arbitrary crash recovery, larger populations and multidimension
+  continuation remain outside validated scope; long-run history saturation and
+  Observer completeness remain questions.
+
+PS01 remains **REQUIRED / IN PROGRESS / NOT COMPLETE**; CIV-48 remains
+**NOT STARTED / IMPLEMENTATION NOT AUTHORIZED**; Gate H remains **PLANNED**.
 
 ## Wave 6 — Organizations, land and law
 

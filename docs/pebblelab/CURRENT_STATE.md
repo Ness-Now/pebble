@@ -303,17 +303,118 @@ risk. Other known risks are recorded in the roadmap milestone contract.
 B04 publication is verified. Full post-B04 qualification and independent
 review of the coherent I08/B02/B03 candidate directly above `c58fe2c` pass.
 I08 publication is verified at `a4f07590b6d899b7cd8d8c25e5b2824aff85c1c7`.
-The supervisor has completed post-I08 selection/recalibration: the next
-substantive action is **BOUNDED MULTI-SEED AUTONOMOUS EMERGENCE CHARACTERIZATION**,
-a later evaluation in a new Codex conversation from then-published canonical.
-It observes normal integrated operation and lets evidence identify any next
-integration gap. No Increment 09 implementation or demographic-headroom fix
-is authorized by this selection.
+The original post-I08 characterization selection led to the accepted historical
+failed campaign. Its demonstrated terminal-identity blockers are now retired
+by the published correction below. The next substantive action is
+**RESUME-AND-COMPLETE-BOUNDED-MULTI-SEED-AUTONOMOUS-EMERGENCE-CHARACTERIZATION**,
+from then-published canonical in a new Codex conversation. Reuse valid evidence,
+complete the remaining scientific questions and return to the supervisor for
+evidence-driven roadmap recalibration. No Increment 09, Wave 6 or product fix
+is selected or authorized.
 Historical FAIL commits remain local evidence and are not publication candidates.
 Population capacity/demographic headroom remains unresolved. CIV-48 remains
 **NOT STARTED — IMPLEMENTATION NOT AUTHORIZED** and is deferred until PLAYABLE
 SLICE 01 and the resulting evidence-driven roadmap recalibration are complete.
 Gate H remains **PLANNED** and continues to require CIV-48 through CIV-52.
+
+## Published terminal historical identity correction
+
+`PS01-BLOCKER-FINALIZED-MORTALITY-RETAINED-HISTORICAL-ACTOR-IDENTITY` is
+**PUBLISHED — REMOTE VERIFIED**. Independent supervisor review returned
+**PASS — APPROVED FOR MANUAL FAST-FORWARD**; manual user publication and remote
+verification are complete. Publication commit `01347e34910e9d16329d1341d3aff6e6cfb3cf70`,
+tree `2b39680f29c4961a6cb967f643cd4c8d96c82ab1`, has sole parent
+`ec183bb2884b0074b8905628570faa9be972a12f` and subject
+`fix(ps01): authenticate retained actors across finalized mortality`.
+
+The correction retires exactly the two demonstrated manifestations:
+WildSubsistence retained opportunities/outcomes referencing finalized actors,
+and AutonomousActivity retained cooldown/history identity at checkpoint.
+Operational selections and active activities still require current actors;
+retained history uses existing validated full or compacted mortality authority
+and preserves causal/time/reference, uniqueness and numerical bounds. No new
+identity registry, checkpoint schema, Codable field or migration was added.
+This is not a claim of universal historical authenticity.
+
+### Immutable historical characterization
+
+The accepted campaign remains **FAIL — HISTORICAL IMMUTABLE EVIDENCE**, disposition
+`PS01_CHARACTERIZATION_PRODUCT_BLOCKER_DISCOVERED`. Its accepted archive
+SHA-256 is `43a2df56918cb6a78245d3b07312c5ad8f417746efee2dddd2e10a077b8a4525`.
+The independently verified 657 manifest-listed files, external uncommitted
+measurement instrumentation and protected characterization worktree remain
+historical evidence. The correction and later qualification do not rewrite,
+replace or turn that failed campaign into PASS.
+
+### Post-correction qualification
+
+Existing correction evidence: **27 passed / 0 failed** focused regressions and
+**805 passed / 0 failed** across fifteen owning/dependent suites. Fresh native
+qualification exercised seeds **14, 101 and 46**, **24 founders**, **36,000 World
+ticks per seed**, followed by a fresh 20-tick reader. All **12 invocations exit
+0**, with **zero runtime errors** and **zero catch-up drops**. Ordinary
+Save/Continue and Save/Exit succeed; three fresh-process restores per seed
+match the preceding saved boundary exactly. All three reach valid extinction;
+survival was neither required nor engineered.
+
+Seed 14 crosses the original **22-death** boundary at World 32,452 with only
+`agent_18` and `agent_9` active, preserving 64 opportunities and six outcomes.
+It continues to extinction with 24 finalized deaths and zero active agents.
+Seed 101 retains four terminal activity records and four cooldowns for finalized
+`agent_16`, with zero active activities/dead executors; checkpoint capture and
+fresh restore succeed. Seed 46 remains the valid extinction/persistence control.
+This retires the two terminal blockers; it does **not** complete PS01
+characterization. The correction review archive SHA-256 is
+`587adbb7d864bd4df9ab496ae58f401d8add330df453e8c035a689b6901e3718`.
+No expensive qualification is rerun by this reconciliation.
+
+### Canonical regression truth
+
+Historical pre-correction canonical evidence is **5789 passed / 3 failed**.
+The corrected product gate in a fresh isolated home is **5816 passed / 3 failed**,
+exit 1 at stage 5, with exactly the same failures: zoo bit-identical, combat
+lockstep and eight A* paths node-identical. Supplemental stages 6–35 are
+**30 / 30 PASS**, exit 0. No regold or weakened comparison; ten goldens remain
+byte-identical in both correction and qualification worktrees.
+
+The initial corrected-candidate default-home run remains **5806 / 13** evidence.
+Its ten extra B02/B03 failures are diagnosed fixed-ID continuation-fixture/home
+contamination: an earlier owning invocation persisted the requirement for
+`ps01-i08-core-cancellation`; the next fixture loads it before installing its
+callbacks, so Core refuses readiness and subsequent expectations cascade.
+The identical candidate and stock comparisons pass those ten checks in a fresh
+`CFFIXED_USER_HOME`. They are not current product regressions. Neither the
+fixture nor the previous default home was repaired or cleaned.
+
+### Remaining characterization questions and scope
+
+- Normal reproduction activation remains disabled.
+- Physical berry custody versus legacy ecology / abstract `foodRaw`
+  reproductive prerequisites remains unresolved.
+- Population capacity 30 is a known boundary, **not demonstrated as the active
+  demographic blocker** in the characterized trajectories.
+- Agriculture, productive/economic and cultural owners remain inactive on the
+  characterized normal founder path.
+- Normal autonomous migration activation remains unresolved.
+- Observer biological-age projection mismatch remains a nonblocking defect.
+- Seed-101 berry reachability/navigation suppression remains unresolved.
+- Production/ProductiveSource/Livestock sibling findings remain separate,
+  unproven risks. No immediate equivalent terminal defect was demonstrated on
+  this normal founder path; their optional/operational ownership requires its
+  own evidence and authorization, so the identity correction did not change them.
+- B01 bounded-history trust limits remain, including evicted pointers,
+  incomplete primary actor/subject validation and superseded care boundaries.
+  Compacted mortality does not independently reconstruct registration prefixes;
+  cooldowns do not retain original source-event provenance.
+- B04 arbitrary-`GenCtx` context-identity limitation remains.
+- Arbitrary crash recovery, larger populations and multidimension continuation
+  remain outside validated scope. Long-run history saturation and Observer
+  completeness remain questions.
+
+None of these observations selects or authorizes a correction. PS01 remains
+**REQUIRED / IN PROGRESS / NOT COMPLETE**. CIV-48 remains **NOT STARTED /
+IMPLEMENTATION NOT AUTHORIZED**; Gate H remains **PLANNED**. Increment 09 and
+Wave 6 are not authorized.
 
 ## Published CIV-47 closure
 
@@ -1183,7 +1284,10 @@ PS01 I08 Blocker 04 status: BLOCKER_FIX_PUBLISHED / SENIOR REVIEW APPROVED / REM
 PS01 I08 Blocker 04 publication: VERIFIED IN CANONICAL c58fe2c0fbb2c5b568426c5f936e7a50e573ff08
 PS01 I08 Blocker 03 correction: EXACT HISTORICAL DIRTY STATE PRESERVED / RECONSTITUTED ON PUBLISHED B04 / PUBLISHED WITH I08
 PLAYABLE SLICE 01 Increment 08 published canonical HEAD: a4f07590b6d899b7cd8d8c25e5b2824aff85c1c7
-next substantive action: BOUNDED-MULTI-SEED-AUTONOMOUS-EMERGENCE-CHARACTERIZATION
+PS01 terminal historical identity correction: PUBLISHED / REMOTE VERIFIED
+PS01 terminal historical identity correction published HEAD: 01347e34910e9d16329d1341d3aff6e6cfb3cf70
+PS01 historical characterization: FAIL / PS01_CHARACTERIZATION_PRODUCT_BLOCKER_DISCOVERED
+next substantive action: RESUME-AND-COMPLETE-BOUNDED-MULTI-SEED-AUTONOMOUS-EMERGENCE-CHARACTERIZATION
 next substantive action execution: LATER / NEW CODEX CONVERSATION / THEN-PUBLISHED CANONICAL HEAD
 CIV-33 status: COMPLETE AND PUBLISHED
 V4-GATE-C-v1 status: ACQUIRED
@@ -1614,14 +1718,17 @@ Increment 08 has been explicitly resumed and reconstructed on that canonical;
 final-source qualification and final independent review pass. I08 is
 **COMPLETE_AND_PUBLISHED / REMOTE VERIFIED** at `a4f07590b6d899b7cd8d8c25e5b2824aff85c1c7`
 after manual user publication of the approved chain. The protected historical
-I08/B03 dirty worktree remains unchanged. Post-I08 supervisor selection is
-complete: **BOUNDED MULTI-SEED AUTONOMOUS EMERGENCE CHARACTERIZATION** is the next
-substantive action, to execute later from then-published canonical in a new
-Codex conversation. It must be allowed to discover blockers and identify the
-owning integration gap from evidence. No Increment 09 product implementation
-is selected or authorized. Demographic headroom, unactivated integration
-domains, long-run authority/history saturation and Observer completeness
-remain open questions, alongside I08 scope and B01/B04 trust/context limits.
+I08/B03 dirty worktree remains unchanged. The terminal historical identity
+correction is published and remotely verified at `01347e34910e9d16329d1341d3aff6e6cfb3cf70`.
+The original failed characterization remains immutable. Next action:
+**RESUME-AND-COMPLETE-BOUNDED-MULTI-SEED-AUTONOMOUS-EMERGENCE-CHARACTERIZATION**.
+Use then-published corrected canonical in a new Codex conversation, preserve
+that campaign and reuse existing valid evidence rather than rerun it
+unnecessarily. Complete the scientific questions listed in the
+[published correction record](#published-terminal-historical-identity-correction),
+then return to the supervisor for evidence-driven roadmap recalibration.
+This documentation mission does not launch characterization. No Increment 09,
+Wave 6 or implementation fix is selected or authorized.
 CIV-48 implementation remains unauthorized. Gate G Evaluation
 01 remains frozen historical FAIL evidence. Blocker 01 is senior-review
 approved, published and independently remote verified. Evaluation 02 is
