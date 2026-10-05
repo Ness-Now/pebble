@@ -292,12 +292,18 @@ for the compact status. In particular:
   It retires the demonstrated WildSubsistence history and AutonomousActivity
   cooldown/history mortality blockers. The accepted characterization remains
   historical **FAIL / PS01_CHARACTERIZATION_PRODUCT_BLOCKER_DISCOVERED**.
-  Next: **RESUME-AND-COMPLETE-BOUNDED-MULTI-SEED-AUTONOMOUS-EMERGENCE-CHARACTERIZATION**,
-  later in a new Codex conversation from then-published canonical. Preserve the
-  failed campaign, reuse valid evidence and complete the remaining scientific
-  questions before supervisor roadmap recalibration. PS01 remains incomplete;
-  no Increment 09, Wave 6 or implementation fix is selected or authorized. See
-  [published correction and remaining questions](docs/pebblelab/CURRENT_STATE.md#published-terminal-historical-identity-correction),
+  The later completed reconciliation is supervisor accepted as
+  **PS01_CHARACTERIZATION_SUFFICIENT_FOR_SUPERVISOR_RECALIBRATION**; its archive
+  SHA-256 is `409a4e8375ad75f302c9b1698964790fd664617b42f1ef8746aee97dbec826d9`.
+  Next selected increment: **PS01-INCREMENT-09-NORMAL-DEMOGRAPHIC-CONTINUITY**,
+  **Increment 09 — Normal Reproduction Activation & Physical Subsistence Composition**.
+  This is an activation/food-prerequisite integration gap; capacity remains 30
+  and is not a demonstrated demographic blocker. A future implementation mission
+  may begin only from a published canonical state containing this selection.
+  No product implementation or new simulation is performed by this documentation
+  mission. PS01 remains incomplete; Wave 6 is unauthorized. See the
+  [accepted reconciliation and selection](docs/pebblelab/CURRENT_STATE.md#supervisor-accepted-characterization-reconciliation),
+  [Increment 09 contract](docs/pebblelab/PEBBLE_CIVILIZATION_ROADMAP.md#selected-increment-09--normal-reproduction-activation--physical-subsistence-composition),
   [PS01_INCREMENT_08_NORMAL_CONTINUITY.md](docs/pebblelab/PS01_INCREMENT_08_NORMAL_CONTINUITY.md),
   [PS01_I08_BLOCKER_04_CROSS_WORLD_STRONGHOLD_CACHE_CONCURRENCY.md](docs/pebblelab/PS01_I08_BLOCKER_04_CROSS_WORLD_STRONGHOLD_CACHE_CONCURRENCY.md) and
   [PS01_I08_BLOCKER_01_MORTALITY_CHECKPOINT_CAUSAL_COMPATIBILITY.md](docs/pebblelab/PS01_I08_BLOCKER_01_MORTALITY_CHECKPOINT_CAUSAL_COMPATIBILITY.md).

@@ -117,11 +117,13 @@ The user manually published the exact candidate/documentation chain, verified
 at `a4f07590b6d899b7cd8d8c25e5b2824aff85c1c7`. The subsequent historical failed
 characterization discovered two terminal-identity blockers, now corrected and
 published at `01347e34910e9d16329d1341d3aff6e6cfb3cf70` with remote verification.
-The next substantive action is **RESUME-AND-COMPLETE-BOUNDED-MULTI-SEED-AUTONOMOUS-EMERGENCE-CHARACTERIZATION**,
-later in a new Codex conversation from then-published corrected canonical.
-Preserve the historical FAIL and reuse valid evidence; complete the remaining
-scientific questions before supervisor roadmap recalibration. No implementation
-fix, Increment 09 or Wave 6 is selected or authorized. See
+The supervisor accepts the completed evidence reconciliation as
+**PS01_CHARACTERIZATION_SUFFICIENT_FOR_SUPERVISOR_RECALIBRATION** and selects
+**PS01-INCREMENT-09-NORMAL-DEMOGRAPHIC-CONTINUITY** as the next PS01 integration
+increment. Implementation belongs to a future mission, starting only from a
+published canonical state containing this selection. PS01 remains incomplete;
+Wave 6 and CIV-48 implementation remain unauthorized, and Gate H remains planned.
+See the [accepted characterization and selection](#supervisor-accepted-characterization-reconciliation) and
 [PS01_INCREMENT_08_NORMAL_CONTINUITY.md](PS01_INCREMENT_08_NORMAL_CONTINUITY.md). CIV-48 remains not started,
 implementation unauthorized and deferred behind the slice and evidence-driven
 roadmap recalibration.
@@ -291,8 +293,10 @@ PLAYABLE SLICE 01 Increment 08 published canonical HEAD: a4f07590b6d899b7cd8d8c2
 PS01 terminal historical identity correction: PUBLISHED / REMOTE VERIFIED
 PS01 terminal historical identity correction published HEAD: 01347e34910e9d16329d1341d3aff6e6cfb3cf70
 PS01 historical characterization: FAIL / PS01_CHARACTERIZATION_PRODUCT_BLOCKER_DISCOVERED
-next substantive action: RESUME-AND-COMPLETE-BOUNDED-MULTI-SEED-AUTONOMOUS-EMERGENCE-CHARACTERIZATION
-next substantive action execution: LATER / NEW CODEX CONVERSATION / THEN-PUBLISHED CANONICAL HEAD
+characterization reconciliation: PS01_CHARACTERIZATION_SUFFICIENT_FOR_SUPERVISOR_RECALIBRATION / SUPERVISOR ACCEPTED
+next selected PS01 integration increment: PS01-INCREMENT-09-NORMAL-DEMOGRAPHIC-CONTINUITY
+Increment 09 status: SELECTED AS NEXT PS01 INTEGRATION INCREMENT
+future implementation prerequisite: PUBLISHED CANONICAL STATE CONTAINING SUPERVISOR SELECTION / FUTURE MISSION
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
@@ -1714,8 +1718,10 @@ PLAYABLE SLICE 01 Increment 08 published canonical HEAD: a4f07590b6d899b7cd8d8c2
 PS01 terminal historical identity correction: PUBLISHED / REMOTE VERIFIED
 PS01 terminal historical identity correction published HEAD: 01347e34910e9d16329d1341d3aff6e6cfb3cf70
 PS01 historical characterization: FAIL / PS01_CHARACTERIZATION_PRODUCT_BLOCKER_DISCOVERED
-next substantive action: RESUME-AND-COMPLETE-BOUNDED-MULTI-SEED-AUTONOMOUS-EMERGENCE-CHARACTERIZATION
-next substantive action execution: LATER / NEW CODEX CONVERSATION / THEN-PUBLISHED CANONICAL HEAD
+characterization reconciliation: PS01_CHARACTERIZATION_SUFFICIENT_FOR_SUPERVISOR_RECALIBRATION / SUPERVISOR ACCEPTED
+next selected PS01 integration increment: PS01-INCREMENT-09-NORMAL-DEMOGRAPHIC-CONTINUITY
+Increment 09 status: SELECTED AS NEXT PS01 INTEGRATION INCREMENT
+future implementation prerequisite: PUBLISHED CANONICAL STATE CONTAINING SUPERVISOR SELECTION / FUTURE MISSION
 CIV-39 status: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 Gate F status: ACQUIRED AND PUBLISHED — REMOTE VERIFIED
@@ -2406,9 +2412,12 @@ risks without treating this roadmap as an implementation specification:
 - restart-unsafe legacy paths.
 
 Increment 01's population capacity of 30 is correct for its bounded founder
-contract but is not enough for long-run demographic characterization: 30
-founders leave zero admission or birth headroom, while 24 leave six slots.
-Capacity headroom remains a whole-slice integration issue. Increment 02 retires
+contract. Thirty founders leave zero admission or birth headroom, while 24
+leave six slots. Characterization demonstrated no otherwise-valid birth or
+admission rejected for capacity. Capacity stays 30; it is not the selected
+blocker. Headroom becomes an owning follow-up only if post-I09 evidence shows
+legitimate demographic demand suppressed by this bound, without pre-authorizing
+a capacity change. Increment 02 retires
 the previous greater-than-eight simultaneous-lethal-transition blocker for the
 validated bounded normal founder sandbox through 30, but it does not establish
 arbitrary population-scale mortality or long-run demographic continuity.
@@ -2509,7 +2518,8 @@ and **PS01_INCREMENT_08_FINAL_INDEPENDENT_REVIEW_PASS**, P0 0 / P1 0 /
 blocking P2 0, and is safe to publish unchanged within the authorized scope.
 Manual user publication of the chain is complete and remote verified at
 `a4f07590b6d899b7cd8d8c25e5b2824aff85c1c7`. The supervisor has completed post-I08
-selection/recalibration and selected the characterization described below.
+selection/recalibration and selected the earlier characterization. The later
+accepted reconciliation now supports the Increment 09 selection below.
 
 B01 and B04 are **BLOCKER_FIX_PUBLISHED — REMOTE VERIFIED** in canonical
 `c58fe2c0fbb2c5b568426c5f936e7a50e573ff08`. Published B04 product correction
@@ -2554,45 +2564,124 @@ SHA-256 `43a2df56918cb6a78245d3b07312c5ad8f417746efee2dddd2e10a077b8a4525`. Corr
 all 12 invocations exit 0, no runtime errors/catch-up drops, ordinary
 Save/Continue/Save/Exit and fresh restores succeed. Seed 14 crosses 22 deaths;
 seed 101 retains four records/four cooldowns for finalized `agent_16` without an
-active executor; seed 46 is the valid extinction control. All three validly
-reach extinction. This qualification does not declare PS01 characterization
-complete. Full publication, qualification, regression and trust-limit evidence:
+active executor; seed 46 is the valid extinction control. At World **36,052**,
+seed 14's valid saved writer boundary has **2 living founders / 22 finalized
+deaths**. Its fresh 20-tick process restores that exact boundary, then reaches
+World **36,072** with `agent_18` and `agent_9` finalized, **0 population / 24
+deaths**. Seeds 46 and 101 were already extinct earlier. All three final measured
+trajectories validly reach extinction; seed 14 was not extinct at the writer
+boundary. Qualification alone did not declare PS01 characterization complete;
+the later accepted reconciliation is recorded below. Full publication,
+qualification, regression and trust-limit evidence:
 [CURRENT_STATE correction record](CURRENT_STATE.md#published-terminal-historical-identity-correction).
 
-### Selected next PS01 action — resume and complete characterization
+<a id="selected-next-ps01-action--bounded-multi-seed-characterization"></a>
+<a id="selected-next-ps01-action--resume-and-complete-characterization"></a>
 
-**RESUME-AND-COMPLETE-BOUNDED-MULTI-SEED-AUTONOMOUS-EMERGENCE-CHARACTERIZATION**
-is the next substantive action. The earlier bounded multi-seed campaign has
-already run and established the historical blocker; preserve that failed
-campaign and use the now-published corrected canonical for continuation.
-Execute later in a **new Codex conversation** from the then-published, fetched
-and verified canonical state. Reuse valid evidence without unnecessary reruns;
-complete the scientific characterization questions, then return to the
-supervisor for evidence-driven roadmap recalibration. This documentation
-mission does not launch characterization or preselect an implementation fix.
-Increment 09 and Wave 6 remain unauthorized.
+The earlier post-I08 bounded multi-seed characterization selection and the
+post-correction resume-and-complete selection are historical decisions. The
+supervisor-accepted reconciliation below supersedes them as the next-action
+record; their campaign FAIL and qualification evidence retain their own scope.
 
-Remaining questions, without authorized fixes:
+### Supervisor-accepted characterization reconciliation
 
-- Normal reproduction activation is disabled; physical berry custody versus
-  legacy ecology / abstract `foodRaw` reproductive prerequisites is unresolved.
-- Capacity 30 is a known boundary, not the demonstrated active demographic
-  blocker. No demographic-headroom correction is preselected.
-- Agriculture, productive/economic and cultural owners are inactive on the
-  characterized normal founder path; normal autonomous migration activation
-  remains unresolved.
-- Observer biological-age projection mismatch is nonblocking; seed-101 berry
-  reachability/navigation suppression remains unresolved.
-- Production/ProductiveSource/Livestock findings are separate, unproven sibling
-  risks, untouched because no immediate equivalent terminal defect was
-  demonstrated on this path and their owners need separate evidence/authorization.
-- B01 bounded-history trust limits and B04 arbitrary-`GenCtx` context identity
-  remain. Arbitrary crash recovery, larger populations and multidimension
-  continuation remain outside validated scope; long-run history saturation and
-  Observer completeness remain questions.
+The completed reconciliation is supervisor accepted as
+**PS01_CHARACTERIZATION_SUFFICIENT_FOR_SUPERVISOR_RECALIBRATION**. Accepted
+external review archive SHA-256:
+`409a4e8375ad75f302c9b1698964790fd664617b42f1ef8746aee97dbec826d9`.
+The [current-state reconciliation record](CURRENT_STATE.md#supervisor-accepted-characterization-reconciliation)
+identifies the external archive and its report, domain opportunity matrix,
+source audit and raw-evidence measurements. This synthesis is distinct from
+the immutable historical **FAIL / PS01_CHARACTERIZATION_PRODUCT_BLOCKER_DISCOVERED**
+and the separately valid published correction/post-correction qualification.
+It is not a retroactive PASS or a claim that PS01 is complete.
+
+Evidence establishes normal bounded composition of World/ecology, cognition,
+ordinary movement, World-time physiology/homeostasis, mortality, legitimate
+physical wild subsistence, physical custody/consumption, foraging skill
+practice, population/lifecycle membership, persistence and bounded
+Observer/Chronicle presentation. No new current product blocker was
+demonstrated. All three final trajectories reach **VALID ADVERSE TRAJECTORY**
+extinction. Seed-101 exact historical reachability remains unresolved and is
+not promoted to a product blocker. No repeated 36k campaign is required for the
+current roadmap decision. Arbitrary-seed or unlimited-duration completeness is
+not claimed.
+
+### Selected Increment 09 — Normal Reproduction Activation & Physical Subsistence Composition
+
+Identifier: **PS01-INCREMENT-09-NORMAL-DEMOGRAPHIC-CONTINUITY**.
+Status: **SELECTED AS NEXT PS01 INTEGRATION INCREMENT**.
+
+The selected owning gap is
+**MISSING NORMAL REPRODUCTION ACTIVATION + PHYSICAL-SUBSISTENCE/DEMOGRAPHIC-PREREQUISITE INTEGRATION**.
+It is not a **POPULATION CAPACITY BLOCKER**, agriculture increment, economy
+increment or navigation correction.
+
+Lifecycle initializes reproduction disabled and normal founder bootstrap does
+not automatically enable it. Manual `/lab reproduction on` exists but was not
+used. Planning requires enabled reproduction and adequate/abundant legacy
+`localEcologyState.currentPressure`; `accessibleFood` uses legacy ecology yield
+plus abstract agent/camp `foodRaw`. Native PS01 berry acquisition and consumption
+use physical Pebble/Core custody instead. The characterized normal founder path
+has no initialized legacy ecological pressure and sampled demographic
+`accessibleFood` is zero. Mature unrelated pairs exist, and 24 founders have
+six nominal slots under capacity 30, but there is no otherwise-valid birth or
+admission observed rejected due to capacity. Absence of births is missing
+activation/prerequisite integration, not demonstrated capacity suppression.
+
+The future implementation mission must establish a normal, non-proof-only path
+in which existing reproduction can become legitimately eligible when
+existing authoritative conditions support it. Architectural contract:
+
+- Keep `AgentSimulationSession` as the sole civilization aggregate/transition
+  owner; no second demographic owner, ecology or food authority.
+- Existing settlement, population, lifecycle, kinship, dependent-care and genetic
+  authorities remain owners. Physical food remains Pebble/Core plus existing
+  custody/reconciliation.
+- Demographic subsistence readiness must compose with legitimate authoritative
+  food/ecological evidence. Do not fake or mint `foodRaw` to satisfy reproduction,
+  bypass prerequisites, inject an expected result, script a birth, force a pair
+  or introduce a hidden fertility override.
+- Reproduction remains causally conditional on health, hunger, maturity,
+  kinship, cooldown, settlement and capacity. Zero births remains valid when
+  legitimate conditions are absent.
+- Existing checkpoint ownership must preserve plans and births exactly through
+  persistence and restart; no additional persistence authority.
+- Capacity remains **30** and must not automatically rise. A capacity/headroom
+  follow-up requires post-I09 evidence of legitimate demand suppressed by that
+  bound and separate authorization.
+
+Implementation design remains for the future **XHigh** mission after source
+audit. That mission may begin only from a **published canonical state containing
+this supervisor selection**. This documentation/status mission does not
+implement Increment 09 or authorize implementation of any deferred owner.
+
+### Deferred characterization questions
+
+Preserve for later evidence-ranked owning decisions, without selecting them now:
+
+- agriculture activation/input integration; livestock; work; production;
+  barter/contracts/market; autonomous migration;
+- structured knowledge activation; language/oral/cultural activation;
+- seed-101 exact reachability, including bounded search uncertainty and possible
+  suppressed alternatives; no navigation blocker is demonstrated;
+- Observer childhood-age projection (nonblocking defect) and physical-inventory
+  completeness; Observer remains read-only, not a second authority;
+- B01 bounded-history trust limits and B04 arbitrary-`GenCtx` context identity;
+  no arbitrary historical provenance authenticity is claimed;
+- separate unproven Production/ProductiveSource/Livestock sibling terminal risks;
+- reduced fidelity; larger populations; arbitrary crash recovery;
+  multidimension continuation; long-duration moving-camera counterfactuals.
+
+Bounded Chronicle/causal recent-window eviction did not demonstrate authority
+loss: retained owner mortality/subsistence/practice evidence and ordinary
+restore remain valid. Product observation is bounded and does not reconstruct
+all evicted history; external read-only characterization evidence supplements
+observation without feeding decisions or becoming product authority.
 
 PS01 remains **REQUIRED / IN PROGRESS / NOT COMPLETE**; CIV-48 remains
-**NOT STARTED / IMPLEMENTATION NOT AUTHORIZED**; Gate H remains **PLANNED**.
+**NOT STARTED / IMPLEMENTATION NOT AUTHORIZED**; Wave 6 remains unauthorized;
+Gate H remains **PLANNED** with its existing CIV-48 through CIV-52 contract.
 
 ## Wave 6 — Organizations, land and law
 
