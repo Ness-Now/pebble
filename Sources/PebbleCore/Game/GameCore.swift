@@ -260,7 +260,6 @@ private struct CompletedChunkGeneration {
     let blockEntitySpecs: [BESpec]?
     let entitySpecs: [EntitySpec]?
     let savedRecord: ChunkRecord?
-    let loadedFullRecord: Bool
 }
 
 private struct ChunkGenerationCompletionKey: Hashable {
@@ -362,10 +361,14 @@ public final class GameCore {
     private var maximumConcurrentChunkGenerationCalculations = 0
     /// keys of chunks that exist on disk — fresh chunks skip the read entirely
     private var savedChunkKeys = Set<String>()
-    /// keys whose DB record holds full block data — an unload rewrite of these
+    /// keys whose captured/loaded record holds full block data — a rewrite of these
     /// must emit a full record again or the blocks are lost (entity-only stubs
     /// REPLACE the row)
     private var savedFullKeys = Set<String>()
+    /// Resident chunks whose seed supplied an initial entity snapshot. Even
+    /// if those entities leave before the first save, an empty record must
+    /// override seed spawns on restart. Derived at adoption, bounded by residency.
+    private var residentSeedEntitySnapshotKeys = Set<String>()
     /// chunks awaiting initial lighting, processed under a per-frame budget
     private var lightQueue: [Dim: Set<Int64>] = [:]
     private var dirtySections: [Dim: Set<SectionPos>] = [:]
@@ -756,6 +759,7 @@ public final class GameCore {
         resetChunkGenerationRuntime()
         savedChunkKeys.removeAll()
         savedFullKeys.removeAll()
+        residentSeedEntitySnapshotKeys.removeAll()
         if let exitingWorldID { clearChunkSaveTracking(worldID: exitingWorldID) }
         clearEntityTimeouts()
         host?.clearAllSections()
@@ -856,6 +860,7 @@ public final class GameCore {
         dragonSpawned = false
         worlds.removeAll()
         resetEntityIds(max(1, rec.nextEntityId))
+        residentSeedEntitySnapshotKeys.removeAll()
         let inscriptionCatalog = db.loadSignInscriptionIdentityCatalog(
             worldID: rec.id,
             nextPhysicalIdentity: max(1, rec.nextEntityId)
@@ -1130,7 +1135,8 @@ public final class GameCore {
             var capturesByKey = self.pendingChunkSaves
             let residentChunks = self.worlds.flatMap { dimension, world in
                 world.chunks.values.compactMap { chunk in
-                    chunk.modified ? (dimension, world, chunk) : nil
+                    self.residentChunkRequiresPersistence(rec.id, world, chunk)
+                        ? (dimension, world, chunk) : nil
                 }
             }.sorted {
                 if $0.0.rawValue != $1.0.rawValue { return $0.0.rawValue < $1.0.rawValue }
@@ -1188,8 +1194,8 @@ public final class GameCore {
         )
     }
 
-    /// runs ON the save queue; on failure re-marks the chunks dirty (on main)
-    /// so the next autosave retries instead of silently losing the edits
+    /// Runs on the save queue; failure retains the capture/key retry horizon.
+    /// Full records additionally re-mark resident block state on main.
     private func writeChunkBatch(
         _ captures: [ChunkSaveCapture],
         nextPhysicalIdentity: Int,
@@ -1238,11 +1244,15 @@ public final class GameCore {
                 guard r.worldId == self.worldRec?.id,
                       let d = Dim(rawValue: r.dim), let w = self.worlds[d] else { continue }
                 if let c = w.chunks[chunkKey(r.cx, r.cz)] {
-                    c.modified = true
-                    self.emitChunkSaveFreshness(
-                        .residentRecoveryMarkedDirty,
-                        capture: capture
-                    )
+                    // Entity-only retry authority lives in the capture/key
+                    // horizon; it must not turn clean terrain into a full save.
+                    if r.blocks != nil {
+                        c.modified = true
+                        self.emitChunkSaveFreshness(
+                            .residentRecoveryMarkedDirty,
+                            capture: capture
+                        )
+                    }
                 }
             }
             self.testingSignInscriptionSaveRecoveryHook?(records)
@@ -1323,14 +1333,33 @@ public final class GameCore {
         worldRec?.gameRules[rule] = value
     }
 
+    private func isChunkPersistentEntity(_ ent: Entity) -> Bool {
+        guard !ent.isPlayer, !ent.dead, ent.shouldSaveToChunk else { return false }
+        if (ent.type == "item" || ent.type == "xp_orb"), ent.age > 4000,
+           (ent as? ItemEntity)?.custodyProvenance == nil { return false }
+        return true
+    }
+
+    /// Block state, current entity state and older snapshots have distinct
+    /// owners. An older empty/full/entity-only row still needs replacement
+    /// when current entities change; block dirtiness cannot express that.
+    private func residentChunkRequiresPersistence(_ worldId: String, _ w: World, _ c: Chunk) -> Bool {
+        let key = db.chunkKey(worldId, w.dim.rawValue, c.cx, c.cz)
+        if c.modified || savedChunkKeys.contains(key)
+            || residentSeedEntitySnapshotKeys.contains(key) { return true }
+        return w.entities.contains { e in
+            guard let ent = e as? Entity, isChunkPersistentEntity(ent) else { return false }
+            return floorDiv(ifloor(ent.x), 16) == c.cx
+                && floorDiv(ifloor(ent.z), 16) == c.cz
+        }
+    }
+
     private func chunkRecord(_ worldId: String, _ d: Dim, _ w: World, _ c: Chunk) -> ChunkRecord {
         // persist entities standing in this chunk (skip player + transient)
         var ents: [[String: Any]] = []
         for e in w.entities {
-            guard let ent = e as? Entity, !ent.isPlayer, !ent.dead, ent.shouldSaveToChunk else { continue }
+            guard let ent = e as? Entity, isChunkPersistentEntity(ent) else { continue }
             if floorDiv(ifloor(ent.x), 16) != c.cx || floorDiv(ifloor(ent.z), 16) != c.cz { continue }
-            if (ent.type == "item" || ent.type == "xp_orb"), ent.age > 4000,
-               (ent as? ItemEntity)?.custodyProvenance == nil { continue }
             ents.append(ent.save())
         }
         let key = db.chunkKey(worldId, d.rawValue, c.cx, c.cz)
@@ -1561,9 +1590,6 @@ public final class GameCore {
             return
         }
         defer { saveCaptureLock.unlock() }
-        if completion.loadedFullRecord {
-            savedFullKeys.insert(completion.databaseKey)
-        }
         adoptChunk(
             world,
             completion.chunk,
@@ -1636,10 +1662,8 @@ public final class GameCore {
             let c: Chunk
             var beSpecs: [BESpec]? = nil
             var entitySpecs: [EntitySpec]? = nil
-            var loadedFull = false
             if let savedRec, Self.recordUsable(savedRec, height: height) {
                 // saved chunk: relight the stored blocks
-                loadedFull = true
                 let light = LoadProf.shared.time("light") { computeLocalLight(blocks: savedRec.blocks!, height: height, hasSky: hasSky) }
                 c = LoadProf.shared.time("mkchunk") { Self.makeChunk(cx, cz, minY, height, savedRec.blocks!, savedRec.biomes!, light.sky, light.blk) }
             } else {
@@ -1664,8 +1688,7 @@ public final class GameCore {
                 chunk: c,
                 blockEntitySpecs: beSpecs,
                 entitySpecs: entitySpecs,
-                savedRecord: savedFinal,
-                loadedFullRecord: loadedFull
+                savedRecord: savedFinal
             )
             self.storeCalculatedChunkGeneration(completion)
             DispatchQueue.main.async { [weak self] in
@@ -1709,6 +1732,14 @@ public final class GameCore {
         let cx = c.cx, cz = c.cz
         _ = (cx, cz)
         w.setChunk(c)
+        if let saved, Self.recordUsable(saved, height: w.info.height) {
+            // Both synchronous and asynchronous loading preserve full terrain
+            // authority, including legacy full records without block entities.
+            savedFullKeys.insert(saved.key)
+        }
+        if saved == nil, let entitySpecs, !entitySpecs.isEmpty, let rec = worldRec {
+            residentSeedEntitySnapshotKeys.insert(db.chunkKey(rec.id, w.dim.rawValue, c.cx, c.cz))
+        }
         // block entities: a full saved record carries them verbatim; otherwise
         // worldgen specs resolve deterministically
         if let savedBEs = saved?.blockEntities {
@@ -2097,26 +2128,16 @@ public final class GameCore {
             saveCaptureLock.lock()
             defer { saveCaptureLock.unlock() }
             let captureAndRemove = {
-                // persist if edited, if live entities stand in it, or if a stale record exists
-                var hasEntities = false
-                for e in w.entities {
-                    guard let ent = e as? Entity, !ent.isPlayer, !ent.dead,
-                          ent.shouldSaveToChunk else { continue }
-                    if floorDiv(ifloor(ent.x), 16) == c.cx
-                        && floorDiv(ifloor(ent.z), 16) == c.cz {
-                        hasEntities = true
-                        break
-                    }
-                }
                 if let rec = self.worldRec {
                     let dbKey = self.db.chunkKey(rec.id, w.dim.rawValue, c.cx, c.cz)
-                    if c.modified || hasEntities || self.savedChunkKeys.contains(dbKey) {
+                    if self.residentChunkRequiresPersistence(rec.id, w, c) {
                         let record = self.chunkRecord(rec.id, w.dim, w, c)
                         let capture = self.makeChunkSaveCapture(record)
                         self.savedChunkKeys.insert(record.key)
                         self.pendingChunkSaves[record.key] = capture
                         self.signInscriptionIdentityCatalog?.stageCurrentChunkRecord(record)
                     }
+                    self.residentSeedEntitySnapshotKeys.remove(dbKey)
                 }
                 // entities standing in the chunk were captured in the record; drop the live ones
                 for e in Array(w.entities) {
@@ -2709,7 +2730,8 @@ public final class GameCore {
                           let dimension = Dim(rawValue: record.dim),
                           let residentWorld = self.worlds[dimension],
                           let resident = residentWorld.getChunk(record.cx, record.cz),
-                          resident.modified else { return pending }
+                          self.residentChunkRequiresPersistence(record.worldId, residentWorld, resident)
+                    else { return pending }
                     // A failed older capture can coexist with a newer resident
                     // mutation before this retry. Capture the current physical
                     // authority; never mint a newer age for the old payload.
