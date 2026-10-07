@@ -110,8 +110,7 @@ public final class ItemEntity: Entity {
     public override func load(_ d: [String: Any]) {
         super.load(d)
         if let raw = d["stack"],
-           let bytes = try? JSONSerialization.data(withJSONObject: raw),
-           let s = try? JSONDecoder().decode(ItemStack.self, from: bytes) {
+           let s = decodeLegacyBooleanJSON(ItemStack.self, from: raw, schema: .itemStack) {
             stack = s
         } else {
             stack = ItemStack(0, 1)

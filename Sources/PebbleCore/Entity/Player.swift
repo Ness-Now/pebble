@@ -665,15 +665,14 @@ public final class Player: LivingEntity {
     }
     public override func load(_ d: [String: Any]) {
         super.load(d)
-        func dec<T: Decodable>(_ raw: Any?, _ type: T.Type) -> T? {
-            guard let raw,
-                  let bytes = try? JSONSerialization.data(withJSONObject: raw, options: [.fragmentsAllowed]) else { return nil }
-            return try? JSONDecoder().decode(type, from: bytes)
+        func dec<T: Decodable>(_ raw: Any?, _ type: T.Type, _ schema: LegacyBooleanSchema) -> T? {
+            guard let raw else { return nil }
+            return decodeLegacyBooleanJSON(type, from: raw, schema: schema, options: [.fragmentsAllowed])
         }
-        inventory = dec(d["inventory"], [ItemStack?].self) ?? Array(repeating: nil, count: 36)
-        enderChest = dec(d["enderChest"], [ItemStack?].self) ?? Array(repeating: nil, count: 27)
-        armor = dec(d["armor"], [ItemStack?].self) ?? [nil, nil, nil, nil]
-        offHand = dec(d["offHand"], ItemStack.self)
+        inventory = dec(d["inventory"], [ItemStack?].self, .itemStacks) ?? Array(repeating: nil, count: 36)
+        enderChest = dec(d["enderChest"], [ItemStack?].self, .itemStacks) ?? Array(repeating: nil, count: 27)
+        armor = dec(d["armor"], [ItemStack?].self, .itemStacks) ?? [nil, nil, nil, nil]
+        offHand = dec(d["offHand"], ItemStack.self, .itemStack)
         // harden against corrupt/truncated saves: fix array sizes, clamp the
         // hotbar slot, drop stacks with out-of-range item ids (itemDefs is
         // indexed unchecked in hot paths)
@@ -709,7 +708,7 @@ public final class Player: LivingEntity {
         } else {
             stats = [:]
         }
-        if let fx = dec(d["effects"], [ActiveEffect].self) {
+        if let fx = dec(d["effects"], [ActiveEffect].self, .effects) {
             for e in fx {
                 if let i = effects.firstIndex(where: { $0.id == e.id }) { effects[i] = e }
                 else { effects.append(e) }

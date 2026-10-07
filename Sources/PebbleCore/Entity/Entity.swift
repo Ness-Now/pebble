@@ -374,8 +374,7 @@ open class Entity: EntityRef {
         yaw = dnum(d["yaw"]); pitch = dnum(d["pitch"])
         age = inum(d["age"]); fireTicks = inum(d["fire"])
         if let raw = d["data"],
-           let bytes = try? JSONSerialization.data(withJSONObject: raw),
-           let decoded = try? JSONDecoder().decode(EntityData.self, from: bytes) {
+           let decoded = decodeLegacyBooleanJSON(EntityData.self, from: raw, schema: .entityData) {
             data = decoded
         } else {
             data = EntityData()

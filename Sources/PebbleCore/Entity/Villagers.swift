@@ -254,8 +254,7 @@ open class Villager: Mob {
         tradeLevel = (d["tradeLevel"] as? NSNumber)?.intValue ?? 1
         tradeXP = (d["tradeXP"] as? NSNumber)?.intValue ?? 0
         if let raw = d["offers"],
-           let bytes = try? JSONSerialization.data(withJSONObject: raw),
-           let decoded = try? JSONDecoder().decode([TradeOffer].self, from: bytes) {
+           let decoded = decodeLegacyBooleanJSON([TradeOffer].self, from: raw, schema: .tradeOffers) {
             offers = decoded
         } else {
             offers = []

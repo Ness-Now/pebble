@@ -102,8 +102,7 @@ public final class Boat: Entity {
         wood = (d["wood"] as? String) ?? "oak"
         hasChest = (d["hasChest"] as? Bool) ?? false
         if let raw = d["chestItems"],
-           let bytes = try? JSONSerialization.data(withJSONObject: raw),
-           let decoded = try? JSONDecoder().decode([ItemStack?].self, from: bytes) {
+           let decoded = decodeLegacyBooleanJSON([ItemStack?].self, from: raw, schema: .itemStacks) {
             chestItems = decoded
         } else {
             chestItems = Array(repeating: nil, count: 27)
@@ -327,8 +326,7 @@ public final class Minecart: Entity {
         super.load(d)
         variant = (d["variant"] as? String) ?? "empty"
         if let raw = d["chestItems"],
-           let bytes = try? JSONSerialization.data(withJSONObject: raw),
-           let decoded = try? JSONDecoder().decode([ItemStack?].self, from: bytes) {
+           let decoded = decodeLegacyBooleanJSON([ItemStack?].self, from: raw, schema: .itemStacks) {
             chestItems = decoded
         } else {
             chestItems = Array(repeating: nil, count: 27)

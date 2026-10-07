@@ -211,7 +211,7 @@ func runPebbleCoreJSONNumericFidelitySmoke() {
     }
     let legacy = Entity(world: world)
     legacy.load(["data": ["swelling": NSNumber(value: 0.1), "charged": NSNumber(value: 0)]])
-    check("numeric residual historical typed Boolean remains separate", legacy.data.swelling == nil && legacy.data.charged == nil)
+    check("numeric legacy Boolean compatibility conserves exact numeric sibling", legacy.data.swelling?.bitPattern == Double(0.1).bitPattern && legacy.data.charged == false)
     let current = Entity(world: world); current.data.swelling = numericSwelling; current.data.charged = false
     check("numeric type-safe common writer: current typed Boolean and Double save", db.putChunks([ChunkRecord(key: "0|0|0", worldId: "ps01-numeric-current", dim: 0, cx: 0, cz: 0, entities: [current.save()])]))
     let currentRestored = Entity(world: world); currentRestored.load(db.getChunk("ps01-numeric-current", 0, 0, 0)!.entities[0])
