@@ -512,8 +512,8 @@ open class HorseBase: Animal {
         super.load(d)
         tamed = (d["tamed"] as? Bool) ?? false
         saddled = (d["saddled"] as? Bool) ?? false
-        jumpStrength = (d["jumpStrength"] as? NSNumber)?.doubleValue ?? 0.7
-        speed = (d["speed"] as? NSNumber)?.doubleValue ?? 0.2
+        jumpStrength = persistedDouble(d["jumpStrength"]) ?? 0.7
+        speed = persistedDouble(d["speed"]) ?? 0.2
     }
 }
 public final class Horse: HorseBase {

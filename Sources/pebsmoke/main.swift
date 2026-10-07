@@ -27,6 +27,14 @@ func checkD(_ name: String, _ got: Double, _ want: Double, tol: Double = 1e-12) 
 func section(_ name: String) { print("\n— \(name)") }
 
 if let mode = ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"],
+   ["core-json-numeric", "core-json-numeric-corpus"].contains(mode) {
+    if mode == "core-json-numeric-corpus" { runPebbleCoreJSONNumericCorpus() }
+    else { runPebbleCoreJSONNumericFidelitySmoke() }
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
+if let mode = ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"],
    ["core-resident-entities", "core-resident-entity-reader", "core-resident-performance"].contains(mode) {
     if mode == "core-resident-entity-reader" { runPebbleCoreResidentEntityPersistenceReader() }
     else if mode == "core-resident-performance" { runPebbleCoreResidentEntityPersistencePerformance() }
@@ -3058,6 +3066,7 @@ runPebbleAgentsAgricultureCycleObservationSmoke()
 runPebbleAgentsHarvestPublicationSmoke()
 runPebbleCoreStrongholdConcurrencySmoke()
 runPebbleCoreResidentEntityPersistenceSmoke()
+runPebbleCoreJSONNumericFidelitySmoke()
 runPebbleCorePhysicalActionSmoke()
 runPebbleCoreAgricultureSmoke()
 runPebbleCoreWildSubsistenceSmoke()

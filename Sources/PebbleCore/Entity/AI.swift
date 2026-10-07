@@ -599,7 +599,7 @@ open class Mob: LivingEntity {
     }
     open override func load(_ d: [String: Any]) {
         super.load(d)
-        health = (d["health"] as? NSNumber)?.doubleValue ?? maxHealth
+        health = persistedDouble(d["health"]) ?? maxHealth
         baby = (d["baby"] as? Bool) ?? false
         sitting = (d["sitting"] as? Bool) ?? false
         ownerId = (d["ownerId"] as? NSNumber)?.intValue

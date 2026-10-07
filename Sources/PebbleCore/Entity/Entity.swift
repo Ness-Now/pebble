@@ -363,7 +363,7 @@ open class Entity: EntityRef {
             "fire": fireTicks, "persistent": persistent,
         ]
         if let enc = try? JSONEncoder().encode(data),
-           let obj = try? JSONSerialization.jsonObject(with: enc) {
+           let obj = try? decodePersistenceJSON(enc) {
             d["data"] = obj
         }
         return d
@@ -385,5 +385,5 @@ open class Entity: EntityRef {
 }
 
 // JSON field readers (baseline `d.x ?? 0` semantics)
-@inline(__always) func dnum(_ v: Any?) -> Double { (v as? NSNumber)?.doubleValue ?? 0 }
+@inline(__always) func dnum(_ v: Any?) -> Double { persistedDouble(v) ?? 0 }
 @inline(__always) func inum(_ v: Any?) -> Int { (v as? NSNumber)?.intValue ?? 0 }

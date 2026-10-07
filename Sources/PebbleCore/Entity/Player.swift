@@ -688,10 +688,10 @@ public final class Player: LivingEntity {
         offHand = valid(offHand)
         selectedSlot = min(8, max(0, inum(d["selectedSlot"])))
         hunger = (d["hunger"] as? NSNumber)?.intValue ?? 20
-        saturation = (d["saturation"] as? NSNumber)?.doubleValue ?? 5
+        saturation = persistedDouble(d["saturation"]) ?? 5
         xpLevel = inum(d["xpLevel"])
         xpProgress = dnum(d["xpProgress"])
-        health = (d["health"] as? NSNumber)?.doubleValue ?? 20
+        health = persistedDouble(d["health"]) ?? 20
         _gameMode = inum(d["gameMode"])
         if let sp = d["spawnPoint"] as? [NSNumber], sp.count == 3 {
             spawnPoint = (sp[0].intValue, sp[1].intValue, sp[2].intValue)
@@ -699,7 +699,16 @@ public final class Player: LivingEntity {
             spawnPoint = nil
         }
         spawnDim = inum(d["spawnDim"])
-        stats = (d["stats"] as? [String: NSNumber])?.mapValues { $0.doubleValue } ?? [:]
+        if let rawStats = d["stats"] as? [String: Any] {
+            var decoded: [String: Double] = [:]
+            for (key, raw) in rawStats {
+                guard let value = persistedDouble(raw) else { decoded = [:]; break }
+                decoded[key] = value
+            }
+            stats = decoded
+        } else {
+            stats = [:]
+        }
         if let fx = dec(d["effects"], [ActiveEffect].self) {
             for e in fx {
                 if let i = effects.firstIndex(where: { $0.id == e.id }) { effects[i] = e }

@@ -108,7 +108,9 @@ public struct ChunkRecord {
 /// JSON can't carry NaN/Infinity (structured clone could) — scrub them so one
 /// blown-up velocity never poisons a whole chunk record
 private func sanitizeJSON(_ v: Any) -> Any {
-    if let d = v as? Double { return d.isFinite ? d : 0 }
+    // Validate without replacing a finite NSNumber with its possibly lossy
+    // doubleValue. This also retains integer and CFBoolean scalar identity.
+    if let number = v as? NSNumber { return number.doubleValue.isFinite ? v : 0 }
     if let arr = v as? [Any] { return arr.map(sanitizeJSON) }
     if let dict = v as? [String: Any] { return dict.mapValues(sanitizeJSON) }
     return v
@@ -920,7 +922,7 @@ public final class SaveDB {
         var tail: [String: Any] = ["entities": r.entities.map(sanitizeJSON)]
         if let bes = r.blockEntities,
            let enc = try? JSONEncoder().encode(bes),
-           let obj = try? JSONSerialization.jsonObject(with: enc) {
+           let obj = try? decodePersistenceJSON(enc) {
             tail["blockEntities"] = obj
         }
         guard let json = try? JSONSerialization.data(withJSONObject: tail) else { return nil }
@@ -968,7 +970,7 @@ public final class SaveDB {
             off += nBiomes
         }
         guard let jsonLen = readU32(), off + jsonLen <= data.count,
-              let tail = try? JSONSerialization.jsonObject(with: data.subdata(in: off..<off + jsonLen)) as? [String: Any]
+              let tail = try? decodePersistenceJSON(data.subdata(in: off..<off + jsonLen)) as? [String: Any]
         else { return nil }
         rec.entities = tail["entities"] as? [[String: Any]] ?? []
         var blockEntitiesValid = true
@@ -1002,7 +1004,7 @@ public final class SaveDB {
         var out: [String: Any]?
         run("SELECT json FROM player WHERE world=?", bind: { self.bindText($0, 1, worldId) }) { stmt in
             if let json = self.columnText(stmt, 0) {
-                out = (try? JSONSerialization.jsonObject(with: Data(json.utf8))) as? [String: Any]
+                out = (try? decodePersistenceJSON(Data(json.utf8))) as? [String: Any]
             }
         }
         return out
@@ -1056,7 +1058,7 @@ public final class SaveDB {
             worlds += 1
             let id = rec.id
             if let pdata = try? Data(contentsOf: legacy.appendingPathComponent("player/\(id).json")),
-               let pobj = (try? JSONSerialization.jsonObject(with: pdata)) as? [String: Any] {
+               let pobj = (try? decodePersistenceJSON(pdata)) as? [String: Any] {
                 putPlayer(id, pobj)
             }
             if let adata = try? Data(contentsOf: legacy.appendingPathComponent("advancements/\(id).json")),
