@@ -312,6 +312,24 @@ public final class GameCore {
     public var cancelExternalContinuation: (() -> Bool)?
     public var restoreExternalContinuation: (() -> Bool)?
     public private(set) var worldContinuationReady = true
+    private var continuationRestorationAuthority: WorldContinuationRestorationAuthority?
+
+    /// Available only in the synchronous entry of the selected persisted World.
+    public func acquireWorldContinuationRestorationAuthority(
+        in world: World, boundary: WorldContinuationRecord
+    ) throws -> WorldContinuationRestorationAuthority {
+        guard let authority = continuationRestorationAuthority,
+              authority.matches(boundary) else {
+            throw WorldContinuationRestorationError.expired
+        }
+        _ = try authority.authenticatedCollisionIDs(in: world, at: [], bodyWidth: 0.6, bodyHeight: 1.8)
+        return authority
+    }
+
+    func isCurrentContinuationRestorationAuthority(_ authority: WorldContinuationRestorationAuthority) -> Bool {
+        continuationRestorationAuthority === authority && !worldContinuationReady
+            && lifecyclePersistenceState == .idle
+    }
     /// Pebble supplies derived live-embodiment coverage. GameCore remains the
     /// sole owner of generation, retention and physical ticking.
     public var physicalSimulationCoverageProvider:
@@ -852,7 +870,9 @@ public final class GameCore {
     // World lifecycle
     // ===========================================================================
     private func enterWorld(_ rec: WorldRecord, _ playerData: [String: Any]?, _ adv: [String]?) {
-        clearLabCoreAgentProbes()
+        worldContinuationReady = false
+        continuationRestorationAuthority = nil
+        _ = clearLabCoreAgentProbesAfterLifecycleCommit()
         resetChunkGenerationRuntime()
         worldRec = rec
         advancements = AdvancementTracker()
@@ -922,8 +942,14 @@ public final class GameCore {
         }
 
         inWorld = true
-        worldContinuationReady = restoreExternalContinuation?()
+        if let boundary = db.worldContinuation(rec.id), boundary.payload != nil {
+            continuationRestorationAuthority = try? WorldContinuationRestorationAuthority(
+                game: self, world: w, record: rec, boundary: boundary)
+        }
+        let restored = restoreExternalContinuation?()
             ?? (db.worldContinuation(rec.id) == nil)
+        continuationRestorationAuthority = nil
+        worldContinuationReady = restored
         deathScreenShown = false
         ticksSinceSave = 0
         host?.closeAllScreens()
@@ -1333,7 +1359,7 @@ public final class GameCore {
         worldRec?.gameRules[rule] = value
     }
 
-    private func isChunkPersistentEntity(_ ent: Entity) -> Bool {
+    func isChunkPersistentEntity(_ ent: Entity) -> Bool {
         guard !ent.isPlayer, !ent.dead, ent.shouldSaveToChunk else { return false }
         if (ent.type == "item" || ent.type == "xp_orb"), ent.age > 4000,
            (ent as? ItemEntity)?.custodyProvenance == nil { return false }
@@ -1765,6 +1791,9 @@ public final class GameCore {
                 let m = spawnMob(w, es.mob, es.x, es.y, es.z, spawnOptsFrom(es.data))
                 m?.persistent = true
             }
+        }
+        if let saved {
+            continuationRestorationAuthority?.noteRestoredChunk(in: w, record: saved)
         }
     }
 
@@ -3209,7 +3238,7 @@ public final class GameCore {
     }
 
     public func mouseDelta(_ dx: Double, _ dy: Double) {
-        guard inWorld, !(host?.hasScreen() ?? false), let p = player else { return }
+        guard inWorld, worldMutationAllowed, !(host?.hasScreen() ?? false), let p = player else { return }
         let sens = 0.0008 + settings.sensitivity * 0.004
         p.yaw += dx * sens
         p.pitch += dy * sens * (settings.invertY ? -1 : 1)
@@ -3217,7 +3246,7 @@ public final class GameCore {
     }
 
     public func wheelHotbar(_ dir: Int) {
-        guard inWorld, let p = player else { return }
+        guard inWorld, worldMutationAllowed, let p = player else { return }
         p.selectedSlot = posMod(p.selectedSlot + dir, 9)
     }
 

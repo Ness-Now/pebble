@@ -57,6 +57,12 @@ if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "retained-hist
     exit(failed > 0 ? 1 : 0)
 }
 
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "continuation-restoration" {
+    runPebbleCoreContinuationRestorationSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
 if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"]
     == "core-stronghold-concurrency" {
     runPebbleCoreStrongholdConcurrencySmoke()
@@ -3111,5 +3117,6 @@ runPebbleAgentsMarketSmoke()
 runPebbleAgentsComposedAssetCommitmentSmoke()
 
 runPebbleCoreWorldContinuationSmoke()
+runPebbleCoreContinuationRestorationSmoke()
 print("\n\(passed) passed, \(failed) failed")
 exit(failed > 0 ? 1 : 0)

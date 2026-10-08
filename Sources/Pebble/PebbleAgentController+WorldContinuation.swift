@@ -318,6 +318,9 @@ extension PebbleAgentController {
                   stored.manifest.manifestIntegrityDigest == continuation.manifestDigest else {
                 throw ContinuationError.refused("checkpoint does not belong to the World boundary")
             }
+            let restorationAuthority = try game.acquireWorldContinuationRestorationAuthority(
+                in: game.world, boundary: boundary
+            )
             let cells = stored.manifest.worldBinding.cells
             let chunks = Set(cells.map { chunkKey($0.position.x >> 4, $0.position.z >> 4) }).sorted().map { key -> (Int, Int) in
                 let position = cells.first { chunkKey($0.position.x >> 4, $0.position.z >> 4) == key }!.position
@@ -327,7 +330,9 @@ extension PebbleAgentController {
                 throw ContinuationError.refused("continuation physical chunks are unavailable")
             }
             anchor = stored.manifest.worldBinding.anchor
-            let result = try loadLiveCheckpoint(name: continuation.name, world: game.world, store: store, continuingWorld: true)
+            let result = try loadLiveCheckpoint(name: continuation.name, world: game.world,
+                store: store, continuingWorld: true,
+                continuationRestorationAuthority: restorationAuthority)
             guard result.succeeded else { throw ContinuationError.refused(result.message) }
             bootstrapFounderProfile = profile
             isPaused = stored.manifest.orchestration.wasPaused

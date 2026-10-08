@@ -623,7 +623,9 @@ extension PebbleAgentController {
             bodyWidth: 0.6,
             bodyHeight: 1.8,
             ignoringEntityIDs:
-                checkpointPlacementAuthority?.ignoredEntityIDs ?? []
+                try checkpointPlacementAuthority?.collisionExclusions(
+                    in: world, mappedByAgentID: probesByAgentId
+                ) ?? []
         )
         guard assessment.isValid else {
             throw ControllerError.bootstrapPlacementBoundary(

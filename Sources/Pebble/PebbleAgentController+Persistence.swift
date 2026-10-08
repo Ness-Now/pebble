@@ -371,16 +371,55 @@ struct PebbleAgentCheckpointProbePlan {
 /// Bounded physical authority acquired for one checkpoint-load candidate.
 ///
 /// The authority carries only the exact target identities/positions and the
-/// physical entity IDs proven to belong to the same restore transaction. It
-/// is never stored or published and cannot authorize an ordinary probe spawn.
+/// physical entity IDs proven to belong to the same restore transaction. A
+/// fresh continuation additionally requires Core's callback-lifetime proof of
+/// any saved external intersection. Neither authority is stored or published.
 struct PebbleAgentCheckpointProbePlacementAuthority {
     let worldIdentity: ObjectIdentifier
     let targetPositionsByAgentID: [String: AgentPosition]
     let ignoredEntityIDs: Set<Int>
+    let continuationRestorationAuthority: WorldContinuationRestorationAuthority?
 
     func authorizes(agent: AgentSnapshot, in world: World) -> Bool {
         worldIdentity == ObjectIdentifier(world)
             && targetPositionsByAgentID[agent.id] == agent.position
+    }
+
+    func collisionExclusions(
+        in world: World, mappedByAgentID: [String: LabCoreAgentEntity]
+    ) throws -> Set<Int> {
+        guard worldIdentity == ObjectIdentifier(world) else {
+            throw PebbleAgentController.ControllerError.bootstrapPlacementBoundary("foreign checkpoint World")
+        }
+        guard let continuationRestorationAuthority else { return ignoredEntityIDs }
+        // Fresh continuation starts empty. Only canonical probes already
+        // created by this exact target transaction may join its exclusions.
+        guard world.entities.compactMap({ $0 as? LabCoreAgentEntity }).count
+                == mappedByAgentID.count,
+              mappedByAgentID.allSatisfy({ id, probe in
+                  probe.labAgentId == id && probe.physicalId == "pebble_app_agent_\(id)"
+                      && probe.world === world && !probe.dead
+                      && !probe.shouldSaveToChunk && !probe.persistent
+                      && probe.noGravity && probe.width == 0.6 && probe.height == 1.8
+                      && probe.x.isFinite && probe.y.isFinite && probe.z.isFinite
+                      && world.entityById[probe.id] === probe
+                      && world.entities.filter({ $0 === probe }).count == 1
+                      && targetPositionsByAgentID[id].map({ target in
+                          probe.x == Double(target.x) + 0.5 && probe.y == Double(target.y)
+                              && probe.z == Double(target.z) + 0.5
+                      }) == true
+              }) else {
+            throw PebbleAgentController.ControllerError.bootstrapPlacementBoundary("foreign continuation probe")
+        }
+        let owned = ignoredEntityIDs.union(mappedByAgentID.values.map(\.id))
+        let targets = targetPositionsByAgentID.keys.sorted().map {
+            let position = targetPositionsByAgentID[$0]!
+            return EntityPlacementPosition(x: position.x, y: position.y, z: position.z)
+        }
+        return try owned.union(continuationRestorationAuthority.authenticatedCollisionIDs(
+            in: world, at: targets, bodyWidth: 0.6, bodyHeight: 1.8,
+            ignoringEntityIDs: owned
+        ))
     }
 }
 
@@ -511,6 +550,10 @@ struct PebbleAgentCheckpointProbePlanner {
 enum PebbleAgentCheckpointPositionRestoreFailurePoint {
     case afterFirstReposition
     case afterFirstMissingCreation
+    case beforePhysicalMutation
+    case afterSeveralMissingCreations
+    case afterCustodyAdoption
+    case beforeSessionPublication
 }
 
 enum PebbleAgentCheckpointPhysicalCustodyFailurePoint {
@@ -918,11 +961,14 @@ extension PebbleAgentController {
         snapshot: AgentSessionSnapshot,
         world: World
     ) throws -> [String: PebbleAgentEmbodiment] {
+        guard activeWorld === world, persistenceWorldID == worldSideReceiptDatabase?.getWorld(persistenceWorldID ?? "")?.id,
+              persistenceWorldID != nil, world.dim.rawValue == persistenceDimension else {
+            throw PebbleAgentPersistenceStoreError.invalidBundle("checkpoint save foreign World")
+        }
         let orderedAgents = snapshot.agents.sorted { $0.id < $1.id }
-        let embodiments = try PebbleAgentEmbodiment.resolveAll(
+        let embodiments = try canonicalCheckpointEmbodiments(
             agentIDs: orderedAgents.map(\.id),
-            in: world,
-            mappedByAgentID: probesByAgentId
+            world: world
         )
         if let mismatch = orderedAgents.first(where: {
             embodiments[$0.id]?.position != $0.position
@@ -947,12 +993,18 @@ extension PebbleAgentController {
             bodyHeight: 1.8,
             ignoringEntityIDs: Set(embodiments.values.map { $0.probe.id })
         )
-        guard placement.isValid else {
-            let invalid = zip(orderedAgents, placement.assessments)
-                .filter { !$0.1.isValid }
+        // Capture validates existing authoritative bodies. External World
+        // entities can legitimately have moved into them during gameplay;
+        // their intersection is not a new-body admission request.
+        let invalidAssessments = placement.assessments.map {
+            $0.rejections.filter { $0 != .entityCollision }
+        }
+        guard invalidAssessments.allSatisfy(\.isEmpty), placement.overlaps.isEmpty else {
+            let invalid = zip(orderedAgents, invalidAssessments)
+                .filter { !$0.1.isEmpty }
                 .map {
                     "\($0.0.id):"
-                        + $0.1.rejections.map(\.rawValue).joined(separator: ",")
+                        + $0.1.map(\.rawValue).joined(separator: ",")
                 }.joined(separator: ";")
             let invalidTargets = invalid.isEmpty ? "none" : invalid
             throw PebbleAgentPersistenceStoreError.invalidBundle(
@@ -964,13 +1016,49 @@ extension PebbleAgentController {
         return embodiments
     }
 
+    func canonicalCheckpointEmbodiments(
+        agentIDs: [String], world: World
+    ) throws -> [String: PebbleAgentEmbodiment] {
+        guard world.dim.rawValue == persistenceDimension else {
+            throw PebbleAgentPersistenceStoreError.invalidBundle("checkpoint foreign dimension")
+        }
+        guard probesByAgentId.values.allSatisfy({ probe in
+            probe.x.isFinite && probe.y.isFinite && probe.z.isFinite
+                && probe.x >= Double(Int.min) && probe.x < Double(Int.max)
+                && probe.y >= Double(Int.min) && probe.y < Double(Int.max)
+                && probe.z >= Double(Int.min) && probe.z < Double(Int.max)
+                && probe.x == floor(probe.x) + 0.5 && probe.y == floor(probe.y)
+                && probe.z == floor(probe.z) + 0.5
+        }) else {
+            throw PebbleAgentPersistenceStoreError.invalidBundle("checkpoint probe coordinates are not exact centered positions")
+        }
+        let embodiments = try PebbleAgentEmbodiment.resolveAll(
+            agentIDs: agentIDs, in: world, mappedByAgentID: probesByAgentId
+        )
+        let physical = world.entities.compactMap { $0 as? LabCoreAgentEntity }
+        guard physical.map(\.labAgentId).sorted() == agentIDs.sorted(),
+              embodiments.allSatisfy({ id, body in
+                  body.physicalID == "pebble_app_agent_\(id)"
+                      && world.entityById[body.probe.id] === body.probe
+                      && !body.probe.shouldSaveToChunk && !body.probe.persistent
+                      && body.probe.noGravity
+                      && body.probe.width == 0.6 && body.probe.height == 1.8
+                      && body.x.isFinite && body.y.isFinite && body.z.isFinite
+              }) else {
+            throw PebbleAgentPersistenceStoreError.invalidBundle("checkpoint probe ownership set is not exact")
+        }
+        return embodiments
+    }
+
     func acquireCheckpointProbePlacementAuthority(
         candidateAgents: [AgentSnapshot],
         currentProbeStates: [PebbleAgentCheckpointProbeState],
         checkpointCustodySpillItems: [ItemEntity],
-        world: World
+        world: World,
+        continuationRestorationAuthority: WorldContinuationRestorationAuthority? = nil
     ) throws -> PebbleAgentCheckpointProbePlacementAuthority {
-        guard currentProbeStates.allSatisfy({
+        guard world.dim.rawValue == persistenceDimension,
+              currentProbeStates.allSatisfy({
             $0.probe.world === world && !$0.probe.dead
                 && $0.probe.width == 0.6 && $0.probe.height == 1.8
         }) else {
@@ -989,12 +1077,24 @@ extension PebbleAgentController {
             currentProbeStates.map { $0.probe.id }
                 + checkpointCustodySpillItems.map(\.id)
         )
+        guard Set(candidateAgents.map(\.id)).count == candidateAgents.count else {
+            throw ControllerError.bootstrapPlacementBoundary("duplicate checkpoint identities")
+        }
+        let authority = PebbleAgentCheckpointProbePlacementAuthority(
+            worldIdentity: ObjectIdentifier(world),
+            targetPositionsByAgentID: Dictionary(uniqueKeysWithValues:
+                candidateAgents.map { ($0.id, $0.position) }),
+            ignoredEntityIDs: ignoredEntityIDs,
+            continuationRestorationAuthority: continuationRestorationAuthority
+        )
         let placement = assessEntityPlacementSet(
             in: world,
             at: targetPositions,
             bodyWidth: 0.6,
             bodyHeight: 1.8,
-            ignoringEntityIDs: ignoredEntityIDs
+            ignoringEntityIDs: try authority.collisionExclusions(
+                in: world, mappedByAgentID: probesByAgentId
+            )
         )
         if let invalidIndex = placement.assessments.firstIndex(where: {
             !$0.isValid
@@ -1013,19 +1113,7 @@ extension PebbleAgentController {
                     + "\(overlap.second.x),\(overlap.second.y),\(overlap.second.z)"
             )
         }
-        let targetPositionsByAgentID = Dictionary(
-            uniqueKeysWithValues: candidateAgents.map { ($0.id, $0.position) }
-        )
-        guard targetPositionsByAgentID.count == candidateAgents.count else {
-            throw ControllerError.bootstrapPlacementBoundary(
-                "checkpoint collective placement contains duplicate identities"
-            )
-        }
-        return PebbleAgentCheckpointProbePlacementAuthority(
-            worldIdentity: ObjectIdentifier(world),
-            targetPositionsByAgentID: targetPositionsByAgentID,
-            ignoredEntityIDs: ignoredEntityIDs
-        )
+        return authority
     }
 
     func validateCheckpointMaterialRightsCustody(
@@ -1449,9 +1537,13 @@ extension PebbleAgentController {
         name: AgentCheckpointName,
         world: World,
         store: PebbleAgentPersistenceStore,
-        continuingWorld: Bool = false
+        continuingWorld: Bool = false,
+        continuationRestorationAuthority: WorldContinuationRestorationAuthority? = nil
     ) throws -> PebbleAgentCommandResult {
         let oldSession = session
+        guard continuingWorld == (continuationRestorationAuthority != nil) else {
+            return failure("Checkpoint load refused: continuation authority mismatch.")
+        }
         guard continuingWorld
             ? (oldSession == nil && activeWorld == nil && probesByAgentId.isEmpty)
             : (oldSession != nil && activeWorld === world) else {
@@ -1918,7 +2010,8 @@ extension PebbleAgentController {
                 candidateAgents: candidateAgents,
                 currentProbeStates: reusableProbeStates + retiredProbeStates,
                 checkpointCustodySpillItems: persistedCustodySpillItems,
-                world: world
+                world: world,
+                continuationRestorationAuthority: continuationRestorationAuthority
             )
         } catch {
             trace(
@@ -2023,6 +2116,9 @@ extension PebbleAgentController {
             }
         }
         do {
+            if injectedPositionRestoreFailure == .beforePhysicalMutation {
+                throw PebbleAgentPersistenceStoreError.invalidBundle("injected checkpoint failure before physical mutation")
+            }
             for retired in retiredProbeStates.sorted(by: {
                 $0.agentID < $1.agentID
             }) {
@@ -2095,6 +2191,10 @@ extension PebbleAgentController {
                         + "position=\(positionText(entry.agent.position)) "
                         + "authority=collective targetSet=exact"
                 )
+                if injectedPositionRestoreFailure == .afterSeveralMissingCreations,
+                   restoredProbesCreated.count == 3 {
+                    throw PebbleAgentPersistenceStoreError.invalidBundle("injected checkpoint failure after several missing creations")
+                }
                 if injectedPositionRestoreFailure
                     == .afterFirstMissingCreation {
                     throw PebbleAgentPersistenceStoreError.invalidBundle(
@@ -2149,6 +2249,9 @@ extension PebbleAgentController {
                     }
                 }
             }
+            if injectedPositionRestoreFailure == .afterCustodyAdoption {
+                throw PebbleAgentPersistenceStoreError.invalidBundle("injected checkpoint failure after custody adoption")
+            }
             let oldNonProbeEntities = Set(oldWorldEntities.compactMap {
                 entity -> ObjectIdentifier? in
                 entity is LabCoreAgentEntity ? nil : ObjectIdentifier(entity)
@@ -2202,10 +2305,9 @@ extension PebbleAgentController {
                         == (custodyByAgentID?[state.agentID]?.slots
                             ?? state.carriedItems)
             }
-            let finalEmbodiments = try PebbleAgentEmbodiment.resolveAll(
+            let finalEmbodiments = try canonicalCheckpointEmbodiments(
                 agentIDs: candidateAgentIDs,
-                in: world,
-                mappedByAgentID: probesByAgentId
+                world: world
             )
             let positionsExact = candidateAgents.allSatisfy {
                 finalEmbodiments[$0.id]?.position == $0.position
@@ -2227,9 +2329,11 @@ extension PebbleAgentController {
                 },
                 bodyWidth: 0.6,
                 bodyHeight: 1.8,
-                ignoringEntityIDs: Set(
-                    finalEmbodiments.values.map { $0.probe.id }
-                )
+                ignoringEntityIDs: continuationRestorationAuthority == nil
+                    ? Set(finalEmbodiments.values.map { $0.probe.id })
+                    : try placementAuthority.collisionExclusions(
+                        in: world, mappedByAgentID: probesByAgentId
+                    )
             )
             guard worldEntitiesExact, exactProbesUnchanged,
                   repositionedProbesVerified, restoredProbesVerified,
@@ -2321,6 +2425,9 @@ extension PebbleAgentController {
             try candidate.rebasePhysiologicalTime(
                 toWorldTick: world.time
             )
+            if injectedPositionRestoreFailure == .beforeSessionPublication {
+                throw PebbleAgentPersistenceStoreError.invalidBundle("injected checkpoint failure before Session publication")
+            }
             session = candidate
             if continuingWorld { activeWorld = world }
             constructionExecutor = candidateConstructionExecutor

@@ -492,6 +492,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
     private var increment08LiveResumeTick = 0
     private var increment08LiveConsumed: UInt64 = 0
     private var increment08LiveCapturePath: String?
+    private let occupancyLivePhase = ProcessInfo.processInfo.environment["PEBBLELAB_PS01_OCCUPANCY_LIVE_PHASE"]
+    private var occupancyLiveStage = 0
+    private var occupancyLiveFrames = 0
+    private var occupancyLiveCapturePath: String?
     private var increment07LiveInitialCaptured = false
     private var increment07LiveFirstAttemptID: AgentSubsistenceAttemptID?
     private var increment07LiveRenderCapture: Increment07LiveRenderCapture?
@@ -613,6 +617,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
             self?.agentController.finalizeLifecycleAfterPersistence()
         }
         host.app = self
+        if occupancyLivePhase != nil {
+            prepareOccupancyLiveWorld()
+        }
         print(String(format: "registries: %.0fms (%d blocks, %d items, %d biomes)",
                      (CFAbsoluteTimeGetCurrent() - t0) * 1000, blockDefs.count, itemDefs.count, BIOMES.count))
 
@@ -636,7 +643,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         // capture hooks blit from the drawable, which framebufferOnly forbids
         let env = ProcessInfo.processInfo.environment
         if env["PEBBLE_SHOT"] != nil || env["PEBBLE_PHOTOBOOTH"] != nil
-            || increment07LiveCaptureEnabled || increment08LivePhase != nil {
+            || increment07LiveCaptureEnabled || increment08LivePhase != nil || occupancyLivePhase != nil {
             gameView.framebufferOnly = false
         }
         window.contentView = gameView
@@ -667,7 +674,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
             self.hud.pushSubtitle(text)
         }
 
-        if increment08LivePhase != nil {
+        if increment08LivePhase != nil || occupancyLivePhase != nil {
             // Existing Video Settings option, presentation only. Keep the
             // ordinary debug overlay legible without covering the subject.
             game.settings.guiScale = 2
@@ -682,7 +689,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         applyResourcePacks(game.settings.resourcePacks ?? [], game: game, renderer: renderer, ui: ui)
 
         ui.titlePhoto = renderer.titleBgTex != nil ; ui.titleLogo = renderer.titleLogoTex != nil
-        ui.open(TitleScreen(), game)
+        if occupancyLivePhase == nil { ui.open(TitleScreen(), game) }
         // test hook: jump straight to the world list (UI testing)
         if ProcessInfo.processInfo.environment["PEBBLE_WORLDS"] != nil {
             ui.open(WorldSelectScreen(), game)
@@ -1380,7 +1387,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
             // Once its final batch has run, freeze World age until the scripted
             // shutdown so the saved continuation boundary is byte-reproducible.
             let frameDelta: Double
-            if increment08LiveStage == 1 || increment08LiveStage == 3 {
+            if occupancyLivePhase != nil || increment08LiveStage == 1 || increment08LiveStage == 3 {
                 frameDelta = 0
             } else if pendingCmdWorldTick == nil {
                 frameDelta = dt
@@ -1390,17 +1397,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
                 frameDelta = min(dt, 10)
             }
             passiveObserverInputProof?.beforeFrame()
-            let partial = game.frame(dtMs: frameDelta)
+            let framePartial = game.frame(dtMs: frameDelta)
+            let partial = occupancyLivePhase == nil ? framePartial : 1
             driveIncrement07LiveCaptureBeforeCognition()
-            agentController.update(
+            if occupancyLivePhase == nil { agentController.update(
                 world: game.world,
                 player: game.player,
                 worldID: game.worldRec?.id,
                 dimension: game.dim.rawValue,
                 maximumSimulationTick: gateB3AcceptanceHorizon
-            )
+            ) }
             driveIncrement07LiveCaptureAfterCognition()
             driveIncrement08LiveContinuation()
+            driveOccupancyLiveCapture()
             driveIncrement05NaturalCharacterization()
             if let evidence = increment03CoverageLiveProof?.afterFrame(
                 game: game,
@@ -1891,6 +1900,103 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         }
     }
 
+    /// This gated proof uses this app's actual GameCore/controller and later
+    /// its normal Metal renderer. Natural stepping precedes UI attachment so
+    /// menus, input and frame timing cannot alter the matched save boundary.
+    private func prepareOccupancyLiveWorld() {
+        let env = ProcessInfo.processInfo.environment
+        do {
+            guard let phase = occupancyLivePhase, ["write", "read"].contains(phase),
+                  let home = env["CFFIXED_USER_HOME"],
+                  home.hasPrefix("/tmp/") || home.hasPrefix("/private/tmp/"),
+                  let output = env["PEBBLELAB_PS01_OCCUPANCY_OUTPUT"],
+                  env["PEBBLELAB_PS01_OCCUPANCY_LIVE_CAPTURE_DIR"] != nil else {
+                throw PebbleContinuationEmbodimentQualification.Failure.refused("isolated native proof configuration required")
+            }
+            game.host = nil
+            if phase == "write" {
+                try PebbleContinuationEmbodimentQualification.prepareWriter(game, agentController)
+                _ = try PebbleContinuationEmbodimentQualification.boundary(game, agentController)
+            } else {
+                PebbleContinuationEmbodimentQualification.configure(game, agentController)
+                let expected = try JSONDecoder().decode(OccupancyQualificationBoundary.self,
+                    from: Data(contentsOf: URL(fileURLWithPath: output)))
+                game.loadWorld(expected.worldID)
+                try PebbleContinuationEmbodimentQualification.verifyReader(game, agentController, expected: expected)
+            }
+            game.host = host
+            game.perspective = 1 // existing presentation option: render Player
+            print("[lab-live] PS01_OCCUPANCY_NATIVE_READY phase=\(phase) world=\(game.world.time) agents=\(agentController.probesByAgentId.count) playerMutation=none entityMutation=none"); fflush(stdout)
+        } catch {
+            fputs("[lab-live] PS01_OCCUPANCY_NATIVE_FAIL \(error)\n", stderr)
+            exit(1)
+        }
+    }
+
+    private func driveOccupancyLiveCapture() {
+        guard let phase = occupancyLivePhase, occupancyLiveStage < 4 else { return }
+        occupancyLiveFrames += 1
+        precondition(occupancyLiveFrames <= 2400, "bounded occupancy native rendering")
+        let env = ProcessInfo.processInfo.environment
+        if occupancyLiveStage == 0 {
+            guard let target = agentController.session?.snapshot().agents.first(where: { $0.id == "agent_1" }),
+                  increment08LiveTerrainReady(around: target.position) else { return }
+            let path = env["PEBBLELAB_PS01_OCCUPANCY_LIVE_CAPTURE_DIR"]! + "/" + phase + ".png"
+            occupancyLiveCapturePath = path
+            scheduleIncrement07LiveCapture(path: path, phase: "occupancy-" + phase,
+                target: target.position,
+                metadata: "worldTick=\(game.world.time) living=24 player=present spider=present probeAuthority=Session",
+                terminateAfterCapture: false)
+            occupancyLiveStage = 1
+            return
+        }
+        if occupancyLiveStage == 3, let path = occupancyLiveCapturePath,
+           FileManager.default.fileExists(atPath: path) {
+            occupancyLiveStage = 4
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                do {
+                    try PebbleContinuationEmbodimentQualification.finishWriter(self.game, self.agentController,
+                        output: env["PEBBLELAB_PS01_OCCUPANCY_OUTPUT"]!, alreadyContinued: true)
+                    print("[lab-live] PS01_OCCUPANCY_NATIVE_PASS phase=write actualMetalCapture=write.png,continue.png saveContinue=PASS saveExit=PASS"); fflush(stdout)
+                    NSApp.terminate(nil)
+                } catch { fputs("[lab-live] PS01_OCCUPANCY_NATIVE_FAIL \(error)\n", stderr); exit(1) }
+            }
+            return
+        }
+        guard occupancyLiveStage == 1, let path = occupancyLiveCapturePath,
+              FileManager.default.fileExists(atPath: path) else { return }
+        occupancyLiveStage = 2
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            do {
+                let output = env["PEBBLELAB_PS01_OCCUPANCY_OUTPUT"]!
+                if phase == "write" {
+                    try PebbleContinuationEmbodimentQualification.saveContinueWriter(self.game, self.agentController, output: output)
+                    let target = self.agentController.session!.snapshot().agents.first { $0.id == "agent_1" }!
+                    let continuePath = env["PEBBLELAB_PS01_OCCUPANCY_LIVE_CAPTURE_DIR"]! + "/continue.png"
+                    self.occupancyLiveCapturePath = continuePath
+                    self.scheduleIncrement07LiveCapture(path: continuePath, phase: "occupancy-continue",
+                        target: target.position, metadata: "Save/Continue complete worldTick=18052 living=24", terminateAfterCapture: false)
+                    self.occupancyLiveStage = 3
+                    return
+                } else {
+                    let expected = try JSONDecoder().decode(OccupancyQualificationBoundary.self,
+                        from: Data(contentsOf: URL(fileURLWithPath: output)))
+                    try PebbleContinuationEmbodimentQualification.verifyReader(self.game, self.agentController, expected: expected)
+                    try PebbleContinuationEmbodimentQualification.require(self.game.saveAndFlush() && self.game.exitToTitle()
+                        && self.agentController.probesByAgentId.isEmpty,
+                        "rendered fresh reader Save/Continue and Save/Exit")
+                }
+                print("[lab-live] PS01_OCCUPANCY_NATIVE_PASS phase=\(phase) actualMetalCapture=\(path) saveContinue=PASS saveExit=PASS playerMutation=none externalEntityMutation=none"); fflush(stdout)
+                NSApp.terminate(nil)
+            } catch {
+                fputs("[lab-live] PS01_OCCUPANCY_NATIVE_FAIL \(error)\n", stderr)
+                exit(1)
+            }
+        }
+    }
+
     private func scheduleIncrement07LiveCapture(
         path: String,
         phase: String,
@@ -1917,7 +2023,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
     }
 
     private func increment07LiveRenderCamera(overriding base: CamState) -> CamState {
-        guard increment07LiveCaptureEnabled || increment08LivePhase != nil,
+        guard increment07LiveCaptureEnabled || increment08LivePhase != nil || occupancyLivePhase != nil,
               var request = increment07LiveRenderCapture else { return base }
         let player = game.player!
         let playerBefore = (player.x, player.y, player.z)
@@ -2138,6 +2244,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
             fflush(stdout)
         }
     }
+}
+
+if let occupancyStatus = PebbleContinuationEmbodimentQualification.runIfRequested() {
+    exit(occupancyStatus)
 }
 
 if let blockerStatus = PebbleMortalityCheckpointBlockerHarness.runIfRequested() {
