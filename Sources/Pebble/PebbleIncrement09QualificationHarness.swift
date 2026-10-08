@@ -131,18 +131,26 @@ enum PebbleIncrement09QualificationHarness {
         try require(acquired == Int(consumed) + carried, "real acquisition equals consumed plus physical custody")
         try require(controller.runtimeErrorCount == 0 && controller.droppedCatchUpSteps == 0
             && controller.candidatePhysicalHardFailure == nil, "no runtime or physical integrity failure")
-        let before = try session.durableStateBytes()
+        let prefix = output + (phase == "read" ? ".read" : "")
+        try session.durableStateBytes().write(
+            to: URL(fileURLWithPath: prefix + ".before-save.session.json"), options: .atomic)
+        // The existing checkpoint owner accepts all elapsed physical World
+        // time, including a partial interval after the latest cognitive step.
+        // Compare the complete saved state with that owning clock operation;
+        // no prerequisite or reproductive transition is supplied here.
+        var saveBoundary = session
+        try saveBoundary.advancePhysiologicalTime(toWorldTick: game.world.time)
+        let before = try saveBoundary.durableStateBytes()
         try require(game.saveAndFlush(), "ordinary Save/Continue succeeds")
         try require(try controller.session!.durableStateBytes() == before,
-                    "Save/Continue preserves authoritative state")
-        let prefix = output + (phase == "read" ? ".read" : "")
+                    "Save/Continue equals authoritative World-time boundary")
         try before.write(to: URL(fileURLWithPath: prefix + ".session.json"), options: .atomic)
         let evidence: [String: Any] = ["phase": phase, "seed": seed, "founders": 24,
             "worldTick": game.world.time, "tick": session.tick,
             "births": session.birthsSnapshot().count, "population": session.snapshot().agents.count,
             "acquired": acquired, "consumed": consumed, "carried": carried,
             "checkpointSchema": try session.makeCheckpoint().schemaVersion,
-            "semanticDigest": try session.durableStateDigest().rawValue,
+            "semanticDigest": try saveBoundary.durableStateDigest().rawValue,
             "causalDigest": session.causalLedgerSnapshot().summary.digest]
         try JSONSerialization.data(withJSONObject: evidence, options: [.prettyPrinted, .sortedKeys])
             .write(to: URL(fileURLWithPath: prefix + ".json"), options: .atomic)
