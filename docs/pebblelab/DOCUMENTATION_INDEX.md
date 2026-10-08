@@ -35,7 +35,10 @@ These documents form the minimal permanent memory of the project:
 | Document | Role |
 | --- | --- |
 | [`CODEX_START_HERE.md`](../../CODEX_START_HERE.md) | Short entry point, authority map and mission-specific reading routes. |
-| [`CURRENT_STATE.md`](CURRENT_STATE.md) | Compact acquired state, product baseline, debt and next authorized action; [published terminal-identity correction](CURRENT_STATE.md#published-terminal-historical-identity-correction), historical characterization FAIL, [supervisor-accepted reconciliation and Increment 09 selection](CURRENT_STATE.md#supervisor-accepted-characterization-reconciliation). |
+| [`CURRENT_STATE.md`](CURRENT_STATE.md) | Compact acquired state, product baseline, debt and next authorized action; [published terminal-identity correction](CURRENT_STATE.md#published-terminal-historical-identity-correction), historical characterization FAIL, [supervisor-accepted reconciliation](CURRENT_STATE.md#supervisor-accepted-characterization-reconciliation). |
+| [`PS01_INCREMENT_09_PUBLICATION.md`](PS01_INCREMENT_09_PUBLICATION.md) | Verified I09 publication identity, accepted independent evidence/provenance, bounded claims, historical FAIL and pending supervisor decision. |
+| [`PS01_INCREMENT_09_REDESIGN.md`](PS01_INCREMENT_09_REDESIGN.md) | Unchanged candidate-time source/owner audit and qualification; LOCAL_REVIEW_CANDIDATE describes its historical boundary. |
+| [`PS01_INCREMENT_09_INDEPENDENT_SENIOR_REVIEW_2026-10-08.md`](PS01_INCREMENT_09_INDEPENDENT_SENIOR_REVIEW_2026-10-08.md) | Byte-exact user-supplied independent senior approval, historical pre-push identity/verdict and explicit execution limits. |
 | [`PEBBLE_CIVILIZATION_VISION.md`](PEBBLE_CIVILIZATION_VISION.md) | Durable V4 product purpose and invariants. |
 | [`PEBBLE_CIVILIZATION_ROADMAP.md`](PEBBLE_CIVILIZATION_ROADMAP.md) | Canonical human V4 program, required/optional phases, slices and versioned gates. |
 | [`ROADMAP_MANIFEST.json`](ROADMAP_MANIFEST.json) | Deterministic machine projection of the V4 roadmap and status. |
@@ -150,8 +153,9 @@ PS01 terminal historical identity correction: PUBLISHED / REMOTE VERIFIED
 PS01 terminal historical identity correction published HEAD: 01347e34910e9d16329d1341d3aff6e6cfb3cf70
 PS01 historical characterization: FAIL / PS01_CHARACTERIZATION_PRODUCT_BLOCKER_DISCOVERED
 characterization reconciliation: PS01_CHARACTERIZATION_SUFFICIENT_FOR_SUPERVISOR_RECALIBRATION / SUPERVISOR ACCEPTED
-next selected PS01 integration increment: PS01-INCREMENT-09-NORMAL-DEMOGRAPHIC-CONTINUITY
-Increment 09 status: SELECTED AS NEXT PS01 INTEGRATION INCREMENT
+Increment 09 status: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+Increment 09 published HEAD: 2886d8bdb7eef257759fa6f42647e51fca891f58
+next selected PS01 integration increment: NONE — SUPERVISOR DECISION REQUIRED
 next eligible CIV phase: CIV-48 — DEFERRED / NOT STARTED / IMPLEMENTATION NOT AUTHORIZED
 Gate E Evaluation 01: FAIL — HISTORICAL IMMUTABLE EVIDENCE
 V4-GATE-E-v1 Blocker 01: FIXED + PUBLISHED + REMOTE VERIFIED
@@ -168,8 +172,9 @@ PS01 terminal historical identity correction: PUBLISHED / REMOTE VERIFIED
 PS01 terminal historical identity correction published HEAD: 01347e34910e9d16329d1341d3aff6e6cfb3cf70
 PS01 historical characterization: FAIL / PS01_CHARACTERIZATION_PRODUCT_BLOCKER_DISCOVERED
 characterization reconciliation: PS01_CHARACTERIZATION_SUFFICIENT_FOR_SUPERVISOR_RECALIBRATION / SUPERVISOR ACCEPTED
-next selected PS01 integration increment: PS01-INCREMENT-09-NORMAL-DEMOGRAPHIC-CONTINUITY
-Increment 09 status: SELECTED AS NEXT PS01 INTEGRATION INCREMENT
+Increment 09 status: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+Increment 09 published HEAD: 2886d8bdb7eef257759fa6f42647e51fca891f58
+next selected PS01 integration increment: NONE — SUPERVISOR DECISION REQUIRED
 CIV-39: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 V4-GATE-F-v1: ACQUIRED AND PUBLISHED — REMOTE VERIFIED
@@ -265,8 +270,9 @@ PS01 terminal historical identity correction: PUBLISHED / REMOTE VERIFIED
 PS01 terminal historical identity correction published HEAD: 01347e34910e9d16329d1341d3aff6e6cfb3cf70
 PS01 historical characterization: FAIL / PS01_CHARACTERIZATION_PRODUCT_BLOCKER_DISCOVERED
 characterization reconciliation: PS01_CHARACTERIZATION_SUFFICIENT_FOR_SUPERVISOR_RECALIBRATION / SUPERVISOR ACCEPTED
-next selected PS01 integration increment: PS01-INCREMENT-09-NORMAL-DEMOGRAPHIC-CONTINUITY
-Increment 09 status: SELECTED AS NEXT PS01 INTEGRATION INCREMENT
+Increment 09 status: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+Increment 09 published HEAD: 2886d8bdb7eef257759fa6f42647e51fca891f58
+next selected PS01 integration increment: NONE — SUPERVISOR DECISION REQUIRED
 CIV-48: NOT STARTED — IMPLEMENTATION NOT AUTHORIZED
 V4-GATE-H-v1: PLANNED
 ```
@@ -639,10 +645,13 @@ SHA-256 `409a4e8375ad75f302c9b1698964790fd664617b42f1ef8746aee97dbec826d9`.
 See the [accepted synthesis](CURRENT_STATE.md#supervisor-accepted-characterization-reconciliation)
 and [selected Increment 09 contract](PEBBLE_CIVILIZATION_ROADMAP.md#selected-increment-09--normal-reproduction-activation--physical-subsistence-composition).
 **PS01-INCREMENT-09-NORMAL-DEMOGRAPHIC-CONTINUITY** — **Increment 09 — Normal
-Reproduction Activation & Physical Subsistence Composition** is **SELECTED AS
-NEXT PS01 INTEGRATION INCREMENT**. Future implementation requires a published
-canonical state containing this selection. This mission changes documentation
-only. PS01 remains incomplete and Wave 6 remains unauthorized.
+Reproduction Activation & Physical Subsistence Composition** is **COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at
+`2886d8bdb7eef257759fa6f42647e51fca891f58`. See the [publication record](PS01_INCREMENT_09_PUBLICATION.md),
+[unchanged candidate qualification](PS01_INCREMENT_09_REDESIGN.md) and
+[byte-exact senior review](PS01_INCREMENT_09_INDEPENDENT_SENIOR_REVIEW_2026-10-08.md). First native birth and restart do not
+establish multigenerational durability. No next increment is selected;
+the supervisor must explicitly decide the next PS01 mission. PS01 remains
+incomplete and Wave 6 remains unauthorized.
 Capacity 30 was not demonstrated as the active demographic blocker. CIV-48
 remains not started, implementation is not authorized and
 it is deferred behind the slice and evidence-driven roadmap recalibration;

@@ -295,13 +295,17 @@ for the compact status. In particular:
   The later completed reconciliation is supervisor accepted as
   **PS01_CHARACTERIZATION_SUFFICIENT_FOR_SUPERVISOR_RECALIBRATION**; its archive
   SHA-256 is `409a4e8375ad75f302c9b1698964790fd664617b42f1ef8746aee97dbec826d9`.
-  Next selected increment: **PS01-INCREMENT-09-NORMAL-DEMOGRAPHIC-CONTINUITY**,
-  **Increment 09 — Normal Reproduction Activation & Physical Subsistence Composition**.
-  This is an activation/food-prerequisite integration gap; capacity remains 30
-  and is not a demonstrated demographic blocker. A future implementation mission
-  may begin only from a published canonical state containing this selection.
-  No product implementation or new simulation is performed by this documentation
-  mission. PS01 remains incomplete; Wave 6 is unauthorized. See the
+  Increment 09, **PS01-INCREMENT-09-NORMAL-DEMOGRAPHIC-CONTINUITY**, is
+  **COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at
+  `2886d8bdb7eef257759fa6f42647e51fca891f58`. Normal prospective reproduction
+  now composes accepted physical meals with existing lifecycle/care prerequisites;
+  capacity remains 30. First-birth/restart proof does not establish
+  multigenerational demographic durability. The canonical gate remains historical
+  FAIL (6555/3); supplemental stages 6–35 PASS are separate evidence.
+  See the [publication record](docs/pebblelab/PS01_INCREMENT_09_PUBLICATION.md) and
+  [unchanged independent senior review](docs/pebblelab/PS01_INCREMENT_09_INDEPENDENT_SENIOR_REVIEW_2026-10-08.md).
+  No next increment is selected; the supervisor must explicitly decide the next
+  PS01 mission. PS01 remains incomplete; Wave 6 is unauthorized. See the
   [accepted reconciliation and selection](docs/pebblelab/CURRENT_STATE.md#supervisor-accepted-characterization-reconciliation),
   [Increment 09 contract](docs/pebblelab/PEBBLE_CIVILIZATION_ROADMAP.md#selected-increment-09--normal-reproduction-activation--physical-subsistence-composition),
   [PS01_INCREMENT_08_NORMAL_CONTINUITY.md](docs/pebblelab/PS01_INCREMENT_08_NORMAL_CONTINUITY.md),

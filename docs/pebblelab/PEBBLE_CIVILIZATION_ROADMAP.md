@@ -118,11 +118,14 @@ at `a4f07590b6d899b7cd8d8c25e5b2824aff85c1c7`. The subsequent historical failed
 characterization discovered two terminal-identity blockers, now corrected and
 published at `01347e34910e9d16329d1341d3aff6e6cfb3cf70` with remote verification.
 The supervisor accepts the completed evidence reconciliation as
-**PS01_CHARACTERIZATION_SUFFICIENT_FOR_SUPERVISOR_RECALIBRATION** and selects
-**PS01-INCREMENT-09-NORMAL-DEMOGRAPHIC-CONTINUITY** as the next PS01 integration
-increment. Implementation belongs to a future mission, starting only from a
-published canonical state containing this selection. PS01 remains incomplete;
-Wave 6 and CIV-48 implementation remain unauthorized, and Gate H remains planned.
+**PS01_CHARACTERIZATION_SUFFICIENT_FOR_SUPERVISOR_RECALIBRATION** and selected
+**PS01-INCREMENT-09-NORMAL-DEMOGRAPHIC-CONTINUITY**. Increment 09 is now
+**COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at
+`2886d8bdb7eef257759fa6f42647e51fca891f58`. See the
+[verified publication record](PS01_INCREMENT_09_PUBLICATION.md). No next increment is selected;
+the next product mission requires an explicit supervisor decision. PS01 remains
+incomplete; Wave 6 and CIV-48 implementation remain unauthorized, and Gate H
+remains planned.
 See the [accepted characterization and selection](#supervisor-accepted-characterization-reconciliation) and
 [PS01_INCREMENT_08_NORMAL_CONTINUITY.md](PS01_INCREMENT_08_NORMAL_CONTINUITY.md). CIV-48 remains not started,
 implementation unauthorized and deferred behind the slice and evidence-driven
@@ -294,9 +297,10 @@ PS01 terminal historical identity correction: PUBLISHED / REMOTE VERIFIED
 PS01 terminal historical identity correction published HEAD: 01347e34910e9d16329d1341d3aff6e6cfb3cf70
 PS01 historical characterization: FAIL / PS01_CHARACTERIZATION_PRODUCT_BLOCKER_DISCOVERED
 characterization reconciliation: PS01_CHARACTERIZATION_SUFFICIENT_FOR_SUPERVISOR_RECALIBRATION / SUPERVISOR ACCEPTED
-next selected PS01 integration increment: PS01-INCREMENT-09-NORMAL-DEMOGRAPHIC-CONTINUITY
-Increment 09 status: SELECTED AS NEXT PS01 INTEGRATION INCREMENT
-future implementation prerequisite: PUBLISHED CANONICAL STATE CONTAINING SUPERVISOR SELECTION / FUTURE MISSION
+Increment 09 status: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+Increment 09 published HEAD: 2886d8bdb7eef257759fa6f42647e51fca891f58
+next selected PS01 integration increment: NONE — SUPERVISOR DECISION REQUIRED
+next product mission: NOT SELECTED OR AUTHORIZED BY THIS RECONCILIATION
 CIV-33: COMPLETE AND PUBLISHED
 V4-GATE-C-v1: ACQUIRED AND PUBLISHED
 V4-MILESTONE-RENEWABLE-SUBSISTENCE-v1: COMPLETE AND PUBLISHED
@@ -1719,9 +1723,10 @@ PS01 terminal historical identity correction: PUBLISHED / REMOTE VERIFIED
 PS01 terminal historical identity correction published HEAD: 01347e34910e9d16329d1341d3aff6e6cfb3cf70
 PS01 historical characterization: FAIL / PS01_CHARACTERIZATION_PRODUCT_BLOCKER_DISCOVERED
 characterization reconciliation: PS01_CHARACTERIZATION_SUFFICIENT_FOR_SUPERVISOR_RECALIBRATION / SUPERVISOR ACCEPTED
-next selected PS01 integration increment: PS01-INCREMENT-09-NORMAL-DEMOGRAPHIC-CONTINUITY
-Increment 09 status: SELECTED AS NEXT PS01 INTEGRATION INCREMENT
-future implementation prerequisite: PUBLISHED CANONICAL STATE CONTAINING SUPERVISOR SELECTION / FUTURE MISSION
+Increment 09 status: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+Increment 09 published HEAD: 2886d8bdb7eef257759fa6f42647e51fca891f58
+next selected PS01 integration increment: NONE — SUPERVISOR DECISION REQUIRED
+next product mission: NOT SELECTED OR AUTHORIZED BY THIS RECONCILIATION
 CIV-39 status: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
 Gate F status: ACQUIRED AND PUBLISHED — REMOTE VERIFIED
@@ -2607,31 +2612,37 @@ not promoted to a product blocker. No repeated 36k campaign is required for the
 current roadmap decision. Arbitrary-seed or unlimited-duration completeness is
 not claimed.
 
-### Selected Increment 09 — Normal Reproduction Activation & Physical Subsistence Composition
+<a id="selected-increment-09--normal-reproduction-activation--physical-subsistence-composition"></a>
+
+### Published Increment 09 — Normal Reproduction Activation & Physical Subsistence Composition
 
 Identifier: **PS01-INCREMENT-09-NORMAL-DEMOGRAPHIC-CONTINUITY**.
-Status: **SELECTED AS NEXT PS01 INTEGRATION INCREMENT**.
+Status: **COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED**.
+Published product/qualification HEAD: `2886d8bdb7eef257759fa6f42647e51fca891f58`,
+tree `a3f745d4a077a6b5f22e7194e397f8493aab299c`; user publication remotely verified
+on 2026-10-08. See the [publication record](PS01_INCREMENT_09_PUBLICATION.md) and
+[unchanged independent senior review](PS01_INCREMENT_09_INDEPENDENT_SENIOR_REVIEW_2026-10-08.md).
 
-The selected owning gap is
+The original selected owning gap was
 **MISSING NORMAL REPRODUCTION ACTIVATION + PHYSICAL-SUBSISTENCE/DEMOGRAPHIC-PREREQUISITE INTEGRATION**.
 It is not a **POPULATION CAPACITY BLOCKER**, agriculture increment, economy
 increment or navigation correction.
 
-Lifecycle initializes reproduction disabled and normal founder bootstrap does
-not automatically enable it. Manual `/lab reproduction on` exists but was not
-used. Planning requires enabled reproduction and adequate/abundant legacy
-`localEcologyState.currentPressure`; `accessibleFood` uses legacy ecology yield
+Historical rationale at selection, before I09: lifecycle initialized reproduction
+disabled and normal founder bootstrap did not automatically enable it. Manual
+`/lab reproduction on` existed but was not used in characterization. Planning
+required enabled reproduction and adequate/abundant legacy
+`localEcologyState.currentPressure`; `accessibleFood` read legacy ecology yield
 plus abstract agent/camp `foodRaw`. Native PS01 berry acquisition and consumption
-use physical Pebble/Core custody instead. The characterized normal founder path
-has no initialized legacy ecological pressure and sampled demographic
-`accessibleFood` is zero. Mature unrelated pairs exist, and 24 founders have
-six nominal slots under capacity 30, but there is no otherwise-valid birth or
-admission observed rejected due to capacity. Absence of births is missing
-activation/prerequisite integration, not demonstrated capacity suppression.
+used physical Pebble/Core custody. The characterized normal path lacked legacy
+pressure and sampled demographic `accessibleFood` was zero. Mature unrelated
+pairs existed and 24 founders had six nominal free slots under capacity 30;
+no otherwise-valid birth/admission was observed rejected due to capacity.
+That absence of births established the integration gap addressed by I09.
 
-The future implementation mission must establish a normal, non-proof-only path
-in which existing reproduction can become legitimately eligible when
-existing authoritative conditions support it. Architectural contract:
+The published implementation establishes a normal, non-proof-only path in
+which existing reproduction becomes eligible when authoritative conditions
+support it. Its existing architectural contract remains:
 
 - Keep `AgentSimulationSession` as the sole civilization aggregate/transition
   owner; no second demographic owner, ecology or food authority.
@@ -2651,10 +2662,17 @@ existing authoritative conditions support it. Architectural contract:
   follow-up requires post-I09 evidence of legitimate demand suppressed by that
   bound and separate authorization.
 
-Implementation design remains for the future **XHigh** mission after source
-audit. That mission may begin only from a **published canonical state containing
-this supervisor selection**. This documentation/status mission does not
-implement Increment 09 or authorize implementation of any deferred owner.
+Published source audit selected session-owned composition of accepted physical
+meal receipts, current physiology and care; new plans pin both parental meals.
+Schema 46 explicitly versions that meaning while historical 44/45 retain their
+activation/prerequisite and replay semantics. Accepted first native birth,
+scarcity zero-birth control, deterministic repeat, restart, body/custody and
+real-client evidence are recorded in the publication record. Focused 737/0 passes;
+the canonical gate remains FAIL 6555/3, with supplemental 6–35 PASS separately.
+Neither that proof nor senior approval establishes multigenerational demographic
+durability or completes PS01. No next increment is selected or authorized;
+the supervisor must assess remaining PS01 gaps and explicitly choose the next
+mission. CIV-48/Wave 6 remain unauthorized; Gate H remains planned.
 
 ### Deferred characterization questions
 
