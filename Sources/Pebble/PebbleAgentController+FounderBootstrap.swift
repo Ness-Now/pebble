@@ -28,6 +28,10 @@ extension PebbleAgentController {
         try session.setWildSubsistenceEnabled(true)
         try session.setPhysicalFoodSurvivalEnabled(true)
         try session.setAutonomousActivityEnabled(true)
+        if session.dependentCareEnabled, session.kinshipEnabled,
+           session.geneticsEnabled, session.homeostasisEnabled {
+            try session.initializeNormalPhysicalReproduction()
+        }
     }
 
     /// Uses the ordinary Observer and durable codec on the unpublished candidate.

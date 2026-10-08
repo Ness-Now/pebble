@@ -486,8 +486,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         guard values.count == 3 else { return nil }
         return AgentPosition(x: values[0], y: values[1], z: values[2])
     }()
-    private let increment08LivePhase = ProcessInfo.processInfo.environment["PEBBLELAB_PS01_INCREMENT08_LIVE_PHASE"]
-    private let increment08LiveDirectory = ProcessInfo.processInfo.environment["PEBBLELAB_PS01_INCREMENT08_LIVE_CAPTURE_DIR"]
+    private let increment09LiveEnabled = ProcessInfo.processInfo.environment["PEBBLELAB_PS01_INCREMENT09_LIVE_PHASE"] != nil
+    private let increment08LivePhase = ProcessInfo.processInfo.environment["PEBBLELAB_PS01_INCREMENT09_LIVE_PHASE"] ?? ProcessInfo.processInfo.environment["PEBBLELAB_PS01_INCREMENT08_LIVE_PHASE"]
+    private let increment08LiveDirectory = ProcessInfo.processInfo.environment["PEBBLELAB_PS01_INCREMENT09_LIVE_CAPTURE_DIR"] ?? ProcessInfo.processInfo.environment["PEBBLELAB_PS01_INCREMENT08_LIVE_CAPTURE_DIR"]
     private var increment08LiveStage = 0
     private var increment08LiveResumeTick = 0
     private var increment08LiveConsumed: UInt64 = 0
@@ -1835,10 +1836,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         precondition(game.worldContinuationReady && agentController.runtimeErrorCount == 0
             && agentController.fatalSessionIntegrityFailure == nil, "I08 live integrity")
         let consumed = session.physicalFoodSurvivalSnapshot()?.totalConsumedQuantity ?? 0
+        let incrementLabel = increment09LiveEnabled ? "09" : "08"
+        let birth = session.birthsSnapshot().first
+        if increment09LiveEnabled, birth == nil { return }
         let carrying = agentController.probesByAgentId.values.filter {
             $0.carriedItems.compactMap { $0 }.contains { itemName($0.id) == "sweet_berries" }
         }.sorted { $0.labAgentId < $1.labAgentId }
-        guard let target = carrying.first ?? agentController.probesByAgentId.values.sorted(by: { $0.labAgentId < $1.labAgentId }).first else { return }
+        guard let target = (increment09LiveEnabled ? birth.flatMap { agentController.probesByAgentId[$0.newbornID.rawValue] } : carrying.first) ?? agentController.probesByAgentId.values.sorted(by: { $0.labAgentId < $1.labAgentId }).first else { return }
         let position = AgentPosition(x: Int(target.x.rounded(.down)), y: Int(target.y.rounded(.down)), z: Int(target.z.rounded(.down)))
         func capture(_ name: String) {
             let cx = position.x >> 4, cz = position.z >> 4
@@ -1847,18 +1851,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
             let neighborStates = [(-1, 0), (1, 0), (0, -1), (0, 1)].map {
                 game.world.getChunk(cx + $0.0, cz + $0.1).map { String(describing: $0.status) } ?? "absent"
             }.joined(separator: ",")
-            print("[lab-live] PS01_INCREMENT_08_RENDER_READY phase=\(name) worldTick=\(game.world.time) target=\(position.x),\(position.y),\(position.z) chunkStatus=\(game.world.getChunk(cx, cz).map { String(describing: $0.status) } ?? "absent") neighbors=\(neighborStates) sections=\(renderer.sections.count) targetOpaque=\(terrain?.opaque?.indexCount ?? 0) targetCutout=\(terrain?.cutout?.indexCount ?? 0) targetTranslucent=\(terrain?.translucent?.indexCount ?? 0) surfaceNeighborhood=9 loadingScreen=0")
+            print("[lab-live] PS01_INCREMENT_\(incrementLabel)_RENDER_READY phase=\(name) worldTick=\(game.world.time) target=\(position.x),\(position.y),\(position.z) chunkStatus=\(game.world.getChunk(cx, cz).map { String(describing: $0.status) } ?? "absent") neighbors=\(neighborStates) sections=\(renderer.sections.count) targetOpaque=\(terrain?.opaque?.indexCount ?? 0) targetCutout=\(terrain?.cutout?.indexCount ?? 0) targetTranslucent=\(terrain?.translucent?.indexCount ?? 0) surfaceNeighborhood=9 loadingScreen=0")
             let path = directory + "/" + name + ".png"
             increment08LiveCapturePath = path
-            scheduleIncrement07LiveCapture(path: path, phase: "i08-" + name, target: position,
-                metadata: "increment=08 living=\(session.snapshot().agents.count) worldTick=\(game.world.time) civilizationTick=\(session.tick) consumed=\(consumed) carryingAgents=\(carrying.count)", terminateAfterCapture: false)
-            print("[lab-live] PS01_INCREMENT_08_CAPTURE_REQUEST phase=\(name) world=\(game.worldRec!.id) simulation=\(session.simulationID.rawValue) tick=\(session.tick) consumed=\(consumed) carryingAgents=\(carrying.count) cameraAuthority=renderOnlyObserver path=\(path)")
+            scheduleIncrement07LiveCapture(path: path, phase: "i" + incrementLabel + "-" + name, target: position,
+                metadata: "increment=\(incrementLabel) newborn=\(birth?.newbornID.rawValue ?? "none") births=\(session.birthsSnapshot().count) living=\(session.snapshot().agents.count) worldTick=\(game.world.time) civilizationTick=\(session.tick) consumed=\(consumed) carryingAgents=\(carrying.count)", terminateAfterCapture: false)
+            print("[lab-live] PS01_INCREMENT_\(incrementLabel)_CAPTURE_REQUEST phase=\(name) world=\(game.worldRec!.id) simulation=\(session.simulationID.rawValue) tick=\(session.tick) consumed=\(consumed) carryingAgents=\(carrying.count) newborn=\(birth?.newbornID.rawValue ?? "none") births=\(session.birthsSnapshot().count) cameraAuthority=renderOnlyObserver path=\(path)")
             fflush(stdout)
         }
         if increment08LiveStage == 0 {
             guard pendingCmds == nil, increment08LiveTerrainReady(around: position) else { return }
-            if (phase == "write" || phase == "resave") && carrying.isEmpty { return }
-            precondition(session.snapshot().agents.count == 24, "I08 live founder envelope")
+            if !increment09LiveEnabled {
+                if (phase == "write" || phase == "resave") && carrying.isEmpty { return }
+                precondition(session.snapshot().agents.count == 24, "I08 live founder envelope")
+            } else {
+                precondition(session.normalPhysicalReproductionEnabled && birth != nil,
+                             "I09 native birth authority")
+                precondition(game.world.entities.compactMap { ($0 as? LabCoreAgentEntity)?.labAgentId }.sorted()
+                    == session.expectedActiveAgentIDs().map(\.rawValue).sorted(), "I09 exact bodies")
+            }
             capture(phase == "write" || phase == "resave" ? "before-save" : "after-restore")
             increment08LiveStage = 1
             increment08LiveConsumed = consumed
@@ -1877,16 +1888,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
             let material = agentController.probesByAgentId.values.reduce(0) { total, probe in
                 total + probe.carriedItems.compactMap { $0 }.reduce(0) { $0 + $1.count }
             }
-            precondition(phase != "read" || consumed > increment08LiveConsumed, "I08 live restored food remains usable")
+            precondition(increment09LiveEnabled || phase != "read" || consumed > increment08LiveConsumed, "I08 live restored food remains usable")
             precondition(session.wildSubsistenceEnabled && session.physicalFoodSurvivalEnabled,
                 "I08 live ordinary subsistence remains enabled")
+            if increment09LiveEnabled {
+                try! session.durableStateBytes().write(to: URL(fileURLWithPath: directory + "/" + phase + ".session.json"), options: .atomic)
+            }
             DispatchQueue.main.async { [weak self] in
                 guard let self else { return }
                 precondition(self.game.saveAndFlush(), "I08 live Save/Continue")
                 precondition((try! self.agentController.session!.durableStateDigest().rawValue) == digest, "I08 live capture changes civilization")
                 precondition(self.game.exitToTitle(), "I08 live Save/Exit")
                 precondition(self.agentController.session == nil && self.agentController.probesByAgentId.isEmpty, "I08 live lifecycle cleanup")
-                print("[lab-live] PS01_INCREMENT_08_LIVE_PASS phase=\(phase) tick=\(tick) digest=\(digest) carried=\(material) consumed=\(consumed) foundersCreated=\(phase == "write" ? 24 : 0) subsistenceEnabled=1 saveContinue=PASS saveExit=PASS probesFinal=0")
+                print("[lab-live] PS01_INCREMENT_\(incrementLabel)_LIVE_PASS phase=\(phase) tick=\(tick) digest=\(digest) carried=\(material) consumed=\(consumed) foundersCreated=\(phase == "write" ? 24 : 0) subsistenceEnabled=1 saveContinue=PASS saveExit=PASS probesFinal=0")
                 fflush(stdout)
                 NSApp.terminate(nil)
             }
@@ -1894,7 +1908,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, MTKViewDelegate, NSWin
         }
         if increment08LiveStage == 2 && game.world.time - increment08LiveResumeTick >= 1200
             && increment08LiveTerrainReady(around: position)
-            && (phase != "read" || consumed > increment08LiveConsumed) {
+            && (increment09LiveEnabled || phase != "read" || consumed > increment08LiveConsumed) {
             capture("continued")
             increment08LiveStage = 3
         }
@@ -2252,6 +2266,10 @@ if let occupancyStatus = PebbleContinuationEmbodimentQualification.runIfRequeste
 
 if let blockerStatus = PebbleMortalityCheckpointBlockerHarness.runIfRequested() {
     exit(blockerStatus)
+}
+
+if let qualificationStatus = PebbleIncrement09QualificationHarness.runIfRequested() {
+    exit(qualificationStatus)
 }
 
 if let continuationStatus = PebbleIncrement08ContinuationHarness.runIfRequested() {

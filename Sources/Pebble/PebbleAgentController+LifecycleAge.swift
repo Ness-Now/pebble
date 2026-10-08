@@ -417,8 +417,8 @@ extension PebbleAgentController {
                 + "pairs=\(reproduction.eligiblePairs.map { $0.map(\.rawValue).joined(separator: "+") }.joined(separator: ",")) "
                 + "plan=\(plan?.planID.rawValue ?? "none") parents=\(plan?.progenitorIDs.map(\.rawValue).joined(separator: ",") ?? "none") "
                 + "created=\(plan?.createdTick ?? -1) due=\(plan?.dueTick ?? -1) "
-                + "population=\(reproduction.populationCount)/\(reproduction.populationCapacity) "
-                + "pressure=\(reproduction.pressure?.rawValue ?? "none") food=\(reproduction.accessibleFood) "
+                + "population=\(reproduction.populationCount.map(String.init) ?? "unavailable")/\(reproduction.populationCapacity.map(String.init) ?? "unavailable") "
+                + "pressure=\(reproduction.pressure?.rawValue ?? "none") food=\(reproduction.accessibleFood.map(String.init) ?? "unavailable") "
                 + "lastCancellation=\(reproduction.lastCancellationReason?.rawValue ?? "none") "
                 + "digest=\(reproduction.digest)"
         )
@@ -453,9 +453,9 @@ extension PebbleAgentController {
                 + "activePlans=\(summary.activePlanCount) plan=\(plan?.planID.rawValue ?? "none") "
                 + "parents=\(plan?.progenitorIDs.map(\.rawValue).joined(separator: ",") ?? "none") "
                 + "created=\(plan?.createdTick ?? -1) due=\(plan?.dueTick ?? -1) "
-                + "population=\(reproduction.populationCount)/\(reproduction.populationCapacity) "
+                + "population=\(reproduction.populationCount.map(String.init) ?? "unavailable")/\(reproduction.populationCapacity.map(String.init) ?? "unavailable") "
                 + "pressure=\(reproduction.pressure?.rawValue ?? "none") "
-                + "food=\(reproduction.accessibleFood) "
+                + "food=\(reproduction.accessibleFood.map(String.init) ?? "unavailable") "
                 + "lastCancellation=\(reproduction.lastCancellationReason?.rawValue ?? "none") "
                 + "births=\(summary.totalBirthCount) digest=\(reproduction.digest)."
         )

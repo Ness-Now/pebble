@@ -44,6 +44,9 @@ extension AgentSimulationSession {
             )
         } else {
             guard physicalFoodSurvivalState != nil else { return }
+            guard !normalPhysicalReproductionEnabled else {
+                throw AgentSessionError.physicalFoodSurvival(.invalidState("normal reproduction owns physical prerequisite semantics"))
+            }
             physicalFoodSurvivalState = nil
             recordFeatureToggle(name: "physicalFoodSurvival", enabled: false)
         }

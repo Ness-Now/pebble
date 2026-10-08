@@ -46,6 +46,7 @@ public enum AgentReplaySchema {
     public static let lexicalDivergenceVersion = 43
     public static let temporalPhysiologyVersion = 44
     public static let pathReadinessLivenessVersion = 45
+    public static let normalPhysicalReproductionVersion = 46
 
     public static func supports(_ version: Int) -> Bool {
         version == currentVersion || version == populationVersion
@@ -78,6 +79,7 @@ public enum AgentReplaySchema {
             || version == lexicalDivergenceVersion
             || version == temporalPhysiologyVersion
             || version == pathReadinessLivenessVersion
+            || version == normalPhysicalReproductionVersion
     }
 }
 
@@ -1320,6 +1322,9 @@ public struct AgentReplayRecorder {
         simulationID = checkpoint.simulationID
         initialTick = checkpoint.tick.rawValue
         schemaVersion = checkpoint.schemaVersion
+            == AgentCheckpointSchema.normalPhysicalReproductionVersion
+            ? AgentReplaySchema.normalPhysicalReproductionVersion
+            : checkpoint.schemaVersion
             == AgentCheckpointSchema.pathReadinessLivenessVersion
             ? AgentReplaySchema.pathReadinessLivenessVersion
             : checkpoint.schemaVersion

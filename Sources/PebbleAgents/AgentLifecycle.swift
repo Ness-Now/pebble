@@ -219,12 +219,20 @@ public struct AgentReproductionPlan: Codable, Equatable, Sendable {
     public let createdTick: Int
     public let dueTick: Int
     public let populationAtPlanning: Int
-    public let pressureAtPlanning: AgentSubsistencePressureLevel
+    public let pressureAtPlanning: AgentSubsistencePressureLevel?
     public internal(set) var resolvedTick: Int?
     public internal(set) var status: AgentReproductionPlanStatus
     public internal(set) var reason: AgentReproductionPlanReason?
     public let createdEventID: AgentCausalEventID
     public internal(set) var terminalEventID: AgentCausalEventID?
+    public internal(set) var physicalSubsistenceEvidence: AgentReproductiveSubsistenceEvidence?
+}
+
+/// Accepted physical nourishment, owned by PhysicalFoodSurvival. A plan pins
+/// these receipts so bounded consumption-history eviction cannot reroll it.
+/// This is prerequisite provenance, not inventory or an ecological census.
+public struct AgentReproductiveSubsistenceEvidence: Codable, Equatable, Sendable {
+    public let meals: [AgentValidatedPhysicalFoodConsumptionOutcome]
 }
 
 public struct AgentReproductionSnapshot: Codable, Equatable, Sendable {
@@ -232,10 +240,10 @@ public struct AgentReproductionSnapshot: Codable, Equatable, Sendable {
     public let eligibleMatureResidentIDs: [AgentID]
     public let eligiblePairs: [[AgentID]]
     public let activePlans: [AgentReproductionPlan]
-    public let populationCount: Int
-    public let populationCapacity: Int
+    public let populationCount: Int?
+    public let populationCapacity: Int?
     public let pressure: AgentSubsistencePressureLevel?
-    public let accessibleFood: Int
+    public let accessibleFood: Int?
     public let lastCancellationReason: AgentReproductionPlanReason?
     public let digest: String
 }
@@ -352,6 +360,7 @@ public struct AgentLifecycleState: Codable, Equatable, Sendable {
     public internal(set) var evictionCounts: AgentLifecycleEvictionCounts
     public let initializedEventID: AgentCausalEventID
     public internal(set) var lastLifecycleEventID: AgentCausalEventID
+    public internal(set) var normalPhysicalReproductionEventID: AgentCausalEventID?
 }
 
 public struct AgentLifecycleSnapshot: Codable, Equatable, Sendable {

@@ -32,12 +32,12 @@ extension AgentSimulationSession {
                 return "m|\(member.agentID.rawValue)|\(member.ordinal.rawValue)|\(member.origin.rawValue)|\(age)|\(member.currentStage.rawValue)|\(member.progenitorIDs.map(\.rawValue).joined(separator: ","))|\(member.completedBirthCount)|\(member.lastCompletedBirthTick.map(String.init) ?? "none")"
             }.joined(separator: ";"),
             plans.map {
-                "p|\($0.planID.rawValue)|\($0.progenitorIDs.map(\.rawValue).joined(separator: ","))|\($0.createdTick)|\($0.dueTick)|\($0.populationAtPlanning)|\($0.pressureAtPlanning.rawValue)|\($0.status.rawValue)|\($0.reason?.rawValue ?? "none")"
+                "p|\($0.planID.rawValue)|\($0.progenitorIDs.map(\.rawValue).joined(separator: ","))|\($0.createdTick)|\($0.dueTick)|\($0.populationAtPlanning)|\($0.pressureAtPlanning?.rawValue ?? "none")|\($0.status.rawValue)|\($0.reason?.rawValue ?? "none")"
             }.joined(separator: ";"),
             births.map {
                 "b|\($0.birthID.rawValue)|\($0.newbornID.rawValue)|\($0.ordinal.rawValue)|\($0.birthTick)|\($0.progenitorIDs.map(\.rawValue).joined(separator: ","))|\($0.position.x),\($0.position.y),\($0.position.z)|\($0.worldFingerprint)"
             }.joined(separator: ";"),
-            "total=\(lifecycle.totalBirthCount)|rolling=\(lifecycle.rollingDigest)",
+            "total=\(lifecycle.totalBirthCount)|rolling=\(lifecycle.rollingDigest)" + (lifecycle.normalPhysicalReproductionEventID.map { "|normalPhysical=\($0.sequence.rawValue)" } ?? ""),
             "evictions=\(lifecycle.evictionCounts.births),\(lifecycle.evictionCounts.plans),\(lifecycle.evictionCounts.frames)",
         ].joined(separator: "|")
         return AgentLifecycleSnapshot(
@@ -78,10 +78,10 @@ extension AgentSimulationSession {
                 eligibleMatureResidentIDs: [],
                 eligiblePairs: [],
                 activePlans: [],
-                populationCount: 0,
-                populationCapacity: 0,
+                populationCount: nil,
+                populationCapacity: nil,
                 pressure: nil,
-                accessibleFood: 0,
+                accessibleFood: nil,
                 lastCancellationReason: nil,
                 digest: AgentLifecycleDigest.make("reproduction-disabled")
             )
@@ -102,7 +102,7 @@ extension AgentSimulationSession {
             "plans=\(active.map(\.planID.rawValue).joined(separator: ","))",
             "population=\(registry.members.count)/\(registry.configuration.maximumActivePopulation)",
             "pressure=\(eligibility.pressure?.rawValue ?? "none")",
-            "food=\(eligibility.accessibleFood)",
+            "food=\(eligibility.accessibleFood.map(String.init) ?? "unavailable")",
             "last=\(lastCancellation?.rawValue ?? "none")",
         ].joined(separator: "|")
         return AgentReproductionSnapshot(
@@ -332,17 +332,29 @@ extension AgentSimulationSession {
                     >= lifecycle.configuration.reproductionCooldownTicks
               }) ?? true,
               let registry = populationRegistry,
-              registry.members.count < registry.configuration.maximumActivePopulation,
-              let ecology = localEcologyState,
-              ecology.currentPressure == .abundant || ecology.currentPressure == .adequate else {
+              registry.members.count < registry.configuration.maximumActivePopulation else {
             return
         }
         let eligibility = reproductionEligibility(
             lifecycle: lifecycle, registry: registry, evaluationTick: evaluationTick
         )
-        guard eligibility.accessibleFood > 0,
-              let pair = eligibility.pairs.first else { return }
-        let planningPressure = ecology.currentPressure!
+        let pair: [AgentLifecycleMember]
+        let physicalEvidence: AgentReproductiveSubsistenceEvidence?
+        if normalPhysicalReproductionEnabled {
+            guard let supported = eligibility.pairs.first(where: {
+                normalReproductiveEvidence(for: $0) != nil
+            }) else { return }
+            pair = supported
+            physicalEvidence = normalReproductiveEvidence(for: pair)
+        } else {
+            guard localEcologyState?.currentPressure == .abundant
+                    || localEcologyState?.currentPressure == .adequate,
+                  (eligibility.accessibleFood ?? 0) > 0,
+                  let legacyPair = eligibility.pairs.first else { return }
+            pair = legacyPair
+            physicalEvidence = nil
+        }
+        let planningPressure = physicalEvidence == nil ? localEcologyState?.currentPressure : nil
         let progenitors = pair.map(\.agentID).sorted()
         let planID = AgentReproductionPlanID(
             rawValue: "reproduction-plan-\(String(format: "%08d", evaluationTick))-\(progenitors[0].rawValue)-\(progenitors[1].rawValue)"
@@ -354,7 +366,9 @@ extension AgentSimulationSession {
             subjectID: progenitors[1],
             causes: Array(Set(progenitors.compactMap { id in
                 lifecycle.members.first { $0.agentID == id }?.lastLifecycleEventID
-            })).sorted(),
+            } + (physicalEvidence?.meals.map {
+                AgentCausalEventID(simulationID: simulationID, sequence: $0.consumptionSequence)
+            } ?? []))).sorted(),
             payload: .reproductionPlan(
                 planID: planID.rawValue,
                 progenitorIDs: progenitors.map(\.rawValue),
@@ -377,7 +391,8 @@ extension AgentSimulationSession {
             status: .planned,
             reason: nil,
             createdEventID: event.eventID,
-            terminalEventID: nil
+            terminalEventID: nil,
+            physicalSubsistenceEvidence: physicalEvidence
         ))
         lifecycle.lastLifecycleEventID = event.eventID
         lifecycleState = lifecycle
@@ -461,9 +476,18 @@ extension AgentSimulationSession {
             lifecycleState = lifecycle
             return nil
         }
-        guard localEcologyState?.currentPressure == .abundant
-                || localEcologyState?.currentPressure == .adequate,
-              accessibleFood > 0 else {
+        let subsistenceSupported: Bool
+        if let evidence = plan.physicalSubsistenceEvidence {
+            let parents = plan.progenitorIDs.compactMap { id in
+                lifecycle.members.first { $0.agentID == id }
+            }
+            subsistenceSupported = normalPhysicalReproductionEnabled
+                && normalReproductiveEvidence(for: parents, pinned: evidence) != nil
+        } else {
+            subsistenceSupported = (localEcologyState?.currentPressure == .abundant
+                || localEcologyState?.currentPressure == .adequate) && accessibleFood > 0
+        }
+        guard subsistenceSupported else {
             try cancelReproductionPlan(
                 &lifecycle, index: planIndex, plan: plan,
                 reason: .subsistenceInsufficient, status: .cancelled
@@ -1017,7 +1041,7 @@ extension AgentSimulationSession {
     ) -> (
         candidates: [AgentLifecycleMember],
         pairs: [[AgentLifecycleMember]],
-        accessibleFood: Int,
+        accessibleFood: Int?,
         pressure: AgentSubsistencePressureLevel?
     ) {
         let accessibleFood = localEcologySummary().currentYield
@@ -1062,7 +1086,12 @@ extension AgentSimulationSession {
             if lhs[0].agentID != rhs[0].agentID { return lhs[0].agentID < rhs[0].agentID }
             return lhs[1].agentID < rhs[1].agentID
         }
-        return (candidates, pairs, accessibleFood, localEcologyState?.currentPressure)
+        if normalPhysicalReproductionEnabled {
+            pairs = pairs.filter { normalReproductiveEvidence(for: $0) != nil }
+        }
+        return (candidates, pairs,
+                normalPhysicalReproductionEnabled ? nil : accessibleFood,
+                normalPhysicalReproductionEnabled ? nil : localEcologyState?.currentPressure)
     }
 
     private mutating func trimLifecycleHistories(_ lifecycle: inout AgentLifecycleState) {

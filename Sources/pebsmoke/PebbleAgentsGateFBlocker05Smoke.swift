@@ -574,7 +574,10 @@ func runPebbleAgentsGateFBlocker05Smoke() {
         })
     check("Family compatibility policy rejects unsupported schema integers",
           AgentCheckpointSchema.familyValidationSemantics(for: 24) == nil
-            && AgentCheckpointSchema.familyValidationSemantics(for: 46) == nil)
+            && AgentCheckpointSchema.familyValidationSemantics(for: 47) == nil)
+    check("I09 schema 46 preserves strict Family consent semantics",
+          AgentCheckpointSchema.familyValidationSemantics(for: 46)
+            == .strictDurableConsent)
 
     let cofounded = gateFB05CofoundedSession(
         "gate-f-b05-family-compatibility"

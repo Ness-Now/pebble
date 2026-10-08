@@ -2166,8 +2166,11 @@ func runPebbleAgentsGateFBlocker09Smoke() {
                     == .strictDurableSuccessorPlan
             })
     check("unsupported future schema remains rejected",
-          AgentCheckpointSchema.estateValidationSemantics(for: 46) == nil
-            && !AgentCheckpointSchema.supports(46))
+          AgentCheckpointSchema.estateValidationSemantics(for: 47) == nil
+            && !AgentCheckpointSchema.supports(47))
+    check("I09 schema 46 preserves strict causal Estate authority",
+          AgentCheckpointSchema.estateValidationSemantics(for: 46)
+            == .strictDurableSuccessorPlan)
 
     var compacted = gateFB09BoundaryFixture(
         "gate-f-b09-compacted", causalMaximumEvents: 32

@@ -57,10 +57,12 @@ public enum AgentCheckpointSchema {
     public static let lexicalDivergenceVersion = 43
     public static let temporalPhysiologyVersion = 44
     public static let pathReadinessLivenessVersion = 45
+    public static let normalPhysicalReproductionVersion = 46
 
     public static func usesWorldTimePhysiology(_ version: Int) -> Bool {
         version == temporalPhysiologyVersion
             || version == pathReadinessLivenessVersion
+            || version == normalPhysicalReproductionVersion
     }
 
     public static func familyValidationSemantics(
@@ -87,7 +89,8 @@ public enum AgentCheckpointSchema {
             || version == archiveVersion || version == cultureVersion
             || version == lexicalDivergenceVersion
             || version == temporalPhysiologyVersion
-            || version == pathReadinessLivenessVersion {
+            || version == pathReadinessLivenessVersion
+            || version == normalPhysicalReproductionVersion {
             return .strictDurableConsent
         }
         return nil
@@ -115,7 +118,8 @@ public enum AgentCheckpointSchema {
             || version == archiveVersion || version == cultureVersion
             || version == lexicalDivergenceVersion
             || version == temporalPhysiologyVersion
-            || version == pathReadinessLivenessVersion {
+            || version == pathReadinessLivenessVersion
+            || version == normalPhysicalReproductionVersion {
             return .strictDurableSuccessorPlan
         }
         return nil
@@ -152,6 +156,7 @@ public enum AgentCheckpointSchema {
             || version == lexicalDivergenceVersion
             || version == temporalPhysiologyVersion
             || version == pathReadinessLivenessVersion
+            || version == normalPhysicalReproductionVersion
     }
 }
 
@@ -369,6 +374,8 @@ public struct AgentSessionDurableState: Codable {
         } else if let legacy = session
             .legacyPathReadinessSchemaVersionOverride {
             schemaVersion = legacy
+        } else if session.normalPhysicalReproductionEnabled {
+            schemaVersion = AgentCheckpointSchema.normalPhysicalReproductionVersion
         } else {
             schemaVersion = AgentCheckpointSchema.pathReadinessLivenessVersion
         }
@@ -1865,7 +1872,7 @@ extension AgentSimulationSession {
                 throw AgentCheckpointError.invalidAgent(agent.id)
             }
             let usesPathReadinessLiveness = state.schemaVersion
-                == AgentCheckpointSchema.pathReadinessLivenessVersion
+                >= AgentCheckpointSchema.pathReadinessLivenessVersion
             let movementUsesPathReadiness = agent.lastMovementOutcome.map {
                 $0.status == .readinessUnavailable
                     || $0.pathReadinessReason != nil
@@ -3186,7 +3193,18 @@ extension AgentSimulationSession {
                 )
             }
         }
+        guard (state.schemaVersion == AgentCheckpointSchema.normalPhysicalReproductionVersion)
+                == (state.lifecycleState?.normalPhysicalReproductionEventID != nil),
+              state.schemaVersion >= AgentCheckpointSchema.normalPhysicalReproductionVersion
+                || state.lifecycleState?.plans.allSatisfy({
+                    $0.physicalSubsistenceEvidence == nil && $0.pressureAtPlanning != nil
+                }) != false else {
+            throw AgentCheckpointError.invalidBound("normal reproduction schema")
+        }
         if let lifecycle = state.lifecycleState, let population = state.populationRegistry {
+            try validateNormalReproductionEvidence(lifecycle: lifecycle,
+                physical: state.physicalFoodSurvivalState, clock: state.clock,
+                causal: state.causalLedger)
             try validateLifecycleState(
                 lifecycle,
                 population: population,
