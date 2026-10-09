@@ -36,6 +36,8 @@ These documents form the minimal permanent memory of the project:
 | --- | --- |
 | [`CODEX_START_HERE.md`](../../CODEX_START_HERE.md) | Short entry point, authority map and mission-specific reading routes. |
 | [`CURRENT_STATE.md`](CURRENT_STATE.md) | Compact acquired state, product baseline, debt and next authorized action; [published terminal-identity correction](CURRENT_STATE.md#published-terminal-historical-identity-correction), historical characterization FAIL, [supervisor-accepted reconciliation](CURRENT_STATE.md#supervisor-accepted-characterization-reconciliation). |
+| [`PS01_CARE_NAVIGATION_BLOCKER_01_PUBLICATION.md`](PS01_CARE_NAVIGATION_BLOCKER_01_PUBLICATION.md) | Verified correction publication, exact identity/SHA provenance, bounded care/movement proof, residual slowing limit, historical canonical FAILs and suspended demographic Phase B. |
+| [`PS01_CARE_NAVIGATION_BLOCKER_01_INDEPENDENT_SENIOR_REVIEW_2026-10-09.md`](PS01_CARE_NAVIGATION_BLOCKER_01_INDEPENDENT_SENIOR_REVIEW_2026-10-09.md) | Byte-exact original senior approval; historical pre-publication conditions, Risk-C findings and explicit independent-execution limits. |
 | [`PS01_INCREMENT_09_PUBLICATION.md`](PS01_INCREMENT_09_PUBLICATION.md) | Verified I09 publication identity, accepted independent evidence/provenance, bounded claims, historical FAIL and pending supervisor decision. |
 | [`PS01_INCREMENT_09_REDESIGN.md`](PS01_INCREMENT_09_REDESIGN.md) | Unchanged candidate-time source/owner audit and qualification; LOCAL_REVIEW_CANDIDATE describes its historical boundary. |
 | [`PS01_INCREMENT_09_INDEPENDENT_SENIOR_REVIEW_2026-10-08.md`](PS01_INCREMENT_09_INDEPENDENT_SENIOR_REVIEW_2026-10-08.md) | Byte-exact user-supplied independent senior approval, historical pre-push identity/verdict and explicit execution limits. |
@@ -155,6 +157,11 @@ PS01 historical characterization: FAIL / PS01_CHARACTERIZATION_PRODUCT_BLOCKER_D
 characterization reconciliation: PS01_CHARACTERIZATION_SUFFICIENT_FOR_SUPERVISOR_RECALIBRATION / SUPERVISOR ACCEPTED
 Increment 09 status: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 Increment 09 published HEAD: 2886d8bdb7eef257759fa6f42647e51fca891f58
+PS01 Care Navigation Blocker 01: FIXED / PUBLISHED / SENIOR REVIEW APPROVED / REMOTE VERIFIED
+PS01 Care Navigation Blocker 01 published HEAD: 3224a3c9d88b40d63b755a3658b3fe20c891867c
+PS01 Care Navigation Blocker 01 canonical gate: FAIL 6586/3; historical I09 FAIL 6555/3 preserved
+PS01 demographic Phase B: SUSPENDED — SEPARATE SUPERVISOR AUTHORIZATION REQUIRED
+I10: NOT SELECTED / NOT AUTHORIZED
 next selected PS01 integration increment: NONE — SUPERVISOR DECISION REQUIRED
 next eligible CIV phase: CIV-48 — DEFERRED / NOT STARTED / IMPLEMENTATION NOT AUTHORIZED
 Gate E Evaluation 01: FAIL — HISTORICAL IMMUTABLE EVIDENCE
@@ -174,6 +181,11 @@ PS01 historical characterization: FAIL / PS01_CHARACTERIZATION_PRODUCT_BLOCKER_D
 characterization reconciliation: PS01_CHARACTERIZATION_SUFFICIENT_FOR_SUPERVISOR_RECALIBRATION / SUPERVISOR ACCEPTED
 Increment 09 status: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 Increment 09 published HEAD: 2886d8bdb7eef257759fa6f42647e51fca891f58
+PS01 Care Navigation Blocker 01: FIXED / PUBLISHED / SENIOR REVIEW APPROVED / REMOTE VERIFIED
+PS01 Care Navigation Blocker 01 published HEAD: 3224a3c9d88b40d63b755a3658b3fe20c891867c
+PS01 Care Navigation Blocker 01 canonical gate: FAIL 6586/3; historical I09 FAIL 6555/3 preserved
+PS01 demographic Phase B: SUSPENDED — SEPARATE SUPERVISOR AUTHORIZATION REQUIRED
+I10: NOT SELECTED / NOT AUTHORIZED
 next selected PS01 integration increment: NONE — SUPERVISOR DECISION REQUIRED
 CIV-39: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
@@ -272,6 +284,11 @@ PS01 historical characterization: FAIL / PS01_CHARACTERIZATION_PRODUCT_BLOCKER_D
 characterization reconciliation: PS01_CHARACTERIZATION_SUFFICIENT_FOR_SUPERVISOR_RECALIBRATION / SUPERVISOR ACCEPTED
 Increment 09 status: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
 Increment 09 published HEAD: 2886d8bdb7eef257759fa6f42647e51fca891f58
+PS01 Care Navigation Blocker 01: FIXED / PUBLISHED / SENIOR REVIEW APPROVED / REMOTE VERIFIED
+PS01 Care Navigation Blocker 01 published HEAD: 3224a3c9d88b40d63b755a3658b3fe20c891867c
+PS01 Care Navigation Blocker 01 canonical gate: FAIL 6586/3; historical I09 FAIL 6555/3 preserved
+PS01 demographic Phase B: SUSPENDED — SEPARATE SUPERVISOR AUTHORIZATION REQUIRED
+I10: NOT SELECTED / NOT AUTHORIZED
 next selected PS01 integration increment: NONE — SUPERVISOR DECISION REQUIRED
 CIV-48: NOT STARTED — IMPLEMENTATION NOT AUTHORIZED
 V4-GATE-H-v1: PLANNED

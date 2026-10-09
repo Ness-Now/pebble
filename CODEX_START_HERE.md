@@ -311,6 +311,16 @@ for the compact status. In particular:
   [PS01_INCREMENT_08_NORMAL_CONTINUITY.md](docs/pebblelab/PS01_INCREMENT_08_NORMAL_CONTINUITY.md),
   [PS01_I08_BLOCKER_04_CROSS_WORLD_STRONGHOLD_CACHE_CONCURRENCY.md](docs/pebblelab/PS01_I08_BLOCKER_04_CROSS_WORLD_STRONGHOLD_CACHE_CONCURRENCY.md) and
   [PS01_I08_BLOCKER_01_MORTALITY_CHECKPOINT_CAUSAL_COMPATIBILITY.md](docs/pebblelab/PS01_I08_BLOCKER_01_MORTALITY_CHECKPOINT_CAUSAL_COMPATIBILITY.md).
+- PS01 Care Navigation Blocker 01 is **FIXED + PUBLISHED + SENIOR REVIEW
+  APPROVED + REMOTE VERIFIED** at `3224a3c9d88b40d63b755a3658b3fe20c891867c`.
+  See the [publication record](docs/pebblelab/PS01_CARE_NAVIGATION_BLOCKER_01_PUBLICATION.md)
+  and [unchanged senior review](docs/pebblelab/PS01_CARE_NAVIGATION_BLOCKER_01_INDEPENDENT_SENIOR_REVIEW_2026-10-09.md).
+  Authentic care recovery is proved; slowed steps unable to reach an exact
+  center remain blocked. Full canonical gate remains FAIL 6586/3 on zoo,
+  combat and eight-A* identities; I09 historical 6555/3 stays immutable.
+  Supplemental 6–35 PASS is separate. PS01 remains REQUIRED / IN PROGRESS /
+  NOT COMPLETE. I10 is not selected or authorized. The 7,200-tick demographic
+  Phase B remains **SUSPENDED — SEPARATE SUPERVISOR AUTHORIZATION REQUIRED**.
 - CIV-48 remains **NOT STARTED**, implementation is not authorized, and it is
   deferred until PLAYABLE SLICE 01 and the resulting evidence-driven roadmap
   recalibration are complete. Gate H remains planned. See

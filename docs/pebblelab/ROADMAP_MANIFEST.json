@@ -390,7 +390,10 @@
     "playableSlice01TerminalHistoricalIdentityCorrectionPublishedCanonicalTree": "2b39680f29c4961a6cb967f643cd4c8d96c82ab1",
     "playableSlice01TerminalHistoricalIdentityCorrectionPublishedCanonicalParent": "ec183bb2884b0074b8905628570faa9be972a12f",
     "playableSlice01Increment09PublishedCanonicalHead": "2886d8bdb7eef257759fa6f42647e51fca891f58",
-    "playableSlice01Increment09PublishedCanonicalTree": "a3f745d4a077a6b5f22e7194e397f8493aab299c"
+    "playableSlice01Increment09PublishedCanonicalTree": "a3f745d4a077a6b5f22e7194e397f8493aab299c",
+    "playableSlice01CareNavigationBlocker01PublishedCanonicalHead": "3224a3c9d88b40d63b755a3658b3fe20c891867c",
+    "playableSlice01CareNavigationBlocker01PublishedCanonicalTree": "dbad32cd6d1c403742bb732e9389d48ddef61e59",
+    "playableSlice01CareNavigationBlocker01PublishedCanonicalParent": "891cb6cb2811099b3731a0802d98f1f3cd08ba57"
   },
   "documents": {
     "startHere": "CODEX_START_HERE.md",
@@ -470,7 +473,9 @@
     "playableSlice01Increment08": "docs/pebblelab/PS01_INCREMENT_08_NORMAL_CONTINUITY.md",
     "playableSlice01Increment09Publication": "docs/pebblelab/PS01_INCREMENT_09_PUBLICATION.md",
     "playableSlice01Increment09Qualification": "docs/pebblelab/PS01_INCREMENT_09_REDESIGN.md",
-    "playableSlice01Increment09IndependentSeniorReview": "docs/pebblelab/PS01_INCREMENT_09_INDEPENDENT_SENIOR_REVIEW_2026-10-08.md"
+    "playableSlice01Increment09IndependentSeniorReview": "docs/pebblelab/PS01_INCREMENT_09_INDEPENDENT_SENIOR_REVIEW_2026-10-08.md",
+    "playableSlice01CareNavigationBlocker01Publication": "docs/pebblelab/PS01_CARE_NAVIGATION_BLOCKER_01_PUBLICATION.md",
+    "playableSlice01CareNavigationBlocker01IndependentSeniorReview": "docs/pebblelab/PS01_CARE_NAVIGATION_BLOCKER_01_INDEPENDENT_SENIOR_REVIEW_2026-10-09.md"
   },
   "authority": {
     "implementedState": "publishedCodeTestsAndGitHead",
@@ -1022,10 +1027,18 @@
     "playableSlice01PopulationCapacityBlockerDemonstrated": false,
     "playableSlice01CapacityChangeAuthorized": false,
     "wave6Authorized": false,
-    "nextSupervisorDecision": "assessRemainingPS01GapsAndExplicitlySelectNextMission",
+    "nextSupervisorDecision": "reviewDocumentationReconciliationThenExplicitlyDecideAnyDemographicContinuationOrOtherPS01Mission",
     "playableSlice01Increment09PublishedCanonicalHead": "2886d8bdb7eef257759fa6f42647e51fca891f58",
     "playableSlice01Increment09PublicationVerified": true,
-    "playableSlice01Increment09ImplementationComplete": true
+    "playableSlice01Increment09ImplementationComplete": true,
+    "playableSlice01CareNavigationBlocker01Status": "fixedPublishedSeniorReviewApprovedRemoteVerified",
+    "playableSlice01CareNavigationBlocker01PublishedCanonicalHead": "3224a3c9d88b40d63b755a3658b3fe20c891867c",
+    "playableSlice01CareNavigationBlocker01PublicationVerified": true,
+    "playableSlice01CareNavigationBlocker01ReviewArchiveSHA256": "9a60514ba76e2e6a5cc4b1aab5227ec9c042647291d0940f221e851c5b870748",
+    "playableSlice01Increment10Selected": false,
+    "playableSlice01Increment10Authorized": false,
+    "playableSlice01DemographicPhaseBStatus": "suspendedPendingSeparateSupervisorAuthorization",
+    "playableSlice01DemographicPhaseBAuthorized": false
   },
   "gateFBlocker10Validation": {
     "title": "Terminal Mortality Migration Admission",
@@ -3979,7 +3992,137 @@
         "wave6Authorized": false,
         "civ48ImplementationAuthorized": false,
         "gateHStatus": "planned",
-        "ps01Complete": false
+        "ps01Complete": false,
+        "latestPublishedCorrection": "3224a3c9d88b40d63b755a3658b3fe20c891867c",
+        "demographicPhaseBAuthorized": false
+      },
+      "careNavigationBlocker01": {
+        "id": "PS01-CARE-NAVIGATION-BLOCKER-01",
+        "kind": "focusedExistingIntegrationCorrection",
+        "status": "fixedPublishedSeniorReviewApprovedRemoteVerified",
+        "publishedCanonicalHead": "3224a3c9d88b40d63b755a3658b3fe20c891867c",
+        "publishedCanonicalTree": "dbad32cd6d1c403742bb732e9389d48ddef61e59",
+        "publishedCanonicalSoleParent": "891cb6cb2811099b3731a0802d98f1f3cd08ba57",
+        "publicationVerifiedOn": "2026-10-09",
+        "publicationVerifiedBy": [
+          "gitFetchOrigin",
+          "gitLsRemote",
+          "exactCommitTreeSoleParentAndSingleCommitAncestry"
+        ],
+        "manualUserPushCompleted": true,
+        "codexPushAttempted": false,
+        "record": "docs/pebblelab/PS01_CARE_NAVIGATION_BLOCKER_01_PUBLICATION.md",
+        "seniorReviewRecord": "docs/pebblelab/PS01_CARE_NAVIGATION_BLOCKER_01_INDEPENDENT_SENIOR_REVIEW_2026-10-09.md",
+        "seniorReviewSHA256": "f3db9fabe17a6bc8c23a51504d45486e5de7b8f43ac3bb33dbf51ea4e4bd30d2",
+        "seniorReviewFindings": {
+          "P0": 0,
+          "P1": 0,
+          "blockingP2": 0
+        },
+        "reviewWasIndependentProgramExecution": false,
+        "acceptedReviewArchive": "/Users/nessnow/.codex/artifacts/ps01-care-navigation-blocker-01-review.tar.gz",
+        "acceptedReviewArchiveSHA256": "9a60514ba76e2e6a5cc4b1aab5227ec9c042647291d0940f221e851c5b870748",
+        "verifiedManifestPayloads": 519,
+        "manifestSHA256": "a1a3ada68c1cd7a88c75016f20b721919b42a2e90f4caa301f997961671a4a04",
+        "candidatePatchSHA256": "0d98d5476dc412a7bd423b71bd56693b80a9c8a2cdc6bd7d036aa9864252375c",
+        "historicalExtensionDisposition": "PS01_POST_I09_EXTENSION_BLOCKED_BY_DEMONSTRATED_PRODUCT_DEFECT",
+        "historicalCareClassification": "CARE_ROUTE_VALID_OPPORTUNITY_SUPPRESSED",
+        "historicalFailuresPreserved": true,
+        "traversabilityAuthority": "existingPebbleCorePlacementThroughPebbleAdapters",
+        "recovery": "finiteProspectiveDistinctIntentMemoryExistingCooldownInitialPlusThreeReplans",
+        "attemptedIntentsPerPhysicalContextMaximum": 4,
+        "careInteractionMetric": "existingChebyshevRadius1",
+        "movementEdges": "cardinal",
+        "partialMovementOutcome": "verifiedRollbackAndBlockedUnlessExactCenterReached",
+        "residualLimit": "CoreSlowedStepsUnableToReachExactCentersRemainBlockedNoUniversalRouteLiveness",
+        "globalSchemaBump": false,
+        "historicalSchemasPreserved": [
+          44,
+          45,
+          46
+        ],
+        "populationCapacity": 30,
+        "capacityBlockerDemonstrated": false,
+        "authenticProof": {
+          "seed": 14,
+          "originalFounders": 24,
+          "startingWorldTick": 9912,
+          "startingCivilizationTick": 1968,
+          "movementObservedWorldTick": 9918,
+          "careCreditWorldTick": 9928,
+          "careObservedWorldTick": 9932,
+          "careCivilizationTick": 1971,
+          "verifiedSupervisionTicks": 2,
+          "needTerminalOutcomes": 1,
+          "endWorldTick": 10012,
+          "endCivilizationTick": 1987,
+          "living": 25,
+          "retainedBirths": 1,
+          "deaths": 0,
+          "physicalFoodAcquired": 8,
+          "physicalFoodConsumed": 8,
+          "physicalFoodCarried": 0,
+          "exactBodyBijection": true,
+          "physicalCustodyVerified": true,
+          "failedAndRecoveredFreshProcessRestorationVerified": true
+        },
+        "acceptedValidation": {
+          "focusedOwning": [
+            942,
+            0
+          ],
+          "isolatedI09Compatibility": [
+            737,
+            0
+          ],
+          "corePhysicalContract": [
+            25,
+            0
+          ],
+          "fullCanonical": {
+            "status": "FAIL",
+            "passed": 6586,
+            "failed": 3,
+            "exitCode": 1,
+            "failures": [
+              "zooBitIdentical",
+              "combatLockstep",
+              "eightAStarPathsNodeIdentical"
+            ]
+          },
+          "historicalI09Canonical": {
+            "status": "FAIL",
+            "passed": 6555,
+            "failed": 3
+          },
+          "supplementalStages6Through35": "PASS_NOT_FULL_CANONICAL_PASS",
+          "regoldOccurred": false,
+          "realClientSaveExitAndFreshRestoreBoundaries": 2,
+          "newProductCampaignExecutedByThisDocumentationMission": false
+        },
+        "nonclaims": [
+          "universalCareOrRouteLiveness",
+          "genericReplayEquivalence",
+          "arbitraryWorldTrajectoryEquivalence",
+          "offspringMaturation",
+          "sustainableMultigenerationalDemography",
+          "longTermFoodSecurity",
+          "fullCanonicalGatePass",
+          "increment10Authorization",
+          "capacityChange",
+          "civ48OrWave6Authorization",
+          "gateHAcquisition",
+          "ps01Completion"
+        ]
+      },
+      "demographicPhaseB": {
+        "status": "suspendedPendingSeparateSupervisorAuthorization",
+        "authorized": false,
+        "proposedStartingWorldTick": 12213,
+        "previouslyProposedAdditionalWorldTickMaximum": 7200,
+        "budgetIsNotCurrentExecutionAuthorization": true,
+        "resumeRequiresCompleteCoupledSaveIntegrityAndCurrentSchemaVerification": true,
+        "executedByCorrectionOrDocumentationMission": false
       }
     }
   ],

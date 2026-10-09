@@ -469,6 +469,51 @@ CIV-48/Wave 6 remain unauthorized and Gate H planned. No next increment is
 selected. Remaining gaps and the next mission require an explicit supervisor
 decision.
 
+### Published care navigation blocker correction
+
+PS01 Care Navigation Blocker 01 is **FIXED + PUBLISHED + SENIOR REVIEW APPROVED +
+REMOTE VERIFIED** at `3224a3c9d88b40d63b755a3658b3fe20c891867c`, tree
+`dbad32cd6d1c403742bb732e9389d48ddef61e59`, sole parent
+`891cb6cb2811099b3731a0802d98f1f3cd08ba57`; remote verification on 2026-10-09
+matches the reviewed single-commit candidate. See the
+[publication record](PS01_CARE_NAVIGATION_BLOCKER_01_PUBLICATION.md) and
+[byte-exact senior review](PS01_CARE_NAVIGATION_BLOCKER_01_INDEPENDENT_SENIOR_REVIEW_2026-10-09.md).
+The external accepted archive SHA-256 is
+`9a60514ba76e2e6a5cc4b1aab5227ec9c042647291d0940f221e851c5b870748`,
+with 519/519 verified payloads. The review found P0 0 / P1 0 / blocking P2 0
+within scope and did not independently execute the macOS client.
+
+The authentic seed-14 World-9912 care failure was a valid opportunity suppressed
+by inconsistent clearance, exhausted navigation and care-range contracts.
+Existing Core placement now supplies local traversability; care recovery is
+finite, cooldown-bound and requires a fresh distinct admitted intent. Cardinal
+movement and the care owner's Chebyshev radius remain coherent. Core/Pebble
+retain physical authority and exact-center verification/rollback. Genuine Core
+movement reaches `(203,67,-36)`, followed by two verified supervision ticks and
+exactly one need-5 outcome at civilization 1971 (credited World 9928, observed
+World 9932). Failed and recovered saved-state restoration preserves exactly-once
+care, body bijection and physical custody. Main bounded end is World 10012 /
+civilization 1987: 25 living, one retained birth, zero deaths and 25/30 capacity.
+Historical `CARE_ROUTE_VALID_OPPORTUNITY_SUPPRESSED` and extension BLOCKED evidence
+remain immutable; this correction does not reclassify the failed campaign.
+
+Accepted final owning 942/0, I09 compatibility 737/0 and Core contract 25/0 are
+reused evidence. Full canonical gate remains **FAIL 6586/3**: zoo bit-identical,
+combat lockstep, eight A* paths node-identical. I09 historical **6555/3 FAIL**
+remains; supplemental 6–35 PASS is not full PASS. Two real-client save/exit and
+fresh restart proofs were accepted; no product campaign is rerun here.
+
+**Material residual limit:** Core-slowed steps unable to reach the exact grid
+center remain honestly blocked and rolled back. No universal care/path liveness,
+generic replay/future World equivalence, maturation or sustainable demography is
+proved. No Core rules, care-credit/demographic rules, capacity or global schema
+change; historical 44/45/46 boundaries remain. PS01 remains **REQUIRED / IN
+PROGRESS / NOT COMPLETE**. I10 is **NOT SELECTED / NOT AUTHORIZED**; CIV-48 and
+Wave 6 remain unauthorized; Gate H remains planned. Capacity remains 30.
+The World-12213 demographic Phase B (up to 7,200 further World ticks) remains
+**SUSPENDED — SEPARATE SUPERVISOR AUTHORIZATION REQUIRED**. This documentation
+reconciliation does not resume it or select a next product increment.
+
 ### Deferred evidence-ranked questions and limits
 
 No implementation for these questions is authorized by this mission:
