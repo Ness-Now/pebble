@@ -220,27 +220,11 @@ public enum AgentMovementCoordinator {
         guard let neighbor = observation.neighbors.first(where: { $0.direction == direction }) else {
             return stationary(agent: agent, tick: tick, status: .blocked, action: action, direction: direction, reason: "missing neighbor observation", worldTick: observation.worldTick)
         }
-        let reason: String?
-        if !neighbor.column.chunkReady { reason = "target chunk unavailable" }
-        else if neighbor.dangerousDrop { reason = "dangerous drop" }
-        else if !neighbor.column.groundPresent { reason = "no ground at target" }
-        else if !neighbor.column.feetClear || !neighbor.column.headClear { reason = "target body space blocked" }
-        else if neighbor.stepDelta == nil { reason = "unknown target step" }
-        else if !(-1...1).contains(neighbor.stepDelta!) { reason = "target step out of range" }
-        else if !neighbor.traversable { reason = "neighbor not traversable" }
-        else { reason = nil }
-        if let reason {
+        if let reason = terrainRefusal(neighbor: neighbor, requestedDY: action.name == "move_abstract" ? nil : dy) {
             return stationary(agent: agent, tick: tick, status: .blocked, action: action, direction: direction, reason: reason, worldTick: observation.worldTick)
         }
 
         let step = neighbor.stepDelta!
-        if action.name == "approach_resource" || action.name == "return_home"
-            || action.name == "approach_construction" || action.name == "approach_information"
-            || action.name == "approach_settlement" || action.name == "approach_dependent"
-            || action.name == "approach_activity",
-           step != dy {
-            return stationary(agent: agent, tick: tick, status: .blocked, action: action, direction: direction, reason: "route step height changed", worldTick: observation.worldTick)
-        }
         let target = AgentPosition(
             x: agent.position.x + direction.dx,
             y: agent.position.y + step,
@@ -273,6 +257,20 @@ public enum AgentMovementCoordinator {
             distanceFromHomeAfter: after,
             distanceReducedTowardHome: max(0, before - after)
         )
+    }
+
+    /// Shared pure admission of an observed cardinal route step. No collision
+    /// calculation or World access belongs here.
+    static func terrainRefusal(neighbor: AgentWorldNeighborObservation, requestedDY: Int?) -> String? {
+        if !neighbor.column.chunkReady { return "target chunk unavailable" }
+        if neighbor.dangerousDrop { return "dangerous drop" }
+        if !neighbor.column.groundPresent { return "no ground at target" }
+        if !neighbor.column.feetClear || !neighbor.column.headClear { return "target body space blocked" }
+        guard let step = neighbor.stepDelta else { return "unknown target step" }
+        if !(-1...1).contains(step) { return "target step out of range" }
+        if !neighbor.traversable { return "neighbor not traversable" }
+        if let requestedDY, step != requestedDY { return "route step height changed" }
+        return nil
     }
 
     private static func stationary(

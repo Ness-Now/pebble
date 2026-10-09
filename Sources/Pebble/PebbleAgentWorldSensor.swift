@@ -3,22 +3,27 @@ import PebbleCore
 
 struct PebbleAgentWorldSensor {
     func observe(world: World, agent: AgentSnapshot) throws -> AgentWorldObservation {
-        let position = agent.position
-        let center = observeColumn(world: world, position: position)
+        try observe(world: world, position: agent.position, plannedNextStep: agent.navigationProgress.nextStep,
+                    ignoringEntityIDs: PebbleAgentNavigationAdapter.observerEntityIDs(world: world, agentID: agent.id))
+    }
+
+    func observe(world: World, position: AgentPosition, plannedNextStep: AgentPosition? = nil,
+                 ignoringEntityIDs: Set<Int> = []) throws -> AgentWorldObservation {
+        let center = observeColumn(world: world, position: position, ignoringEntityIDs: ignoringEntityIDs)
         let neighbors = AgentCardinalDirection.allCases.map { direction in
             let neighborPosition = AgentPosition(
                 x: position.x + direction.dx,
                 y: position.y,
                 z: position.z + direction.dz
             )
-            let fixedColumn = observeColumn(world: world, position: neighborPosition)
+            let fixedColumn = observeColumn(world: world, position: neighborPosition, ignoringEntityIDs: ignoringEntityIDs)
             let column: AgentWorldColumnObservation
             let movementFootY: Int?
             if fixedColumn.groundPresent && fixedColumn.feetClear && fixedColumn.headClear {
                 column = fixedColumn
                 movementFootY = position.y
             } else if let surfaceY = fixedColumn.surfaceY {
-                let plannedY = agent.navigationProgress.nextStep.flatMap { next in
+                let plannedY = plannedNextStep.flatMap { next in
                     next.x == neighborPosition.x && next.z == neighborPosition.z
                         ? next.y
                         : nil
@@ -30,7 +35,7 @@ struct PebbleAgentWorldSensor {
                         x: neighborPosition.x,
                         y: movementY,
                         z: neighborPosition.z
-                    )
+                    ), ignoringEntityIDs: ignoringEntityIDs
                 )
                 column = AgentWorldColumnObservation(
                     position: neighborPosition,
@@ -107,12 +112,15 @@ struct PebbleAgentWorldSensor {
             raining: world.raining,
             thundering: world.thundering,
             physicalCoverageDigest:
-                world.physicalSimulationCoverage.stableDigest
+                world.physicalSimulationCoverage.stableDigest,
+            physicalMovementAssessmentVersion:
+                world.physicalSimulationCoverage.status == .ready ? 1 : nil
         )
     }
 
-    private func observeColumn(world: World, position: AgentPosition) -> AgentWorldColumnObservation {
-        let ready = world.isChunkReady(position.x >> 4, position.z >> 4)
+    private func observeColumn(world: World, position: AgentPosition, ignoringEntityIDs: Set<Int>) -> AgentWorldColumnObservation {
+        let assessment = PebbleAgentNavigationAdapter.terrainAssessment(world: world, position: position, ignoringEntityIDs: ignoringEntityIDs)
+        let ready = !assessment.rejections.contains(.chunkUnavailable)
         guard ready else {
             return AgentWorldColumnObservation(
                 position: position,
@@ -139,9 +147,15 @@ struct PebbleAgentWorldSensor {
             blockBelow: below,
             blockAtFeet: feet,
             blockAtHead: head,
-            groundPresent: !isAir(UInt16(truncatingIfNeeded: below)),
-            feetClear: isAir(UInt16(truncatingIfNeeded: feet)),
-            headClear: isAir(UInt16(truncatingIfNeeded: head))
+            groundPresent: !assessment.rejections.contains(.incompatibleSupport),
+            feetClear: !assessment.rejections.contains(.bodyObstructed)
+                && !assessment.rejections.contains(.incompatibleFluid)
+                && !assessment.rejections.contains(.outsideWorld)
+                && !assessment.rejections.contains(.entityCollision),
+            headClear: !assessment.rejections.contains(.bodyObstructed)
+                && !assessment.rejections.contains(.incompatibleFluid)
+                && !assessment.rejections.contains(.outsideWorld)
+                && !assessment.rejections.contains(.entityCollision)
         )
     }
 }

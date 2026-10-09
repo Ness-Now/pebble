@@ -672,6 +672,7 @@ public struct AgentSimulationSession {
             guard var state = statesById[id] else { continue }
             let cooperationTransitionPending = terminalCooperationHelperIDs.contains(id)
             let perception = perceptionsById[id]
+            let previousWorldObservation = state.lastWorldObservation
             var memoriesAdded = perception?.externalMemoryEntries ?? []
 
             let survivalMemory: AgentMemoryEntry?
@@ -927,6 +928,7 @@ public struct AgentSimulationSession {
             updateNavigation(
                 state: &state,
                 observation: perception?.navigationObservation,
+                previousWorldObservation: previousWorldObservation,
                 tick: nextTick
             )
 

@@ -153,7 +153,8 @@ struct PebbleAgentNavigationAdapter {
             origin: agent.position,
             target: target,
             occupiedAgentPositions: occupiedAgentPositions,
-            goalMode: goalMode
+            goalMode: goalMode,
+            ignoringEntityIDs: Self.observerEntityIDs(world: world, agentID: agent.id)
         )
     }
 
@@ -167,14 +168,13 @@ struct PebbleAgentNavigationAdapter {
         origin: AgentPosition,
         target: AgentPosition,
         occupiedAgentPositions: [AgentPosition],
-        goalMode: AgentNavigationGoalMode = .cardinalAdjacent
+        goalMode: AgentNavigationGoalMode = .cardinalAdjacent,
+        ignoringEntityIDs: Set<Int> = []
     ) -> AgentNavigationObservation {
         var cells: [AgentNavigationCell] = []
-        // Entity occupancy remains the caller's explicit deterministic agent
-        // projection below. Ignore every current entity only for Core's terrain
-        // assessment so this does not silently change historical target/entity
-        // collision semantics or reject the observing actor as its own blocker.
-        let ignoredEntityIDs = Set(world.entities.map(\.id))
+        // Ignore only the observing body. All other live occupancy is checked
+        // by Core, alongside the caller's deterministic agent projection.
+        let ignoredEntityIDs = ignoringEntityIDs
         for dx in -Self.radius...Self.radius {
             let remaining = Self.radius - abs(dx)
             for dz in -remaining...remaining {
@@ -225,22 +225,32 @@ struct PebbleAgentNavigationAdapter {
         )
     }
 
+    /// One Core-owned terrain contract shared by coarse navigation and local
+    /// movement sensing. Other live occupancy uses the same assessment; Core
+    /// placement at the selected actual node verifies all live bodies.
+    static func terrainAssessment(world: World, position: AgentPosition,
+                                  ignoringEntityIDs: Set<Int> = []) -> EntityPlacementAssessment {
+        assessEntityPlacement(
+            in: world,
+            at: EntityPlacementPosition(x: position.x, y: position.y, z: position.z),
+            bodyWidth: 0.6, bodyHeight: 1.8,
+            ignoringEntityIDs: ignoringEntityIDs
+        )
+    }
+
+    static func observerEntityIDs(world: World, agentID: String) -> Set<Int> {
+        Set(world.entities.compactMap {
+            guard let body = $0 as? LabCoreAgentEntity, body.labAgentId == agentID else { return nil }
+            return body.id
+        })
+    }
+
     private func physicalTerrainStatus(
         world: World,
         position: AgentPosition,
         ignoredEntityIDs: Set<Int>
     ) -> AgentNavigationCellStatus {
-        let assessment = assessEntityPlacement(
-            in: world,
-            at: EntityPlacementPosition(
-                x: position.x,
-                y: position.y,
-                z: position.z
-            ),
-            bodyWidth: 0.6,
-            bodyHeight: 1.8,
-            ignoringEntityIDs: ignoredEntityIDs
-        )
+        let assessment = Self.terrainAssessment(world: world, position: position, ignoringEntityIDs: ignoredEntityIDs)
         if assessment.isValid { return .traversable }
         if assessment.rejections.contains(.chunkUnavailable) {
             return .unavailable

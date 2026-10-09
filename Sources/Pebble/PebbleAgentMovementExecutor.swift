@@ -237,6 +237,20 @@ struct PebbleAgentMovementExecutor {
                     continue
                 }
 
+                let placement = assessEntityPlacement(
+                    in: world,
+                    at: EntityPlacementPosition(x: next.x, y: next.y, z: next.z),
+                    bodyWidth: 0.6, bodyHeight: 1.8,
+                    ignoringEntityIDs: [embodiment.probe.id]
+                )
+                guard placement.isValid else {
+                    verified.append(blocked(intent: intent, agent: agent,
+                        at: embodiment.position,
+                        reason: "Core node placement refused: " + placement.rejections.map(\.rawValue).joined(separator: ","),
+                        worldTick: world.time))
+                    continue
+                }
+
                 let original = embodiment.probe.capturePhysicalState()
                 if movementReservation == nil, let candidatePhysicalTransaction {
                     movementReservation = try candidatePhysicalTransaction.reserve(
@@ -263,12 +277,9 @@ struct PebbleAgentMovementExecutor {
                     // after the exact final cell is verified; any partial move
                     // is restored below.
                     embodiment.probe.move(requestedX, 0, requestedZ)
-                    let horizontalReached = Int(
-                        embodiment.probe.x.rounded(.down)
-                    ) == next.x
-                        && Int(embodiment.probe.y.rounded(.down))
-                            == Int(original.y.rounded(.down))
-                        && Int(embodiment.probe.z.rounded(.down)) == next.z
+                    let horizontalReached = embodiment.x == Double(next.x) + 0.5
+                        && embodiment.y == original.y
+                        && embodiment.z == Double(next.z) + 0.5
                     if horizontalReached {
                         embodiment.probe.move(0, requestedY, 0)
                     }
@@ -276,7 +287,7 @@ struct PebbleAgentMovementExecutor {
                     embodiment.probe.move(requestedX, requestedY, requestedZ)
                 }
 
-                guard embodiment.position == next else {
+                guard reachesCenteredNode(embodiment, next) else {
                     try rollback(
                         embodiment.probe,
                         to: original,
@@ -286,7 +297,7 @@ struct PebbleAgentMovementExecutor {
                         intent: intent,
                         agent: agent,
                         at: agent.position,
-                        reason: "PebbleCore collision blocked movement",
+                        reason: "PebbleCore movement did not reach the exact centered node",
                         worldTick: world.time
                     ))
                     continue
@@ -466,7 +477,7 @@ struct PebbleAgentMovementExecutor {
             Double(next.y) - original.y,
             Double(next.z) + 0.5 - original.z
         )
-        let reached = embodiment.position == next
+        let reached = reachesCenteredNode(embodiment, next)
         let orientationChanged = embodiment.probe.yaw != original.yaw
         try rollback(
             embodiment.probe,
@@ -479,15 +490,23 @@ struct PebbleAgentMovementExecutor {
             occupiedRefused: false,
             explorationBoundaryRefused: false,
             physicalMutationCount: 1,
-            rollbackVerified: embodiment.position == AgentPosition(
-                x: Int(original.x.rounded(.down)),
-                y: Int(original.y.rounded(.down)),
-                z: Int(original.z.rounded(.down))
-            ),
+            rollbackVerified: embodiment.probe.capturePhysicalState() == original,
             latePublicationRejected: rejectAfterPhysicalMove && reached,
             orientationChanged: orientationChanged,
             node: next
         )
+    }
+
+    /// Core may legitimately slow or clip a move inside noncolliding terrain.
+    /// A cell-floor match is not a completed discrete step: checkpoint bodies
+    /// require these exact centers. Partial movement is rolled back, not
+    /// published as success or compensated with extra movement calls.
+    private func reachesCenteredNode(
+        _ embodiment: PebbleAgentEmbodiment, _ node: AgentPosition
+    ) -> Bool {
+        embodiment.x == Double(node.x) + 0.5
+            && embodiment.y == Double(node.y)
+            && embodiment.z == Double(node.z) + 0.5
     }
 
     private func blocked(

@@ -51,6 +51,34 @@ if let mode = ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"],
     exit(failed > 0 ? 1 : 0)
 }
 
+// Read-only canonical extraction for real-client saved-boundary qualification.
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "care-navigation-export" {
+    do {
+        let env = ProcessInfo.processInfo.environment
+        guard let input = env["PEBBLELAB_CARE_CHECKPOINT_INPUT"],
+              let output = env["PEBBLELAB_CARE_STATE_OUTPUT"] else {
+            throw CocoaError(.fileReadInvalidFileName)
+        }
+        let checkpoint = try AgentCheckpointCodec.decode(AgentSessionCheckpoint.self,
+            from: Data(contentsOf: URL(fileURLWithPath: input)))
+        let session = try AgentSimulationSession.restoring(checkpoint)
+        try session.durableStateBytes().write(to: URL(fileURLWithPath: output), options: .atomic)
+        print("[care-export] exact validated schema=\(checkpoint.schemaVersion) tick=\(session.tick)")
+        exit(0)
+    } catch { fputs("[care-export] FAIL \(error)\n", stderr); exit(1) }
+}
+
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "care-navigation-blocker" {
+    registerAllBlocks(); registerAllItems(); registerAllEntities(); registerAllSystems()
+    runPebbleAgentsCareNavigationBlockerSmoke()
+    runPebbleAgentsDependentCareSmoke()
+    runPebbleAgentsMovementSmoke()
+    runPebbleAgentsBoundedAutonomousNavigationSmoke()
+    runPebbleCorePhysicalSimulationCoverageFullSmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
 if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "retained-historical-identity" {
     runPebbleAgentsRetainedHistoricalIdentitySmoke()
     print("\n\(passed) passed, \(failed) failed")
@@ -3123,6 +3151,7 @@ runPebbleAgentsRetainedHistoricalIdentitySmoke()
 runPebbleAgentsWorkProfessionSmoke()
 runPebbleAgentsWorkDemandRefreshSmoke()
 runPebbleAgentsAutonomousCivilizationSmoke()
+runPebbleAgentsCareNavigationBlockerSmoke()
 runPebbleAgentsBoundedAutonomousNavigationSmoke()
 runPebbleAgentsAutonomousActivityLifecycleSmoke()
 runPebbleAgentsProductiveSourceLifecycleSmoke()

@@ -486,8 +486,16 @@ extension AgentSimulationSession {
     mutating func updateNavigation(
         state: inout AgentSessionAgentState,
         observation: AgentNavigationObservation?,
+        previousWorldObservation: AgentWorldObservation? = nil,
         tick navigationTick: Int
     ) {
+        // Preserve prospective attempt memory across missing physical readiness.
+        // It is derived bookkeeping, never a substitute for fresh admission.
+        if var current = state.lastWorldObservation,
+           current.careNavigationProposal == nil {
+            current.careNavigationProposal = previousWorldObservation?.careNavigationProposal
+            state.lastWorldObservation = current
+        }
         let purpose: AgentNavigationPurpose
         let targetPosition: AgentPosition
         let targetResource: AgentResourceKind?
@@ -778,9 +786,17 @@ extension AgentSimulationSession {
                 observation: observation, purpose: purpose
             )
             targetResource = nil
-            goalMode = targetPosition == dependent.position ? .cardinalAdjacent : .exact
-            if manhattanDistance(state.position, dependent.position)
-                <= dependentCareState!.configuration.careInteractionDistance {
+            goalMode = targetPosition == dependent.position
+                ? (state.lastWorldObservation?.physicalMovementAssessmentVersion == 1
+                    ? .chebyshevAdjacent : .cardinalAdjacent) : .exact
+            // Historical replay inputs retain the old arrival convention.
+            // New Core-placement observations use the actual care-owner range.
+            let careDistance = state.lastWorldObservation?.physicalMovementAssessmentVersion == 1
+                ? max(abs(state.position.x - dependent.position.x),
+                      abs(state.position.y - dependent.position.y),
+                      abs(state.position.z - dependent.position.z))
+                : manhattanDistance(state.position, dependent.position)
+            if careDistance <= dependentCareState!.configuration.careInteractionDistance {
                 state.navigationProgress = AgentNavigationProgress(
                     status: .arrived, route: state.navigationProgress.route,
                     routeIndex: state.navigationProgress.route.map {
@@ -897,6 +913,30 @@ extension AgentSimulationSession {
             return
         }
 
+        var refreshedCarePlan: AgentNavigationPlan?
+        if purpose == .dependentCare,
+           var current = state.lastWorldObservation,
+           current.physicalMovementAssessmentVersion == 1,
+           current.worldTick == observation.worldTick,
+           current.position == state.position {
+            let proposal = AgentCareNavigationProposal.observe(
+                navigation: observation, world: current, goalMode: goalMode,
+                previous: previousWorldObservation?.careNavigationProposal
+            )
+            current.careNavigationProposal = proposal.observation
+            state.lastWorldObservation = current
+            if proposal.observation.refreshesExhaustedBudget(
+                progress: state.navigationProgress, tick: navigationTick,
+                maximumReplans: configuration.navigationMaxReplans,
+                cooldown: configuration.navigationReplanCooldownTicks
+            ) {
+                // A newly observed admissible proposal starts a new bounded
+                // episode. Time/light or an unchanged failed proposal do not.
+                state.navigationProgress = AgentNavigationProgress(lastInvalidation: .targetChanged)
+                refreshedCarePlan = proposal.plan
+            }
+        }
+
         var invalidation = state.navigationProgress.lastInvalidation
         var shouldPlan = state.navigationProgress.route == nil
         if let route = state.navigationProgress.route {
@@ -956,7 +996,7 @@ extension AgentSimulationSession {
             return
         }
 
-        let plan = AgentBoundedRoutePlanner.plan(AgentNavigationRequest(
+        let plan = refreshedCarePlan ?? AgentBoundedRoutePlanner.plan(AgentNavigationRequest(
             start: state.position,
             target: targetPosition,
             goalMode: goalMode,
@@ -974,6 +1014,11 @@ extension AgentSimulationSession {
                 lastFailure: plan.failure ?? .noRoute
             )
             return
+        }
+        if purpose == .dependentCare, var current = state.lastWorldObservation,
+           let proposal = current.careNavigationProposal {
+            current.careNavigationProposal = proposal.recordingAttempt()
+            state.lastWorldObservation = current
         }
         let route = AgentNavigationRoute(
             purpose: purpose,

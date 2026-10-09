@@ -2268,6 +2268,10 @@ if let blockerStatus = PebbleMortalityCheckpointBlockerHarness.runIfRequested() 
     exit(blockerStatus)
 }
 
+if let careStatus = PebbleCareNavigationBlockerHarness.runIfRequested() {
+    exit(careStatus)
+}
+
 if let qualificationStatus = PebbleIncrement09QualificationHarness.runIfRequested() {
     exit(qualificationStatus)
 }

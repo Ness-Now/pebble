@@ -107,6 +107,11 @@ public struct AgentWorldObservation: Codable, Equatable {
     /// Historical/synthetic observations may omit it; live Pebble observations
     /// always supply the Core snapshot digest.
     public let physicalCoverageDigest: String?
+    /// Prospective Core-placement sensor contract. Absent in historical inputs.
+    public let physicalMovementAssessmentVersion: Int?
+    /// Bounded derived proposal memory, owned by AgentSimulationSession. Nil
+    /// historical inputs retain their exact codec/replay behavior.
+    public internal(set) var careNavigationProposal: AgentCareNavigationProposal?
     public let traversableNeighborCount: Int
     public let blockedNeighborCount: Int
     public let dangerousDropCount: Int
@@ -124,7 +129,8 @@ public struct AgentWorldObservation: Codable, Equatable {
         dayTime: Int,
         raining: Bool,
         thundering: Bool,
-        physicalCoverageDigest: String? = nil
+        physicalCoverageDigest: String? = nil,
+        physicalMovementAssessmentVersion: Int? = nil
     ) throws {
         guard center.position == position else {
             throw AgentWorldObservationError.invalidCenterPosition
@@ -164,6 +170,8 @@ public struct AgentWorldObservation: Codable, Equatable {
         self.dayTime = dayTime
         self.raining = raining
         self.thundering = thundering
+        self.physicalMovementAssessmentVersion = physicalMovementAssessmentVersion
+        self.careNavigationProposal = nil
         self.physicalCoverageDigest = physicalCoverageDigest
         traversableNeighborCount = ordered.filter(\.traversable).count
         blockedNeighborCount = ordered.filter { !$0.traversable }.count

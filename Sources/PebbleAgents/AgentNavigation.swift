@@ -18,6 +18,8 @@ public struct AgentNavigationCell: Codable, Equatable {
 public enum AgentNavigationGoalMode: String, Codable, Equatable {
     case exact
     case cardinalAdjacent
+    /// Care-owner range, without changing cardinal movement edges.
+    case chebyshevAdjacent
 }
 
 public struct AgentNavigationObservation: Codable, Equatable {
@@ -186,7 +188,7 @@ public enum AgentBoundedRoutePlanner {
                     $0.position.x == current.x + direction.dx
                         && $0.position.z == current.z + direction.dz
                         && horizontalDistance(request.start, $0.position) <= request.radius
-                        && !(request.goalMode == .cardinalAdjacent && $0.position == request.target)
+                        && !(request.goalMode != .exact && $0.position == request.target)
                 }
                 if horizontal.contains(where: { $0.status == .unavailable }) { sawUnavailable = true }
                 if horizontal.contains(where: { $0.status == .dangerousDrop }) { sawDangerousDrop = true }
@@ -265,6 +267,9 @@ public enum AgentBoundedRoutePlanner {
             return position == target
         case .cardinalAdjacent:
             return AgentInteractionSandbox.isCardinalAdjacent(target: target, actor: position)
+        case .chebyshevAdjacent:
+            return position != target && max(abs(position.x - target.x),
+                abs(position.y - target.y), abs(position.z - target.z)) <= 1
         }
     }
 
