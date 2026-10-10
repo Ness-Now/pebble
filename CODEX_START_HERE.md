@@ -304,8 +304,9 @@ for the compact status. In particular:
   FAIL (6555/3); supplemental stages 6–35 PASS are separate evidence.
   See the [publication record](docs/pebblelab/PS01_INCREMENT_09_PUBLICATION.md) and
   [unchanged independent senior review](docs/pebblelab/PS01_INCREMENT_09_INDEPENDENT_SENIOR_REVIEW_2026-10-08.md).
-  No next increment is selected; the supervisor must explicitly decide the next
-  PS01 mission. PS01 remains incomplete; Wave 6 is unauthorized. See the
+  I11 or any further PS01 product increment is NOT SELECTED / NOT AUTHORIZED;
+  the supervisor must explicitly decide any further PS01 mission. PS01 remains
+  incomplete; Wave 6 is unauthorized. See the
   [accepted reconciliation and selection](docs/pebblelab/CURRENT_STATE.md#supervisor-accepted-characterization-reconciliation),
   [Increment 09 contract](docs/pebblelab/PEBBLE_CIVILIZATION_ROADMAP.md#selected-increment-09--normal-reproduction-activation--physical-subsistence-composition),
   [PS01_INCREMENT_08_NORMAL_CONTINUITY.md](docs/pebblelab/PS01_INCREMENT_08_NORMAL_CONTINUITY.md),
@@ -316,11 +317,31 @@ for the compact status. In particular:
   See the [publication record](docs/pebblelab/PS01_CARE_NAVIGATION_BLOCKER_01_PUBLICATION.md)
   and [unchanged senior review](docs/pebblelab/PS01_CARE_NAVIGATION_BLOCKER_01_INDEPENDENT_SENIOR_REVIEW_2026-10-09.md).
   Authentic care recovery is proved; slowed steps unable to reach an exact
-  center remain blocked. Full canonical gate remains FAIL 6586/3 on zoo,
+  center remain blocked. The care-correction canonical gate was FAIL 6586/3 on zoo,
   combat and eight-A* identities; I09 historical 6555/3 stays immutable.
   Supplemental 6–35 PASS is separate. PS01 remains REQUIRED / IN PROGRESS /
-  NOT COMPLETE. I10 is not selected or authorized. The 7,200-tick demographic
+  NOT COMPLETE. Historical 6586/3 remains immutable. The 7,200-tick demographic
   Phase B remains **SUSPENDED — SEPARATE SUPERVISOR AUTHORIZATION REQUIRED**.
+- I10, Bounded Hunger-Driven Physical Food Discovery, is **COMPLETE AND
+  PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at published product
+  HEAD `1426dc8328e56ec6e85b5b70d6e988b324bd97e5`. See
+  [PS01 I10 — Publication Reconciliation](docs/pebblelab/PS01_INCREMENT_10_PUBLICATION.md).
+  Normal seed-14 search proves 125 successful physical movements / 13 blocked
+  outcomes, natural western berry discovery by `agent_23`, ordinary
+  WildSubsistence selection and existing activity takeover. No autonomous
+  harvest or new food acquisition occurred; `dangerousDrop` and legitimate
+  replan exhaustion leave the selected western approach unresolved. Slowed
+  terrain remains unresolved. Controlled eastern harvest is external evaluation
+  evidence, not spontaneous natural discovery. Accepted qualification reports
+  39/0 focused, 25/0 Core contracts, 10/10 compatibility and 149 World ticks;
+  archive SHA-256 is
+  `4627d015bdd356ca45633b1d47aad19a0605c2ced8baca46c1faaff7716ab074`.
+  Candidate canonical gate is FAIL 6625/3 with the same three historical
+  failures; B02/B03 same-home repeatability is an additional baseline fixture
+  issue, isolated from fresh-home results. Capacity remains 30; PS01 remains
+  REQUIRED / IN PROGRESS / NOT COMPLETE. I11 or any further PS01 product
+  increment is NOT SELECTED / NOT AUTHORIZED. Demographic Phase B still requires
+  separate supervisor authorization.
 - CIV-48 remains **NOT STARTED**, implementation is not authorized, and it is
   deferred until PLAYABLE SLICE 01 and the resulting evidence-driven roadmap
   recalibration are complete. Gate H remains planned. See

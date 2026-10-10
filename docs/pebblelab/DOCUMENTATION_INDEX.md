@@ -38,6 +38,7 @@ These documents form the minimal permanent memory of the project:
 | [`CURRENT_STATE.md`](CURRENT_STATE.md) | Compact acquired state, product baseline, debt and next authorized action; [published terminal-identity correction](CURRENT_STATE.md#published-terminal-historical-identity-correction), historical characterization FAIL, [supervisor-accepted reconciliation](CURRENT_STATE.md#supervisor-accepted-characterization-reconciliation). |
 | [`PS01_CARE_NAVIGATION_BLOCKER_01_PUBLICATION.md`](PS01_CARE_NAVIGATION_BLOCKER_01_PUBLICATION.md) | Verified correction publication, exact identity/SHA provenance, bounded care/movement proof, residual slowing limit, historical canonical FAILs and suspended demographic Phase B. |
 | [`PS01_CARE_NAVIGATION_BLOCKER_01_INDEPENDENT_SENIOR_REVIEW_2026-10-09.md`](PS01_CARE_NAVIGATION_BLOCKER_01_INDEPENDENT_SENIOR_REVIEW_2026-10-09.md) | Byte-exact original senior approval; historical pre-publication conditions, Risk-C findings and explicit independent-execution limits. |
+| [`PS01_INCREMENT_10_PUBLICATION.md`](PS01_INCREMENT_10_PUBLICATION.md) | PS01 I10 — Publication Reconciliation: exact manual publication/noreply identity, supervisor-supplied senior approval, bounded native search/discovery/admission, missing harvest/sustainability proof, archive provenance, historical gate and same-home fixture failures, authorization limits. |
 | [`PS01_INCREMENT_09_PUBLICATION.md`](PS01_INCREMENT_09_PUBLICATION.md) | Verified I09 publication identity, accepted independent evidence/provenance, bounded claims, historical FAIL and pending supervisor decision. |
 | [`PS01_INCREMENT_09_REDESIGN.md`](PS01_INCREMENT_09_REDESIGN.md) | Unchanged candidate-time source/owner audit and qualification; LOCAL_REVIEW_CANDIDATE describes its historical boundary. |
 | [`PS01_INCREMENT_09_INDEPENDENT_SENIOR_REVIEW_2026-10-08.md`](PS01_INCREMENT_09_INDEPENDENT_SENIOR_REVIEW_2026-10-08.md) | Byte-exact user-supplied independent senior approval, historical pre-push identity/verdict and explicit execution limits. |
@@ -124,7 +125,7 @@ CIV-37: COMPLETE AND PUBLISHED
 CIV-38: OPTIONAL — NOT STARTED
 V4-GATE-E-v1: ACQUIRED AND PUBLISHED
 V4-GATE-E-v1 acquisition published canonical HEAD: 076a616a97a229e921a5c36eebdfd12f76744f83
-active phase: PLAYABLE SLICE 01 — IN PROGRESS / CHARACTERIZATION CONTINUATION SELECTED
+active phase: PLAYABLE SLICE 01 — IN PROGRESS / NO FURTHER PRODUCT INCREMENT SELECTED
 completed through: CIV-47 (CIV-38 and CIV-40 optional and unstarted)
 published through: CIV-47
 next required milestone: PLAYABLE SLICE 01 — Autonomous Emergence Baseline
@@ -159,9 +160,13 @@ Increment 09 status: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOT
 Increment 09 published HEAD: 2886d8bdb7eef257759fa6f42647e51fca891f58
 PS01 Care Navigation Blocker 01: FIXED / PUBLISHED / SENIOR REVIEW APPROVED / REMOTE VERIFIED
 PS01 Care Navigation Blocker 01 published HEAD: 3224a3c9d88b40d63b755a3658b3fe20c891867c
-PS01 Care Navigation Blocker 01 canonical gate: FAIL 6586/3; historical I09 FAIL 6555/3 preserved
+PS01 Care Navigation Blocker 01 historical canonical gate: FAIL 6586/3; historical I09 FAIL 6555/3 preserved
 PS01 demographic Phase B: SUSPENDED — SEPARATE SUPERVISOR AUTHORIZATION REQUIRED
-I10: NOT SELECTED / NOT AUTHORIZED
+I10: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED (bounded discovery)
+I10 published product HEAD: 1426dc8328e56ec6e85b5b70d6e988b324bd97e5
+I10 canonical candidate gate: FAIL 6625/3; historical 6586/3 immutable
+I10 natural campaign: SEARCH / DISCOVERY / ADMISSION PROVED; NO HARVEST OR NEW FOOD
+I11 or any further PS01 product increment: NOT SELECTED / NOT AUTHORIZED
 next selected PS01 integration increment: NONE — SUPERVISOR DECISION REQUIRED
 next eligible CIV phase: CIV-48 — DEFERRED / NOT STARTED / IMPLEMENTATION NOT AUTHORIZED
 Gate E Evaluation 01: FAIL — HISTORICAL IMMUTABLE EVIDENCE
@@ -183,9 +188,13 @@ Increment 09 status: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOT
 Increment 09 published HEAD: 2886d8bdb7eef257759fa6f42647e51fca891f58
 PS01 Care Navigation Blocker 01: FIXED / PUBLISHED / SENIOR REVIEW APPROVED / REMOTE VERIFIED
 PS01 Care Navigation Blocker 01 published HEAD: 3224a3c9d88b40d63b755a3658b3fe20c891867c
-PS01 Care Navigation Blocker 01 canonical gate: FAIL 6586/3; historical I09 FAIL 6555/3 preserved
+PS01 Care Navigation Blocker 01 historical canonical gate: FAIL 6586/3; historical I09 FAIL 6555/3 preserved
 PS01 demographic Phase B: SUSPENDED — SEPARATE SUPERVISOR AUTHORIZATION REQUIRED
-I10: NOT SELECTED / NOT AUTHORIZED
+I10: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED (bounded discovery)
+I10 published product HEAD: 1426dc8328e56ec6e85b5b70d6e988b324bd97e5
+I10 canonical candidate gate: FAIL 6625/3; historical 6586/3 immutable
+I10 natural campaign: SEARCH / DISCOVERY / ADMISSION PROVED; NO HARVEST OR NEW FOOD
+I11 or any further PS01 product increment: NOT SELECTED / NOT AUTHORIZED
 next selected PS01 integration increment: NONE — SUPERVISOR DECISION REQUIRED
 CIV-39: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
@@ -286,9 +295,13 @@ Increment 09 status: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOT
 Increment 09 published HEAD: 2886d8bdb7eef257759fa6f42647e51fca891f58
 PS01 Care Navigation Blocker 01: FIXED / PUBLISHED / SENIOR REVIEW APPROVED / REMOTE VERIFIED
 PS01 Care Navigation Blocker 01 published HEAD: 3224a3c9d88b40d63b755a3658b3fe20c891867c
-PS01 Care Navigation Blocker 01 canonical gate: FAIL 6586/3; historical I09 FAIL 6555/3 preserved
+PS01 Care Navigation Blocker 01 historical canonical gate: FAIL 6586/3; historical I09 FAIL 6555/3 preserved
 PS01 demographic Phase B: SUSPENDED — SEPARATE SUPERVISOR AUTHORIZATION REQUIRED
-I10: NOT SELECTED / NOT AUTHORIZED
+I10: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED (bounded discovery)
+I10 published product HEAD: 1426dc8328e56ec6e85b5b70d6e988b324bd97e5
+I10 canonical candidate gate: FAIL 6625/3; historical 6586/3 immutable
+I10 natural campaign: SEARCH / DISCOVERY / ADMISSION PROVED; NO HARVEST OR NEW FOOD
+I11 or any further PS01 product increment: NOT SELECTED / NOT AUTHORIZED
 next selected PS01 integration increment: NONE — SUPERVISOR DECISION REQUIRED
 CIV-48: NOT STARTED — IMPLEMENTATION NOT AUTHORIZED
 V4-GATE-H-v1: PLANNED
@@ -666,8 +679,13 @@ Reproduction Activation & Physical Subsistence Composition** is **COMPLETE AND P
 `2886d8bdb7eef257759fa6f42647e51fca891f58`. See the [publication record](PS01_INCREMENT_09_PUBLICATION.md),
 [unchanged candidate qualification](PS01_INCREMENT_09_REDESIGN.md) and
 [byte-exact senior review](PS01_INCREMENT_09_INDEPENDENT_SENIOR_REVIEW_2026-10-08.md). First native birth and restart do not
-establish multigenerational durability. No next increment is selected;
-the supervisor must explicitly decide the next PS01 mission. PS01 remains
+establish multigenerational durability. I10 is now **COMPLETE AND PUBLISHED —
+SENIOR REVIEW APPROVED — REMOTE VERIFIED** at product HEAD
+`1426dc8328e56ec6e85b5b70d6e988b324bd97e5`, within bounded discovery scope;
+see [PS01 I10 — Publication Reconciliation](PS01_INCREMENT_10_PUBLICATION.md).
+Natural discovery/admission does not prove harvest or food security.
+I11 or any further PS01 product increment is **NOT SELECTED / NOT AUTHORIZED**;
+the supervisor must explicitly decide any further PS01 mission. PS01 remains
 incomplete and Wave 6 remains unauthorized.
 Capacity 30 was not demonstrated as the active demographic blocker. CIV-48
 remains not started, implementation is not authorized and

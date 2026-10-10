@@ -125,9 +125,16 @@ The supervisor accepts the completed evidence reconciliation as
 [verified publication record](PS01_INCREMENT_09_PUBLICATION.md). The focused
 [care navigation blocker correction](PS01_CARE_NAVIGATION_BLOCKER_01_PUBLICATION.md)
 is also published and remote verified at `3224a3c9d88b40d63b755a3658b3fe20c891867c`.
-Its residual slow-terrain limit and canonical FAIL 6586/3 remain explicit.
+Its residual slow-terrain limit and historical canonical FAIL 6586/3 remain explicit.
+I10, Bounded Hunger-Driven Physical Food Discovery, is **COMPLETE AND PUBLISHED —
+SENIOR REVIEW APPROVED — REMOTE VERIFIED** at published product HEAD
+`1426dc8328e56ec6e85b5b70d6e988b324bd97e5`, within search/discovery/admission
+scope; see [PS01 I10 — Publication Reconciliation](PS01_INCREMENT_10_PUBLICATION.md).
+Natural search/discovery succeeded; no autonomous harvest or new food acquisition
+occurred. Slowed terrain and selected western approach failure remain unresolved.
+Candidate canonical gate remains FAIL 6625/3; historical 6586/3 stays immutable.
 Demographic Phase B is suspended pending separate supervisor authorization.
-I10 is not authorized. No next increment is selected;
+I11 or any further PS01 product increment is **NOT SELECTED / NOT AUTHORIZED**;
 the next product mission requires an explicit supervisor decision. PS01 remains
 incomplete; Wave 6 and CIV-48 implementation remain unauthorized, and Gate H
 remains planned.
@@ -2675,9 +2682,9 @@ scarcity zero-birth control, deterministic repeat, restart, body/custody and
 real-client evidence are recorded in the publication record. Focused 737/0 passes;
 the canonical gate remains FAIL 6555/3, with supplemental 6–35 PASS separately.
 Neither that proof nor senior approval establishes multigenerational demographic
-durability or completes PS01. No next increment is selected or authorized;
-the supervisor must assess remaining PS01 gaps and explicitly choose the next
-mission. CIV-48/Wave 6 remain unauthorized; Gate H remains planned.
+durability or completes PS01. At I09 publication no next increment was selected
+or authorized; I10 publication is recorded below. The supervisor must explicitly
+authorize any further product mission. CIV-48/Wave 6 remain unauthorized; Gate H remains planned.
 
 ### Published care navigation blocker correction
 
@@ -2708,7 +2715,8 @@ Historical `CARE_ROUTE_VALID_OPPORTUNITY_SUPPRESSED` and extension BLOCKED evide
 remain immutable; this correction does not reclassify the failed campaign.
 
 Accepted final owning 942/0, I09 compatibility 737/0 and Core contract 25/0 are
-reused evidence. Full canonical gate remains **FAIL 6586/3**: zoo bit-identical,
+reused evidence. At the care correction boundary, the full canonical gate was
+**FAIL 6586/3**: zoo bit-identical,
 combat lockstep, eight A* paths node-identical. I09 historical **6555/3 FAIL**
 remains; supplemental 6–35 PASS is not full PASS. Two real-client save/exit and
 fresh restart proofs were accepted; no product campaign is rerun here.
@@ -2718,11 +2726,58 @@ center remain honestly blocked and rolled back. No universal care/path liveness,
 generic replay/future World equivalence, maturation or sustainable demography is
 proved. No Core rules, care-credit/demographic rules, capacity or global schema
 change; historical 44/45/46 boundaries remain. PS01 remains **REQUIRED / IN
-PROGRESS / NOT COMPLETE**. I10 is **NOT SELECTED / NOT AUTHORIZED**; CIV-48 and
+PROGRESS / NOT COMPLETE**. At that correction publication, I10 was
+**NOT SELECTED / NOT AUTHORIZED**; its later publication is recorded below. CIV-48 and
 Wave 6 remain unauthorized; Gate H remains planned. Capacity remains 30.
 The World-12213 demographic Phase B (up to 7,200 further World ticks) remains
 **SUSPENDED — SEPARATE SUPERVISOR AUTHORIZATION REQUIRED**. This documentation
-reconciliation does not resume it or select a next product increment.
+reconciliation did not resume it or select a next product increment.
+
+### Published Increment 10 — Bounded Hunger-Driven Physical Food Discovery
+
+I10 is **COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED**
+within bounded discovery scope at published product HEAD
+`1426dc8328e56ec6e85b5b70d6e988b324bd97e5`, tree
+`592ae3f9bc18e4b0cc8f75089d677d9cdd6b6999`, sole parent
+`83cb0e9ec9137fd357dca9267ab2aa829925cb84`. The user manually published after
+independent senior approval and noreply identity correction; this reconciliation
+verified the exact remote on 2026-10-10. See
+[PS01 I10 — Publication Reconciliation](PS01_INCREMENT_10_PUBLICATION.md).
+Senior approval is supervisor-supplied; reported qualification is archive
+evidence, not independent macOS execution by this documentation mission.
+
+Existing Session cognition and local Pebble evidence select bounded exploration;
+Core retains physical navigation authority. Each need permits at most 24 final
+requests, bursts of 8 with 8-tick cooldown, and 4 blocked/refused contexts;
+persisted progress/refusals cannot renew on restart. Sensing, home and navigation
+bounds remain unchanged. Normal seed-14 continuation proves **125 successful
+physical search movements / 13 blocked outcomes**, natural western mature berry
+discovery by `agent_23`, ordinary WildSubsistence selection and existing activity
+takeover. **No autonomous harvest or new food acquisition occurred.** The
+selected western-food approach refused `dangerousDrop` and exhausted legitimate
+replans; that failure and the known slowed-terrain limitation remain unresolved.
+The earlier controlled eastern harvest is valid external evaluation evidence,
+not spontaneous natural discovery or I10 natural harvest proof.
+
+Accepted archive SHA-256:
+`4627d015bdd356ca45633b1d47aad19a0605c2ced8baca46c1faaff7716ab074`;
+881/881 payload hashes reverified. Reported qualification: **39/0** focused,
+**25/0** physical Core contract, **10/10** historical compatibility identities,
+**149** ordinary World ticks, body/custody conservation, authentic fresh
+restoration and limited real-client visual search proof. Current candidate gate
+is **FAIL 6625/3** on zoo bit-identical, combat lockstep and eight A* identities.
+Historical **6586/3 FAIL** stays immutable. The additional B02/B03 same-home
+fixture-repeatability issue was reproduced with unchanged baseline Core
+(fresh 31/0; repeat 21/10), remains unresolved and is separate from fresh-home
+candidate results. No regold or full canonical PASS.
+
+Capacity remains **30**. Discovery does not prove food security, dependent
+nourishment, maturation, multigenerational reproduction or PS01 completion.
+PS01 remains **REQUIRED / IN PROGRESS / NOT COMPLETE**. **I11 or any further
+PS01 product increment is NOT SELECTED / NOT AUTHORIZED**. Demographic Phase B
+requires separate supervisor authorization; CIV-48 / Wave 6 remain unauthorized;
+Gate H remains planned. This local documentation candidate requires supervisor
+review before any further manual publication; it selects no substantive mission.
 
 ### Deferred characterization questions
 
