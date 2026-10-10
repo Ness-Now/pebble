@@ -2,13 +2,16 @@ import PebbleAgents
 import PebbleCore
 
 struct PebbleAgentWorldSensor {
-    func observe(world: World, agent: AgentSnapshot) throws -> AgentWorldObservation {
+    func observe(world: World, agent: AgentSnapshot,
+                 physicalFoodCustody: AgentPhysicalFoodCustodyObservation? = nil) throws -> AgentWorldObservation {
         try observe(world: world, position: agent.position, plannedNextStep: agent.navigationProgress.nextStep,
-                    ignoringEntityIDs: PebbleAgentNavigationAdapter.observerEntityIDs(world: world, agentID: agent.id))
+                    ignoringEntityIDs: PebbleAgentNavigationAdapter.observerEntityIDs(world: world, agentID: agent.id),
+                    physicalFoodCustody: physicalFoodCustody)
     }
 
     func observe(world: World, position: AgentPosition, plannedNextStep: AgentPosition? = nil,
-                 ignoringEntityIDs: Set<Int> = []) throws -> AgentWorldObservation {
+                 ignoringEntityIDs: Set<Int> = [],
+                 physicalFoodCustody: AgentPhysicalFoodCustodyObservation? = nil) throws -> AgentWorldObservation {
         let center = observeColumn(world: world, position: position, ignoringEntityIDs: ignoringEntityIDs)
         let neighbors = AgentCardinalDirection.allCases.map { direction in
             let neighborPosition = AgentPosition(
@@ -114,7 +117,8 @@ struct PebbleAgentWorldSensor {
             physicalCoverageDigest:
                 world.physicalSimulationCoverage.stableDigest,
             physicalMovementAssessmentVersion:
-                world.physicalSimulationCoverage.status == .ready ? 1 : nil
+                world.physicalSimulationCoverage.status == .ready ? 1 : nil,
+            physicalFoodCustody: physicalFoodCustody
         )
     }
 

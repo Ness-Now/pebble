@@ -149,8 +149,11 @@ public struct AgentGoalSelectionInput {
     public let isMigrating: Bool
     public let hasAutonomousActivity: Bool
     public let hasNeedDrivenPhysicalFoodActivity: Bool
+    public let hasHungerDiscoveryIntent: Bool
+    public let physicalHungerYields: Bool
     public let autonomousActivityUrgency: Int
     public let currentGoalKind: AgentGoalKind
+    public let currentGoalReason: String?
     public let survivalEnabled: Bool
     public let hungryThreshold: Double
     public let criticalHungerThreshold: Double
@@ -178,8 +181,11 @@ public struct AgentGoalSelectionInput {
         isMigrating: Bool = false,
         hasAutonomousActivity: Bool = false,
         hasNeedDrivenPhysicalFoodActivity: Bool = false,
+        hasHungerDiscoveryIntent: Bool = false,
+        physicalHungerYields: Bool = false,
         autonomousActivityUrgency: Int = 0,
         currentGoalKind: AgentGoalKind,
+        currentGoalReason: String? = nil,
         survivalEnabled: Bool = false,
         hungryThreshold: Double = AgentSurvivalConfiguration.live.hungryThreshold,
         criticalHungerThreshold: Double = AgentSurvivalConfiguration.live.criticalHungerThreshold,
@@ -206,8 +212,11 @@ public struct AgentGoalSelectionInput {
         self.isMigrating = isMigrating
         self.hasAutonomousActivity = hasAutonomousActivity
         self.hasNeedDrivenPhysicalFoodActivity = hasNeedDrivenPhysicalFoodActivity
+        self.hasHungerDiscoveryIntent = hasHungerDiscoveryIntent
+        self.physicalHungerYields = physicalHungerYields
         self.autonomousActivityUrgency = max(0, min(100, autonomousActivityUrgency))
         self.currentGoalKind = currentGoalKind
+        self.currentGoalReason = currentGoalReason
         self.survivalEnabled = survivalEnabled
         self.hungryThreshold = hungryThreshold
         self.criticalHungerThreshold = criticalHungerThreshold

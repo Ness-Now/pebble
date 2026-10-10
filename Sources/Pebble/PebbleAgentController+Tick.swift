@@ -435,9 +435,19 @@ extension PebbleAgentController {
                 } else {
                     navigationObservation = nil
                 }
+                var custodyObservation: AgentPhysicalFoodCustodyObservation?
+                if session.physicalFoodSurvivalEnabled,
+                   let probe = probesByAgentId[agent.id], probe.world === world, !probe.dead {
+                    let endpoint = PebbleAgentMaterialCustodyEndpoint.liveAgent(probe, in: world)
+                    if endpoint.read() != nil {
+                        custodyObservation = AgentPhysicalFoodCustodyObservation(worldTick: world.time,
+                            hasEligibleFood: foodConsumptionExecutor.hasEligibleFood(in: endpoint))
+                    }
+                }
                 return AgentPerceptionInput(
                     agentId: agent.id,
-                    worldObservation: try worldSensor.observe(world: world, agent: agent),
+                    worldObservation: try worldSensor.observe(world: world, agent: agent,
+                        physicalFoodCustody: custodyObservation),
                     resourceObservations: resourceObservations,
                     socialResourceObservations: socialObservations,
                     navigationObservation: navigationObservation

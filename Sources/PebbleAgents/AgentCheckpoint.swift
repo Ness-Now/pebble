@@ -1871,6 +1871,18 @@ extension AgentSimulationSession {
                   validInventory(agent.resourceInventory) else {
                 throw AgentCheckpointError.invalidAgent(agent.id)
             }
+            if let discovery = agent.lastWorldObservation?.hungerDiscoveryProgress {
+                let currentTick = state.clock.tick.rawValue
+                guard discovery.startedAtTick <= currentTick,
+                      discovery.lastAttemptTick.map({ $0 <= currentTick }) ?? true,
+                      discovery.lastEvaluatedOutcomeTick.map({ $0 <= currentTick }) ?? true,
+                      discovery.cooldownUntilTick.map({
+                          $0 <= currentTick
+                              || $0 - currentTick <= AgentHungerDiscoveryProgress.cooldownTicks
+                      }) ?? true else {
+                    throw AgentCheckpointError.invalidAgent(agent.id)
+                }
+            }
             let usesPathReadinessLiveness = state.schemaVersion
                 >= AgentCheckpointSchema.pathReadinessLivenessVersion
             let movementUsesPathReadiness = agent.lastMovementOutcome.map {

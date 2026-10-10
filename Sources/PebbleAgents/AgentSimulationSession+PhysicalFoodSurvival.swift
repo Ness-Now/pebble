@@ -23,6 +23,115 @@ extension AgentSimulationSession {
             || (state.currentGoal.kind == .satisfyHunger
                 && state.needs.hunger
                     > configuration.survivalConfiguration.hungerRecoveryThreshold)
+            || (state.lastWorldObservation?.hungerDiscoveryProgress != nil
+                && state.needs.hunger
+                    > configuration.survivalConfiguration.hungerRecoveryThreshold)
+    }
+
+    /// All durable search memory stays in the existing prospective local
+    /// observation boundary. A missing custody input cannot mean empty food.
+    func hungerDiscoveryDecision(
+        state: inout AgentSessionAgentState, hasFreshPerception: Bool,
+        forcedCareGoal: AgentGoalKind?, occupiedPositions: [AgentPosition],
+        tick decisionTick: Int
+    ) -> (search: Bool, yields: Bool) {
+        guard physicalFoodSurvivalEnabled, survivalEnabled, wildSubsistenceEnabled,
+              autonomousActivityEnabled,
+              var world = state.lastWorldObservation,
+              let custody = world.physicalFoodCustody, custody.version == 1,
+              hasFreshPerception, custody.worldTick == world.worldTick,
+              world.position == state.position else { return (false, false) }
+        let recovery = configuration.survivalConfiguration.hungerRecoveryThreshold
+        if custody.hasEligibleFood || state.needs.hunger <= recovery {
+            world.hungerDiscoveryProgress = nil
+            state.lastWorldObservation = world
+            return (false, false)
+        }
+        let need = state.needs.hunger >= configuration.survivalConfiguration.hungryThreshold
+            || state.currentGoal.kind == .satisfyHunger
+            || world.hungerDiscoveryProgress != nil
+        guard need, state.health > 0,
+              lifecycleState?.members.first(where: { $0.agentID == state.agentID })?
+                .currentStage == .mature else { return (false, false) }
+        // Reuse the normal eligible-source owner, including reservations and
+        // edible fingerprints. No source positions are discovered here.
+        let sourceFresh = ecologicalObservations(for: state.agentID).first?
+            .observation.isFresh(atSimulationTick: decisionTick) == true
+        let context = AgentSubsistenceDecisionContext(actorID: state.agentID,
+            fishingRodAvailable: false, huntingWeaponAvailable: false,
+            agricultureAvailable: false, maximumDistance: 16,
+            subsistencePressure: max(0, min(100, Int(state.needs.hunger * 100))),
+            requiredEdibleMaterialName: "sweet_berries")
+        if sourceFresh, (try? eligibleSubsistenceStrategies(context).isEmpty) == false {
+            return (false, false)
+        }
+        var progress = world.hungerDiscoveryProgress
+            ?? AgentHungerDiscoveryProgress(startedAtTick: decisionTick)
+        if let outcome = state.lastMovementOutcome,
+           outcome.tick == progress.lastAttemptTick,
+           outcome.tick != progress.lastEvaluatedOutcomeTick {
+            progress.lastEvaluatedOutcomeTick = outcome.tick
+            if outcome.status == .blocked {
+                progress.failures = min(AgentHungerDiscoveryProgress.maximumFailures,
+                    progress.failures + 1)
+                progress.cooldownUntilTick = decisionTick + AgentHungerDiscoveryProgress.cooldownTicks
+            }
+        }
+        defer {
+            world.hungerDiscoveryProgress = progress
+            state.lastWorldObservation = world
+        }
+        guard forcedCareGoal == nil, state.health > 25, state.fear < 70,
+              state.needs.safety >= 0.5, !isMigratingAgent(state.id) else {
+            return (false, true)
+        }
+        guard !progress.exhausted else { return (false, true) }
+        if let until = progress.cooldownUntilTick {
+            guard decisionTick >= until else { return (false, true) }
+            progress.cooldownUntilTick = nil
+            progress.attemptsInBurst = 0
+        }
+        // Unknown coverage suspends search; it neither proves physical absence
+        // nor refreshes any refusal/budget.
+        guard world.physicalMovementAssessmentVersion == 1,
+              world.center.chunkReady else { return (false, true) }
+        let legal = AgentFeedbackLoop.permittedExplorationDirections(
+            position: state.position, home: state.homePosition,
+            observation: world, occupiedPositions: occupiedPositions,
+            configuration: configuration.feedbackLoopConfiguration)
+        guard !legal.isEmpty else {
+            let localOccupancy = occupiedPositions.filter {
+                manhattanDistance($0, state.position) <= 2
+            }.map { positionKey($0) }.sorted().joined(separator: ";")
+            let refusal = AgentAutonomousActivityDigest.make(
+                world.physicalReadinessContextDigest + "|" + localOccupancy)
+            if !progress.refusedContexts.contains(refusal),
+               progress.refusedContexts.count < AgentHungerDiscoveryProgress.maximumFailures {
+                progress.refusedContexts.append(refusal)
+                progress.failures = min(AgentHungerDiscoveryProgress.maximumFailures,
+                    progress.failures + 1)
+                progress.cooldownUntilTick = decisionTick + AgentHungerDiscoveryProgress.cooldownTicks
+            }
+            return (false, true)
+        }
+        return (true, false)
+    }
+
+    func recordHungerDiscoveryAttempt(
+        state: inout AgentSessionAgentState, action: AgentAction, searching: Bool
+    ) {
+        guard searching, state.currentGoal.kind == .explore,
+              action.name == "move_abstract",
+              var world = state.lastWorldObservation,
+              var progress = world.hungerDiscoveryProgress, !progress.exhausted else { return }
+        progress.attempts += 1
+        progress.attemptsInBurst += 1
+        progress.lastAttemptTick = action.tick
+        if progress.attemptsInBurst == AgentHungerDiscoveryProgress.burstAttempts {
+            progress.cooldownUntilTick = action.tick + AgentHungerDiscoveryProgress.cooldownTicks
+        }
+        world.hungerDiscoveryProgress = progress
+        state.lastWorldObservation = world
     }
 
     public mutating func setPhysicalFoodSurvivalEnabled(_ enabled: Bool) throws {

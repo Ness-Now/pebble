@@ -58,7 +58,14 @@ public enum AgentCognitiveTransitions {
                 urgency: input.needs.hunger >= input.criticalHungerThreshold
                     ? 110 : max(83, input.autonomousActivityUrgency)
             )
-        } else if input.survivalEnabled
+        } else if input.hasHungerDiscoveryIntent {
+            nextGoal = AgentGoal(
+                kind: .explore,
+                reason: "bounded hunger-driven physical food discovery",
+                startedAtTick: input.tick,
+                urgency: 82
+            )
+        } else if input.survivalEnabled && !input.physicalHungerYields
             && (input.needs.hunger >= input.criticalHungerThreshold || hungerCommitted) {
             nextGoal = AgentGoal(
                 kind: .satisfyHunger,
@@ -100,7 +107,8 @@ public enum AgentCognitiveTransitions {
                 startedAtTick: input.tick,
                 urgency: 90
             )
-        } else if input.survivalEnabled && input.needs.hunger >= input.hungryThreshold {
+        } else if input.survivalEnabled && !input.physicalHungerYields
+                    && input.needs.hunger >= input.hungryThreshold {
             nextGoal = AgentGoal(
                 kind: .satisfyHunger,
                 reason: "hunger threshold reached",
@@ -190,7 +198,7 @@ public enum AgentCognitiveTransitions {
                 startedAtTick: input.tick,
                 urgency: 55
             )
-        } else if input.needs.curiosity >= 0.8 {
+        } else if input.needs.curiosity >= 0.8 && !input.physicalHungerYields {
             nextGoal = AgentGoal(
                 kind: .explore,
                 reason: "curiosity >= 0.8",
@@ -204,7 +212,7 @@ public enum AgentCognitiveTransitions {
                 startedAtTick: input.tick,
                 urgency: 50
             )
-        } else if input.needs.curiosity >= 0.5 {
+        } else if input.needs.curiosity >= 0.5 && !input.physicalHungerYields {
             nextGoal = AgentGoal(
                 kind: .explore,
                 reason: "curiosity >= 0.5",
@@ -220,7 +228,10 @@ public enum AgentCognitiveTransitions {
             )
         }
 
-        guard nextGoal.kind != input.currentGoalKind else { return nil }
+        let discoveryMeaningChanged = (input.hasHungerDiscoveryIntent
+            || input.currentGoalReason == "bounded hunger-driven physical food discovery")
+            && input.currentGoalReason != nextGoal.reason
+        guard nextGoal.kind != input.currentGoalKind || discoveryMeaningChanged else { return nil }
         return AgentGoalChange(from: input.currentGoalKind, to: nextGoal.kind, goal: nextGoal)
     }
 

@@ -728,6 +728,10 @@ public struct AgentSimulationSession {
                     fear: state.fear
                 )
                 state.lastWorldObservation = observation
+                // Incoming perception supplies custody evidence, never search
+                // policy state. Carry only the Session's already-owned budget.
+                state.lastWorldObservation?.hungerDiscoveryProgress =
+                    previousWorldObservation?.hungerDiscoveryProgress
                 state.lastWorldPerceptionEffect = effect
                 state.needs.safety = effect.safetyAfter
                 state.needs.curiosity = effect.curiosityAfter
@@ -849,8 +853,13 @@ public struct AgentSimulationSession {
             }
 
             state.goalSelectionCount += 1
+            let forcedCareGoal = dependentCareForcedGoal(for: state.agentID, stage: careStage)
+            let discovery = hungerDiscoveryDecision(state: &state,
+                hasFreshPerception: perception?.worldObservation != nil,
+                forcedCareGoal: forcedCareGoal, occupiedPositions: peers.map(\.position),
+                tick: nextTick)
             let goalChange: AgentGoalChange?
-            if let forcedKind = dependentCareForcedGoal(for: state.agentID, stage: careStage) {
+            if let forcedKind = forcedCareGoal {
                 if state.currentGoal.kind == forcedKind {
                     goalChange = nil
                 } else {
@@ -904,8 +913,11 @@ public struct AgentSimulationSession {
                     hasNeedDrivenPhysicalFoodActivity:
                         autonomousActivity?.candidate.source == .need
                             && autonomousActivity?.candidate.domain == .wildGathering,
+                    hasHungerDiscoveryIntent: discovery.search,
+                    physicalHungerYields: discovery.yields,
                     autonomousActivityUrgency: autonomousActivity?.candidate.urgency ?? 0,
                     currentGoalKind: state.currentGoal.kind,
+                    currentGoalReason: state.currentGoal.reason,
                     survivalEnabled: survivalEnabled,
                     hungryThreshold: configuration.survivalConfiguration.hungryThreshold,
                     criticalHungerThreshold: configuration.survivalConfiguration.criticalHungerThreshold,
@@ -999,9 +1011,11 @@ public struct AgentSimulationSession {
                 occupiedPositions: peers.map(\.position),
                 lastMovementOutcome: state.lastMovementOutcome,
                 retrievedMemories: retrievedMemories,
-                configuration: configuration.feedbackLoopConfiguration
+                configuration: configuration.feedbackLoopConfiguration,
+                boundedHungerDiscovery: discovery.search
             )
             let action = decisionTrace.finalAction
+            recordHungerDiscoveryAttempt(state: &state, action: action, searching: discovery.search)
             state.lastFeedbackDecisionTrace = decisionTrace
             if decisionTrace.actionChanged && !decisionTrace.memoryRecordsUsed.isEmpty {
                 state.memoryInfluencedDecisionCount += 1

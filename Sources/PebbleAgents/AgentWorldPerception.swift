@@ -112,6 +112,8 @@ public struct AgentWorldObservation: Codable, Equatable {
     /// Bounded derived proposal memory, owned by AgentSimulationSession. Nil
     /// historical inputs retain their exact codec/replay behavior.
     public internal(set) var careNavigationProposal: AgentCareNavigationProposal?
+    public let physicalFoodCustody: AgentPhysicalFoodCustodyObservation?
+    public internal(set) var hungerDiscoveryProgress: AgentHungerDiscoveryProgress?
     public let traversableNeighborCount: Int
     public let blockedNeighborCount: Int
     public let dangerousDropCount: Int
@@ -130,7 +132,8 @@ public struct AgentWorldObservation: Codable, Equatable {
         raining: Bool,
         thundering: Bool,
         physicalCoverageDigest: String? = nil,
-        physicalMovementAssessmentVersion: Int? = nil
+        physicalMovementAssessmentVersion: Int? = nil,
+        physicalFoodCustody: AgentPhysicalFoodCustodyObservation? = nil
     ) throws {
         guard center.position == position else {
             throw AgentWorldObservationError.invalidCenterPosition
@@ -172,6 +175,8 @@ public struct AgentWorldObservation: Codable, Equatable {
         self.thundering = thundering
         self.physicalMovementAssessmentVersion = physicalMovementAssessmentVersion
         self.careNavigationProposal = nil
+        self.physicalFoodCustody = physicalFoodCustody
+        self.hungerDiscoveryProgress = nil
         self.physicalCoverageDigest = physicalCoverageDigest
         traversableNeighborCount = ordered.filter(\.traversable).count
         blockedNeighborCount = ordered.filter { !$0.traversable }.count

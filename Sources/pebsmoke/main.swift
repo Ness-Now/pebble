@@ -79,6 +79,12 @@ if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "care-navigati
     exit(failed > 0 ? 1 : 0)
 }
 
+if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "ps01-increment-10" {
+    runPebbleAgentsHungerDiscoverySmoke()
+    print("\n\(passed) passed, \(failed) failed")
+    exit(failed > 0 ? 1 : 0)
+}
+
 if ProcessInfo.processInfo.environment["PEBBLELAB_SMOKE_ONLY"] == "retained-historical-identity" {
     runPebbleAgentsRetainedHistoricalIdentitySmoke()
     print("\n\(passed) passed, \(failed) failed")
@@ -3152,6 +3158,7 @@ runPebbleAgentsWorkProfessionSmoke()
 runPebbleAgentsWorkDemandRefreshSmoke()
 runPebbleAgentsAutonomousCivilizationSmoke()
 runPebbleAgentsCareNavigationBlockerSmoke()
+runPebbleAgentsHungerDiscoverySmoke()
 runPebbleAgentsBoundedAutonomousNavigationSmoke()
 runPebbleAgentsAutonomousActivityLifecycleSmoke()
 runPebbleAgentsProductiveSourceLifecycleSmoke()

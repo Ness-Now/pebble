@@ -135,6 +135,19 @@ public struct AgentFeedbackDecisionTrace: Codable, Equatable {
 }
 
 public enum AgentFeedbackLoop {
+    static func permittedExplorationDirections(
+        position: AgentPosition, home: AgentPosition,
+        observation: AgentWorldObservation?, occupiedPositions: [AgentPosition],
+        configuration: AgentFeedbackLoopConfiguration
+    ) -> [AgentCardinalDirection] {
+        safeCandidates(position: position, observation: observation,
+            occupiedPositions: occupiedPositions).filter {
+                respectsExplorationHomeBoundary(
+                    distanceBefore: distance(position, home),
+                    distanceAfter: distance($0.position, home),
+                    maximumDistance: configuration.maxExploreDistanceFromHome)
+            }.map(\.direction)
+    }
     /// Validates one exploration movement against the exploration policy's
     /// home range. An actor already at or beyond the boundary must make strict
     /// progress home; a lateral step would otherwise permit an endless
@@ -237,7 +250,8 @@ public enum AgentFeedbackLoop {
         occupiedPositions: [AgentPosition],
         lastMovementOutcome: AgentMovementOutcome?,
         retrievedMemories: [AgentRetrievedMemory],
-        configuration: AgentFeedbackLoopConfiguration
+        configuration: AgentFeedbackLoopConfiguration,
+        boundedHungerDiscovery: Bool = false
     ) -> AgentFeedbackDecisionTrace {
         let baseFactor = AgentDecisionFactor(
             kind: .basePolicy,
@@ -262,6 +276,20 @@ public enum AgentFeedbackLoop {
                 distanceAfter: distance($0.position, homePosition),
                 maximumDistance: configuration.maxExploreDistanceFromHome
             )
+        }
+        // Hunger discovery admits only an already observed, locally legal
+        // exploration step. Core still owns every actual physical path/step.
+        if boundedHungerDiscovery, goal.kind == .explore,
+           baseAction.name == "move_abstract",
+           !explorationSafe.contains(where: { $0.direction == baseDirection }) {
+            if let candidate = explorationSafe.first {
+                finalAction = movementAction(tick: tick, direction: candidate.direction,
+                    reason: "bounded hunger discovery uses a locally admissible step")
+            } else {
+                finalAction = AgentAction(name: "wait",
+                    reason: "bounded hunger discovery has no legal local step", tick: tick)
+            }
+            reason = finalAction.reason
         }
         let baseExplorationCandidate = baseDirection.flatMap { direction in
             safe.first { $0.direction == direction }
