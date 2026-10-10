@@ -989,7 +989,9 @@ public struct AgentSimulationSession {
                 careInteractionDistance: dependentCareState?.configuration
                     .careInteractionDistance ?? 1,
                 autonomousActivityTarget: autonomousActivity?.candidate.target,
-                autonomousActivityActionKey: autonomousActivity?.candidate.actionKey
+                autonomousActivityActionKey: autonomousActivity?.candidate.actionKey,
+                autonomousActivityGoalMode: autonomousActivity?.candidate.navigationGoalMode
+                    ?? .cardinalAdjacent
             ))
             let retrievedMemories = AgentFeedbackLoop.retrieveMovementMemories(
                 memory: state.memory,

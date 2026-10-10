@@ -97,6 +97,7 @@ public struct AgentActionDecisionInput {
     public let careInteractionDistance: Int
     public let autonomousActivityTarget: AgentPosition?
     public let autonomousActivityActionKey: String?
+    public let autonomousActivityGoalMode: AgentNavigationGoalMode
 
     public init(
         agentId: String,
@@ -119,7 +120,8 @@ public struct AgentActionDecisionInput {
         careActionName: String? = nil,
         careInteractionDistance: Int = 1,
         autonomousActivityTarget: AgentPosition? = nil,
-        autonomousActivityActionKey: String? = nil
+        autonomousActivityActionKey: String? = nil,
+        autonomousActivityGoalMode: AgentNavigationGoalMode = .cardinalAdjacent
     ) {
         self.agentId = agentId
         self.tick = tick
@@ -142,6 +144,7 @@ public struct AgentActionDecisionInput {
         self.careInteractionDistance = careInteractionDistance
         self.autonomousActivityTarget = autonomousActivityTarget
         self.autonomousActivityActionKey = autonomousActivityActionKey
+        self.autonomousActivityGoalMode = autonomousActivityGoalMode
     }
 }
 
@@ -247,7 +250,7 @@ public enum AgentActionDecider {
             }
             let distance = abs(input.position.x - target.x)
                 + abs(input.position.y - target.y) + abs(input.position.z - target.z)
-            if distance <= 1 {
+            if input.autonomousActivityGoalMode == .exact ? distance == 0 : distance <= 1 {
                 return AgentAction(
                     name: "execute_autonomous_activity",
                     reason: "cognitive activity ready: \(actionKey)",

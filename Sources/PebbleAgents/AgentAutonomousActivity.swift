@@ -194,6 +194,28 @@ public struct AgentAutonomousActivityCandidate: Codable, Equatable, Sendable {
         ].joined(separator: "|"))
     }
 
+    /// A physical food approach names a standing site separately from its
+    /// source. Historical same-column targets and other activities retain
+    /// their existing adjacent-arrival convention.
+    public var navigationGoalMode: AgentNavigationGoalMode {
+        guard domain == .wildGathering, actionKey == "wildGathering",
+              source == .need, materialFingerprint != "legacy",
+              let target, target == approachPosition,
+              let physicalTarget,
+              abs(target.x - physicalTarget.x) + abs(target.z - physicalTarget.z) == 1,
+              (-1...2).contains(physicalTarget.y - target.y) else {
+            return .cardinalAdjacent
+        }
+        return .exact
+    }
+
+    public func hasArrived(at position: AgentPosition) -> Bool {
+        guard let target else { return true }
+        let distance = abs(position.x - target.x) + abs(position.y - target.y)
+            + abs(position.z - target.z)
+        return navigationGoalMode == .exact ? distance == 0 : distance <= 1
+    }
+
     public var physicalAttemptFingerprint: String {
         func position(_ value: AgentPosition?) -> String {
             value.map { "\($0.x),\($0.y),\($0.z)" } ?? "none"

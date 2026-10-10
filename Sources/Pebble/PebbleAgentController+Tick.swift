@@ -268,7 +268,7 @@ extension PebbleAgentController {
                         navigationTarget = preparedNavigationObservation?.target ?? target
                     }
                     navigationGoalMode = navigationTarget == target
-                        ? .cardinalAdjacent : .exact
+                        ? activity.candidate.navigationGoalMode : .exact
                 } else if agent.currentGoal.kind == .provideDependentCare,
                    let caregiverID = AgentID(rawValue: agent.id),
                    let dependentID = session.careTarget(for: caregiverID),

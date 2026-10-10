@@ -640,3 +640,103 @@ func runPebbleAgentsBoundedAutonomousNavigationSmoke() {
             && abs(homeWaypoint.x - origin.x) < abs(outsideLocalObservation.x - origin.x)
     )
 }
+
+func runPebbleAgentsPhysicalFoodApproachSmoke() {
+    section("PS01 I11 physical food standing-site navigation")
+    let origin = AgentPosition(x: 0, y: 64, z: 0)
+    let site = AgentPosition(x: 3, y: 64, z: 0)
+    func candidate(
+        tick: Int, sourceY: Int = 64, siteY: Int = 64,
+        domain: AgentAutonomousActivityDomain = .wildGathering,
+        fingerprint: String = "mature-observed-source",
+        targetX: Int = 3
+    ) -> AgentAutonomousActivityCandidate {
+        let target = AgentPosition(x: targetX, y: siteY, z: 0)
+        return AgentAutonomousActivityCandidate(
+            candidateID: "food-opportunity", actorID: AgentID(rawValue: "agent_0")!,
+            domain: domain, actionKey: "wildGathering", stableReference: "ordinary-opportunity",
+            target: target, logicalTargetKey: "plant:sweet_berry_bush@4,64,0",
+            physicalTarget: AgentPosition(x: 4, y: sourceY, z: 0),
+            approachPosition: target, materialFingerprint: fingerprint,
+            source: .need, priorityBand: 8, urgency: 70,
+            distance: 3, observedAtTick: tick
+        )
+    }
+    for delta in -1...2 {
+        let food = candidate(tick: 0, sourceY: 64 + delta)
+        check("I11 source reach delta \(delta) uses existing exact mode",
+              food.navigationGoalMode == .exact && food.hasArrived(at: site))
+    }
+    for delta in [-2, 3] {
+        check("I11 source outside reach delta \(delta) cannot mark a standing site",
+              candidate(tick: 0, sourceY: 64 + delta).navigationGoalMode == .cardinalAdjacent)
+    }
+    check("I11 raised historical source-column target remains adjacent",
+          candidate(tick: 0, sourceY: 63, targetX: 4).navigationGoalMode == .cardinalAdjacent)
+    check("I11 legacy physical fingerprint retains historical convention",
+          candidate(tick: 0, fingerprint: "legacy").navigationGoalMode == .cardinalAdjacent)
+    for domain in AgentAutonomousActivityDomain.allCases where domain != .wildGathering {
+        check("I11 unrelated \(domain.rawValue) arrival remains adjacent",
+              candidate(tick: 0, domain: domain).navigationGoalMode == .cardinalAdjacent)
+    }
+    var session = boundedNavigationSession()
+    try! session.setAutonomousActivityEnabled(true)
+    let activity = try! session.selectAutonomousActivities([candidate(tick: 0)])[0]
+    for x in 0...2 {
+        let current = session.snapshot().agents[0].position
+        let result = try! session.advanceTick(perceptions: [AgentPerceptionInput(
+            agentId: "agent_0", navigationObservation: boundedNavigationObservation(
+                origin: current, target: site, traversableX: 0...3, targetBlocked: false
+            )
+        )])
+        let progress = session.snapshot().agents[0].navigationProgress
+        check("I11 normal Session publishes exact food route step \(x)",
+              progress.route?.purpose == .civilizationActivity
+                && progress.route?.positions.last == site
+                && result.agents[0].action.name == "approach_activity")
+        if x == 2 {
+            check("I11 adjacent-to-site does not execute early",
+                  current == AgentPosition(x: 2, y: 64, z: 0)
+                    && progress.status != .arrived)
+        }
+        publishBoundedEastStep(result: result, session: &session)
+        let selected = try! session.selectAutonomousActivities([candidate(tick: session.tick)])[0]
+        check("I11 movement refresh preserves activity identity \(x)",
+              selected.activityID == activity.activityID)
+    }
+    let arrived = try! session.advanceTick(perceptions: [AgentPerceptionInput(
+        agentId: "agent_0", navigationObservation: boundedNavigationObservation(
+            origin: site, target: site, traversableX: 0...3, targetBlocked: false
+        )
+    )])
+    check("I11 exact standing-site arrival enables ordinary execution",
+          arrived.agents[0].action.name == "execute_autonomous_activity"
+            && session.snapshot().agents[0].navigationProgress.status == .arrived)
+    check("I11 route admission creates no material or subsistence receipt",
+          session.snapshot().agents[0].resourceInventory.count(of: .foodRaw) == 0
+            && session.wildSubsistenceSnapshot().retainedOutcomes.isEmpty)
+    let checkpoint = try! session.makeCheckpoint()
+    let restored = try! AgentSimulationSession.restoring(checkpoint)
+    check("I11 checkpoint preserves existing activity fields and exact arrival",
+          try! restored.durableStateBytes() == session.durableStateBytes())
+    _ = try! session.selectAutonomousActivities([])
+    check("I11 lost observation cancels food activity and its route",
+          session.activeAutonomousActivity(for: AgentID(rawValue: "agent_0")!) == nil
+            && session.snapshot().agents[0].navigationProgress.route == nil)
+
+    var blocked = boundedNavigationSession(maximumReplans: 0)
+    try! blocked.setAutonomousActivityEnabled(true)
+    _ = try! blocked.selectAutonomousActivities([candidate(tick: 0)])
+    for _ in 0..<2 {
+        _ = try! blocked.advanceTick(perceptions: [AgentPerceptionInput(
+            agentId: "agent_0", navigationObservation: boundedNavigationObservation(
+                origin: origin, target: site, traversableX: 0...0, targetBlocked: false
+            )
+        )])
+    }
+    check("I11 valid site without bounded route exhausts ordinary replans",
+          blocked.snapshot().agents[0].navigationProgress.lastFailure == .replanLimitReached)
+    check("I11 exhausted exact route uses existing cooldown without retry reset",
+          try! blocked.selectAutonomousActivities([candidate(tick: blocked.tick)]).isEmpty
+            && blocked.autonomousActivitySnapshot().cooldowns.count == 1)
+}

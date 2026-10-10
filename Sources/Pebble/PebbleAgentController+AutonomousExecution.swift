@@ -617,6 +617,15 @@ extension PebbleAgentController {
         }), let attemptID = AgentSubsistenceAttemptID(
             rawValue: "auto-gather:\(session.tick):\(opportunity.actorID.rawValue)"
         ) else { throw ControllerError.feedbackBoundary("stale gathering opportunity") }
+        if let evidence = opportunity.edibleSourceEvidence {
+            guard opportunity.expiresAtTick >= session.tick,
+                  opportunity.actorID.rawValue == actor.agentID,
+                  activity.candidate.physicalTarget == opportunity.lastObservedPosition,
+                  activity.candidate.materialFingerprint == evidence.physicalSourceFingerprint,
+                  activity.candidate.hasArrived(at: actor.position) else {
+                throw ControllerError.feedbackBoundary("stale physical food approach")
+            }
+        }
         let target = PhysicalBlockPosition(
             x: opportunity.lastObservedPosition.x,
             y: opportunity.lastObservedPosition.y,

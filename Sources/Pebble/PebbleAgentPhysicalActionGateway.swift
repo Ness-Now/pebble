@@ -1220,8 +1220,19 @@ final class PebbleAgentPhysicalActionGateway {
         let actorX = Int(actor.x.rounded(.down))
         let actorY = Int(actor.y.rounded(.down))
         let actorZ = Int(actor.z.rounded(.down))
-        let horizontal = abs(target.x - actorX) + abs(target.z - actorZ)
-        let vertical = target.y - actorY
+        return Self.isWithinBoundedReach(
+            actorPosition: PhysicalBlockPosition(x: actorX, y: actorY, z: actorZ),
+            target: target
+        )
+    }
+
+    /// Read-only admission uses the same centered-foot reach as execution.
+    static func isWithinBoundedReach(
+        actorPosition: PhysicalBlockPosition,
+        target: PhysicalBlockPosition
+    ) -> Bool {
+        let horizontal = abs(target.x - actorPosition.x) + abs(target.z - actorPosition.z)
+        let vertical = target.y - actorPosition.y
         return horizontal == 1 && (-1...2).contains(vertical)
     }
 

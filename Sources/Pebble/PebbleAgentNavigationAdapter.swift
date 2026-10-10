@@ -5,6 +5,65 @@ struct PebbleAgentNavigationAdapter {
     static let radius = AgentNavigationObservation.maximumRadius
     static let maximumSurveyCandidateCount = 32
 
+    /// Select only among already observed, Core-placeable standing sites.
+    /// This is at most four columns by four harvesting heights, using the
+    /// unchanged bounded planner. Session still owns actual route publication
+    /// and the movement executor independently verifies every physical step.
+    func observeFoodApproach(
+        world: World,
+        agent: AgentSnapshot,
+        source: AgentPosition,
+        preferredPosition: AgentPosition?,
+        occupiedAgentPositions: [AgentPosition]
+    ) -> AgentPosition? {
+        let observation = observe(
+            world: world, agent: agent, target: source,
+            occupiedAgentPositions: occupiedAgentPositions, goalMode: .exact
+        )
+        return Self.selectFoodApproach(
+            observation: observation, source: source, preferredPosition: preferredPosition
+        )
+    }
+
+    static func selectFoodApproach(
+        observation: AgentNavigationObservation,
+        source: AgentPosition,
+        preferredPosition: AgentPosition?
+    ) -> AgentPosition? {
+        let physicalSource = PhysicalBlockPosition(x: source.x, y: source.y, z: source.z)
+        let sites = observation.cells.filter { cell in
+            cell.status == .traversable
+                && PebbleAgentPhysicalActionGateway.isWithinBoundedReach(
+                    actorPosition: PhysicalBlockPosition(
+                        x: cell.position.x, y: cell.position.y, z: cell.position.z
+                    ), target: physicalSource
+                )
+        }.sorted { lhs, rhs in
+            if (lhs.position == preferredPosition) != (rhs.position == preferredPosition) {
+                return lhs.position == preferredPosition
+            }
+            func distance(_ position: AgentPosition) -> Int {
+                abs(position.x - observation.origin.x) + abs(position.y - observation.origin.y)
+                    + abs(position.z - observation.origin.z)
+            }
+            let left = distance(lhs.position), right = distance(rhs.position)
+            if left != right { return left < right }
+            if lhs.position.x != rhs.position.x { return lhs.position.x < rhs.position.x }
+            if lhs.position.z != rhs.position.z { return lhs.position.z < rhs.position.z }
+            return lhs.position.y < rhs.position.y
+        }.prefix(16)
+        for site in sites {
+            let plan = AgentBoundedRoutePlanner.plan(AgentNavigationRequest(
+                start: observation.origin, target: site.position, goalMode: .exact,
+                cells: observation.cells, radius: observation.radius,
+                maxVisitedNodes: AgentBoundedRoutePlanner.maximumVisitedNodes,
+                maxSteps: AgentBoundedRoutePlanner.maximumRouteSteps
+            ))
+            if plan.found { return site.position }
+        }
+        return nil
+    }
+
     func observeSurvey(
         world: World,
         agent: AgentSnapshot,

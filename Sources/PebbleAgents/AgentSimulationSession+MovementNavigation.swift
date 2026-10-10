@@ -859,8 +859,9 @@ extension AgentSimulationSession {
                 purpose: purpose
             )
             targetResource = nil
-            goalMode = targetPosition == target ? .cardinalAdjacent : .exact
-            if manhattanDistance(state.position, target) <= 1 {
+            goalMode = targetPosition == target
+                ? activity.candidate.navigationGoalMode : .exact
+            if activity.candidate.hasArrived(at: state.position) {
                 state.navigationProgress = AgentNavigationProgress(
                     status: .arrived,
                     route: state.navigationProgress.route,

@@ -184,8 +184,10 @@ extension AgentSimulationSession {
                 }
                 continue
             }
-            let lifecycle: AgentAutonomousActivityLifecycle = winner.distance <= 1
-                ? .ready : .traveling
+            let arrived = winner.navigationGoalMode == .exact
+                ? winner.hasArrived(at: statesById[actorID.rawValue]!.position)
+                : winner.distance <= 1
+            let lifecycle: AgentAutonomousActivityLifecycle = arrived ? .ready : .traveling
             if var previous,
                previous.candidate.representsSameLogicalActivity(as: winner) {
                 if !previous.candidate.representsSamePhysicalAttempt(as: winner) {

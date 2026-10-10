@@ -461,13 +461,34 @@ extension PebbleAgentController {
             let work = productiveSource == nil
                 ? nil : commitment(opportunity.actorID, domains: workDomains)
             let id = "subsistence:\(opportunity.opportunityID.rawValue)"
-            let navigationTarget = AgentPosition(
+            var navigationTarget = AgentPosition(
                 x: opportunity.lastObservedPosition.x,
                 y: opportunity.lastObservedPosition.y < agent.position.y
                     ? opportunity.lastObservedPosition.y + 1
                     : opportunity.lastObservedPosition.y,
                 z: opportunity.lastObservedPosition.z
             )
+            if domain == .wildGathering, let evidence = opportunity.edibleSourceEvidence {
+                let source = opportunity.lastObservedPosition
+                guard world.isChunkReady(source.x >> 4, source.z >> 4),
+                      let qualification = edibleSweetBerryHarvestQualification(
+                        for: world.getBlock(source.x, source.y, source.z)
+                      ), qualification.canonicalMaterialName == evidence.canonicalMaterialName,
+                      pebbleAgentEdibleSourceFingerprint(
+                        sourceCell: qualification.sourceCell, blockName: qualification.blockName,
+                        canonicalMaterialName: qualification.canonicalMaterialName
+                      ) == evidence.physicalSourceFingerprint else { continue }
+                let previous = session.activeAutonomousActivity(for: opportunity.actorID)?.candidate
+                let preferred = previous?.navigationGoalMode == .exact
+                    && previous?.physicalTarget == source
+                    && previous?.materialFingerprint == evidence.physicalSourceFingerprint
+                    ? previous?.approachPosition : nil
+                guard let site = navigationAdapter.observeFoodApproach(
+                    world: world, agent: agent, source: source, preferredPosition: preferred,
+                    occupiedAgentPositions: snapshot.agents.filter { $0.id != agent.id }.map(\.position)
+                ) else { continue }
+                navigationTarget = site
+            }
             candidates.append(markingLogicalContinuity(
                 AgentAutonomousActivityCandidate(
                     candidateID: id, actorID: opportunity.actorID,
