@@ -316,7 +316,10 @@ evidence reconciliation as
 **COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at
 `1426dc8328e56ec6e85b5b70d6e988b324bd97e5` within bounded discovery scope;
 see [PS01 I10 — Publication Reconciliation](PS01_INCREMENT_10_PUBLICATION.md).
-I11 or any further PS01 product increment is **NOT SELECTED / NOT AUTHORIZED**;
+I11 is **COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at
+`d7cd3777d1a8220174ab5d44a0214f2829af91cd`; see the
+[publication record](PS01_INCREMENT_11_PUBLICATION.md). I12 and any further PS01 product increment
+are **NOT SELECTED / NOT AUTHORIZED**;
 the next product mission requires an explicit supervisor decision. PS01 remains
 incomplete; Wave 6 and CIV-48 implementation remain unauthorized, and Gate H
 remains planned.
@@ -523,6 +526,9 @@ reconciliation did not resume it or select a next product increment.
 
 ### Published Increment 10 — Bounded Hunger-Driven Physical Food Discovery
 
+Historical I10 qualification and authorization snapshot: the statements below
+remain valid at that publication boundary. Later I11 closure is recorded next.
+
 I10 is **COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED**
 within bounded discovery scope at published product HEAD
 `1426dc8328e56ec6e85b5b70d6e988b324bd97e5`, tree
@@ -566,6 +572,63 @@ PS01 product increment is NOT SELECTED / NOT AUTHORIZED**. Demographic Phase B
 requires separate supervisor authorization; CIV-48 / Wave 6 remain unauthorized;
 Gate H remains planned. This local documentation candidate requires supervisor
 review before any further manual publication; it selects no substantive mission.
+
+### Published Increment 11 — Physical Food Approach Admission
+
+I11 is **COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** within its
+bounded physical-food-approach scope. Latest published product increment HEAD:
+`d7cd3777d1a8220174ab5d44a0214f2829af91cd`, tree `6f0f13ed41c06a0b6ab340ddee36b7381f42faca`,
+sole parent `843a6af589fb7fe0eb0104d44d2ae5ef124036c9`. Manual non-forced user
+publication and exact remote verification are recorded on 2026-10-10 in
+[PS01 I11 — Publication Reconciliation](PS01_INCREMENT_11_PUBLICATION.md). Historical candidate
+`a33cbe2ec5b32083cd4f2ee680dc203242e5cb34` shares the exact tree and parent;
+the SHA change corrected metadata only after GH007 protection. Independent
+senior approval is supervisor-supplied; no signed attachment or independent
+macOS test execution by this documentation mission is claimed.
+
+Ordinary cognition now selects a locally observed, Core-placeable and bounded
+planner-reachable harvesting standing site while retaining the actual source
+separately. `AgentSimulationSession` owns route admission, publication and
+activity; unchanged Core/MovementExecutor owns physical movement, exact-center
+checks and rollback; the existing harvest gateway owns acquisition and custody.
+Coarse admission does not guarantee physical execution. No new planner, Core
+locomotion, global navigation semantics, schema migration, demographics or
+capacity increase is introduced.
+
+Accepted ordinary seed-14 continuation by `agent_23` proves hunger-directed
+physical search, genuine western mature berry detection, ordinary WildSubsistence
+selection, safe standing site `(193,64,-38)`, Session-owned route admission and
+publication, actual Core-backed movement and exact-center arrival. The first
+expired opportunity is legitimately refused; normal cooldown and a fresh later
+opportunity lead to autonomous harvest of **two sweet berries**, exact physical
+consumption of both, and fresh-process durable restoration. Final conservation:
+**11 acquired = 11 consumed + 0 carried** (previously 9 = 9 + 0). E11 western audit,
+E11B isolated east-site proof and isolated adapter fixtures remain separate from
+this ordinary native continuation. I10's historical natural campaign acquired
+no new food; that qualification is unchanged.
+
+Accepted regression closure: focused **1637/0**, isolated Core/adapter **30/0**,
+**11 byte-identical** compatibility outputs, complete stock Release and Debug
+both **6659/3**, exactly **34** new passing checks over historical I10 **6625/3**.
+Canonical gate remains **FAIL** on zoo determinism, combat lockstep and eight A*
+path identities. Supplemental stages 6–35 are **30/30 PASS**, not a complete
+35-stage canonical PASS. B02/B03 same-home repeatability remains separate and
+unresolved. Qualification is reused archive evidence; no build or native campaign
+is rerun by this documentation mission.
+
+Representative 30-body / 16-admission observation-and-selection median is
+approximately **38.6 ms**, p95 **41.4 ms**. Full cognition p95 and exhausted-site
+worst-case 4 Hz guarantees are **not established**. Core-slowed exact-center
+refusal/verified rollback remains; no terrain-wide robustness claim. Visual
+qualification is limited and claims no frame-level harvest depiction.
+
+Capacity remains **30**. PS01 is **REQUIRED / IN PROGRESS / NOT COMPLETE**.
+**I12 and any further PS01 product increment are NOT SELECTED / NOT AUTHORIZED**.
+Demographic Phase B requires separate supervisor authorization. CIV-48 / Wave 6
+remain unauthorized; Gate H remains planned. No sustained food-security or
+multigenerational-durability claim. The next action is independent supervisor
+review of this local documentation candidate before any further manual
+publication; it selects no substantive product mission. **Push attempted: NO.**
 
 ### Deferred evidence-ranked questions and limits
 
@@ -1477,7 +1540,12 @@ Increment 10 published product HEAD: 1426dc8328e56ec6e85b5b70d6e988b324bd97e5
 Increment 10 published tree: 592ae3f9bc18e4b0cc8f75089d677d9cdd6b6999
 Increment 10 canonical candidate gate: FAIL 6625/3; historical 6586/3 immutable
 Increment 10 natural harvest/new food acquisition: NONE
-I11 or any further PS01 product increment: NOT SELECTED / NOT AUTHORIZED
+Increment 11 status: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED
+Latest published product increment HEAD: d7cd3777d1a8220174ab5d44a0214f2829af91cd
+Increment 11 natural chain: autonomous two-berry harvest / exact consumption / fresh restart
+Increment 11 conservation: 11 acquired = 11 consumed + 0 carried
+Increment 11 canonical gate: FAIL 6659/3; supplemental stages 6–35 PASS 30/30
+I12 and any further PS01 product increment: NOT SELECTED / NOT AUTHORIZED
 next selected PS01 integration increment: NONE — SUPERVISOR DECISION REQUIRED
 next product mission: NOT SELECTED OR AUTHORIZED BY THIS RECONCILIATION
 CIV-33 status: COMPLETE AND PUBLISHED
@@ -1921,7 +1989,10 @@ the completed evidence reconciliation as
 **COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at
 `1426dc8328e56ec6e85b5b70d6e988b324bd97e5` within bounded discovery scope;
 see [PS01 I10 — Publication Reconciliation](PS01_INCREMENT_10_PUBLICATION.md).
-I11 or any further PS01 product increment is **NOT SELECTED / NOT AUTHORIZED**;
+I11 is **COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at
+`d7cd3777d1a8220174ab5d44a0214f2829af91cd`; see the
+[publication record](PS01_INCREMENT_11_PUBLICATION.md). I12 and any further PS01 product increment
+are **NOT SELECTED / NOT AUTHORIZED**;
 the next product mission requires an explicit supervisor decision. PS01 remains
 incomplete; Wave 6 and CIV-48 implementation remain unauthorized, and Gate H
 remains planned.

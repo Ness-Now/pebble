@@ -304,7 +304,9 @@ for the compact status. In particular:
   FAIL (6555/3); supplemental stages 6–35 PASS are separate evidence.
   See the [publication record](docs/pebblelab/PS01_INCREMENT_09_PUBLICATION.md) and
   [unchanged independent senior review](docs/pebblelab/PS01_INCREMENT_09_INDEPENDENT_SENIOR_REVIEW_2026-10-08.md).
-  I11 or any further PS01 product increment is NOT SELECTED / NOT AUTHORIZED;
+  I11 is published at `d7cd3777d1a8220174ab5d44a0214f2829af91cd` within bounded
+  physical-food-approach scope; see the [publication record](docs/pebblelab/PS01_INCREMENT_11_PUBLICATION.md).
+  I12 and any further PS01 product increment are NOT SELECTED / NOT AUTHORIZED;
   the supervisor must explicitly decide any further PS01 mission. PS01 remains
   incomplete; Wave 6 is unauthorized. See the
   [accepted reconciliation and selection](docs/pebblelab/CURRENT_STATE.md#supervisor-accepted-characterization-reconciliation),
@@ -339,9 +341,31 @@ for the compact status. In particular:
   Candidate canonical gate is FAIL 6625/3 with the same three historical
   failures; B02/B03 same-home repeatability is an additional baseline fixture
   issue, isolated from fresh-home results. Capacity remains 30; PS01 remains
-  REQUIRED / IN PROGRESS / NOT COMPLETE. I11 or any further PS01 product
-  increment is NOT SELECTED / NOT AUTHORIZED. Demographic Phase B still requires
-  separate supervisor authorization.
+  REQUIRED / IN PROGRESS / NOT COMPLETE. At I10 publication, I11 or any further
+  PS01 product increment was NOT SELECTED / NOT AUTHORIZED; later I11 closure
+  follows. Demographic Phase B still requires separate supervisor authorization.
+- I11, Physical Food Approach Admission, is **COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at latest published product increment HEAD
+  `d7cd3777d1a8220174ab5d44a0214f2829af91cd`. See
+  [PS01 I11 — Publication Reconciliation](docs/pebblelab/PS01_INCREMENT_11_PUBLICATION.md).
+  Ordinary cognition selects an observed Core-placeable standing site separately
+  from the food source; Session retains route/activity authority and unchanged
+  Core/MovementExecutor and harvest gateway retain physical/custody authority.
+  Natural seed-14 `agent_23` search/discovery reaches `(193,64,-38)` exactly,
+  refuses the expired opportunity, then uses normal cooldown/fresh opportunity
+  to harvest two sweet berries, consume both and restore durable state in a
+  fresh process. **11 acquired = 11 consumed + 0 carried**. I10's earlier
+  no-harvest qualification remains unchanged; E11/E11B isolated evidence is
+  separate. Focused 1637/0, Core/adapter 30/0, 11 byte-identical outputs;
+  complete stock Release and Debug are **FAIL 6659/3**, exactly 34 additional
+  passing checks over I10 6625/3. Supplemental 6–35 PASS 30/30 is separate;
+  B02/B03 same-home repeatability remains unresolved. Representative 30-body /
+  16-admission median ~38.6 ms, p95 ~41.4 ms does not establish full cognition
+  p95 or exhausted-site worst-case 4 Hz. Slowed exact-center refusal/rollback
+  and limited visual evidence remain; no frame-level harvest claim.
+  Capacity stays 30; no sustained food security, multigenerational durability,
+  schema migration, new planner or terrain-wide guarantee. PS01 is REQUIRED /
+  IN PROGRESS / NOT COMPLETE. I12 and further product increments are NOT
+  SELECTED / NOT AUTHORIZED; Phase B requires separate supervisor authorization.
 - CIV-48 remains **NOT STARTED**, implementation is not authorized, and it is
   deferred until PLAYABLE SLICE 01 and the resulting evidence-driven roadmap
   recalibration are complete. Gate H remains planned. See

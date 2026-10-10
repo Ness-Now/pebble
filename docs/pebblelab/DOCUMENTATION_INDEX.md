@@ -38,6 +38,7 @@ These documents form the minimal permanent memory of the project:
 | [`CURRENT_STATE.md`](CURRENT_STATE.md) | Compact acquired state, product baseline, debt and next authorized action; [published terminal-identity correction](CURRENT_STATE.md#published-terminal-historical-identity-correction), historical characterization FAIL, [supervisor-accepted reconciliation](CURRENT_STATE.md#supervisor-accepted-characterization-reconciliation). |
 | [`PS01_CARE_NAVIGATION_BLOCKER_01_PUBLICATION.md`](PS01_CARE_NAVIGATION_BLOCKER_01_PUBLICATION.md) | Verified correction publication, exact identity/SHA provenance, bounded care/movement proof, residual slowing limit, historical canonical FAILs and suspended demographic Phase B. |
 | [`PS01_CARE_NAVIGATION_BLOCKER_01_INDEPENDENT_SENIOR_REVIEW_2026-10-09.md`](PS01_CARE_NAVIGATION_BLOCKER_01_INDEPENDENT_SENIOR_REVIEW_2026-10-09.md) | Byte-exact original senior approval; historical pre-publication conditions, Risk-C findings and explicit independent-execution limits. |
+| [`PS01_INCREMENT_11_PUBLICATION.md`](PS01_INCREMENT_11_PUBLICATION.md) | PS01 I11 — Publication Reconciliation: exact remote-verified identity and metadata crosswalk, supervisor approval, bounded ordinary harvest/consumption/restart, conservation, regression closure, performance/visual limits and external provenance; I12 not authorized. |
 | [`PS01_INCREMENT_10_PUBLICATION.md`](PS01_INCREMENT_10_PUBLICATION.md) | PS01 I10 — Publication Reconciliation: exact manual publication/noreply identity, supervisor-supplied senior approval, bounded native search/discovery/admission, missing harvest/sustainability proof, archive provenance, historical gate and same-home fixture failures, authorization limits. |
 | [`PS01_INCREMENT_09_PUBLICATION.md`](PS01_INCREMENT_09_PUBLICATION.md) | Verified I09 publication identity, accepted independent evidence/provenance, bounded claims, historical FAIL and pending supervisor decision. |
 | [`PS01_INCREMENT_09_REDESIGN.md`](PS01_INCREMENT_09_REDESIGN.md) | Unchanged candidate-time source/owner audit and qualification; LOCAL_REVIEW_CANDIDATE describes its historical boundary. |
@@ -166,7 +167,11 @@ I10: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED (boun
 I10 published product HEAD: 1426dc8328e56ec6e85b5b70d6e988b324bd97e5
 I10 canonical candidate gate: FAIL 6625/3; historical 6586/3 immutable
 I10 natural campaign: SEARCH / DISCOVERY / ADMISSION PROVED; NO HARVEST OR NEW FOOD
-I11 or any further PS01 product increment: NOT SELECTED / NOT AUTHORIZED
+I11: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED (bounded physical food approach)
+Latest published product increment HEAD: d7cd3777d1a8220174ab5d44a0214f2829af91cd
+I11 natural chain: 2 berries harvested and consumed; fresh-process restore; 11 = 11 + 0
+I11 canonical gate: FAIL 6659/3; supplemental 6–35 PASS 30/30
+I12 and any further PS01 product increment: NOT SELECTED / NOT AUTHORIZED
 next selected PS01 integration increment: NONE — SUPERVISOR DECISION REQUIRED
 next eligible CIV phase: CIV-48 — DEFERRED / NOT STARTED / IMPLEMENTATION NOT AUTHORIZED
 Gate E Evaluation 01: FAIL — HISTORICAL IMMUTABLE EVIDENCE
@@ -194,7 +199,11 @@ I10: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED (boun
 I10 published product HEAD: 1426dc8328e56ec6e85b5b70d6e988b324bd97e5
 I10 canonical candidate gate: FAIL 6625/3; historical 6586/3 immutable
 I10 natural campaign: SEARCH / DISCOVERY / ADMISSION PROVED; NO HARVEST OR NEW FOOD
-I11 or any further PS01 product increment: NOT SELECTED / NOT AUTHORIZED
+I11: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED (bounded physical food approach)
+Latest published product increment HEAD: d7cd3777d1a8220174ab5d44a0214f2829af91cd
+I11 natural chain: 2 berries harvested and consumed; fresh-process restore; 11 = 11 + 0
+I11 canonical gate: FAIL 6659/3; supplemental 6–35 PASS 30/30
+I12 and any further PS01 product increment: NOT SELECTED / NOT AUTHORIZED
 next selected PS01 integration increment: NONE — SUPERVISOR DECISION REQUIRED
 CIV-39: COMPLETE AND PUBLISHED
 CIV-39 published canonical HEAD: 0b0ec535cda62b70add182875c65eaee27bb5bb2
@@ -301,7 +310,11 @@ I10: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED (boun
 I10 published product HEAD: 1426dc8328e56ec6e85b5b70d6e988b324bd97e5
 I10 canonical candidate gate: FAIL 6625/3; historical 6586/3 immutable
 I10 natural campaign: SEARCH / DISCOVERY / ADMISSION PROVED; NO HARVEST OR NEW FOOD
-I11 or any further PS01 product increment: NOT SELECTED / NOT AUTHORIZED
+I11: COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED (bounded physical food approach)
+Latest published product increment HEAD: d7cd3777d1a8220174ab5d44a0214f2829af91cd
+I11 natural chain: 2 berries harvested and consumed; fresh-process restore; 11 = 11 + 0
+I11 canonical gate: FAIL 6659/3; supplemental 6–35 PASS 30/30
+I12 and any further PS01 product increment: NOT SELECTED / NOT AUTHORIZED
 next selected PS01 integration increment: NONE — SUPERVISOR DECISION REQUIRED
 CIV-48: NOT STARTED — IMPLEMENTATION NOT AUTHORIZED
 V4-GATE-H-v1: PLANNED
@@ -684,7 +697,15 @@ SENIOR REVIEW APPROVED — REMOTE VERIFIED** at product HEAD
 `1426dc8328e56ec6e85b5b70d6e988b324bd97e5`, within bounded discovery scope;
 see [PS01 I10 — Publication Reconciliation](PS01_INCREMENT_10_PUBLICATION.md).
 Natural discovery/admission does not prove harvest or food security.
-I11 or any further PS01 product increment is **NOT SELECTED / NOT AUTHORIZED**;
+I11 is **COMPLETE AND PUBLISHED — SENIOR REVIEW APPROVED — REMOTE VERIFIED** at
+`d7cd3777d1a8220174ab5d44a0214f2829af91cd`; see
+[PS01 I11 — Publication Reconciliation](PS01_INCREMENT_11_PUBLICATION.md). Bounded seed-14
+ordinary harvest of two berries, exact consumption and fresh restoration prove
+**11 acquired = 11 consumed + 0 carried**. I10 historical no-harvest truth remains.
+Canonical FAIL 6659/3 and supplemental 30/30 are distinct; full cognition p95,
+exhausted-site 4 Hz and terrain-wide robustness remain unproved. Visual evidence
+claims no frame-level harvest; capacity stays 30.
+I12 and any further PS01 product increment are **NOT SELECTED / NOT AUTHORIZED**;
 the supervisor must explicitly decide any further PS01 mission. PS01 remains
 incomplete and Wave 6 remains unauthorized.
 Capacity 30 was not demonstrated as the active demographic blocker. CIV-48
